@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "description": "Lightweight loop harness with strict evidence gates.",
   "author": {
-    "name": ""
+    "name": "beefiker"
   },
   "license": "MIT",
   "skills": "./skills/",

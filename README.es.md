@@ -71,7 +71,7 @@ Cuando un handoff de crew termina, Superloopy puede imprimir una línea original
 
 ## Instalación
 
-Requiere Node.js 20 o superior. Superloopy no tiene dependencias de runtime.
+Requiere Node.js 20 o superior y Codex CLI 0.131.0 o superior para `codex plugin add`. Superloopy no tiene dependencias de runtime.
 
 ```
 codex plugin marketplace add https://github.com/beefiker/superloopy
@@ -112,7 +112,7 @@ Las instalaciones desde checkout no están gestionadas por `npx`. El self-update
 
 ## Solución de problemas
 
-Si fallan los comandos de instalación o actualización del plugin, actualiza primero el Codex CLI. Las versiones antiguas del Codex CLI pueden tener problemas con los comandos actuales de plugin marketplace y la aprobación de hooks.
+Si fallan los comandos de instalación o actualización del plugin, actualiza primero el Codex CLI. `codex plugin add` está disponible desde Codex CLI 0.131.0; las versiones antiguas del Codex CLI pueden tener problemas con los comandos actuales de plugin marketplace y la aprobación de hooks.
 
 Después de actualizar el CLI, reinicia Codex, vuelve a ejecutar el comando de instalación o actualización del marketplace, aprueba cualquier hook Modified y revisa con `superloopy doctor`.
 

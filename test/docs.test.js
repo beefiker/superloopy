@@ -51,6 +51,9 @@ test("public docs describe real marketplace install and bootstrap", async () => 
 
   assert.match(readme, /codex plugin marketplace add https:\/\/github\.com\/beefiker\/superloopy/);
   assert.match(readme, /codex plugin add superloopy@beefiker/);
+  assert.match(readme, /Codex CLI ≥ 0\.131\.0/);
+  assert.match(readme, /## Why Superloopy\?/);
+  assert.match(readme, /Evidence-first: every pass points at a real artifact/);
   assert.match(readme, /codex plugin marketplace upgrade beefiker/);
   assert.match(readme, /repair reinstall.*codex plugin add superloopy@beefiker/is);
   assert.match(readme, /hooks.*Modified/s);
@@ -64,7 +67,8 @@ test("public docs describe real marketplace install and bootstrap", async () => 
   assert.match(readme, /codex plugin remove superloopy@beefiker/);
   assert.match(readme, /codex plugin marketplace remove beefiker/);
   assert.match(readme, /## Troubleshooting/);
-  assert.match(readme, /Older Codex CLI builds can have trouble/);
+  assert.match(readme, /codex plugin add.*Codex CLI 0\.131\.0/is);
+  assert.match(readme, /older builds can have trouble/);
   assert.match(readme, /optional local bootstrap cleanup/i);
   assert.doesNotMatch(readme, /\/Users\/bee|<repo-url>/);
   assert.match(skill, /first approved `SessionStart` hook/);
@@ -83,6 +87,7 @@ test("README locales are discoverable and do not point at removed PDF manuals", 
     assert.match(content, /README\.es\.md/);
     assert.match(content, /codex plugin marketplace add https:\/\/github\.com\/beefiker\/superloopy/);
     assert.match(content, /codex plugin add superloopy@beefiker/);
+    assert.match(content, /0\.131\.0/);
     assert.match(content, /codex plugin marketplace upgrade beefiker/);
     assert.match(content, /codex plugin remove superloopy@beefiker/);
     assert.match(content, /superloopy doctor/);

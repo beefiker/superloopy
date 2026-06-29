@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
+import { normalizeComparisonPath } from "../src/comparison-similarity.js";
 import { formatDoctor, runDoctor } from "../src/doctor.js";
 
 function runCli(args, options = {}) {
@@ -43,6 +44,10 @@ async function tempComparisonTree(files) {
     await writeFile(target, content, "utf8");
   }
   return repo;
+}
+
+function toCrLf(content) {
+  return content.replace(/\r\n?/gu, "\n").replace(/\n/gu, "\r\n");
 }
 
 test("doctor --json reports Superloopy packaging, audit, and reviewability checks", () => {
@@ -138,7 +143,7 @@ test("doctor accepts skill frontmatter after CRLF checkout", async () => {
   const repo = await tempRepoCopy();
   const skillPath = join(repo, "skills", "superloopy-loop", "SKILL.md");
   const skill = await readFile(skillPath, "utf8");
-  await writeFile(skillPath, skill.replace(/\n/gu, "\r\n"), "utf8");
+  await writeFile(skillPath, toCrLf(skill), "utf8");
 
   const result = await runDoctor(repo);
 
@@ -180,6 +185,10 @@ test("doctor comparison scan fails on copied-looking blocks", async () => {
   assert.match(result.checks.comparisonSimilarity.message, /Copied-looking comparison blocks found/);
 });
 
+test("comparison scan normalizes Windows reference paths in findings", () => {
+  assert.equal(normalizeComparisonPath("src\\external-loop.js"), "src/external-loop.js");
+});
+
 test("doctor file audit fails when an inventory row loses boundary evidence", async () => {
   const repo = await tempRepoCopy();
   const auditPath = join(repo, "docs", "superloopy-file-audit.md");
@@ -204,11 +213,12 @@ test("doctor file audit fails when an inventory row points at a deleted file", a
   const repo = await tempRepoCopy();
   const auditPath = join(repo, "docs", "superloopy-file-audit.md");
   const audit = await readFile(auditPath, "utf8");
+  const newline = audit.includes("\r\n") ? "\r\n" : "\n";
   await writeFile(
     auditPath,
     audit.replace(
-      "| File | Original Superloopy role | Compatibility boundary |\n",
-      "| File | Original Superloopy role | Compatibility boundary |\n| `docs/deleted.md` | Dead row. | No live file. |\n"
+      /(\| File \| Original Superloopy role \| Compatibility boundary \|\r?\n)/u,
+      `$1| \`docs/deleted.md\` | Dead row. | No live file. |${newline}`
     ),
     "utf8"
   );

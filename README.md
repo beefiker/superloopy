@@ -28,6 +28,14 @@ loopy fix the failing login test and prove it with evidence
 
 The agent plans it, proves each piece with a real file, and reports back — you don't run any commands yourself. The packaged Stop hook stays quiet unless `SUPERLOOPY_STOP_HOOK=on`.
 
+## Why Superloopy?
+
+Superloopy is for Codex work where "done" needs to mean more than a confident status sentence.
+
+- Evidence-first: every pass points at a real artifact under `.superloopy/evidence/`.
+- Lightweight by default: one small CLI, repo-local state, zero runtime dependencies.
+- Agent-friendly: skills, hooks, and optional crew lanes guide Codex without hiding the final gate.
+
 ## Skills
 
 Superloopy keeps the command layer small. Skills carry the specialist workflow: when to use it, what the agent should inspect, and what proof must be left under `.superloopy/evidence/`.
@@ -71,7 +79,7 @@ When a tracked crew handoff finishes, Superloopy can print one original crew lin
 
 ## Install
 
-Needs Node.js ≥ 20. Superloopy is dependency-free — zero runtime dependencies, just Node.
+Needs Node.js ≥ 20 and Codex CLI ≥ 0.131.0 for `codex plugin add`. Superloopy is dependency-free — zero runtime dependencies, just Node.
 
 ```
 codex plugin marketplace add https://github.com/beefiker/superloopy
@@ -112,7 +120,7 @@ Checkout installs are not `npx`-managed. `npx` self-update is reserved for a fut
 
 ## Troubleshooting
 
-If plugin install or upgrade commands fail, update the Codex CLI first. Older Codex CLI builds can have trouble with current plugin marketplace commands and hook approval flows.
+If plugin install or upgrade commands fail, update the Codex CLI first. `codex plugin add` is available in Codex CLI 0.131.0 and newer; older builds can have trouble with current plugin marketplace commands and hook approval flows.
 
 After updating the CLI, restart Codex, run the marketplace install or upgrade command again, approve any Modified hooks, then check with `superloopy doctor`.
 

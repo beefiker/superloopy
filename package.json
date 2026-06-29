@@ -13,11 +13,15 @@
   },
   "keywords": [
     "codex",
-    "harness",
+    "codex-plugin",
+    "ai-agents",
+    "developer-tools",
+    "workflow-automation",
+    "evidence-gates",
     "loop",
     "evidence"
   ],
-  "author": "",
+  "author": "beefiker",
   "license": "MIT",
   "engines": {
     "node": ">=20.0.0"

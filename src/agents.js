@@ -1,6 +1,6 @@
 import { chmod, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { delimiter, dirname, join, resolve } from "node:path";
+import { dirname, join, posix as pathPosix, resolve, win32 as pathWin32 } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { hasFlag, readFlag } from "./args.js";
@@ -75,7 +75,7 @@ export async function installBinShim(cwd, argv, options = {}) {
 
   await mkdir(targetDir, { recursive: true });
   const status = await installOneTextFile(target, content, force, platform === "win32" ? undefined : 0o755);
-  const onPath = pathContainsDir(env.PATH, targetDir);
+  const onPath = pathContainsDir(env.PATH, targetDir, platform);
   return {
     ok: status !== "conflict",
     kind: "bin_install",
@@ -94,8 +94,17 @@ export async function installBinShim(cwd, argv, options = {}) {
 
 function pathExportHint(targetDir, platform) {
   return platform === "win32"
-    ? `setx PATH "%PATH%;${targetDir}"`
+    ? powerShellPathAppendHint(targetDir)
     : `export PATH="${targetDir}:$PATH"`;
+}
+
+function powerShellPathAppendHint(targetDir) {
+  return [
+    `$d='${powerShellSingleQuote(targetDir)}'`,
+    "$p=([string][Environment]::GetEnvironmentVariable('Path','User')).TrimEnd(';')",
+    'if ($p) { $p="$p;$d" } else { $p=$d }',
+    "[Environment]::SetEnvironmentVariable('Path',$p,'User')"
+  ].join("; ");
 }
 
 export function formatBinInstallResult(result) {
@@ -219,9 +228,33 @@ function shellQuote(value) {
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
-function pathContainsDir(pathValue, dir) {
+function pathContainsDir(pathValue, dir, platform = process.platform) {
   if (typeof pathValue !== "string") return false;
-  return pathValue.split(delimiter).some((entry) => resolve(entry) === resolve(dir));
+  const pathApi = platform === "win32" ? pathWin32 : pathPosix;
+  const delimiter = platform === "win32" ? ";" : ":";
+  const expected = comparablePath(pathApi, dir, platform);
+  return pathValue
+    .split(delimiter)
+    .map(cleanPathEntry)
+    .filter((entry) => entry.length > 0)
+    .some((entry) => comparablePath(pathApi, entry, platform) === expected);
+}
+
+function comparablePath(pathApi, value, platform) {
+  const normalized = pathApi.normalize(pathApi.resolve(value));
+  const withoutTrailingSep = normalized.length > pathApi.parse(normalized).root.length && normalized.endsWith(pathApi.sep)
+    ? normalized.slice(0, -1)
+    : normalized;
+  return platform === "win32" ? withoutTrailingSep.toLowerCase() : withoutTrailingSep;
+}
+
+function cleanPathEntry(value) {
+  const trimmed = value.trim();
+  return trimmed.startsWith("\"") && trimmed.endsWith("\"") ? trimmed.slice(1, -1) : trimmed;
+}
+
+function powerShellSingleQuote(value) {
+  return String(value).replaceAll("'", "''");
 }
 
 function countAgentStatuses(agents) {

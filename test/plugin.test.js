@@ -6,14 +6,26 @@ import test from "node:test";
 async function readSkill(name) {
   const path = `skills/${name}/SKILL.md`;
   const content = await readFile(path, "utf8");
-  const frontmatter = content.match(/^---\n([\s\S]*?)\n---/u)?.[1] ?? "";
+  const frontmatter = extractSkillFrontmatter(content);
   return { path, content, frontmatter };
 }
+
+function extractSkillFrontmatter(content) {
+  return content.replace(/\r\n?/gu, "\n").match(/^---\n([\s\S]*?)\n---/u)?.[1] ?? "";
+}
+
+test("skill frontmatter parser accepts CRLF line endings", () => {
+  const frontmatter = extractSkillFrontmatter("---\r\nname: example\r\ndescription: test\r\n---\r\nbody\r\n");
+
+  assert.match(frontmatter, /^name: example$/m);
+  assert.match(frontmatter, /^description: test$/m);
+});
 
 test("plugin manifest exposes Superloopy skills and packaged opt-in hooks", async () => {
   const plugin = JSON.parse(await readFile(".codex-plugin/plugin.json", "utf8"));
 
   assert.equal(plugin.name, "superloopy");
+  assert.equal(plugin.author.name, "beefiker");
   assert.equal(plugin.interface.displayName, "Superloopy");
   assert.equal(plugin.skills, "./skills/");
   assert(plugin.hooks.includes("./hooks/session-start.json"));
@@ -21,6 +33,15 @@ test("plugin manifest exposes Superloopy skills and packaged opt-in hooks", asyn
   assert(plugin.hooks.includes("./hooks/pre-tool-use.json"));
   assert(plugin.interface.defaultPrompt.some((line) => /bootstraps the CLI wrapper/.test(line)));
   assert.equal(plugin.hooks.includes("./hooks/stop.json"), true);
+});
+
+test("package metadata names author and GitHub topics", async () => {
+  const pkg = JSON.parse(await readFile("package.json", "utf8"));
+
+  assert.equal(pkg.author, "beefiker");
+  for (const topic of ["codex-plugin", "ai-agents", "developer-tools", "workflow-automation", "evidence-gates"]) {
+    assert.ok(pkg.keywords.includes(topic));
+  }
 });
 
 test("subagent receipt hook covers Superloopy evidence-reporting agents", async () => {

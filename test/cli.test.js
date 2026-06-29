@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { SUPERLOOPY_AGENT_NAMES } from "../src/agents.js";
+import { installBinShim, SUPERLOOPY_AGENT_NAMES } from "../src/agents.js";
 import { createLoop } from "../src/loop.js";
 
 async function tempRepo() {
@@ -22,6 +22,24 @@ function runCli(args, options = {}) {
   });
 }
 
+function cliPathInvocation(binPath, args, platform = process.platform) {
+  if (platform !== "win32") return { command: binPath, args };
+  const command = process.env.ComSpec || "cmd.exe";
+  return {
+    command,
+    args: ["/d", "/s", "/c", [quoteWindowsCmdArg(binPath), ...args.map(quoteWindowsCmdArg)].join(" ")]
+  };
+}
+
+function spawnCliPath(binPath, args, options = {}) {
+  const invocation = cliPathInvocation(binPath, args);
+  return spawnSync(invocation.command, invocation.args, options);
+}
+
+function quoteWindowsCmdArg(value) {
+  return `"${String(value).replaceAll('"', '\\"')}"`;
+}
+
 test("CLI loop help shows the shortest evidence-backed flow", () => {
   const result = runCli(["loop", "help"]);
 
@@ -36,12 +54,21 @@ test("CLI loop help shows the shortest evidence-backed flow", () => {
   assert.match(result.stdout, /Pass evidence must be a non-empty artifact under the active evidence root\./);
 });
 
-test("CLI entrypoint runs through a symlinked bin path", async () => {
+test("CLI test wrapper routes Windows command files through cmd.exe", () => {
+  const invocation = cliPathInvocation("C:\\tmp\\superloopy.cmd", ["--help"], "win32");
+
+  assert.equal(invocation.command.toLowerCase().endsWith("cmd.exe"), true);
+  assert.deepEqual(invocation.args.slice(0, 3), ["/d", "/s", "/c"]);
+  assert.match(invocation.args[3], /superloopy\.cmd/);
+  assert.match(invocation.args[3], /--help/);
+});
+
+test("CLI entrypoint runs through a symlinked bin path", { skip: process.platform === "win32" ? "extensionless symlink execution is POSIX-only" : false }, async () => {
   const repo = await tempRepo();
   const binPath = join(repo, "superloopy");
   await symlink(join(process.cwd(), "src", "cli.js"), binPath);
 
-  const result = spawnSync(binPath, ["--help"], {
+  const result = spawnCliPath(binPath, ["--help"], {
     cwd: repo,
     encoding: "utf8",
     env: process.env,
@@ -114,7 +141,7 @@ test("CLI install writes command wrapper and bundled agents", async () => {
   assert.equal(parsed.agents.target, join(codexHome, "agents"));
   assert.deepEqual(parsed.agents.agents.map((agent) => agent.status), SUPERLOOPY_AGENT_NAMES.map(() => "installed"));
 
-  const help = spawnSync(join(binDir, process.platform === "win32" ? "superloopy.cmd" : "superloopy"), ["--help"], {
+  const help = spawnCliPath(join(binDir, process.platform === "win32" ? "superloopy.cmd" : "superloopy"), ["--help"], {
     cwd: repo,
     encoding: "utf8",
     env,
@@ -122,6 +149,23 @@ test("CLI install writes command wrapper and bundled agents", async () => {
   });
   assert.equal(help.status, 0, help.stderr);
   assert.match(help.stdout, /superloopy loop <subcommand>/);
+});
+
+test("CLI bin install uses Windows-safe PATH detection and PowerShell hint", async () => {
+  const repo = await tempRepo();
+  const binDir = join(repo, "Bin");
+  const result = await installBinShim(repo, ["--bin-dir", binDir], {
+    env: { PATH: `"${binDir.toUpperCase()}";C:\\Windows\\System32` },
+    homeDir: join(repo, "home"),
+    platform: "win32"
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.onPath, true);
+  assert.equal(result.target, join(binDir, "superloopy.cmd"));
+  assert.match(result.pathHint, /\[Environment\]::SetEnvironmentVariable\('Path'/);
+  assert.doesNotMatch(result.pathHint, /%PATH%/);
+  assert.doesNotMatch(result.next, /Add .* to PATH/);
 });
 
 test("CLI hook stop emits a continuation block for unresolved loop work", async () => {

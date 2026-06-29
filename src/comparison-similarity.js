@@ -110,10 +110,11 @@ async function buildComparisonBlockIndex(sources) {
     source.files = files.length;
     for (const file of files) {
       const lines = normalizedLines(await readFile(join(source.path, file), "utf8"));
+      const referenceFile = normalizeComparisonPath(file);
       for (const block of lineBlocks(lines)) {
         if (!blocks.has(block.key)) {
           blocks.set(block.key, {
-            reference: `${source.name}:${file}`,
+            reference: `${source.name}:${referenceFile}`,
             lines: block.lines
           });
         }
@@ -163,8 +164,12 @@ async function walkComparisonFiles(root, prefix, files) {
     if (!COMPARISON_CODE_EXTENSIONS.test(file)) continue;
     const info = await stat(join(root, file));
     if (info.size > 250_000) continue;
-    files.push(file);
+    files.push(normalizeComparisonPath(file));
   }
+}
+
+export function normalizeComparisonPath(path) {
+  return path.split("\\").join("/");
 }
 
 function lineBlocks(lines) {
