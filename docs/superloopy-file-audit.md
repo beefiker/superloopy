@@ -20,6 +20,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `.codex-plugin/plugin.json` | Local plugin metadata, hook registration, skill entry, and default Superloopy prompt. | Uses Codex plugin shape only; no external assets. |
 | `.gitignore` | Keeps runtime state, logs, coverage, and dependencies out of source control. | Superloopy runtime ignore set only. |
 | `LICENSE` | MIT license for this repo. | Standard license text. |
+| `SECURITY.md` | Vulnerability disclosure policy required for plugin catalog submissions. | Process documentation only; avoids publishing exploit details or secrets. |
 | `README.md` | English public product overview, language switcher, marketplace install flow, bootstrap behavior, command flow, state model, hooks, gates, and doctor checks. | Uses Superloopy-native product terms and current install commands. |
 | `README.ko.md` | Korean public product overview translated from the root README. | Documentation-only locale surface; mirrors Superloopy behavior without adding runtime logic. |
 | `README.zh-CN.md` | Simplified Chinese public product overview translated from the root README. | Documentation-only locale surface; mirrors Superloopy behavior without adding runtime logic. |
@@ -32,6 +33,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `.github/assets/robin.png` | README crew-card image for the robin auditor agent. | Documentation image only; no executable plugin logic. |
 | `.github/assets/nami.png` | README crew-card image for the nami navigator agent. | Documentation image only; no executable plugin logic. |
 | `.github/assets/transferloom-clone-reference.png` | README clone-demo screenshot showing the validated Transferloom.com Superloopy clone reference. | Documentation image only; generated from the local clone output and contains no executable plugin logic. |
+| `.github/workflows/hol-plugin-scanner.yml` | GitHub Actions workflow that runs the HOL plugin scanner for hashgraph awesome-list readiness. | Uses SHA-pinned Actions and scans the local plugin root only; no runtime plugin logic. |
 | `docs/superloopy-design-audit.md` | Doctor-verified decision matrix for naming, compatibility, and threshold records. | Records Superloopy decisions, not source-project lineage. |
 | `docs/superloopy-crew-lines.md` | Crew-line precedent, policy, and runtime contract for presentation-only handoff flavor. | Keeps lines Superloopy-original and non-authoritative beside mechanical evidence state. |
 | `docs/superloopy-file-audit.md` | File-by-file audit and reviewability note. | Proves every Git-visible file has a role and boundary. |
@@ -46,6 +48,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `hooks/subagent-stop-audit.json` | Registers robin verdict-receipt validation. | Verdict receipts use Superloopy evidence roots. |
 | `hooks/user-prompt-submit.json` | Registers steering and trigger-scoped context injection. | Structured `SUPERLOOPY_STEER` and explicit Superloopy prompt triggers only. |
 | `package.json` | Dependency-free Node package metadata, bin, and scripts including manifest version sync. | Keeps Superloopy small and dependency-free. |
+| `package-lock.json` | npm lockfile required by plugin catalog readiness checks. | Lockfile records the dependency-free package root only; no runtime dependencies are introduced. |
 | `scripts/sync-version.mjs` | Release helper that stamps `package.json` and `.codex-plugin/plugin.json` from one authoritative Superloopy version. | Superloopy release metadata only; no runtime dependency or publishing side effect. |
 | `skills/superloopy-clone/SKILL.md` | Skill instructions for authorized website cloning with browser extraction, component specs, implementation, and visual QA evidence. | Superloopy-governed workflow only; no template dependency or bundled external code. |
 | `skills/superloopy-clone/agents/openai.yaml` | Minimal agent metadata for discovering the Superloopy clone skill. | Superloopy-native skill metadata only. |
@@ -123,6 +126,16 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/pre-tool-use.test.js` | Focused unit tests for native goal-tool lifecycle guards. | Prevents premature native completion while Superloopy state is incomplete. |
 | `test/report.test.js` | Focused report artifact tests. | Tests report portability and guide output. |
 | `test/sync-version.test.js` | Release-helper tests for stamping package and plugin manifests from one version. | Tests Superloopy release metadata sync only. |
+| `web/README.md` | Static landing-page notes for the Superloopy web preview. | Documentation for the static site only; no plugin runtime behavior. |
+| `web/_headers` | Static-hosting security/cache headers for the Superloopy web preview. | Web deployment configuration only; does not affect the plugin package. |
+| `web/assets/franky.png` | Static landing-page agent illustration for franky. | Web presentation asset only; no executable plugin logic. |
+| `web/assets/jinbe.png` | Static landing-page agent illustration for jinbe. | Web presentation asset only; no executable plugin logic. |
+| `web/assets/luffy.svg` | Static landing-page logo/illustration asset. | Web presentation asset only; no executable plugin logic. |
+| `web/assets/nami.png` | Static landing-page agent illustration for nami. | Web presentation asset only; no executable plugin logic. |
+| `web/assets/robin.png` | Static landing-page agent illustration for robin. | Web presentation asset only; no executable plugin logic. |
+| `web/assets/usopp.png` | Static landing-page agent illustration for usopp. | Web presentation asset only; no executable plugin logic. |
+| `web/assets/zoro.png` | Static landing-page agent illustration for zoro. | Web presentation asset only; no executable plugin logic. |
+| `web/index.html` | Static marketing landing page for Superloopy. | Web preview only; kept separate from CLI/plugin runtime. |
 
 ## Weight Notes
 
