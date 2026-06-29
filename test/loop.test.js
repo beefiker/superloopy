@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -138,6 +139,22 @@ test("guideLoop points an active goal at the next evidence artifact", async () =
   assert.deepEqual(result.guide.proofPlan.map((item) => item.ref), ["G001/C001", "G001/C002"]);
   assert.equal(result.guide.proofPlan[0].captureCommand, "superloopy loop capture --goal-id G001 --criterion-id C001 --notes \"<summary>\" -- <validation-command>");
   assert.equal(result.guide.proofPlan[1].evidenceCommand, "superloopy loop evidence --goal-id G001 --criterion-id C002 --status pass --artifact .superloopy/evidence/G001-C002.txt --notes \"<summary>\" --json");
+});
+
+test("store relative paths stay POSIX when absolute operations use Windows path joins", async () => {
+  const source = await readFile(join(process.cwd(), "src", "store.js"), "utf8");
+  const transformed = source.replace(
+    /import \{[^}]+\} from "node:path";/u,
+    'import { posix, win32 as pathWin32 } from "node:path"; const { basename, dirname } = pathWin32; const join = pathWin32.join;'
+  );
+  const moduleUrl = `data:text/javascript;base64,${Buffer.from(transformed).toString("base64")}#${Date.now()}`;
+  const store = await import(moduleUrl);
+  const scope = { sessionId: "sess.1" };
+
+  assert.equal(store.superloopyRelativeDir(scope), ".superloopy/sessions/sess.1");
+  assert.equal(store.evidenceRelativeDir(scope), ".superloopy/sessions/sess.1/evidence");
+  assert.equal(store.goalsRelativePath(scope), ".superloopy/sessions/sess.1/goals.json");
+  assert.equal(store.auditStateRelativePath(scope), ".superloopy/sessions/sess.1/audit-state.json");
 });
 
 test("guideLoop moves from finish to final checkpoint when the default gate exists", async () => {

@@ -1,6 +1,6 @@
 import { closeSync, openSync, readFileSync, rmSync, statSync, writeSync } from "node:fs";
 import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, posix } from "node:path";
 
 export const SUPERLOOPY_DIR = ".superloopy";
 export const EVIDENCE_DIR = "evidence";
@@ -26,7 +26,7 @@ export function scopeFromSessionId(sessionId) {
 
 export function superloopyRelativeDir(scope) {
   const sessionId = normalizeLoopSessionId(scope?.sessionId);
-  return sessionId === null ? SUPERLOOPY_DIR : join(SUPERLOOPY_DIR, "sessions", sessionId);
+  return sessionId === null ? SUPERLOOPY_DIR : relativePath(SUPERLOOPY_DIR, "sessions", sessionId);
 }
 
 export function superloopyDir(cwd, scope) {
@@ -34,7 +34,7 @@ export function superloopyDir(cwd, scope) {
 }
 
 export function evidenceRelativeDir(scope) {
-  return join(superloopyRelativeDir(scope), EVIDENCE_DIR);
+  return relativePath(superloopyRelativeDir(scope), EVIDENCE_DIR);
 }
 
 export function evidenceDir(cwd, scope) {
@@ -42,19 +42,19 @@ export function evidenceDir(cwd, scope) {
 }
 
 export function briefRelativePath(scope) {
-  return join(superloopyRelativeDir(scope), "brief.md");
+  return relativePath(superloopyRelativeDir(scope), "brief.md");
 }
 
 export function goalsRelativePath(scope) {
-  return join(superloopyRelativeDir(scope), "goals.json");
+  return relativePath(superloopyRelativeDir(scope), "goals.json");
 }
 
 export function ledgerRelativePath(scope) {
-  return join(superloopyRelativeDir(scope), "ledger.jsonl");
+  return relativePath(superloopyRelativeDir(scope), "ledger.jsonl");
 }
 
 export function loopControlRelativePath(scope) {
-  return join(superloopyRelativeDir(scope), "loop-control.json");
+  return relativePath(superloopyRelativeDir(scope), "loop-control.json");
 }
 
 export function briefPath(cwd, scope) {
@@ -74,7 +74,7 @@ export function loopControlPath(cwd, scope) {
 }
 
 export function auditStateRelativePath(scope) {
-  return join(superloopyRelativeDir(scope), "audit-state.json");
+  return relativePath(superloopyRelativeDir(scope), "audit-state.json");
 }
 
 export function auditStatePath(cwd, scope) {
@@ -83,6 +83,10 @@ export function auditStatePath(cwd, scope) {
 
 export function repoRelativePath(path) {
   return path.split("\\").join("/");
+}
+
+function relativePath(...segments) {
+  return posix.join(...segments.map(repoRelativePath));
 }
 
 export async function ensureSuperloopyDirs(cwd, scope) {

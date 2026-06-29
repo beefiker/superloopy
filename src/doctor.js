@@ -122,9 +122,13 @@ async function checkHooks(cwd, hooks) {
 async function checkSkills(cwd) {
   const path = join(cwd, "skills", "superloopy-loop", "SKILL.md");
   if (!existsSync(path)) return fail("Missing skills/superloopy-loop/SKILL.md.");
-  const content = await readFile(path, "utf8");
+  const content = normalizeLineEndings(await readFile(path, "utf8"));
   if (!/^---\nname: superloopy-loop/m.test(content)) return fail("superloopy-loop skill frontmatter is invalid.");
   return { ok: true };
+}
+
+function normalizeLineEndings(content) {
+  return content.replace(/\r\n?/gu, "\n");
 }
 
 function checkCli(cwd) {

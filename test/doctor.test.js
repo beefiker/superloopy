@@ -134,6 +134,18 @@ test("doctor ignores Codex marketplace install metadata in plugin cache", async 
   assert.equal(result.checks.fileAudit.ok, true);
 });
 
+test("doctor accepts skill frontmatter after CRLF checkout", async () => {
+  const repo = await tempRepoCopy();
+  const skillPath = join(repo, "skills", "superloopy-loop", "SKILL.md");
+  const skill = await readFile(skillPath, "utf8");
+  await writeFile(skillPath, skill.replace(/\n/gu, "\r\n"), "utf8");
+
+  const result = await runDoctor(repo);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.checks.skills.ok, true);
+});
+
 test("doctor text reports whether comparison scanning was skipped", () => {
   const result = runCli(["doctor"]);
 
