@@ -42,6 +42,8 @@
       "Record Superloopy evidence for this change, using superloopy loop prove when command output is the proof."
     ],
     "brandColor": "#2563EB",
-    "screenshots": []
+    "screenshots": [],
+    "composerIcon": "./web/assets/luffy.svg",
+    "logo": "./web/assets/luffy.svg"
   }
 }
