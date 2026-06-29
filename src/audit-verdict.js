@@ -1,4 +1,4 @@
-// Deterministic validation for the robin's verdict (the LLM judgment).
+// Deterministic validation for the rovyn's verdict (the LLM judgment).
 //
 // Superloopy treats the LLM verdict as ADVISORY and DOWNGRADE-ONLY: it can never
 // turn a deterministic re-run failure/inconclusive into a pass. The hard

@@ -48,11 +48,11 @@ test("subagent receipt hook covers Superloopy evidence-reporting agents", async 
   const hook = JSON.parse(await readFile("hooks/subagent-stop.json", "utf8"));
   const matcher = new RegExp(hook.hooks.SubagentStop[0].matcher);
 
-  assert.equal(matcher.test("franky"), true);
-  assert.equal(matcher.test("zoro"), true);
-  assert.equal(matcher.test("usopp"), true);
-  assert.equal(matcher.test("jinbe"), true);
-  assert.equal(matcher.test("robin"), false);
+  assert.equal(matcher.test("fronk"), true);
+  assert.equal(matcher.test("zyro"), true);
+  assert.equal(matcher.test("usk"), true);
+  assert.equal(matcher.test("jumbo"), true);
+  assert.equal(matcher.test("rovyn"), false);
 });
 
 test("repo marketplace exposes Superloopy plugin install entry", async () => {
@@ -120,7 +120,7 @@ test("clone skill preserves exact extraction pipeline and crew dispatch guardrai
     /plain `loopy clone`.*solo/is,
     /superloopy loop handoff/,
     /superloopy loop fleet --json/,
-    /nami.*franky.*usopp.*zoro.*robin.*jinbe/is,
+    /nomi.*fronk.*usk.*zyro.*rovyn.*jumbo/is,
     /Do not.*similar.*redraw/is
   ]) {
     assert.match(clone.content, pattern);

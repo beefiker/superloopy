@@ -13,10 +13,10 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | File | Original Superloopy role | Compatibility boundary |
 | --- | --- | --- |
 | `.agents/plugins/marketplace.json` | Repo-local Codex marketplace entry that exposes the root Superloopy plugin as `superloopy@beefiker`. | Uses Codex marketplace metadata only; points at this plugin root without vendoring external code. |
-| `.codex/agents/zoro.toml` | Project-scoped Codex reviewer agent for bounded Superloopy subagent workflows. | Superloopy-native report contract plus advisory model policy; no product edits and no external workflow dependency. |
-| `.codex/agents/franky.toml` | Project-scoped Codex executor agent for one criterion or independent slice. | Superloopy-native handoff, evidence receipt, and advisory model policy only. |
-| `.codex/agents/jinbe.toml` | Project-scoped Codex gate reviewer for final evidence integration. | Uses Superloopy evidence, review, QA, audit, criteria coverage, and advisory model policy as the authority. |
-| `.codex/agents/usopp.toml` | Project-scoped Codex QA agent for artifact-backed scenario evidence. | Superloopy-native QA report contract plus advisory model policy; no product edits. |
+| `.codex/agents/zyro.toml` | Project-scoped Codex reviewer agent for bounded Superloopy subagent workflows. | Superloopy-native report contract plus advisory model policy; no product edits and no external workflow dependency. |
+| `.codex/agents/fronk.toml` | Project-scoped Codex executor agent for one criterion or independent slice. | Superloopy-native handoff, evidence receipt, and advisory model policy only. |
+| `.codex/agents/jumbo.toml` | Project-scoped Codex gate reviewer for final evidence integration. | Uses Superloopy evidence, review, QA, audit, criteria coverage, and advisory model policy as the authority. |
+| `.codex/agents/usk.toml` | Project-scoped Codex QA agent for artifact-backed scenario evidence. | Superloopy-native QA report contract plus advisory model policy; no product edits. |
 | `.codex-plugin/plugin.json` | Local plugin metadata, hook registration, skill entry, and default Superloopy prompt. | Uses Codex plugin shape only; no external assets. |
 | `.gitignore` | Keeps runtime state, logs, coverage, and dependencies out of source control. | Superloopy runtime ignore set only. |
 | `LICENSE` | MIT license for this repo. | Standard license text. |
@@ -25,13 +25,23 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `README.zh-CN.md` | Simplified Chinese public product overview translated from the root README. | Documentation-only locale surface; mirrors Superloopy behavior without adding runtime logic. |
 | `README.ja.md` | Japanese public product overview translated from the root README. | Documentation-only locale surface; mirrors Superloopy behavior without adding runtime logic. |
 | `README.es.md` | Spanish public product overview translated from the root README. | Documentation-only locale surface; mirrors Superloopy behavior without adding runtime logic. |
-| `.github/assets/franky.png` | README crew-card image for the franky executor agent. | Documentation image only; no executable plugin logic. |
-| `.github/assets/zoro.png` | README crew-card image for the zoro reviewer agent. | Documentation image only; no executable plugin logic. |
-| `.github/assets/usopp.png` | README crew-card image for the usopp QA agent. | Documentation image only; no executable plugin logic. |
-| `.github/assets/jinbe.png` | README crew-card image for the jinbe gate-reviewer agent. | Documentation image only; no executable plugin logic. |
-| `.github/assets/robin.png` | README crew-card image for the robin auditor agent. | Documentation image only; no executable plugin logic. |
-| `.github/assets/nami.png` | README crew-card image for the nami navigator agent. | Documentation image only; no executable plugin logic. |
+| `.github/assets/fronk.png` | README crew-card image for the fronk executor agent. | Documentation image only; no executable plugin logic. |
+| `.github/assets/zyro.png` | README crew-card image for the zyro reviewer agent. | Documentation image only; no executable plugin logic. |
+| `.github/assets/usk.png` | README crew-card image for the usk QA agent. | Documentation image only; no executable plugin logic. |
+| `.github/assets/jumbo.png` | README crew-card image for the jumbo gate-reviewer agent. | Documentation image only; no executable plugin logic. |
+| `.github/assets/rovyn.png` | README crew-card image for the rovyn auditor agent. | Documentation image only; no executable plugin logic. |
+| `.github/assets/nomi.png` | README crew-card image for the nomi navigator agent. | Documentation image only; no executable plugin logic. |
 | `.github/assets/transferloom-clone-reference.png` | README clone-demo screenshot showing the validated Transferloom.com Superloopy clone reference. | Documentation image only; generated from the local clone output and contains no executable plugin logic. |
+| `web/README.md` | Static web demo deployment notes for the Superloopy landing page. | Documentation-only web surface; no runtime plugin logic. |
+| `web/_headers` | Static hosting header rules for the web demo. | Web-hosting metadata only; does not affect CLI/runtime behavior. |
+| `web/assets/fronk.png` | Web crew-card image for the fronk executor agent. | Website image only; no executable plugin logic. |
+| `web/assets/zyro.png` | Web crew-card image for the zyro reviewer agent. | Website image only; no executable plugin logic. |
+| `web/assets/usk.png` | Web crew-card image for the usk QA agent. | Website image only; no executable plugin logic. |
+| `web/assets/jumbo.png` | Web crew-card image for the jumbo gate-reviewer agent. | Website image only; no executable plugin logic. |
+| `web/assets/rovyn.png` | Web crew-card image for the rovyn auditor agent. | Website image only; no executable plugin logic. |
+| `web/assets/nomi.png` | Web crew-card image for the nomi navigator agent. | Website image only; no executable plugin logic. |
+| `web/assets/loopi.jpg` | Web landing-page hero image for Loopi. | Website image only; no executable plugin logic. |
+| `web/index.html` | Static Superloopy landing page using owned role names and image assets. | Web demo only; package/runtime behavior stays in CLI, hooks, and skills. |
 | `docs/superloopy-design-audit.md` | Doctor-verified decision matrix for naming, compatibility, and threshold records. | Records Superloopy decisions, not source-project lineage. |
 | `docs/superloopy-crew-lines.md` | Crew-line precedent, policy, and runtime contract for presentation-only handoff flavor. | Keeps lines Superloopy-original and non-authoritative beside mechanical evidence state. |
 | `docs/superloopy-file-audit.md` | File-by-file audit and reviewability note. | Proves every Git-visible file has a role and boundary. |
@@ -43,7 +53,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `hooks/session-start.json` | Provides first-launch bootstrap, marketplace update notices, and optional session-start context injection. | Routes through Superloopy CLI; bootstrap installs only the command wrapper and bundled agents, and update checks never run npx self-update for marketplace or checkout installs. |
 | `hooks/stop.json` | Provides optional stop continuation guard. | Routes through Superloopy CLI when enabled locally. |
 | `hooks/subagent-stop.json` | Registers evidence receipt verification for Superloopy executor, review, QA, and gate subagents. | Receipts use Superloopy evidence roots. |
-| `hooks/subagent-stop-audit.json` | Registers robin verdict-receipt validation. | Verdict receipts use Superloopy evidence roots. |
+| `hooks/subagent-stop-audit.json` | Registers rovyn verdict-receipt validation. | Verdict receipts use Superloopy evidence roots. |
 | `hooks/user-prompt-submit.json` | Registers steering and trigger-scoped context injection. | Structured `SUPERLOOPY_STEER` and explicit Superloopy prompt triggers only. |
 | `package.json` | Dependency-free Node package metadata, bin, and scripts including manifest version sync. | Keeps Superloopy small and dependency-free. |
 | `scripts/sync-version.mjs` | Release helper that stamps `package.json` and `.codex-plugin/plugin.json` from one authoritative Superloopy version. | Superloopy release metadata only; no runtime dependency or publishing side effect. |
@@ -53,8 +63,8 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `skills/superloopy-loop/agents/openai.yaml` | Minimal agent metadata for Superloopy discovery. | Search terms are Superloopy-native. |
 | `skills/superloopy-research/SKILL.md` | Skill instructions for deep research with EXPAND waves, claim verification, cited synthesis, and Superloopy evidence artifacts. | Superloopy-native research workflow; workers return text and parent-owned artifacts remain authoritative. |
 | `skills/superloopy-research/agents/openai.yaml` | Minimal agent metadata for discovering the Superloopy research skill. | Superloopy-native skill metadata only. |
-| `.codex/agents/robin.toml` | Read-only skeptical evidence-auditor agent, installed so the host can spawn the robin auditor by name. | Superloopy-native auditor contract plus advisory model policy. |
-| `.codex/agents/nami.toml` | Read-only codebase-navigator agent for subagent-driven work; locates files and code and returns absolute paths, writing no evidence receipt. | Superloopy-native read-only search contract with fast advisory model defaults; no product edits and no host coupling. |
+| `.codex/agents/rovyn.toml` | Read-only skeptical evidence-auditor agent, installed so the host can spawn the rovyn auditor by name. | Superloopy-native auditor contract plus advisory model policy. |
+| `.codex/agents/nomi.toml` | Read-only codebase-navigator agent for subagent-driven work; locates files and code and returns absolute paths, writing no evidence receipt. | Superloopy-native read-only search contract with fast advisory model defaults; no product edits and no host coupling. |
 | `src/agents.js` | Installs bundled Superloopy custom agent TOML files, the command wrapper, and the combined bootstrap used by plugin startup. | Conservative Superloopy installer; skips identical files and requires `--force` for changed local files. |
 | `src/args.js` | Shared flag/stdin/JSON parsing helpers. | Generic Superloopy CLI utility. |
 | `src/artifacts.js` | Evidence path confinement, symlink rejection, and quality-gate dispatch. | Dispatches Superloopy review, matrix, and default gates. |
@@ -62,7 +72,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/auto-update-plan.js` | Semver comparison, latest/current version resolution, install-flow routing, and default update command construction. | Superloopy-owned planning logic; npm lookup is advisory and can be overridden by environment for tests or future release channels. |
 | `src/auto-update-state.js` | Auto-update state, log, and lock file helpers. | Writes under Superloopy data paths or explicit env overrides; used only by the update checker. |
 | `src/audit.js` | Deterministic evidence auditor: re-runs command-backed criteria, hashes results, records audit-state, caches unchanged work; `auditOneCriterion` force-re-derives one criterion in-process for accept/gate time. | Superloopy-owned re-run anchor; never force-completes. |
-| `src/audit-hooks.js` | Validates robin verdict receipts by RE-DERIVING the floor in-process (never trusting worker-writable recorded state), then hash-binding and floor-dominance; idempotent on replay. | Superloopy-native; LLM verdict advisory and downgrade-only. |
+| `src/audit-hooks.js` | Validates rovyn verdict receipts by RE-DERIVING the floor in-process (never trusting worker-writable recorded state), then hash-binding and floor-dominance; idempotent on replay. | Superloopy-native; LLM verdict advisory and downgrade-only. |
 | `src/audit-verdict.js` | Structural verdict + gate-section validators and the symmetric floor-dominance cross-check (a non-pass floor surfaces, is never flipped by the LLM). | Deterministic; independence limits documented. |
 | `src/audit-gate-verify.js` | Completion-time provenance: re-derives every cited audit verdict so the deterministic spine actually gates aggregate completion. | Superloopy-native; closes the gate-decoupling gap. |
 | `src/begin.js` | One-command entrypoint that creates a plan and starts the first goal. | Superloopy-specific ease-of-start flow. |

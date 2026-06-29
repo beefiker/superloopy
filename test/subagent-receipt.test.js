@@ -10,13 +10,13 @@ async function tempRepo() {
   return mkdtemp(join(tmpdir(), "superloopy-receipt-"));
 }
 
-test("runSubagentStopHook blocks franky without receipt", async () => {
+test("runSubagentStopHook blocks fronk without receipt", async () => {
   // Isolated temp cwd: the attempt counter persists per (cwd, session, agent), so a shared dir
   // like /tmp would accumulate across runs and trip the cap intermittently.
   const repo = await tempRepo();
   const output = runSubagentStopHook({
     hook_event_name: "SubagentStop",
-    agent_type: "franky",
+    agent_type: "fronk",
     cwd: repo,
     last_assistant_message: "done"
   });
@@ -36,7 +36,7 @@ test("runSubagentStopHook blocks a blank (whitespace-only) artifact receipt", as
 
   const output = runSubagentStopHook({
     hook_event_name: "SubagentStop",
-    agent_type: "franky",
+    agent_type: "fronk",
     cwd: repo,
     last_assistant_message: "SUPERLOOPY_EVIDENCE: .superloopy/evidence/blank.txt"
   });
@@ -49,7 +49,7 @@ test("runSubagentStopHook still enforces the attempt cap when agent_id is missin
   const repo = await tempRepo();
   const payload = {
     hook_event_name: "SubagentStop",
-    agent_type: "franky",
+    agent_type: "fronk",
     cwd: repo,
     last_assistant_message: "no receipt here"
   };
@@ -65,7 +65,7 @@ test("runSubagentStopHook records a ledger signal when the attempt cap is exhaus
   const repo = await tempRepo();
   const payload = {
     hook_event_name: "SubagentStop",
-    agent_type: "franky",
+    agent_type: "fronk",
     session_id: "s1",
     agent_id: "a1",
     cwd: repo,

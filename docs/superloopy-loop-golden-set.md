@@ -55,10 +55,10 @@ Total: 100 points.
 | File | Evidence anchor | Strict pass rule |
 | --- | --- | --- |
 | `.agents/plugins/marketplace.json` | `test/plugin.test.js`, audit coverage. | Must expose the root Superloopy plugin as an installable Codex marketplace entry. |
-| `.codex/agents/zoro.toml` | `test/docs.test.js`, audit coverage. | Must define the Superloopy code-review role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
-| `.codex/agents/franky.toml` | `test/docs.test.js`, audit coverage. | Must define the bounded Superloopy executor role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
-| `.codex/agents/jinbe.toml` | `test/docs.test.js`, audit coverage. | Must define the Superloopy gate-review role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
-| `.codex/agents/usopp.toml` | `test/docs.test.js`, audit coverage. | Must define the Superloopy QA role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
+| `.codex/agents/zyro.toml` | `test/docs.test.js`, audit coverage. | Must define the Superloopy code-review role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
+| `.codex/agents/fronk.toml` | `test/docs.test.js`, audit coverage. | Must define the bounded Superloopy executor role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
+| `.codex/agents/jumbo.toml` | `test/docs.test.js`, audit coverage. | Must define the Superloopy gate-review role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
+| `.codex/agents/usk.toml` | `test/docs.test.js`, audit coverage. | Must define the Superloopy QA role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
 | `.codex-plugin/plugin.json` | `test/plugin.test.js`, doctor plugin manifest check. | Must expose `./skills/` and the packaged Superloopy hook files, including opt-in Stop. |
 | `.gitignore` | Doctor runtime-boundary ignored samples and installed-cache docs coverage. | `.superloopy/`, logs, coverage, dependencies, OS noise, and Codex marketplace metadata must stay out of source control. |
 | `LICENSE` | Audit coverage and reviewability check. | Must remain a source file with no runtime implementation content. |
@@ -67,13 +67,23 @@ Total: 100 points.
 | `README.zh-CN.md` | `test/docs.test.js`, audit coverage. | Must provide the Simplified Chinese README locale and keep install commands aligned with the root README. |
 | `README.ja.md` | `test/docs.test.js`, audit coverage. | Must provide the Japanese README locale and keep install commands aligned with the root README. |
 | `README.es.md` | `test/docs.test.js`, audit coverage. | Must provide the Spanish README locale and keep install commands aligned with the root README. |
-| `.github/assets/franky.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
-| `.github/assets/zoro.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
-| `.github/assets/usopp.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
-| `.github/assets/jinbe.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
-| `.github/assets/robin.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
-| `.github/assets/nami.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
+| `.github/assets/fronk.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
+| `.github/assets/zyro.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
+| `.github/assets/usk.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
+| `.github/assets/jumbo.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
+| `.github/assets/rovyn.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
+| `.github/assets/nomi.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
 | `.github/assets/transferloom-clone-reference.png` | Audit coverage and README clone-demo reference. | Must remain a documentation screenshot for the validated Transferloom.com clone, not runtime plugin logic. |
+| `web/README.md` | Audit coverage. | Must describe the static web demo deployment boundary. |
+| `web/_headers` | Audit coverage. | Must remain static web-hosting metadata only. |
+| `web/assets/fronk.png` | Audit coverage. | Must remain a web documentation image, not runtime plugin logic. |
+| `web/assets/zyro.png` | Audit coverage. | Must remain a web documentation image, not runtime plugin logic. |
+| `web/assets/usk.png` | Audit coverage. | Must remain a web documentation image, not runtime plugin logic. |
+| `web/assets/jumbo.png` | Audit coverage. | Must remain a web documentation image, not runtime plugin logic. |
+| `web/assets/rovyn.png` | Audit coverage. | Must remain a web documentation image, not runtime plugin logic. |
+| `web/assets/nomi.png` | Audit coverage. | Must remain a web documentation image, not runtime plugin logic. |
+| `web/assets/loopi.jpg` | Audit coverage. | Must remain a web hero image, not runtime plugin logic. |
+| `web/index.html` | Audit coverage. | Must keep the static landing page aligned with owned Superloopy role names and assets. |
 | `docs/superloopy-design-audit.md` | `src/design-audit.js`, `test/doctor.test.js`. | Must keep required decision rows with reason, effect, and guard. |
 | `docs/superloopy-crew-lines.md` | `test/docs.test.js`, audit coverage. | Must record the precedent pattern, no-copied-quotes rule, terminal-only behavior, and presentation-only authority boundary. |
 | `docs/superloopy-file-audit.md` | `test/audit.test.js`, `src/file-audit.js`, doctor file-audit check. | Must list every Git-visible file with non-empty role and compatibility-boundary cells. |
@@ -85,7 +95,7 @@ Total: 100 points.
 | `hooks/session-start.json` | `test/golden-hooks.test.js`, doctor hook check. | Must route first-launch bootstrap, marketplace update notices, and optional SessionStart context through the Superloopy CLI. |
 | `hooks/stop.json` | Optional runtime hook file, direct hook tests. | Must route Stop continuation through the Superloopy CLI and stay inert unless `SUPERLOOPY_STOP_HOOK=on`. |
 | `hooks/subagent-stop.json` | `test/plugin.test.js`, doctor hook check. | Must route executor, review, QA, and gate SubagentStop receipt validation through the Superloopy CLI. |
-| `hooks/subagent-stop-audit.json` | `test/plugin.test.js`, doctor hook check. | Must route robin verdict validation through the Superloopy CLI. |
+| `hooks/subagent-stop-audit.json` | `test/plugin.test.js`, doctor hook check. | Must route rovyn verdict validation through the Superloopy CLI. |
 | `hooks/user-prompt-submit.json` | `test/plugin.test.js`, doctor hook check. | Must route prompt steering and trigger-scoped context injection through the Superloopy CLI. |
 | `package.json` | `npm test`, doctor dependency check. | Must stay dependency-free and expose `superloopy`, `test`, `check`, and `sync-version` scripts. |
 | `scripts/sync-version.mjs` | `test/sync-version.test.js`. | Must stamp `package.json` and `.codex-plugin/plugin.json` from one authoritative version without publishing or adding dependencies. |
@@ -95,8 +105,8 @@ Total: 100 points.
 | `skills/superloopy-loop/agents/openai.yaml` | Audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata. |
 | `skills/superloopy-research/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must describe exhaustive deep research with EXPAND waves, claim verification, cited synthesis, and Superloopy evidence receipts. |
 | `skills/superloopy-research/agents/openai.yaml` | Audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for deep research. |
-| `.codex/agents/robin.toml` | `test/cli.test.js`, `test/doctor.test.js`, audit coverage. | Must define the robin auditor role, advisory model defaults, and the SUPERLOOPY_AUDIT verdict receipt; installed via SUPERLOOPY_AGENT_NAMES. |
-| `.codex/agents/nami.toml` | `test/cli.test.js`, `test/doctor.test.js`, audit coverage. | Must define the read-only navigator role, advisory fast model defaults, return absolute paths, and write no evidence receipt; installed via SUPERLOOPY_AGENT_NAMES and matched by a SubagentStop matcher. |
+| `.codex/agents/rovyn.toml` | `test/cli.test.js`, `test/doctor.test.js`, audit coverage. | Must define the rovyn auditor role, advisory model defaults, and the SUPERLOOPY_AUDIT verdict receipt; installed via SUPERLOOPY_AGENT_NAMES. |
+| `.codex/agents/nomi.toml` | `test/cli.test.js`, `test/doctor.test.js`, audit coverage. | Must define the read-only navigator role, advisory fast model defaults, return absolute paths, and write no evidence receipt; installed via SUPERLOOPY_AGENT_NAMES and matched by a SubagentStop matcher. |
 | `src/agents.js` | `test/cli.test.js`, `test/golden-hooks.test.js`, audit coverage. | Must install bundled Superloopy custom agents and command wrapper, skip identical files, and refuse changed local files unless `--force` is used. |
 | `src/args.js` | CLI and loop tests using parsed flags/stdin/JSON. | Must parse shared CLI inputs without dependencies. |
 | `src/artifacts.js` | Gate and evidence tests. | Must reject missing, empty, symlink, outside-root, and invalid gate artifacts. |

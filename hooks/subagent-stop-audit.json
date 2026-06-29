@@ -2,7 +2,7 @@
   "hooks": {
     "SubagentStop": [
       {
-        "matcher": "^robin$",
+        "matcher": "^rovyn$",
         "hooks": [
           {
             "type": "command",

@@ -12,7 +12,7 @@
   <a href="README.es.md">Español</a>
 </p>
 
-<img src=".github/assets/franky.png" width="92" alt="franky" />&nbsp;<img src=".github/assets/zoro.png" width="92" alt="zoro" />&nbsp;<img src=".github/assets/usopp.png" width="92" alt="usopp" />&nbsp;<img src=".github/assets/jinbe.png" width="92" alt="jinbe" />&nbsp;<img src=".github/assets/robin.png" width="92" alt="robin" />&nbsp;<img src=".github/assets/nami.png" width="92" alt="nami" />
+<img src=".github/assets/fronk.png" width="92" alt="fronk" />&nbsp;<img src=".github/assets/zyro.png" width="92" alt="zyro" />&nbsp;<img src=".github/assets/usk.png" width="92" alt="usk" />&nbsp;<img src=".github/assets/jumbo.png" width="92" alt="jumbo" />&nbsp;<img src=".github/assets/rovyn.png" width="92" alt="rovyn" />&nbsp;<img src=".github/assets/nomi.png" width="92" alt="nomi" />
 
 <sub><b>the crew</b> — 可选子代理，每个代理负责一个岗位</sub>
 
@@ -52,14 +52,14 @@ Loop skill 是默认护栏。`loopy` 会启动或继续 evidence loop；`loopy t
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src=".github/assets/franky.png" width="190" alt="franky" /><br /><b>franky</b><br /><sub>实现</sub></td>
-    <td align="center" width="33%"><img src=".github/assets/zoro.png" width="190" alt="zoro" /><br /><b>zoro</b><br /><sub>评审</sub></td>
-    <td align="center" width="33%"><img src=".github/assets/usopp.png" width="190" alt="usopp" /><br /><b>usopp</b><br /><sub>测试</sub></td>
+    <td align="center" width="33%"><img src=".github/assets/fronk.png" width="190" alt="fronk" /><br /><b>fronk</b><br /><sub>实现</sub></td>
+    <td align="center" width="33%"><img src=".github/assets/zyro.png" width="190" alt="zyro" /><br /><b>zyro</b><br /><sub>评审</sub></td>
+    <td align="center" width="33%"><img src=".github/assets/usk.png" width="190" alt="usk" /><br /><b>usk</b><br /><sub>测试</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src=".github/assets/jinbe.png" width="190" alt="jinbe" /><br /><b>jinbe</b><br /><sub>把关</sub></td>
-    <td align="center"><img src=".github/assets/robin.png" width="190" alt="robin" /><br /><b>robin</b><br /><sub>审计</sub></td>
-    <td align="center"><img src=".github/assets/nami.png" width="190" alt="nami" /><br /><b>nami</b><br /><sub>定位</sub></td>
+    <td align="center"><img src=".github/assets/jumbo.png" width="190" alt="jumbo" /><br /><b>jumbo</b><br /><sub>把关</sub></td>
+    <td align="center"><img src=".github/assets/rovyn.png" width="190" alt="rovyn" /><br /><b>rovyn</b><br /><sub>审计</sub></td>
+    <td align="center"><img src=".github/assets/nomi.png" width="190" alt="nomi" /><br /><b>nomi</b><br /><sub>定位</sub></td>
   </tr>
 </table>
 
@@ -134,7 +134,7 @@ codex plugin marketplace remove beefiker
 
 ```
 rm -f ~/.local/bin/superloopy
-rm -f ~/.codex/agents/franky.toml ~/.codex/agents/zoro.toml ~/.codex/agents/usopp.toml ~/.codex/agents/jinbe.toml ~/.codex/agents/robin.toml ~/.codex/agents/nami.toml
+rm -f ~/.codex/agents/fronk.toml ~/.codex/agents/zyro.toml ~/.codex/agents/usk.toml ~/.codex/agents/jumbo.toml ~/.codex/agents/rovyn.toml ~/.codex/agents/nomi.toml
 ```
 
 如果安装时使用了 `CODEX_HOME`、`SUPERLOOPY_BIN_DIR` 或 `CODEX_LOCAL_BIN_DIR`，请清理对应路径。

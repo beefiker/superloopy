@@ -29,16 +29,16 @@ function runCli(args, options = {}) {
 }
 
 test("crewLineForHandoff returns original role lines for terminal verdicts", () => {
-  const line = crewLineForHandoff({ agent: "usopp", normalizedVerdict: "accept" });
+  const line = crewLineForHandoff({ agent: "usk", normalizedVerdict: "accept" });
 
   assert.deepEqual(line, {
-    agent: "usopp",
-    speaker: "Usopp",
+    agent: "usk",
+    speaker: "Usk",
     verdict: "accept",
     language: "en",
     line: "Target checked. The test passed."
   });
-  assert.equal(formatCrewLine(line), 'Usopp: "Target checked. The test passed."');
+  assert.equal(formatCrewLine(line), 'Usk: "Target checked. The test passed."');
 });
 
 test("crewLineForHandoff matches Korean user language from assignment or explicit hints", () => {
@@ -46,20 +46,20 @@ test("crewLineForHandoff matches Korean user language from assignment or explici
   assert.equal(detectCrewLineLanguage("answer in English"), "en");
 
   const line = crewLineForHandoff({
-    agent: "usopp",
+    agent: "usk",
     normalizedVerdict: "accept",
     assignment: "한국어 사용자가 요청한 QA"
   });
 
   assert.deepEqual(line, {
-    agent: "usopp",
-    speaker: "우솝",
+    agent: "usk",
+    speaker: "Usk",
     verdict: "accept",
     language: "ko",
     line: "표적 확인. 테스트는 통과했다."
   });
   assert.equal(
-    decorateHandoffWithCrewLine({ agent: "zoro", normalizedVerdict: "reject", assignment: "review" }, { languageHints: ["사용자는 한국어로 말했다"] }).crewLine.line,
+    decorateHandoffWithCrewLine({ agent: "zyro", normalizedVerdict: "reject", assignment: "review" }, { languageHints: ["사용자는 한국어로 말했다"] }).crewLine.line,
     "길이 어긋났다. 막는 결함부터 베어내자."
   );
 });
@@ -72,23 +72,23 @@ test("crewLineForHandoff follows supported prompt languages and falls back to En
   assert.equal(detectCrewLineLanguage("العربية"), "ar");
   assert.equal(detectCrewLineLanguage("unsupported made-up language"), "en");
 
-  assert.deepEqual(crewLineForHandoff({ agent: "usopp", normalizedVerdict: "accept", assignment: "responde en español" }), {
-    agent: "usopp",
-    speaker: "Usopp",
+  assert.deepEqual(crewLineForHandoff({ agent: "usk", normalizedVerdict: "accept", assignment: "responde en español" }), {
+    agent: "usk",
+    speaker: "Usk",
     verdict: "accept",
     language: "es",
     line: "Objetivo confirmado. La prueba pasó."
   });
-  assert.equal(crewLineForHandoff({ agent: "robin", normalizedVerdict: "accept", assignment: "日本語で監査" }).line, "記録確認。証拠と結論は一致している。");
-  assert.equal(crewLineForHandoff({ agent: "usopp", normalizedVerdict: "accept" }, { language: "fr-FR" }).line, "Cible confirmée. Le test est passé.");
+  assert.equal(crewLineForHandoff({ agent: "rovyn", normalizedVerdict: "accept", assignment: "日本語で監査" }).line, "記録確認。証拠と結論は一致している。");
+  assert.equal(crewLineForHandoff({ agent: "usk", normalizedVerdict: "accept" }, { language: "fr-FR" }).line, "Cible confirmée. Le test est passé.");
 });
 
 test("crewLineForHandoff stays silent for pending or unknown lanes", () => {
-  assert.equal(crewLineForHandoff({ agent: "usopp", normalizedVerdict: "pending" }), null);
+  assert.equal(crewLineForHandoff({ agent: "usk", normalizedVerdict: "pending" }), null);
   assert.equal(crewLineForHandoff({ agent: "unknown", normalizedVerdict: "accept" }), null);
-  assert.deepEqual(decorateHandoffWithCrewLine({ id: "H001", agent: "usopp", normalizedVerdict: "pending" }), {
+  assert.deepEqual(decorateHandoffWithCrewLine({ id: "H001", agent: "usk", normalizedVerdict: "pending" }), {
     id: "H001",
-    agent: "usopp",
+    agent: "usk",
     normalizedVerdict: "pending"
   });
 });
@@ -101,7 +101,7 @@ test("CLI handoff text shows the crew line without hiding status", async () => {
     "loop",
     "handoff",
     "--agent",
-    "usopp",
+    "usk",
     "--assignment",
     "qa",
     "--status",
@@ -113,7 +113,7 @@ test("CLI handoff text shows the crew line without hiding status", async () => {
   ], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /^Usopp: "Target checked\. The test passed\."\nsuperloopy handoff: H001 usopp -> done \[accept\]\n$/);
+  assert.match(result.stdout, /^Usk: "Target checked\. The test passed\."\nsuperloopy handoff: H001 usk -> done \[accept\]\n$/);
 });
 
 test("CLI handoff text can use an explicit supported language override", async () => {
@@ -126,7 +126,7 @@ test("CLI handoff text can use an explicit supported language override", async (
     "--language",
     "es",
     "--agent",
-    "usopp",
+    "usk",
     "--assignment",
     "qa",
     "--status",
@@ -138,7 +138,7 @@ test("CLI handoff text can use an explicit supported language override", async (
   ], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /^Usopp: "Objetivo confirmado\. La prueba pasó\."\nsuperloopy handoff: H001 usopp -> done \[accept\]\n$/);
+  assert.match(result.stdout, /^Usk: "Objetivo confirmado\. La prueba pasó\."\nsuperloopy handoff: H001 usk -> done \[accept\]\n$/);
 });
 
 test("CLI handoff text follows Korean session brief language", async () => {
@@ -161,7 +161,7 @@ test("CLI handoff text follows Korean session brief language", async () => {
     "--session-id",
     "ko-user",
     "--agent",
-    "usopp",
+    "usk",
     "--assignment",
     "qa",
     "--status",
@@ -173,5 +173,5 @@ test("CLI handoff text follows Korean session brief language", async () => {
   ], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /^우솝: "표적 확인\. 테스트는 통과했다\."\nsuperloopy handoff: H001 usopp -> done \[accept\]\n$/);
+  assert.match(result.stdout, /^Usk: "표적 확인\. 테스트는 통과했다\."\nsuperloopy handoff: H001 usk -> done \[accept\]\n$/);
 });

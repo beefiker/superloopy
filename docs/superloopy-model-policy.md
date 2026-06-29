@@ -19,12 +19,12 @@ Allowed service tiers: `priority`, `fast`, `efficient`.
 
 | Agent | Purpose | Model | Effort | Tier |
 | --- | --- | --- | --- | --- |
-| `franky` | Bounded implementation lane. | `gpt-5.5` | `high` | `priority` |
-| `zoro` | Skeptical code review lane. | `gpt-5.5` | `xhigh` | `priority` |
-| `usopp` | QA and regression lane. | `gpt-5.5` | `high` | `priority` |
-| `jinbe` | Final gate integration lane. | `gpt-5.5` | `xhigh` | `priority` |
-| `robin` | Evidence auditor lane. | `gpt-5.5` | `high` | `priority` |
-| `nami` | Read-only navigation lane. | `gpt-5.4-mini` | `low` | `fast` |
+| `fronk` | Bounded implementation lane. | `gpt-5.5` | `high` | `priority` |
+| `zyro` | Skeptical code review lane. | `gpt-5.5` | `xhigh` | `priority` |
+| `usk` | QA and regression lane. | `gpt-5.5` | `high` | `priority` |
+| `jumbo` | Final gate integration lane. | `gpt-5.5` | `xhigh` | `priority` |
+| `rovyn` | Evidence auditor lane. | `gpt-5.5` | `high` | `priority` |
+| `nomi` | Read-only navigation lane. | `gpt-5.4-mini` | `low` | `fast` |
 
 ## Rules
 

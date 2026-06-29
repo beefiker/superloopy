@@ -76,7 +76,7 @@ test("runSubagentStopHook allows non-empty receipt under .superloopy/evidence", 
 
   const output = runSubagentStopHook({
     hook_event_name: "SubagentStop",
-    agent_type: "franky",
+    agent_type: "fronk",
     cwd: repo,
     last_assistant_message: `done\nSUPERLOOPY_EVIDENCE: ${artifact}`
   });
@@ -90,7 +90,7 @@ test("runSubagentStopHook validates Superloopy review worker receipts", async ()
 
   const output = runSubagentStopHook({
     hook_event_name: "SubagentStop",
-    agent_type: "zoro",
+    agent_type: "zyro",
     cwd: repo,
     last_assistant_message: `reviewed\nSUPERLOOPY_EVIDENCE: ${artifact}`
   });
@@ -106,14 +106,14 @@ test("runSubagentStopHook uses scoped evidence root when session_id is present",
 
   const globalOutput = runSubagentStopHook({
     hook_event_name: "SubagentStop",
-    agent_type: "franky",
+    agent_type: "fronk",
     session_id: "sess.1",
     cwd: repo,
     last_assistant_message: `done\nEVIDENCE_RECORDED: ${globalArtifact}`
   });
   const scopedOutput = runSubagentStopHook({
     hook_event_name: "SubagentStop",
-    agent_type: "franky",
+    agent_type: "fronk",
     session_id: "sess.1",
     cwd: repo,
     last_assistant_message: `done\nEVIDENCE_RECORDED: ${scopedArtifact}`
@@ -134,7 +134,7 @@ test("runSubagentStopHook suppresses on a context-pressure marker in the transcr
 
   const output = runSubagentStopHook({
     hook_event_name: "SubagentStop",
-    agent_type: "franky",
+    agent_type: "fronk",
     cwd: repo,
     transcript_path: transcript,
     last_assistant_message: "done"
@@ -152,7 +152,7 @@ test("runSubagentStopHook ignores a marker outside the bounded transcript tail",
 
   const output = runSubagentStopHook({
     hook_event_name: "SubagentStop",
-    agent_type: "franky",
+    agent_type: "fronk",
     cwd: repo,
     transcript_path: transcript,
     last_assistant_message: "done"

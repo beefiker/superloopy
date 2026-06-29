@@ -330,12 +330,12 @@ test("CLI loop finish rejects markdown paths for the quality gate artifact", asy
     "--evidence",
     "criteria passed",
     "--artifact",
-    ".superloopy/evidence/jinbe-final-gate.md"
+    ".superloopy/evidence/jumbo-final-gate.md"
   ], { cwd: repo });
 
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Quality gate artifact must use a \.json path/);
-  assert.equal(existsSync(join(repo, ".superloopy", "evidence", "jinbe-final-gate.md")), false);
+  assert.equal(existsSync(join(repo, ".superloopy", "evidence", "jumbo-final-gate.md")), false);
 });
 
 test("CLI loop finish text shows the complete guide", async () => {

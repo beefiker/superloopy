@@ -1,4 +1,4 @@
-// SubagentStop handler for the read-only robin subagent. It validates
+// SubagentStop handler for the read-only rovyn subagent. It validates
 // the auditor's verdict RECEIPT deterministically. Crucially it does NOT trust the
 // recorded .superloopy/audit-state.json (worker-writable): on each receipt it RE-DERIVES
 // the cited criterion's floor in-process (auditOneCriterion) and accepts the verdict
@@ -30,7 +30,7 @@ const CONTEXT_PRESSURE_MARKERS = [
 export async function runAuditorStopHook(payload) {
   if (payload === null || typeof payload !== "object") return "";
   if (payload.hook_event_name !== "SubagentStop") return "";
-  if (payload.agent_type !== "robin") return "";
+  if (payload.agent_type !== "rovyn") return "";
   if (typeof payload.cwd !== "string") return "";
   if (transcriptTailHasMarker(payload.transcript_path, CONTEXT_PRESSURE_MARKERS)) return "";
 

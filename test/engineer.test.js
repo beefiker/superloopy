@@ -77,15 +77,15 @@ test("runUserPromptSubmitHook injects the crew fan-out playbook in team mode, wi
   assert.match(context, /multi_agent_v1\.spawn_agent/);
   assert.match(context, /multi_agent_v1\.wait_agent/);
   // agent_type must be set per crew role so the child loads that role's TOML.
-  assert.match(context, /"agent_type": "franky"/);
-  assert.match(context, /"zoro"/);
-  assert.match(context, /"usopp"/);
-  assert.match(context, /"jinbe"/);
-  assert.match(context, /"robin"/);
-  assert.match(context, /"nami"/);
+  assert.match(context, /"agent_type": "fronk"/);
+  assert.match(context, /"zyro"/);
+  assert.match(context, /"usk"/);
+  assert.match(context, /"jumbo"/);
+  assert.match(context, /"rovyn"/);
+  assert.match(context, /"nomi"/);
   assert.match(context, /requested repository path differs from `cwd`/);
   assert.match(context, /implementation worker must own a real bounded implementation slice/);
-  assert.match(context, /jinbe-final-gate-report\.md/);
+  assert.match(context, /jumbo-final-gate-report\.md/);
   assert.match(context, /\.superloopy\/evidence\/gate\.json/);
   assert.match(context, /role completion line/);
   assert.match(context, /git status --short --untracked-files=all/);

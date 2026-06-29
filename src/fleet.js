@@ -1,5 +1,5 @@
 // Parent-side coordination for subagent-driven mode. Superloopy does not spawn or schedule workers,
-// but the parent (Luffy) can record one handoff per dispatched worker and later reconcile the
+// but the parent (Loopi) can record one handoff per dispatched worker and later reconcile the
 // fleet: which assignments are outstanding, and a SINGLE normalized verdict across the workers'
 // three different vocabularies (reviewer APPROVE/CHANGES_REQUESTED, QA PASS/FAIL, gate
 // APPROVE/REJECT). This is additive and parent-side — it never spawns and never completes.

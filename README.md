@@ -12,7 +12,7 @@
   <a href="README.es.md">Español</a>
 </p>
 
-<img src=".github/assets/franky.png" width="92" alt="franky" />&nbsp;<img src=".github/assets/zoro.png" width="92" alt="zoro" />&nbsp;<img src=".github/assets/usopp.png" width="92" alt="usopp" />&nbsp;<img src=".github/assets/jinbe.png" width="92" alt="jinbe" />&nbsp;<img src=".github/assets/robin.png" width="92" alt="robin" />&nbsp;<img src=".github/assets/nami.png" width="92" alt="nami" />
+<img src=".github/assets/fronk.png" width="92" alt="fronk" />&nbsp;<img src=".github/assets/zyro.png" width="92" alt="zyro" />&nbsp;<img src=".github/assets/usk.png" width="92" alt="usk" />&nbsp;<img src=".github/assets/jumbo.png" width="92" alt="jumbo" />&nbsp;<img src=".github/assets/rovyn.png" width="92" alt="rovyn" />&nbsp;<img src=".github/assets/nomi.png" width="92" alt="nomi" />
 
 <sub><b>the crew</b> — optional subagents, one job each</sub>
 
@@ -60,14 +60,14 @@ For bigger work, Superloopy ships six optional subagents under `.codex/agents/` 
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src=".github/assets/franky.png" width="190" alt="franky" /><br /><b>franky</b><br /><sub>builds it</sub></td>
-    <td align="center" width="33%"><img src=".github/assets/zoro.png" width="190" alt="zoro" /><br /><b>zoro</b><br /><sub>reviews it</sub></td>
-    <td align="center" width="33%"><img src=".github/assets/usopp.png" width="190" alt="usopp" /><br /><b>usopp</b><br /><sub>tests it</sub></td>
+    <td align="center" width="33%"><img src=".github/assets/fronk.png" width="190" alt="fronk" /><br /><b>fronk</b><br /><sub>builds it</sub></td>
+    <td align="center" width="33%"><img src=".github/assets/zyro.png" width="190" alt="zyro" /><br /><b>zyro</b><br /><sub>reviews it</sub></td>
+    <td align="center" width="33%"><img src=".github/assets/usk.png" width="190" alt="usk" /><br /><b>usk</b><br /><sub>tests it</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src=".github/assets/jinbe.png" width="190" alt="jinbe" /><br /><b>jinbe</b><br /><sub>gates it</sub></td>
-    <td align="center"><img src=".github/assets/robin.png" width="190" alt="robin" /><br /><b>robin</b><br /><sub>audits it</sub></td>
-    <td align="center"><img src=".github/assets/nami.png" width="190" alt="nami" /><br /><b>nami</b><br /><sub>finds it</sub></td>
+    <td align="center"><img src=".github/assets/jumbo.png" width="190" alt="jumbo" /><br /><b>jumbo</b><br /><sub>gates it</sub></td>
+    <td align="center"><img src=".github/assets/rovyn.png" width="190" alt="rovyn" /><br /><b>rovyn</b><br /><sub>audits it</sub></td>
+    <td align="center"><img src=".github/assets/nomi.png" width="190" alt="nomi" /><br /><b>nomi</b><br /><sub>finds it</sub></td>
   </tr>
 </table>
 
@@ -142,7 +142,7 @@ Restart Codex after uninstalling. Optional local bootstrap cleanup: plugin remov
 
 ```
 rm -f ~/.local/bin/superloopy
-rm -f ~/.codex/agents/franky.toml ~/.codex/agents/zoro.toml ~/.codex/agents/usopp.toml ~/.codex/agents/jinbe.toml ~/.codex/agents/robin.toml ~/.codex/agents/nami.toml
+rm -f ~/.codex/agents/fronk.toml ~/.codex/agents/zyro.toml ~/.codex/agents/usk.toml ~/.codex/agents/jumbo.toml ~/.codex/agents/rovyn.toml ~/.codex/agents/nomi.toml
 ```
 
 If you installed with `CODEX_HOME`, `SUPERLOOPY_BIN_DIR`, or `CODEX_LOCAL_BIN_DIR`, clean up those configured paths instead.

@@ -10,12 +10,12 @@ const ALLOWED_EFFORTS = ["low", "medium", "high", "xhigh"];
 const ALLOWED_TIERS = ["priority", "fast", "efficient"];
 
 const AGENT_MODEL_DEFAULTS = {
-  franky: { model: "gpt-5.5", model_reasoning_effort: "high", service_tier: "priority" },
-  zoro: { model: "gpt-5.5", model_reasoning_effort: "xhigh", service_tier: "priority" },
-  usopp: { model: "gpt-5.5", model_reasoning_effort: "high", service_tier: "priority" },
-  jinbe: { model: "gpt-5.5", model_reasoning_effort: "xhigh", service_tier: "priority" },
-  robin: { model: "gpt-5.5", model_reasoning_effort: "high", service_tier: "priority" },
-  nami: { model: "gpt-5.4-mini", model_reasoning_effort: "low", service_tier: "fast" }
+  fronk: { model: "gpt-5.5", model_reasoning_effort: "high", service_tier: "priority" },
+  zyro: { model: "gpt-5.5", model_reasoning_effort: "xhigh", service_tier: "priority" },
+  usk: { model: "gpt-5.5", model_reasoning_effort: "high", service_tier: "priority" },
+  jumbo: { model: "gpt-5.5", model_reasoning_effort: "xhigh", service_tier: "priority" },
+  rovyn: { model: "gpt-5.5", model_reasoning_effort: "high", service_tier: "priority" },
+  nomi: { model: "gpt-5.4-mini", model_reasoning_effort: "low", service_tier: "fast" }
 };
 
 export async function checkModelPolicy(cwd) {

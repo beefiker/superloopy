@@ -3,7 +3,7 @@
 // Superloopy owns the trustworthy part: it re-runs each command-backed passed
 // criterion in-process (the exact capture path), hashes the result, and records
 // it in .superloopy/audit-state.json. This is the source of truth. The independent
-// LLM judgment is layered on top by a host-dispatched read-only robin
+// LLM judgment is layered on top by a host-dispatched read-only rovyn
 // subagent whose verdict is validated against THIS state (see audit-hooks.js).
 //
 // The deterministic floor: a re-run that reproduces (exit 0) is "pass" and may
@@ -203,7 +203,7 @@ function renderAuditDispatch(scope, pending) {
     ""
   ];
   for (const entry of pending) {
-    lines.push(`- ${entry.criterion}: \`task(subagent_type="robin", run_in_background=false)\` — cite re-run artifact \`${entry.rerunArtifact}\` against the scenario; write verdict to \`${evidenceRelativeDir(scope)}/audit/${entry.criterion.replace("/", "-")}-verdict.json\`.`);
+    lines.push(`- ${entry.criterion}: \`task(subagent_type="rovyn", run_in_background=false)\` — cite re-run artifact \`${entry.rerunArtifact}\` against the scenario; write verdict to \`${evidenceRelativeDir(scope)}/audit/${entry.criterion.replace("/", "-")}-verdict.json\`.`);
   }
   lines.push("", `The auditor must be read-only and skeptical. A pass requires citing the re-run artifact. Re-check status with \`superloopy loop audit${sessionFlag} --json\`.`);
   return lines.join("\n");

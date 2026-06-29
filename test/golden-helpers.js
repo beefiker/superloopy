@@ -66,7 +66,7 @@ export async function writeGenuineAuditVerdict(repo, { criterion = "G001/C001", 
 export function reviewStyleQualityGate(paths, overrides = {}) {
   return {
     codeReview: {
-      by: "zoro",
+      by: "zyro",
       recommendation: "APPROVE",
       codeQualityStatus: "CLEAR",
       reportPath: paths.codeReview,
@@ -74,7 +74,7 @@ export function reviewStyleQualityGate(paths, overrides = {}) {
       blockers: []
     },
     manualQa: {
-      by: "usopp",
+      by: "usk",
       status: "passed",
       evidence: "Executed CLI golden scenarios and captured artifact-backed outcomes.",
       surfaceEvidence: [
@@ -113,7 +113,7 @@ export function reviewStyleQualityGate(paths, overrides = {}) {
       ]
     },
     gateReview: {
-      by: "jinbe",
+      by: "jumbo",
       recommendation: "APPROVE",
       reportPath: paths.gateReview,
       evidence: "Rechecked reviewer reports and manual QA artifacts.",

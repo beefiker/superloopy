@@ -40,7 +40,7 @@ test("runAuditorStopHook accepts a verdict bound to Superloopy's recorded re-run
 
   const out = await runAuditorStopHook({
     hook_event_name: "SubagentStop",
-    agent_type: "robin",
+    agent_type: "rovyn",
     cwd: repo,
     last_assistant_message: `reviewed\nSUPERLOOPY_AUDIT: ${rel}`
   });
@@ -68,7 +68,7 @@ test("runAuditorStopHook re-derives the floor and blocks a pass whose command no
 
   const out = await runAuditorStopHook({
     hook_event_name: "SubagentStop",
-    agent_type: "robin",
+    agent_type: "rovyn",
     cwd: repo,
     last_assistant_message: `reviewed\nSUPERLOOPY_AUDIT: ${rel}`
   });
@@ -84,7 +84,7 @@ test("runAuditorStopHook blocks when no SUPERLOOPY_AUDIT receipt is present", as
   const { repo } = await auditedRepo();
   const out = await runAuditorStopHook({
     hook_event_name: "SubagentStop",
-    agent_type: "robin",
+    agent_type: "rovyn",
     cwd: repo,
     last_assistant_message: "I reviewed it and it looks fine"
   });
@@ -98,7 +98,7 @@ test("runAuditorStopHook flips the criterion on an accepted fail verdict (re-dri
 
   const out = await runAuditorStopHook({
     hook_event_name: "SubagentStop",
-    agent_type: "robin",
+    agent_type: "rovyn",
     cwd: repo,
     last_assistant_message: `reviewed\nSUPERLOOPY_AUDIT: ${rel}`
   });
@@ -114,7 +114,7 @@ test("runAuditorStopHook counts an accepted pass verdict as a monotonic audit", 
   const { repo, entry } = await auditedRepo();
   const rel = await writeVerdict(repo, verdictFor(entry));
   await runAuditorStopHook({
-    hook_event_name: "SubagentStop", agent_type: "robin", cwd: repo,
+    hook_event_name: "SubagentStop", agent_type: "rovyn", cwd: repo,
     last_assistant_message: `ok\nSUPERLOOPY_AUDIT: ${rel}`
   });
   const state = JSON.parse(await readFile(join(repo, ".superloopy", "audit-state.json"), "utf8"));
@@ -126,8 +126,8 @@ test("runAuditorStopHook does not double-count a byte-identical verdict re-submi
   const v = verdictFor(entry);
   const rel1 = await writeVerdict(repo, v, "v1.json");
   const rel2 = await writeVerdict(repo, v, "v2.json"); // identical bytes, different path
-  await runAuditorStopHook({ hook_event_name: "SubagentStop", agent_type: "robin", cwd: repo, last_assistant_message: `ok\nSUPERLOOPY_AUDIT: ${rel1}` });
-  await runAuditorStopHook({ hook_event_name: "SubagentStop", agent_type: "robin", cwd: repo, last_assistant_message: `ok\nSUPERLOOPY_AUDIT: ${rel2}` });
+  await runAuditorStopHook({ hook_event_name: "SubagentStop", agent_type: "rovyn", cwd: repo, last_assistant_message: `ok\nSUPERLOOPY_AUDIT: ${rel1}` });
+  await runAuditorStopHook({ hook_event_name: "SubagentStop", agent_type: "rovyn", cwd: repo, last_assistant_message: `ok\nSUPERLOOPY_AUDIT: ${rel2}` });
   const state = JSON.parse(await readFile(join(repo, ".superloopy", "audit-state.json"), "utf8"));
   assert.equal(state.auditsAccepted, 1); // content-keyed idempotency: counted once despite the new path
 });
@@ -140,7 +140,7 @@ test("runAuditorStopHook blocks a criterion at the per-criterion fail cap", asyn
   process.env.SUPERLOOPY_AUDIT_MAX_FAILS = "1";
   try {
     await runAuditorStopHook({
-      hook_event_name: "SubagentStop", agent_type: "robin", cwd: repo,
+      hook_event_name: "SubagentStop", agent_type: "rovyn", cwd: repo,
       last_assistant_message: `r\nSUPERLOOPY_AUDIT: ${rel}`
     });
     const plan = JSON.parse(await readFile(join(repo, ".superloopy", "goals.json"), "utf8"));
@@ -155,7 +155,7 @@ test("runAuditorStopHook ignores non-auditor subagents", async () => {
   const { repo } = await auditedRepo();
   const out = await runAuditorStopHook({
     hook_event_name: "SubagentStop",
-    agent_type: "franky",
+    agent_type: "fronk",
     cwd: repo,
     last_assistant_message: "done"
   });
@@ -164,7 +164,7 @@ test("runAuditorStopHook ignores non-auditor subagents", async () => {
 
 test("runAuditorStopHook still enforces the attempt cap when agent_id is missing", async () => {
   const { repo } = await auditedRepo();
-  const payload = { hook_event_name: "SubagentStop", agent_type: "robin", cwd: repo, last_assistant_message: "no verdict cited" };
+  const payload = { hook_event_name: "SubagentStop", agent_type: "rovyn", cwd: repo, last_assistant_message: "no verdict cited" };
   // No agent_id: the audit cap must still count down rather than block forever.
   assert.equal(JSON.parse(await runAuditorStopHook(payload)).decision, "block");
   assert.equal(JSON.parse(await runAuditorStopHook(payload)).decision, "block");
@@ -174,7 +174,7 @@ test("runAuditorStopHook still enforces the attempt cap when agent_id is missing
 
 test("runAuditorStopHook records a ledger signal when the audit cap is exhausted", async () => {
   const { repo } = await auditedRepo();
-  const payload = { hook_event_name: "SubagentStop", agent_type: "robin", session_id: "s1", agent_id: "a1", cwd: repo, last_assistant_message: "no verdict cited" };
+  const payload = { hook_event_name: "SubagentStop", agent_type: "rovyn", session_id: "s1", agent_id: "a1", cwd: repo, last_assistant_message: "no verdict cited" };
   await runAuditorStopHook(payload);
   await runAuditorStopHook(payload);
   await runAuditorStopHook(payload);

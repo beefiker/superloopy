@@ -128,8 +128,8 @@ test("golden: SessionStart bootstraps CLI and agents once, then stays quiet", as
   assert.match(parsed.hookSpecificOutput.additionalContext, /Superloopy bootstrap/);
   assert.match(parsed.hookSpecificOutput.additionalContext, /CLI wrapper: installed/);
   assert.ok(existsSync(join(binDir, process.platform === "win32" ? "superloopy.cmd" : "superloopy")));
-  assert.ok(existsSync(join(codexHome, "agents", "franky.toml")));
-  assert.ok(existsSync(join(codexHome, "agents", "robin.toml")));
+  assert.ok(existsSync(join(codexHome, "agents", "fronk.toml")));
+  assert.ok(existsSync(join(codexHome, "agents", "rovyn.toml")));
 
   const second = runCli(["hook", "session-start"], {
     env,
@@ -350,7 +350,7 @@ test("golden: SubagentStop accepts legacy EVIDENCE_RECORDED receipts", async () 
   const result = runCli(["hook", "subagent-stop"], {
     input: `${JSON.stringify({
       hook_event_name: "SubagentStop",
-      agent_type: "franky",
+      agent_type: "fronk",
       agent_id: "agent.1",
       session_id: "sess.1",
       transcript_path: "",
@@ -376,7 +376,7 @@ test("golden: SubagentStop rejects symlink evidence that resolves outside eviden
   const result = runCli(["hook", "subagent-stop"], {
     input: `${JSON.stringify({
       hook_event_name: "SubagentStop",
-      agent_type: "franky",
+      agent_type: "fronk",
       agent_id: "agent.1",
       session_id: "sess.1",
       transcript_path: "",
@@ -398,7 +398,7 @@ test("golden: SubagentStop attempt state blocks three claims then clears", async
   const repo = await tempRepo();
   const payload = {
     hook_event_name: "SubagentStop",
-    agent_type: "franky",
+    agent_type: "fronk",
     agent_id: "agent.1",
     session_id: "sess.1",
     transcript_path: "",

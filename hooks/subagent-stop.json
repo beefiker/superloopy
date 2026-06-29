@@ -2,7 +2,7 @@
   "hooks": {
     "SubagentStop": [
       {
-        "matcher": "^(?:franky|zoro|usopp|jinbe)$",
+        "matcher": "^(?:fronk|zyro|usk|jumbo)$",
         "hooks": [
           {
             "type": "command",
@@ -13,7 +13,7 @@
         ]
       },
       {
-        "matcher": "^nami$",
+        "matcher": "^nomi$",
         "hooks": [
           {
             "type": "command",

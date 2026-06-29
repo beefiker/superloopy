@@ -97,18 +97,18 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.reviewability.maxLines, 500);
   assert.equal(parsed.checks.reviewability.oversized.length, 0);
   assert.equal(parsed.checks.dispatchCoherence.ok, true);
-  assert.ok(parsed.checks.dispatchCoherence.dispatched.includes("robin"));
+  assert.ok(parsed.checks.dispatchCoherence.dispatched.includes("rovyn"));
   assert.equal(parsed.checks.modelPolicy.ok, true);
   assert.equal(parsed.checks.modelPolicy.policyPath, "docs/superloopy-model-policy.md");
-  assert.equal(parsed.checks.modelPolicy.agents.nami.model, "gpt-5.4-mini");
-  assert.equal(parsed.checks.modelPolicy.agents.zoro.model_reasoning_effort, "xhigh");
+  assert.equal(parsed.checks.modelPolicy.agents.nomi.model, "gpt-5.4-mini");
+  assert.equal(parsed.checks.modelPolicy.agents.zyro.model_reasoning_effort, "xhigh");
   assert.equal(parsed.checks.hostContract.ok, true);
   assert.ok(parsed.checks.hostContract.cannotVerify.length >= 3);
 });
 
 test("doctor model policy fails when bundled agent defaults drift", async () => {
   const repo = await tempRepoCopy();
-  const agentPath = join(repo, ".codex", "agents", "nami.toml");
+  const agentPath = join(repo, ".codex", "agents", "nomi.toml");
   const agent = await readFile(agentPath, "utf8");
   await writeFile(agentPath, agent.replace('model = "gpt-5.4-mini"', 'model = "gpt-5.5"'), "utf8");
 
@@ -116,17 +116,17 @@ test("doctor model policy fails when bundled agent defaults drift", async () => 
 
   assert.equal(result.ok, false);
   assert.equal(result.checks.modelPolicy.ok, false);
-  assert.match(result.checks.modelPolicy.message, /nami\.toml model/);
+  assert.match(result.checks.modelPolicy.message, /nomi\.toml model/);
 });
 
 test("doctor dispatch coherence fails when a dispatched agent is not installed", async () => {
   const repo = await tempRepoCopy();
-  await rm(join(repo, ".codex", "agents", "robin.toml"), { force: true });
+  await rm(join(repo, ".codex", "agents", "rovyn.toml"), { force: true });
 
   const result = await runDoctor(repo);
 
   assert.equal(result.checks.dispatchCoherence.ok, false);
-  assert.match(result.checks.dispatchCoherence.message, /robin/);
+  assert.match(result.checks.dispatchCoherence.message, /rovyn/);
 });
 
 test("doctor ignores Codex marketplace install metadata in plugin cache", async () => {

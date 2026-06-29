@@ -9,8 +9,8 @@ is visible and testable.
 `superloopy agents install` copies the bundled agent definitions into the personal Codex agents
 directory (`$CODEX_HOME/agents` when set, otherwise `~/.codex/agents`). The host spawns them
 through its native multi-agent dispatch when the parent delegates: the receipt workers
-`franky`, `zoro`, `usopp`, `jinbe`, the read-only auditor `robin`, and the read-only navigator
-`nami`. `superloopy doctor` (dispatchCoherence) fails if any agent Superloopy dispatches is not installed
+`fronk`, `zyro`, `usk`, `jumbo`, the read-only auditor `rovyn`, and the read-only navigator
+`nomi`. `superloopy doctor` (dispatchCoherence) fails if any agent Superloopy dispatches is not installed
 or not matched by a hook.
 
 Superloopy provisions and tracks these agents; the host spawns them. Superloopy never spawns.
@@ -47,7 +47,7 @@ Superloopy's `SubagentStop` handlers read these fields from the JSON piped on st
 | Field | Use |
 |---|---|
 | `hook_event_name` | Must equal `SubagentStop`; otherwise the handler is a no-op. |
-| `agent_type` | Matched against the hook matcher to pick the worker path (`franky`/`zoro`/`usopp`/`jinbe`), the auditor path (`robin`), or the read-only navigator path (`nami`, which writes no receipt so its handler is a no-op). |
+| `agent_type` | Matched against the hook matcher to pick the worker path (`fronk`/`zyro`/`usk`/`jumbo`), the auditor path (`rovyn`), or the read-only navigator path (`nomi`, which writes no receipt so its handler is a no-op). |
 | `agent_id` | Keys the per-attempt counter. Optional — Superloopy falls back to a session/cwd key so the 3-attempt cap still counts. |
 | `session_id` | Selects scoped `.superloopy/sessions/<id>/` state when present. |
 | `cwd` | Repo root; required. |

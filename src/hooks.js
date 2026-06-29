@@ -12,7 +12,7 @@ import { MAX_SUBAGENT_ATTEMPTS, clearAttemptState, nextAttemptState, recordSubag
 
 export { runPreToolUseHook } from "./pre-tool-use.js";
 
-const EVIDENCE_RECEIPT_AGENT_TYPES = new Set(["franky", "zoro", "usopp", "jinbe"]);
+const EVIDENCE_RECEIPT_AGENT_TYPES = new Set(["fronk", "zyro", "usk", "jumbo"]);
 // An artifact up to this size must carry non-whitespace content to satisfy the receipt gate;
 // only larger artifacts (assumed non-trivial) skip the read. Closes the blank-placeholder hole.
 const MAX_BLANK_CHECK_BYTES = 1_000_000;

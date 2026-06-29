@@ -60,7 +60,7 @@ test("report artifact surfaces exhausted worker attempts as warnings", async () 
   await createLoop(repo, ["--brief", "Ship a CLI loop"]);
   const payload = {
     hook_event_name: "SubagentStop",
-    agent_type: "franky",
+    agent_type: "fronk",
     session_id: "s1",
     agent_id: "a1",
     cwd: repo,

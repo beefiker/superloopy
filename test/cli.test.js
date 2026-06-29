@@ -103,19 +103,19 @@ test("CLI agents install refuses changed files unless forced", async () => {
   const first = runCli(["agents", "install", "--target", target, "--json"]);
   assert.equal(first.status, 0, first.stderr);
 
-  const executorPath = join(target, "franky.toml");
+  const executorPath = join(target, "fronk.toml");
   await writeFile(executorPath, "local edit\n", "utf8");
 
   const conflict = runCli(["agents", "install", "--target", target, "--json"]);
   assert.equal(conflict.status, 1, conflict.stderr);
   const parsedConflict = JSON.parse(conflict.stdout);
   assert.equal(parsedConflict.ok, false);
-  assert.equal(parsedConflict.conflicts[0].name, "franky");
+  assert.equal(parsedConflict.conflicts[0].name, "fronk");
 
   const forced = runCli(["agents", "install", "--target", target, "--force", "--json"]);
   assert.equal(forced.status, 0, forced.stderr);
   const restored = await readFile(executorPath, "utf8");
-  assert.match(restored, /name = "franky"/);
+  assert.match(restored, /name = "fronk"/);
 });
 
 test("CLI install writes command wrapper and bundled agents", async () => {
@@ -298,7 +298,7 @@ test("CLI hook subagent-stop honors the host contract over stdin", async () => {
   // Missing receipt -> block (re-prompt the worker).
   const missing = runCli(["hook", "subagent-stop"], {
     cwd: repo,
-    input: JSON.stringify({ hook_event_name: "SubagentStop", agent_type: "franky", session_id: "s", agent_id: "a", cwd: repo, last_assistant_message: "done" })
+    input: JSON.stringify({ hook_event_name: "SubagentStop", agent_type: "fronk", session_id: "s", agent_id: "a", cwd: repo, last_assistant_message: "done" })
   });
   assert.equal(missing.status, 0, missing.stderr);
   assert.equal(JSON.parse(missing.stdout).decision, "block");
@@ -309,7 +309,7 @@ test("CLI hook subagent-stop honors the host contract over stdin", async () => {
   await writeFile(join(evidenceDir, "receipt.txt"), "real proof\n", "utf8");
   const ok = runCli(["hook", "subagent-stop"], {
     cwd: repo,
-    input: JSON.stringify({ hook_event_name: "SubagentStop", agent_type: "franky", session_id: "s", agent_id: "b", cwd: repo, last_assistant_message: "done\nSUPERLOOPY_EVIDENCE: .superloopy/evidence/receipt.txt" })
+    input: JSON.stringify({ hook_event_name: "SubagentStop", agent_type: "fronk", session_id: "s", agent_id: "b", cwd: repo, last_assistant_message: "done\nSUPERLOOPY_EVIDENCE: .superloopy/evidence/receipt.txt" })
   });
   assert.equal(ok.status, 0, ok.stderr);
   assert.equal(ok.stdout.trim(), "");

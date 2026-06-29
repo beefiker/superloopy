@@ -39,7 +39,7 @@ The loop engineer directive is injected for every `loopy` prompt, and it scales 
 - **Solo (default).** A plain `loopy <task>` drives one agent through the loop. The directive still permits light delegation: if the work splits into 2+ genuinely independent slices, you may fan them out in parallel with the host's native `multi_agent_v1.spawn_agent` (self-contained `message`, `fork_context: false`); for a single cohesive change, stay solo.
 - **Crew (`loopy team <task>` / `loopy crew <task>`, the connected one-word `loopycrew <task>`, or the standalone `ultrawork <task>`).** The same engineer escalates into full fan-out: dispatch the crew across independent lanes, collect them with `multi_agent_v1.wait_agent`, and record only artifact-backed proof. The escalation keyword is stripped from the brief that seeds the loop. This is the active counterpart to "Optional Subagent-Driven Mode" below — same dispatch contract, receipt gate, and mandatory `handoff`/`fleet` tracking.
 
-Each crew dispatch sets `agent_type` to the role so the host can load that role's TOML instructions and advisory model policy: `agent_type: "franky"` to build, `"zoro"` to review, `"usopp"` to test, `"jinbe"` to gate, `"robin"` to audit, `"nami"` to navigate. Because role routing and model defaults are best-effort across hosts, the `message` also stays self-contained (`TASK: act as <role> ...`) so the worker behaves correctly even if the host ignores `agent_type`.
+Each crew dispatch sets `agent_type` to the role so the host can load that role's TOML instructions and advisory model policy: `agent_type: "fronk"` to build, `"zyro"` to review, `"usk"` to test, `"jumbo"` to gate, `"rovyn"` to audit, `"nomi"` to navigate. Because role routing and model defaults are best-effort across hosts, the `message` also stays self-contained (`TASK: act as <role> ...`) so the worker behaves correctly even if the host ignores `agent_type`.
 
 Both tiers are steering, not enforcement: the directive instructs the main agent, and actual spawning depends on the host's native multi-agent tool being available. Superloopy never spawns; it gates the evidence workers deliver. See "Optional Subagent-Driven Mode" for the full dispatch contract and crew roles.
 
@@ -65,7 +65,7 @@ Superloopy detects the limit and pauses; *waking* when quota resets is an extern
 
 `superloopy loop audit` independently re-checks recorded proof. Superloopy itself re-runs each command-backed passed criterion (the deterministic source of truth) and records the result in `.superloopy/audit-state.json`; a re-run that does not reproduce is marked `inconclusive`, never a silent fail.
 
-- For independent judgment, dispatch a read-only `robin` subagent: it judges the re-run against the scenario and ends with `SUPERLOOPY_AUDIT: <verdict-path>`. When the receipt arrives, Superloopy **re-derives that criterion's floor in-process** (it does not trust the recorded `.superloopy/audit-state.json`, which the worker can write) and accepts the verdict only if it is hash-bound to that fresh re-run. Floor dominance is symmetric: the verdict may act only when the re-run reproduces — it can neither upgrade nor flip a non-reproducing (`inconclusive`) re-run.
+- For independent judgment, dispatch a read-only `rovyn` subagent: it judges the re-run against the scenario and ends with `SUPERLOOPY_AUDIT: <verdict-path>`. When the receipt arrives, Superloopy **re-derives that criterion's floor in-process** (it does not trust the recorded `.superloopy/audit-state.json`, which the worker can write) and accepts the verdict only if it is hash-bound to that fresh re-run. Floor dominance is symmetric: the verdict may act only when the re-run reproduces — it can neither upgrade nor flip a non-reproducing (`inconclusive`) re-run.
 - At completion the deterministic spine actually gates the result: `superloopy loop review`/`checkpoint` re-derive **every passed criterion** (not just the cited ones) and hash-verify every cited audit verdict, so a regressed command criterion can't be skipped and a structurally valid audit section pointing at hand-written verdict files cannot authorize completion.
 - Command-backed vs manual proof: the deterministic guarantee is strongest for **command-backed** criteria — Superloopy re-runs the command and reads the live exit code. A **manual (commandless)** criterion can only be re-validated for artifact existence; its correctness is not command-reproducible and rests on the auditor's (autonomous LLM) judgment and human review, not on the deterministic floor. **Prefer command-backed proof** (`superloopy loop prove -- <command>`) wherever the work allows — the autonomous loop engineer does this by default, so most criteria get the strong guarantee automatically.
 - A failed audit (deterministic floor fail or a `verdict: fail`) flips the criterion off pass with the gap recorded in its notes, so the continuation engine re-drives exactly that criterion to be fixed and re-audited. A non-reproducing command re-run is `inconclusive` and never auto-flips (flaky-test safety).
@@ -98,7 +98,7 @@ Parent agent responsibilities:
 Because role-by-name routing is unverified, each spawn message must stand alone — paste the role's requirements into it rather than relying on the agent name. Lead with an imperative `TASK:` and name the rest:
 
 - `TASK:` the one bounded assignment (one criterion or one non-overlapping slice).
-- `DELIVERABLE:` the report artifact path under the active evidence root, and the required receipt (`SUPERLOOPY_EVIDENCE` for workers; `SUPERLOOPY_AUDIT` for `robin`; `nami` writes none).
+- `DELIVERABLE:` the report artifact path under the active evidence root, and the required receipt (`SUPERLOOPY_EVIDENCE` for workers; `SUPERLOOPY_AUDIT` for `rovyn`; `nomi` writes none).
 - `SCOPE:` allowed files, the active evidence root, the validation command, and explicit non-goals.
 - `VERIFY:` the binary check that decides PASS/FAIL.
 
@@ -112,12 +112,12 @@ State that it is an executable assignment, not a context handoff. Prefer a fresh
 
 Agent allocation:
 
-- `franky`: edits one criterion or independent slice, writes a report, and ends with `SUPERLOOPY_EVIDENCE: <path-under-active-evidence-root>`.
-- `zoro`: reviews diff, scope, and evidence; writes a report under the active evidence root; does not edit product files.
-- `usopp`: exercises happy-path, regression, and risk scenarios; writes artifact-backed QA evidence; does not edit product files.
-- `jinbe`: integrates implementation, review, QA, audit, and criteria coverage; writes a final gate report such as `.superloopy/evidence/jinbe-final-gate-report.md`; the parent still runs Superloopy completion commands.
-- `robin`: read-only, skeptical evidence auditor; judges Superloopy's deterministic re-run against the scenario and ends with `SUPERLOOPY_AUDIT: <verdict-path>`. Installed by `superloopy agents install` alongside the workers.
-- `nami`: read-only codebase navigator; locates files and code and returns absolute paths with a direct answer. Writes no evidence and edits nothing — dispatch it first to scope a slice before assigning an executor. Parallelize it with review/QA lanes.
+- `fronk`: edits one criterion or independent slice, writes a report, and ends with `SUPERLOOPY_EVIDENCE: <path-under-active-evidence-root>`.
+- `zyro`: reviews diff, scope, and evidence; writes a report under the active evidence root; does not edit product files.
+- `usk`: exercises happy-path, regression, and risk scenarios; writes artifact-backed QA evidence; does not edit product files.
+- `jumbo`: integrates implementation, review, QA, audit, and criteria coverage; writes a final gate report such as `.superloopy/evidence/jumbo-final-gate-report.md`; the parent still runs Superloopy completion commands.
+- `rovyn`: read-only, skeptical evidence auditor; judges Superloopy's deterministic re-run against the scenario and ends with `SUPERLOOPY_AUDIT: <verdict-path>`. Installed by `superloopy agents install` alongside the workers.
+- `nomi`: read-only codebase navigator; locates files and code and returns absolute paths with a direct answer. Writes no evidence and edits nothing — dispatch it first to scope a slice before assigning an executor. Parallelize it with review/QA lanes.
 
 ## Basic Flow
 
@@ -179,7 +179,7 @@ Finish in one command after all criteria pass:
 superloopy loop finish --evidence "<summary>" --artifact .superloopy/evidence/gate.json --json
 ```
 
-Keep the human final gate report and the Superloopy quality gate artifact separate. A `jinbe` report is Markdown evidence (for example `.superloopy/evidence/jinbe-final-gate-report.md`). The `superloopy loop review` and `superloopy loop finish --artifact` flag writes the machine-validated quality gate artifact and must point to JSON, normally `.superloopy/evidence/gate.json`. Never pass the Markdown report path as the finish artifact.
+Keep the human final gate report and the Superloopy quality gate artifact separate. A `jumbo` report is Markdown evidence (for example `.superloopy/evidence/jumbo-final-gate-report.md`). The `superloopy loop review` and `superloopy loop finish --artifact` flag writes the machine-validated quality gate artifact and must point to JSON, normally `.superloopy/evidence/gate.json`. Never pass the Markdown report path as the finish artifact.
 
 For custom gate workflows:
 
