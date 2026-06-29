@@ -1,0 +1,4 @@
+interface:
+  display_name: "Loopy Clone"
+  short_description: "Evidence-backed website cloning"
+  default_prompt: "Use loopy-clone to reverse-engineer a target URL into component specs, local assets, implementation, and visual QA evidence."

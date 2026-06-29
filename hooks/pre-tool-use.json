@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^(create_goal|update_goal)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/src/cli.js\" hook pre-tool-use",
+            "timeout": 5,
+            "statusMessage": "(Loopy) Checking Goal Payload"
+          }
+        ]
+      }
+    ]
+  }
+}

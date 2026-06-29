@@ -1,0 +1,24 @@
+{
+  "name": "loopy",
+  "version": "0.1.0",
+  "description": "A lightweight Codex loop harness with strict evidence gates.",
+  "type": "module",
+  "bin": {
+    "loopy": "src/cli.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "npm test"
+  },
+  "keywords": [
+    "codex",
+    "harness",
+    "loop",
+    "evidence"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

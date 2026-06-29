@@ -1,0 +1,37 @@
+{
+  "name": "loopy",
+  "version": "0.1.0",
+  "description": "Lightweight loop harness with strict evidence gates.",
+  "author": {
+    "name": ""
+  },
+  "license": "MIT",
+  "skills": "./skills/",
+  "hooks": [
+    "./hooks/session-start.json",
+    "./hooks/user-prompt-submit.json",
+    "./hooks/pre-tool-use.json",
+    "./hooks/stop.json",
+    "./hooks/subagent-stop.json",
+    "./hooks/subagent-stop-audit.json"
+  ],
+  "interface": {
+    "displayName": "Loopy",
+    "shortDescription": "Strict evidence loop harness without heavyweight ceremony",
+    "longDescription": "Loopy provides repo-local loop state, explicit success criteria, append-only evidence ledgers, and Codex hook guardrails while keeping workflow overhead low.",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Hooks",
+      "Workflow",
+      "Context Injection"
+    ],
+    "defaultPrompt": [
+      "Use loopy loop begin for new tasks.",
+      "After hook approval, Loopy bootstraps the CLI wrapper and bundled custom agents on SessionStart.",
+      "Run loopy loop guide --json before choosing the next Loopy command.",
+      "Record Loopy evidence for this change, using loopy loop prove when command output is the proof."
+    ],
+    "brandColor": "#2563EB",
+    "screenshots": []
+  }
+}

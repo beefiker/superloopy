@@ -1,0 +1,4 @@
+interface:
+  display_name: "Loopy Research"
+  short_description: "Deep research with Loopy evidence"
+  default_prompt: "Use loopy-research to run exhaustive research with EXPAND waves, cited synthesis, and Loopy evidence artifacts."

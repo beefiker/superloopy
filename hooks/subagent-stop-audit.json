@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "SubagentStop": [
+      {
+        "matcher": "^robin$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/src/cli.js\" hook subagent-stop-audit",
+            "timeout": 5,
+            "statusMessage": "(Loopy) Validating Audit Verdict"
+          }
+        ]
+      }
+    ]
+  }
+}

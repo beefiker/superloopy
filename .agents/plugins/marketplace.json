@@ -1,0 +1,20 @@
+{
+  "name": "beefiker",
+  "interface": {
+    "displayName": "Loopy"
+  },
+  "plugins": [
+    {
+      "name": "loopy",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

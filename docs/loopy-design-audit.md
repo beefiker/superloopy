@@ -1,0 +1,30 @@
+# Loopy Design Audit
+
+This doctor-verified audit records Loopy's own design decisions. It exists to keep compatibility behavior explicit without making external lineage part of the product contract.
+
+## Design Decisions
+
+| Decision | Reason | Effect | Guard |
+| --- | --- | --- | --- |
+| `gate-shape-compatibility` | Existing users may have strict review or matrix gate JSON. | Loopy keeps both shapes accepted through local validators. | `test/golden-review-gate.test.js`, `test/golden-matrix-gate.test.js`, and `src/artifacts.js`. |
+| `actor-field-policy` | Exact external role literals made compatibility too specific. | Actor fields now require non-empty identity text instead of a hard-coded role name. | `src/review-gate.js` and review-gate golden tests. |
+| `native-naming` | Public code, docs, and tests should describe Loopy behavior directly. | Modules, tests, docs, CLI flags, and metadata use Loopy-owned terms. | `test/docs.test.js` and `docs/loopy-gate-notes.md`. |
+| `recorded-thresholds` | Later analysis should compare against earlier judgments. | `docs/loopy-loop-golden-set.md` stores score history and command evidence in one tracked place. | `docs/loopy-loop-golden-set.md` and `test/docs.test.js`. |
+| `model-policy` | Crew lanes need explicit cost/depth defaults without treating model choice as correctness. | Bundled agent TOML files carry advisory model, effort, and tier defaults, with Nami optimized for navigation and review/gate lanes using deeper effort. | `docs/loopy-model-policy.md`, `src/model-policy.js`, and `test/doctor.test.js`. |
+| `crew-lines` | Crew handoffs should feel alive without weakening evidence discipline. | Known crew lanes can emit original terminal-state lines in presentation output only; persisted state and gate authority stay mechanical. | `docs/loopy-crew-lines.md`, `src/crew-lines.js`, `test/crew-lines.test.js`, and `test/fleet.test.js`. |
+
+## Compatibility Boundary
+
+Loopy supports strict gate shapes as data contracts, not as implementation lineage. The accepted shapes are:
+
+- Review gate: reviewer, manual QA, gate review, iteration, and criteria coverage.
+- Matrix gate: architecture review, executor QA, and iteration.
+- Default gate: status plus artifact list.
+
+All paths resolve through Loopy evidence confinement.
+
+## Decision Log
+
+- Turn 0: baseline audit found inherited names across runtime, docs, skill metadata, and tests.
+- Turn 1: runtime modules, CLI flags, docs, tests, and audit policy were renamed to Loopy-owned terms while preserving strict gate behavior.
+- Final completion requires a fresh audit plus `node src/cli.js doctor --json` and `npm test`.

@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SubagentStop": [
+      {
+        "matcher": "^(?:franky|zoro|usopp|jinbe)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/src/cli.js\" hook subagent-stop",
+            "timeout": 5,
+            "statusMessage": "(Loopy) Verifying Evidence Receipt"
+          }
+        ]
+      },
+      {
+        "matcher": "^nami$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/src/cli.js\" hook subagent-stop",
+            "timeout": 5,
+            "statusMessage": "(Loopy) Navigator (read-only) — no receipt required"
+          }
+        ]
+      }
+    ]
+  }
+}
