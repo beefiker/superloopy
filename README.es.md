@@ -34,11 +34,11 @@ Superloopy mantiene pequeña la capa de comandos. Las skills guardan el flujo es
 
 | Skill | Cuándo usarla | Qué produce |
 | --- | --- | --- |
-| `superloopy-loop` | Usas `loopy <task>`, `loopy team <task>`, `loopywork`, `$lpy`, o necesitas terminar con evidencia estricta. | Un plan ligero, siguientes acciones, prueba respaldada por comandos, un quality gate y un evidence report final. |
+| `superloopy-loop` | Usa `loopy <task>` o `loopy team <task>` para un loop completo; usa `loopywork`, `lpy` o `$lpy` solo para guidance. | Un loop completo produce un plan ligero, siguientes acciones, prueba respaldada por comandos, un quality gate y un evidence report final. Los alias de guidance no mutan estado. |
 | `superloopy-research` | Pides `loopy research`, deep research, exhaustive investigation o un informe con citas. | Ejes de investigación, expansion waves, claim ledger, notas de verificación y un synthesis artifact citado. |
 | `superloopy-clone` | Pides `loopy clone`, clonación autorizada de un sitio, reconstrucción, migración o recuperación visual precisa. | Capturas de navegador, topología de página, design tokens, inventario de assets, notas de implementación, salida de build y evidencia de visual QA. |
 
-La skill de loop es la barandilla por defecto. Research y clone son modos especializados opt-in, y ambos terminan registrando Superloopy evidence en lugar de confiar en una frase de estado.
+La skill de loop es la barandilla por defecto. `loopy` inicia o reanuda el evidence loop; `loopy team` sube a crew mode. `loopywork`, `lpy` y `$lpy` solo inyectan guidance inicial. Research y clone son modos especializados opt-in, y ambos terminan registrando Superloopy evidence en lugar de confiar en una frase de estado.
 
 ## Crew
 

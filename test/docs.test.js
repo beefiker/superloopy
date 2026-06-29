@@ -100,8 +100,13 @@ test("README lists the packaged Superloopy skills and their jobs", async () => {
     assert.match(content, /superloopy-clone/);
     assert.match(content, /loopy research/);
     assert.match(content, /loopy clone/);
+    assert.match(content, /loopywork/);
+    assert.match(content, /\blpy\b/);
+    assert.match(content, /\$lpy/);
     assert.match(content, /\.superloopy\/evidence/);
   }
+  assert.match(await readFile("README.md", "utf8"), /Guidance aliases do not mutate state/);
+  assert.match(await readFile("README.ko.md", "utf8"), /guidance alias는 상태를 바꾸지 않습니다/);
 });
 
 test("public docs describe loose prompt triggers as guidance-only", async () => {
@@ -192,6 +197,16 @@ test("loop golden set records threshold history for this turn", async () => {
   assert.match(golden, /Recorded judgment trail/);
   assert.match(golden, /npm test/);
   assert.match(golden, /node src\/cli\.js doctor --json/);
+});
+
+test("clone skill blocks approximating JS-driven hero and animation sections", async () => {
+  const skill = await readFile("skills/superloopy-clone/SKILL.md", "utf8");
+
+  assert.match(skill, /verbatim port/i);
+  assert.match(skill, /dependency graph/i);
+  assert.match(skill, /DOM subtree.*CSS class block.*JS driver/is);
+  assert.match(skill, /approximation.*blocker/is);
+  assert.match(skill, /section crop/i);
 });
 
 function listRepoFiles() {

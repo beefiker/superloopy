@@ -80,3 +80,28 @@ test("plugin packages Superloopy research and website-clone skills", async () =>
     assert.match(metadata, /default_prompt:/);
   }
 });
+
+test("clone skill preserves exact extraction pipeline and crew dispatch guardrails", async () => {
+  const clone = await readSkill("superloopy-clone");
+
+  for (const pattern of [
+    /docs\/research\/<hostname>\//,
+    /docs\/design-references\/<hostname>\//,
+    /getComputedStyle\(\)/,
+    /scripts\/download-assets\.mjs/,
+    /Asset Discovery Script Pattern/i,
+    /Layered assets/i,
+    /video.*Lottie.*canvas/is,
+    /scroll before click/i,
+    /Pre-Dispatch Checklist/,
+    /150 lines/,
+    /loopy team.*full-crew clone/is,
+    /plain `loopy clone`.*solo/is,
+    /superloopy loop handoff/,
+    /superloopy loop fleet --json/,
+    /nami.*franky.*usopp.*zoro.*robin.*jinbe/is,
+    /Do not.*similar.*redraw/is
+  ]) {
+    assert.match(clone.content, pattern);
+  }
+});

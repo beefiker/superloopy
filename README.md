@@ -34,11 +34,11 @@ Superloopy keeps the command layer small. Skills carry the specialist workflow: 
 
 | Skill | Use it when | What it produces |
 | --- | --- | --- |
-| `superloopy-loop` | You type `loopy <task>`, `loopy team <task>`, `loopywork`, `$lpy`, or need strict evidence-backed completion. | A lightweight plan, guided next actions, command-backed proof, a quality gate, and a final evidence report. |
+| `superloopy-loop` | You type `loopy <task>` or `loopy team <task>` for a full loop; use `loopywork`, `lpy`, or `$lpy` for guidance-only context. | Full loops produce a lightweight plan, guided next actions, command-backed proof, a quality gate, and a final evidence report. Guidance aliases do not mutate state. |
 | `superloopy-research` | You ask for `loopy research`, deep research, exhaustive investigation, or a cited report. | Research axes, expansion waves, a claim ledger, verification notes, and a cited synthesis artifact. |
 | `superloopy-clone` | You ask for `loopy clone`, authorized website cloning, rebuilding, migration, or pixel-focused page recovery. | Browser captures, page topology, design tokens, asset inventory, implementation notes, build output, and visual QA evidence. |
 
-The loop skill is the default guardrail. Research and clone are opt-in specialist modes, and both still finish by recording Superloopy evidence instead of trusting a status sentence.
+The loop skill is the default guardrail. `loopy` starts or resumes the evidence loop; `loopy team` escalates to crew mode. `loopywork`, `lpy`, and `$lpy` only inject starter guidance. Research and clone are opt-in specialist modes, and both still finish by recording Superloopy evidence instead of trusting a status sentence.
 
 ## The crew
 
