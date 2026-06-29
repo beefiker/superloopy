@@ -2,6 +2,15 @@
   "name": "superloopy",
   "version": "0.2.0",
   "description": "Lightweight loop harness with strict evidence gates.",
+  "homepage": "https://github.com/beefiker/superloopy#readme",
+  "repository": "https://github.com/beefiker/superloopy",
+  "keywords": [
+    "codex",
+    "codex-plugin",
+    "ai-agents",
+    "evidence-gates",
+    "proof-of-done"
+  ],
   "author": {
     "name": "beefiker"
   },
@@ -17,6 +26,7 @@
   ],
   "interface": {
     "displayName": "Superloopy",
+    "developerName": "beefiker",
     "shortDescription": "Strict evidence loop harness without heavyweight ceremony",
     "longDescription": "Superloopy provides repo-local loop state, explicit success criteria, append-only evidence ledgers, and Codex hook guardrails while keeping workflow overhead low.",
     "category": "Developer Tools",

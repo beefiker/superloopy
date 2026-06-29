@@ -62,6 +62,7 @@ Total: 100 points.
 | `.codex-plugin/plugin.json` | `test/plugin.test.js`, doctor plugin manifest check. | Must expose `./skills/` and the packaged Superloopy hook files, including opt-in Stop. |
 | `.gitignore` | Doctor runtime-boundary ignored samples and installed-cache docs coverage. | `.superloopy/`, logs, coverage, dependencies, OS noise, and Codex marketplace metadata must stay out of source control. |
 | `LICENSE` | Audit coverage and reviewability check. | Must remain a source file with no runtime implementation content. |
+| `SECURITY.md` | Hashgraph catalog readiness. | Must document vulnerability reporting without publishing exploit details or secrets. |
 | `README.md` | `test/docs.test.js` public-doc assertions. | Must describe actual Superloopy install, bootstrap, commands, evidence rules, hooks, gates, doctor checks, and locale links. |
 | `README.ko.md` | `test/docs.test.js`, audit coverage. | Must provide the Korean README locale and keep install commands aligned with the root README. |
 | `README.zh-CN.md` | `test/docs.test.js`, audit coverage. | Must provide the Simplified Chinese README locale and keep install commands aligned with the root README. |
@@ -74,6 +75,7 @@ Total: 100 points.
 | `.github/assets/robin.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
 | `.github/assets/nami.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
 | `.github/assets/transferloom-clone-reference.png` | Audit coverage and README clone-demo reference. | Must remain a documentation screenshot for the validated Transferloom.com clone, not runtime plugin logic. |
+| `.github/workflows/hol-plugin-scanner.yml` | Hashgraph catalog readiness and GitHub Actions. | Must run the HOL scanner against the plugin root with SHA-pinned actions and no runtime side effects. |
 | `docs/superloopy-design-audit.md` | `src/design-audit.js`, `test/doctor.test.js`. | Must keep required decision rows with reason, effect, and guard. |
 | `docs/superloopy-crew-lines.md` | `test/docs.test.js`, audit coverage. | Must record the precedent pattern, no-copied-quotes rule, terminal-only behavior, and presentation-only authority boundary. |
 | `docs/superloopy-file-audit.md` | `test/audit.test.js`, `src/file-audit.js`, doctor file-audit check. | Must list every Git-visible file with non-empty role and compatibility-boundary cells. |
@@ -88,6 +90,7 @@ Total: 100 points.
 | `hooks/subagent-stop-audit.json` | `test/plugin.test.js`, doctor hook check. | Must route robin verdict validation through the Superloopy CLI. |
 | `hooks/user-prompt-submit.json` | `test/plugin.test.js`, doctor hook check. | Must route prompt steering and trigger-scoped context injection through the Superloopy CLI. |
 | `package.json` | `npm test`, doctor dependency check. | Must stay dependency-free and expose `superloopy`, `test`, `check`, and `sync-version` scripts. |
+| `package-lock.json` | Hashgraph catalog readiness and npm audit surface. | Must lock only the dependency-free package root unless real dependencies are intentionally added. |
 | `scripts/sync-version.mjs` | `test/sync-version.test.js`. | Must stamp `package.json` and `.codex-plugin/plugin.json` from one authoritative version without publishing or adding dependencies. |
 | `skills/superloopy-clone/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must describe authorized browser-assisted website cloning with specs, assets, build validation, visual QA, and Superloopy evidence receipts. |
 | `skills/superloopy-clone/agents/openai.yaml` | Audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for website cloning. |
@@ -165,6 +168,16 @@ Total: 100 points.
 | `test/pre-tool-use.test.js` | `npm test`. | Must verify Superloopy blocks native complete status until aggregate completion is real. |
 | `test/report.test.js` | `npm test`. | Must verify report artifacts remain portable and guide-backed. |
 | `test/sync-version.test.js` | `npm test`. | Must prove Superloopy package and plugin manifest versions are stamped from one release version. |
+| `web/README.md` | Static landing-page documentation. | Must describe the static web preview without changing plugin runtime contracts. |
+| `web/_headers` | Static-hosting headers. | Must remain deployment configuration only. |
+| `web/assets/franky.png` | Static landing-page franky asset. | Must remain a web presentation image, not runtime plugin logic. |
+| `web/assets/jinbe.png` | Static landing-page jinbe asset. | Must remain a web presentation image, not runtime plugin logic. |
+| `web/assets/luffy.svg` | Static landing-page logo/illustration asset. | Must remain a web presentation image, not runtime plugin logic. |
+| `web/assets/nami.png` | Static landing-page nami asset. | Must remain a web presentation image, not runtime plugin logic. |
+| `web/assets/robin.png` | Static landing-page robin asset. | Must remain a web presentation image, not runtime plugin logic. |
+| `web/assets/usopp.png` | Static landing-page usopp asset. | Must remain a web presentation image, not runtime plugin logic. |
+| `web/assets/zoro.png` | Static landing-page zoro asset. | Must remain a web presentation image, not runtime plugin logic. |
+| `web/index.html` | Static marketing landing page. | Must stay separate from the CLI/plugin runtime and within reviewability limits. |
 
 ## Run History
 
