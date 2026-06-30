@@ -10,13 +10,20 @@ test("syncVersion stamps package and plugin manifests from the authoritative roo
   const repo = await mkdtemp(join(tmpdir(), "superloopy-sync-version-"));
   await mkdir(join(repo, ".codex-plugin"), { recursive: true });
   await writeFile(join(repo, "package.json"), `${JSON.stringify({ name: "superloopy", version: "0.2.0" }, null, 2)}\n`);
+  await writeFile(
+    join(repo, "package-lock.json"),
+    `${JSON.stringify({ name: "superloopy", version: "0.1.0", packages: { "": { name: "superloopy", version: "0.1.0" } } }, null, 2)}\n`
+  );
   await writeFile(join(repo, ".codex-plugin", "plugin.json"), `${JSON.stringify({ name: "superloopy", version: "0.1.0" }, null, 2)}\n`);
 
   const result = await syncVersion({ repoRoot: repo });
 
   assert.equal(result.version, "0.2.0");
-  assert.deepEqual(result.changed, [join(repo, ".codex-plugin", "plugin.json")]);
+  assert.deepEqual(result.changed, [join(repo, ".codex-plugin", "plugin.json"), join(repo, "package-lock.json")]);
   assert.equal(JSON.parse(await readFile(join(repo, "package.json"), "utf8")).version, "0.2.0");
+  const packageLock = JSON.parse(await readFile(join(repo, "package-lock.json"), "utf8"));
+  assert.equal(packageLock.version, "0.2.0");
+  assert.equal(packageLock.packages[""].version, "0.2.0");
   assert.equal(JSON.parse(await readFile(join(repo, ".codex-plugin", "plugin.json"), "utf8")).version, "0.2.0");
 });
 
@@ -24,11 +31,18 @@ test("syncVersion honors an explicit release version", async () => {
   const repo = await mkdtemp(join(tmpdir(), "superloopy-sync-version-explicit-"));
   await mkdir(join(repo, ".codex-plugin"), { recursive: true });
   await writeFile(join(repo, "package.json"), `${JSON.stringify({ name: "superloopy", version: "0.1.0" }, null, 2)}\n`);
+  await writeFile(
+    join(repo, "package-lock.json"),
+    `${JSON.stringify({ name: "superloopy", version: "0.1.0", packages: { "": { name: "superloopy", version: "0.1.0" } } }, null, 2)}\n`
+  );
   await writeFile(join(repo, ".codex-plugin", "plugin.json"), `${JSON.stringify({ name: "superloopy", version: "0.1.0" }, null, 2)}\n`);
 
   const result = await syncVersion({ repoRoot: repo, version: "0.3.0" });
 
   assert.equal(result.version, "0.3.0");
   assert.equal(JSON.parse(await readFile(join(repo, "package.json"), "utf8")).version, "0.3.0");
+  const packageLock = JSON.parse(await readFile(join(repo, "package-lock.json"), "utf8"));
+  assert.equal(packageLock.version, "0.3.0");
+  assert.equal(packageLock.packages[""].version, "0.3.0");
   assert.equal(JSON.parse(await readFile(join(repo, ".codex-plugin", "plugin.json"), "utf8")).version, "0.3.0");
 });
