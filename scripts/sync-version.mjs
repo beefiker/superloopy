@@ -48,6 +48,33 @@ async function stampJsonVersion(path, version) {
   return true;
 }
 
+async function stampPackageLockVersion(path, version) {
+  let parsed;
+  try {
+    parsed = await readJson(path);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return false;
+    throw error;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return false;
+
+  let changed = false;
+  if (parsed.version !== version) {
+    parsed.version = version;
+    changed = true;
+  }
+
+  const rootPackage = parsed.packages?.[""];
+  if (typeof rootPackage === "object" && rootPackage !== null && rootPackage.version !== version) {
+    rootPackage.version = version;
+    changed = true;
+  }
+
+  if (!changed) return false;
+  await writeJson(path, parsed);
+  return true;
+}
+
 export function manifestTargets(repoRoot) {
   return [
     join(repoRoot, "package.json"),
@@ -63,6 +90,8 @@ export async function syncVersion(options = {}) {
   for (const target of targets) {
     if (await stampJsonVersion(target, version)) changed.push(target);
   }
+  const packageLock = join(repoRoot, "package-lock.json");
+  if (await stampPackageLockVersion(packageLock, version)) changed.push(packageLock);
   return { version, targets, changed };
 }
 
