@@ -15,7 +15,5 @@
     "proof-of-done",
     "loop",
     "subagents"
-  ],
-  "skills": "./skills/",
-  "hooks": "./hooks/hooks.json"
+  ]
 }
