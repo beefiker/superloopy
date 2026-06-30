@@ -83,6 +83,7 @@ Total: 100 points.
 | `docs/superloopy-host-contract.md` | `test/cli.test.js`, doctor hostContract/gate-notes. | Must document the SubagentStop payload contract and the host behaviors Superloopy cannot verify. |
 | `docs/superloopy-loop-golden-set.md` | `test/docs.test.js` golden-set assertions. | Must list every Git-visible file, score each accepted run, and keep threshold history append-only. |
 | `docs/superloopy-model-policy.md` | `test/docs.test.js`, `test/doctor.test.js`. | Must record allowed model values and state that model choice is steering, not proof. |
+| `docs/superpowers/plans/2026-07-01-humanize-korean-superloopy.md` | Plan-file review plus audit/golden inventory coverage. | Must define the future Korean humanizer skill scope, measurable safeguards, file list, tests, and validation without changing runtime behavior. |
 | `hooks/pre-tool-use.json` | `test/plugin.test.js`, doctor hook check. | Must route to `node "${PLUGIN_ROOT}/src/cli.js" hook pre-tool-use`. |
 | `hooks/session-start.json` | `test/golden-hooks.test.js`, doctor hook check. | Must route first-launch bootstrap, marketplace update notices, and optional SessionStart context through the Superloopy CLI. |
 | `hooks/stop.json` | Optional runtime hook file, direct hook tests. | Must route Stop continuation through the Superloopy CLI and stay inert unless `SUPERLOOPY_STOP_HOOK=on`. |
@@ -100,6 +101,12 @@ Total: 100 points.
 | `skills/superloopy-research/agents/openai.yaml` | Audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for deep research. |
 | `skills/superloopy-frontend/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must auto-activate on UI/visual work and enforce a DESIGN.md token gate, anti-slop rules, real-browser visual QA, and Superloopy evidence receipts. |
 | `skills/superloopy-frontend/agents/openai.yaml` | `test/plugin.test.js`, audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for frontend work. |
+| `skills/humanize-korean/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must trigger for Korean AI-tone removal, preserve protected spans and register, run the audit script for file-backed output, and record Superloopy evidence. |
+| `skills/humanize-korean/agents/openai.yaml` | `test/plugin.test.js`, audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for Korean humanization. |
+| `skills/humanize-korean/references/quick-rules.md` | `test/plugin.test.js`, audit coverage and reviewability check. | Must keep local Korean AI-tell rules and Superloopy additions without symlinked references. |
+| `skills/humanize-korean/references/quality-rubric.md` | `test/plugin.test.js`, audit coverage and reviewability check. | Must define protected-token, Korean-ratio, change-rate, register, and grade gates. |
+| `skills/humanize-korean/references/upstream-notice.md` | `test/plugin.test.js`, audit coverage and reviewability check. | Must attribute adapted `epoko77-ai/im-not-ai` ideas and keep the packaging boundary explicit. |
+| `skills/humanize-korean/scripts/audit-humanize-output.mjs` | `test/humanize-korean.test.js`, audit coverage and reviewability check. | Must reject non-Korean input, fail missing protected tokens, report pattern deltas, and warn/fail by change rate without dependencies. |
 | `skills/superloopy-frontend/references/anti-slop.md` | Audit coverage and reviewability check. | Must keep the named-default bans, countable rules, consistency locks, real-asset mandate, and pre-flight checklist. |
 | `skills/superloopy-frontend/references/design-system.md` | Audit coverage and reviewability check. | Must keep the 7-section DESIGN.md schema and loopy-native token-authoring guidance. |
 | `skills/superloopy-frontend/references/design/mercury.md` | Audit coverage and reviewability check. | Must keep the cool blue-cast neutrals, hairline-border structure (not shadows), radius capped at 16px (no pills), and monospace tabular numerals on all money figures. |
@@ -253,6 +260,7 @@ Total: 100 points.
 | `test/docs.test.js` | `npm test`. | Must keep README, skill, gate notes, design audit, and this golden set aligned with enforced behavior. |
 | `test/doctor.test.js` | `npm test`. | Must cover doctor checks for package, audits, comparison, design decisions, model policy, generated install metadata, and reviewability. |
 | `test/file-audit.test.js` | `npm test`. | Must prove the file-audit verifier fails stale inventory rows. |
+| `test/humanize-korean.test.js` | `node --test test/humanize-korean.test.js`. | Must prove the Korean humanizer audit script accepts preserved Korean output and rejects non-Korean or token-dropping output. |
 | `test/fleet.test.js` | `npm test`. | Must prove verdict normalization, artifact-bound accept verdicts, handoff recording/update, fleet reconciliation, crew-line decoration, and the parallel-cap warning. |
 | `test/goals.test.js` | `npm test`. | Must keep goal parsing, seeded criteria, lookup, and completion guards strict. |
 | `test/golden-helpers.js` | Golden tests. | Must provide Superloopy-owned fixtures. |

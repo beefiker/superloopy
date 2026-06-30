@@ -146,3 +146,24 @@ test("clone skill preserves exact extraction pipeline and crew dispatch guardrai
     assert.match(clone.content, pattern);
   }
 });
+
+test("plugin packages the Superloopy Korean humanizer skill with measurable safeguards", async () => {
+  const skill = await readSkill("humanize-korean");
+
+  assert.match(skill.frontmatter, /^name: humanize-korean$/m);
+  assert.match(skill.frontmatter, /AI 티|humanize Korean|번역투/u);
+  assert.match(skill.content, /SUPERLOOPY HUMANIZE KOREAN ENABLED/);
+  assert.match(skill.content, /references\/quick-rules\.md/);
+  assert.match(skill.content, /audit-humanize-output\.mjs/);
+  assert.match(skill.content, /SUPERLOOPY_EVIDENCE/);
+
+  for (const file of [
+    "skills/humanize-korean/agents/openai.yaml",
+    "skills/humanize-korean/references/quick-rules.md",
+    "skills/humanize-korean/references/quality-rubric.md",
+    "skills/humanize-korean/references/upstream-notice.md",
+    "skills/humanize-korean/scripts/audit-humanize-output.mjs"
+  ]) {
+    assert.equal(existsSync(file), true);
+  }
+});
