@@ -197,3 +197,24 @@ test("runUserPromptSubmitHook lets the loop engineer trigger win over the fronte
   assert.match(context, /Superloopy loop engineer/);
   assert.doesNotMatch(context, /Superloopy frontend trigger/);
 });
+
+test("the Korean alias 루피 wakes the loop engineer like loopy", () => {
+  assert.equal(hasEngineerTrigger("루피 로그인 버그 고쳐줘"), true);
+  assert.equal(hasEngineerTrigger("루피"), true);
+  assert.equal(hasEngineerTrigger("@루피 배포 준비해줘"), true);
+  assert.equal(hasEngineerTrigger("loopy ship the fix"), true); // English path preserved
+  assert.equal(hasEngineerTrigger("루팡 작업 시작"), false); // different word, not 루피
+  assert.equal(hasEngineerTrigger("디버깅 도와줘"), false);
+
+  // brief is stripped clean
+  assert.deepEqual(parseInvocation("루피 로그인 고쳐줘"), { orchestrate: false, brief: "로그인 고쳐줘" });
+});
+
+test("Korean 팀/크루 escalate the alias to crew mode, but 팀워크 stays a brief", () => {
+  assert.equal(hasTeamTrigger("루피 팀 인증 모듈 마이그레이션"), true);
+  assert.equal(hasTeamTrigger("루피팀 대시보드"), true); // connected form
+  assert.equal(hasTeamTrigger("루피 크루: 파서 리팩터"), true);
+  assert.equal(hasTeamTrigger("루피 팀워크 페이지 만들어"), false); // 팀워크 != 팀
+  assert.equal(hasTeamTrigger("루피 로그인 고쳐줘"), false);
+  assert.deepEqual(parseInvocation("루피 팀 마이그레이션"), { orchestrate: true, brief: "마이그레이션" });
+});

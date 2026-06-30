@@ -1,5 +1,5 @@
-// Loop engineer: the `loopy` keyword wakes an operator that drives the whole
-// evidence loop, so a person never has to type begin, prove, or finish by hand.
+// Loop engineer: the `loopy` keyword (or its Korean alias `루피`) wakes an operator
+// that drives the whole evidence loop, so a person never types begin, prove, or finish.
 // `loopy team`/`loopy crew`, the connected one-word `loopycrew`, or the
 // standalone `ultrawork` escalate the same operator into crew fan-out mode: it
 // is steered to delegate independent slices to parallel workers via the host's
@@ -7,14 +7,18 @@
 // single source of truth. This module stays dependency-free; the hook runtime
 // injects the helpers it needs.
 
-const ENGINEER_TRIGGER_PATTERN = /^\s*@?loopy\b[ \t:,]*/iu;
+// Leading invocation keyword: ASCII `loopy` (with a word boundary so `loopyfoo`/`loopycrew`
+// stay out) or its Korean alias `루피`. Hangul has no `\b`, so `루피` matches as a leading
+// token and the optional separators are consumed the same way.
+const ENGINEER_TRIGGER_PATTERN = /^\s*@?(?:loopy\b|루피)[ \t:,]*/iu;
 // Suppress only a prompt-shaped `loopy loop <subcommand>` command reference (or a bare `loopy loop`),
 // NOT any task that merely starts with the word "loop" — e.g. "loopy loop over the array"
 // is a real task and must still wake the engineer.
 const CLI_REFERENCE_PATTERN = /^loop(\s+(begin|create|next|guide|trace|report|check|evidence|capture|prove|review|checkpoint|finish|status|audit|fleet|handoff)\b|\s*$)/iu;
-// Escalation keyword right after `loopy`: `loopy team <task>` / `loopy crew <task>`.
-// Requires a word boundary so "teamwork" or "crews" stay ordinary briefs.
-const TEAM_TRIGGER_PATTERN = /^(?:team|crew)\b[ \t:,]*/iu;
+// Escalation keyword right after the leading keyword: `team`/`crew` (English) or
+// `팀`/`크루` (Korean). English forms require a word boundary so "teamwork"/"crews" stay
+// ordinary briefs; the Korean forms require a following separator/end so "팀워크" stays a brief.
+const TEAM_TRIGGER_PATTERN = /^(?:team\b|crew\b|팀(?=$|[\s:,])|크루(?=$|[\s:,]))[ \t:,]*/iu;
 // Connected one-word escalation: `loopycrew <task>`. Leading-only (like the `loopy`
 // keyword) and boundary-guarded so "loopycrewmate" stays inert.
 const CONNECTED_CREW_TRIGGER_PATTERN = /^\s*@?loopycrew\b[ \t:,]*/iu;
