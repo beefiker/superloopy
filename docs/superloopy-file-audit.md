@@ -41,7 +41,6 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `docs/superloopy-host-contract.md` | The host-runtime contract Superloopy rides: installable agents, the SubagentStop payload fields, and the host behaviors Superloopy cannot verify. | Superloopy-native; states advisory limits and the deterministic-floor backstop. |
 | `docs/superloopy-loop-golden-set.md` | Long-running golden set, threshold model, file evidence inventory, and run history. | Scores Superloopy on its own behavior. |
 | `docs/superloopy-model-policy.md` | Advisory model, reasoning-effort, and service-tier defaults for bundled Superloopy agents. | Explicitly treats model choice as steering, not proof. |
-| `docs/superpowers/plans/2026-07-01-humanize-korean-superloopy.md` | Implementation plan for a Superloopy-native Korean humanizer skill with measurable safeguards. | Plan-only artifact; keeps the future skill inside Superloopy packaging, evidence, attribution, and validation boundaries. |
 | `hooks/pre-tool-use.json` | Registers the PreToolUse guard command. | Thin Superloopy hook wrapper. |
 | `hooks/session-start.json` | Provides first-launch bootstrap, marketplace update notices, and optional session-start context injection. | Routes through Superloopy CLI; bootstrap installs only the command wrapper and bundled agents, and update checks never run npx self-update for marketplace or checkout installs. |
 | `hooks/stop.json` | Provides optional stop continuation guard. | Routes through Superloopy CLI when enabled locally. |

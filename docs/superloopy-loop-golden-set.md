@@ -83,7 +83,6 @@ Total: 100 points.
 | `docs/superloopy-host-contract.md` | `test/cli.test.js`, doctor hostContract/gate-notes. | Must document the SubagentStop payload contract and the host behaviors Superloopy cannot verify. |
 | `docs/superloopy-loop-golden-set.md` | `test/docs.test.js` golden-set assertions. | Must list every Git-visible file, score each accepted run, and keep threshold history append-only. |
 | `docs/superloopy-model-policy.md` | `test/docs.test.js`, `test/doctor.test.js`. | Must record allowed model values and state that model choice is steering, not proof. |
-| `docs/superpowers/plans/2026-07-01-humanize-korean-superloopy.md` | Plan-file review plus audit/golden inventory coverage. | Must define the future Korean humanizer skill scope, measurable safeguards, file list, tests, and validation without changing runtime behavior. |
 | `hooks/pre-tool-use.json` | `test/plugin.test.js`, doctor hook check. | Must route to `node "${PLUGIN_ROOT}/src/cli.js" hook pre-tool-use`. |
 | `hooks/session-start.json` | `test/golden-hooks.test.js`, doctor hook check. | Must route first-launch bootstrap, marketplace update notices, and optional SessionStart context through the Superloopy CLI. |
 | `hooks/stop.json` | Optional runtime hook file, direct hook tests. | Must route Stop continuation through the Superloopy CLI and stay inert unless `SUPERLOOPY_STOP_HOOK=on`. |
