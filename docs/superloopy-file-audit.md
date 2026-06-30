@@ -41,6 +41,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `docs/superloopy-host-contract.md` | The host-runtime contract Superloopy rides: installable agents, the SubagentStop payload fields, and the host behaviors Superloopy cannot verify. | Superloopy-native; states advisory limits and the deterministic-floor backstop. |
 | `docs/superloopy-loop-golden-set.md` | Long-running golden set, threshold model, file evidence inventory, and run history. | Scores Superloopy on its own behavior. |
 | `docs/superloopy-model-policy.md` | Advisory model, reasoning-effort, and service-tier defaults for bundled Superloopy agents. | Explicitly treats model choice as steering, not proof. |
+| `docs/superpowers/plans/2026-07-01-humanize-korean-superloopy.md` | Implementation plan for a Superloopy-native Korean humanizer skill with measurable safeguards. | Plan-only artifact; keeps the future skill inside Superloopy packaging, evidence, attribution, and validation boundaries. |
 | `hooks/pre-tool-use.json` | Registers the PreToolUse guard command. | Thin Superloopy hook wrapper. |
 | `hooks/session-start.json` | Provides first-launch bootstrap, marketplace update notices, and optional session-start context injection. | Routes through Superloopy CLI; bootstrap installs only the command wrapper and bundled agents, and update checks never run npx self-update for marketplace or checkout installs. |
 | `hooks/stop.json` | Provides optional stop continuation guard. | Routes through Superloopy CLI when enabled locally. |
@@ -58,6 +59,12 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `skills/superloopy-research/agents/openai.yaml` | Minimal agent metadata for discovering the Superloopy research skill. | Superloopy-native skill metadata only. |
 | `skills/superloopy-frontend/SKILL.md` | Skill instructions for UI/visual work: auto-activation, a DESIGN.md token gate, anti-slop rules, crew dispatch, and a real-browser visual-QA evidence gate. | Superloopy-native frontend workflow; concepts independently authored, no external design code or files vendored. |
 | `skills/superloopy-frontend/agents/openai.yaml` | Minimal agent metadata for discovering the Superloopy frontend skill. | Superloopy-native skill metadata only. |
+| `skills/humanize-korean/SKILL.md` | Skill instructions for Korean AI-tone removal with protected spans, register preservation, file-backed audit, and Superloopy evidence receipts. | Superloopy-native skill workflow; adapts ideas with attribution and keeps all packaged guidance local. |
+| `skills/humanize-korean/agents/openai.yaml` | Minimal agent metadata for discovering the Korean humanizer skill. | Superloopy-native skill metadata only. |
+| `skills/humanize-korean/references/quick-rules.md` | Compact Korean AI-tell checklist and rewrite order. | Superloopy-native adapted reference; no symlinked upstream content and no external dependency. |
+| `skills/humanize-korean/references/quality-rubric.md` | Required gates and grading rules for humanized Korean output. | Superloopy-native quality contract; keeps validation measurable and local. |
+| `skills/humanize-korean/references/upstream-notice.md` | Attribution notice for selected ideas adapted from `epoko77-ai/im-not-ai`. | Attribution-only boundary; preserves MIT provenance without vendoring the upstream package. |
+| `skills/humanize-korean/scripts/audit-humanize-output.mjs` | Dependency-free audit CLI for Korean ratio, protected-token preservation, pattern deltas, change rate, warnings, and grade. | Superloopy-native script using Node built-ins only. |
 | `skills/superloopy-frontend/references/anti-slop.md` | Named-default bans, countable rules, consistency locks, real-asset mandate, and the pre-flight checklist for non-AI-looking UI. | Superloopy-native rule set; original prose, no external code or design files vendored. |
 | `skills/superloopy-frontend/references/design-system.md` | The 7-section DESIGN.md token schema and loopy-native token-authoring guidance with illustrative example sets. | Superloopy-native schema; original token examples, no third-party design files vendored. |
 | `skills/superloopy-frontend/references/design/mercury.md` | Mercury's clinical dashboard system: cool near-white canvas, a single indigo-violet signal, and structure built from 1px hairline borders with monospace tabular figures. | Superloopy-native; original prose, public brand facts only, no external design files vendored. |
@@ -211,6 +218,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/docs.test.js` | Public documentation contract tests for Superloopy-native docs and threshold history. | Keeps docs aligned with product contract. |
 | `test/doctor.test.js` | Doctor coverage for package, audit, comparison, design audit, and reviewability checks. | Uses synthetic fixtures only. |
 | `test/file-audit.test.js` | Direct unit coverage for row-level file audit verifier. | Tests Superloopy audit parser. |
+| `test/humanize-korean.test.js` | Contract tests for the Korean humanizer audit script's accept and reject paths. | Superloopy-native test for dependency-free safeguards and protected-token gating. |
 | `test/fleet.test.js` | Handoff registry, fleet reconciliation, verdict-normalization, and crew-line decoration tests. | Tests Superloopy parent-side coordination without persisting presentation flavor. |
 | `test/goals.test.js` | Goal parsing, seeded criteria, lookup, and completion guard tests. | Tests Superloopy plan model. |
 | `test/golden-helpers.js` | Shared temporary repo, CLI, evidence, and gate fixture helpers for golden tests. | Superloopy-owned fixtures. |

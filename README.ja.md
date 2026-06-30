@@ -37,6 +37,7 @@ Superloopy はコマンド層を小さく保ちます。専門的な進め方は
 | `superloopy-loop` | 完全な loop は `loopy <task>` または `loopy team <task>` で始めます。`loopywork`、`lpy`、`$lpy` は guidance だけが必要なときに使います。 | 完全な loop は軽量な計画、次の行動、コマンドで検証した証拠、品質 gate、最終 evidence report を残します。Guidance alias は状態を変更しません。 |
 | `superloopy-research` | `loopy research`、deep research、exhaustive investigation、または引用付きレポートを求めるとき。 | 調査軸、拡張 wave、claim ledger、検証メモ、引用付き synthesis artifact。 |
 | `superloopy-clone` | `loopy clone`、許可された Web サイトのクローン、再構築、移行、ピクセル単位の復元を求めるとき。 | ブラウザ取得、ページ構造、デザイントークン、アセット一覧、実装メモ、build 出力、visual QA 証拠。 |
+| `humanize-korean` | 韓国語テキストの AI っぽさや翻訳調を抑え、事実を変えずに人が書いたように整えるとき。 | `final.md`、`summary.md`、`audit.json` を書き、Superloopy loop では `.superloopy/evidence/humanize-korean/` に証拠を残します。 |
 
 Loop skill が標準のガードレールです。`loopy` は evidence loop を開始または再開し、`loopy team` は crew mode に上げます。`loopywork`、`lpy`、`$lpy` は最初の guidance だけを注入します。Research と clone は明示的に使う専門モードで、どちらも完了文だけではなく Superloopy evidence を残して終わります。
 
