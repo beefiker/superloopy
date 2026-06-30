@@ -1,6 +1,6 @@
 {
   "name": "superloopy",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A lightweight Codex loop harness with strict evidence gates.",
   "type": "module",
   "bin": {
