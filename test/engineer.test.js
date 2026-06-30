@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { hasEngineerTrigger, hasTeamTrigger, parseInvocation } from "../src/engineer.js";
+import { hasEngineerTrigger, hasFrontendTrigger, hasTeamTrigger, parseInvocation } from "../src/engineer.js";
 import { runUserPromptSubmitHook } from "../src/hooks.js";
 import { createLoop } from "../src/loop.js";
 
@@ -155,4 +155,45 @@ test("runUserPromptSubmitHook re-injects the crew playbook when resuming with lo
   assert.match(context, /Crew fan-out \(team mode\)/);
   assert.match(context, /multi_agent_v1\.spawn_agent/);
   assert.match(context, /run `superloopy loop fleet --json` before the final gate/);
+});
+
+test("hasFrontendTrigger fires on UI/visual intent and stays quiet on backend work", () => {
+  assert.equal(hasFrontendTrigger("build a landing page for the product"), true);
+  assert.equal(hasFrontendTrigger("the UI looks generic, make it look professional"), true);
+  assert.equal(hasFrontendTrigger("redesign the navbar with a dark mode"), true);
+  assert.equal(hasFrontendTrigger("style this component with Tailwind"), true);
+  assert.equal(hasFrontendTrigger("set up a design system and color palette"), true);
+
+  assert.equal(hasFrontendTrigger("design the database schema for orders"), false);
+  assert.equal(hasFrontendTrigger("fix the memory layout of the buffer"), false);
+  assert.equal(hasFrontendTrigger("add a retry to the payment API"), false);
+  assert.equal(hasFrontendTrigger(""), false);
+  assert.equal(hasFrontendTrigger(null), false);
+});
+
+test("runUserPromptSubmitHook steers UI prompts to the frontend skill without mutating state", async () => {
+  const repo = await tempRepo();
+  const output = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "build a landing page hero that does not look generic"
+  });
+  const parsed = JSON.parse(output);
+  assert.equal(parsed.hookSpecificOutput.hookEventName, "UserPromptSubmit");
+  assert.match(parsed.hookSpecificOutput.additionalContext, /Superloopy frontend trigger/);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /DESIGN\.md/);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /\.superloopy\/evidence\/frontend\//);
+  assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
+});
+
+test("runUserPromptSubmitHook lets the loop engineer trigger win over the frontend steer", async () => {
+  const repo = await tempRepo();
+  const output = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "loopy build a landing page"
+  });
+  const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+  assert.match(context, /Superloopy loop engineer/);
+  assert.doesNotMatch(context, /Superloopy frontend trigger/);
 });

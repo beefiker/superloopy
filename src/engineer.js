@@ -41,6 +41,55 @@ export function hasTeamTrigger(prompt) {
   return TEAM_TRIGGER_PATTERN.test(prompt.replace(ENGINEER_TRIGGER_PATTERN, ""));
 }
 
+// Frontend intent: keyword/phrase patterns that mark UI/visual work so the prompt
+// hook can steer toward the superloopy-frontend skill even when the user never
+// typed `loopy`. Curated for precision — bare "design"/"layout"/"component" are
+// excluded (they collide with API/data work); the steer is guidance-only, so an
+// occasional miss costs nothing more than a few unused context lines.
+const FRONTEND_TRIGGER_PATTERNS = [
+  /\bfront[\s-]?end\b/iu,
+  /\bu[ix]\b/iu,
+  /\bui\/ux\b|\bux\/ui\b/iu,
+  /\buser interface\b/iu,
+  /\b(css|scss|tailwind|tailwindcss)\b/iu,
+  /\b(landing|pricing|marketing|signup|sign-up) page\b/iu,
+  /\bhero section\b/iu,
+  /\bnav ?bar\b/iu,
+  /\bdesign system\b/iu,
+  /\bdesign\.md\b/iu,
+  /\bdesign tokens?\b/iu,
+  /\bcolor (palette|scheme)\b/iu,
+  /\bfont (pairing|stack)\b/iu,
+  /\bdark mode\b/iu,
+  /\bresponsive\b/iu,
+  /\bredesign\b|\brestyle\b|\bre-?skin\b/iu,
+  /\bmock-?up\b|\bwireframe\b/iu,
+  /\bmake (?:it|this|the [\w-]+) (?:look|feel) (?:better|good|nicer|prettier|premium|professional|polished|designed|modern|clean)\b/iu,
+  /\bmake (?:it|this) pretty\b/iu,
+  /\blooks? (?:generic|bland|boring|cheap|unfinished|like ai|ai[\s-]?generated|like a template|templated)\b/iu,
+  /\banti[\s-]?slop\b|\bawwwards\b|\bpolish the (?:ui|design|page|frontend|landing)\b/iu
+];
+
+// True when the prompt reads as frontend/visual work. Used by the prompt hook to
+// inject a steer toward the superloopy-frontend skill (no state mutation).
+export function hasFrontendTrigger(prompt) {
+  if (typeof prompt !== "string") return false;
+  return FRONTEND_TRIGGER_PATTERNS.some((pattern) => pattern.test(prompt));
+}
+
+// Guidance-only steer: tell the agent to engage the frontend skill and its gates.
+export function renderFrontendTriggerContext() {
+  return [
+    "Superloopy frontend trigger",
+    "",
+    "This request involves UI/visual work. Engage the superloopy-frontend skill before writing UI. This is guidance only; it does not mutate Superloopy state.",
+    "",
+    "- Establish or read a DESIGN.md token contract FIRST — no design system, no UI work; every color/spacing/type value traces to a token.",
+    "- Load `skills/superloopy-frontend/references/anti-slop.md` and pass its pre-flight: zero em-dashes, eyebrow/consistency locks, no AI-default purple/gradient or Inter/beige palette, real assets (no div-fake screenshots).",
+    "- Verify in a real browser at 390/768/1280 px and record a `VISUAL_QA.md` artifact under `.superloopy/evidence/frontend/` before claiming done."
+  ].join("\n");
+}
+
 // Strip the leading trigger keyword and report whether crew fan-out was requested,
 // alongside the cleaned task brief.
 export function parseInvocation(prompt) {

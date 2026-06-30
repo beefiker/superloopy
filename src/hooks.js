@@ -5,7 +5,7 @@ import { parseJson } from "./args.js";
 import { resolveEvidenceArtifact } from "./artifacts.js";
 import { buildGuide } from "./guide.js";
 import { decideContinuation, transcriptTailHasMarker } from "./continuation.js";
-import { hasEngineerTrigger, runEngineerTriggerHook } from "./engineer.js";
+import { hasEngineerTrigger, hasFrontendTrigger, renderFrontendTriggerContext, runEngineerTriggerHook } from "./engineer.js";
 import { applySteering, statusLoop } from "./loop.js";
 import { appendLedger, evidenceRelativeDir, goalsPath, scopeFromSessionId } from "./store.js";
 import { MAX_SUBAGENT_ATTEMPTS, clearAttemptState, nextAttemptState, recordSubagentLedger } from "./subagent-attempts.js";
@@ -79,6 +79,9 @@ export async function runUserPromptSubmitHook(payload) {
     if (hasSteeringMarker(payload.prompt)) return "";
     if (hasEngineerTrigger(payload.prompt)) return await runEngineerTriggerHook(payload, { statusForPayload, guideForPayload, renderSuperloopyContext, formatAdditionalContext });
     if (hasLoosePromptTrigger(payload.prompt)) return await runLoosePromptTriggerHook(payload);
+    // Auto-steer UI/visual prompts to the frontend skill even without a `loopy` keyword. Guidance
+    // only (no state mutation), so it fires regardless of SUPERLOOPY_AUTO_CONTEXT.
+    if (hasFrontendTrigger(payload.prompt)) return formatAdditionalContext("UserPromptSubmit", renderFrontendTriggerContext());
     if (!envOn(process.env, "SUPERLOOPY_AUTO_CONTEXT")) return "";
     return await runContextInjectionHook(payload, "UserPromptSubmit");
   }

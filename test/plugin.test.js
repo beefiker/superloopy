@@ -93,13 +93,33 @@ test("plugin packages Superloopy research and website-clone skills", async () =>
   assert.match(clone.content, /Visual QA/i);
   assert.match(clone.content, /SUPERLOOPY_EVIDENCE/);
 
-  for (const name of ["superloopy-research", "superloopy-clone"]) {
+  for (const name of ["superloopy-research", "superloopy-clone", "superloopy-frontend"]) {
     assert.equal(existsSync(`skills/${name}/agents/openai.yaml`), true);
     const metadata = await readFile(`skills/${name}/agents/openai.yaml`, "utf8");
     assert.match(metadata, /display_name:/);
     assert.match(metadata, /short_description:/);
     assert.match(metadata, /default_prompt:/);
   }
+});
+
+test("plugin packages the Superloopy frontend skill with auto-activation and gates", async () => {
+  const frontend = await readSkill("superloopy-frontend");
+
+  assert.match(frontend.frontmatter, /^name: superloopy-frontend$/m);
+  assert.match(frontend.frontmatter, /MUST USE for ANY frontend/i);
+  assert.match(frontend.frontmatter, /Auto-activates/i);
+  assert.match(frontend.content, /SUPERLOOPY FRONTEND ENABLED/);
+  assert.match(frontend.content, /DESIGN\.md/);
+  assert.match(frontend.content, /anti-slop/i);
+  assert.match(frontend.content, /SUPERLOOPY_EVIDENCE/);
+  assert.match(frontend.content, /\.superloopy\/evidence\/frontend/);
+
+  const antiSlop = await readFile("skills/superloopy-frontend/references/anti-slop.md", "utf8");
+  assert.match(antiSlop, /Pre-Flight checklist/i);
+  assert.match(antiSlop, /em-dash/i);
+
+  const designSystem = await readFile("skills/superloopy-frontend/references/design-system.md", "utf8");
+  assert.match(designSystem, /7 sections|7-section/i);
 });
 
 test("clone skill preserves exact extraction pipeline and crew dispatch guardrails", async () => {
