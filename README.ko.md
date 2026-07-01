@@ -23,7 +23,7 @@
 설치 후 Codex 또는 Claude Code에서 작업 앞에 `loopy`만 붙이세요.
 
 ```
-loopy fix the failing login test and prove it with evidence
+loopy 결제 모듈 적용해줘
 ```
 
 Superloopy가 계획을 세우고, 실행하고, 실제 파일로 각 조각을 검증한 뒤 결과를 보고합니다. 사용자가 중간에 명령을 직접 칠 필요는 없습니다. 패키징된 Stop hook은 기본으로 조용하고, `SUPERLOOPY_STOP_HOOK=on`일 때만 막아섭니다.

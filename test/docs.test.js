@@ -100,11 +100,11 @@ test("README locales are discoverable and do not point at removed PDF manuals", 
   assert.match(root, /中文\(简体\)/);
   assert.match(root, /日本語/);
   assert.match(root, /Español/);
-  assert.match(root, /loopy fix the failing login test and prove it with evidence/);
-  assert.match(await readFile("README.ko.md", "utf8"), /loopy 로그인 테스트가 깨졌어\. 고치고 근거 남겨줘/);
-  assert.match(await readFile("README.zh-CN.md", "utf8"), /loopy 修复失败的登录测试并用证据验证/);
-  assert.match(await readFile("README.ja.md", "utf8"), /loopy 失敗しているログインテストを直して証拠で検証して/);
-  assert.match(await readFile("README.es.md", "utf8"), /loopy corrige la prueba de inicio de sesión que falla y verifícala con evidencia/);
+  assert.match(root, /loopy add the payments module/);
+  assert.match(await readFile("README.ko.md", "utf8"), /loopy 결제 모듈 적용해줘/);
+  assert.match(await readFile("README.zh-CN.md", "utf8"), /loopy 添加支付模块/);
+  assert.match(await readFile("README.ja.md", "utf8"), /loopy 決済モジュールを追加して/);
+  assert.match(await readFile("README.es.md", "utf8"), /loopy agrega el módulo de pagos/);
 });
 
 test("README lists the packaged Superloopy skills and their jobs", async () => {

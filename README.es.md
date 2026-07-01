@@ -23,7 +23,7 @@
 Después de instalarlo, escribe tu tarea en Codex o Claude Code con `loopy` al inicio:
 
 ```
-loopy fix the failing login test and prove it with evidence
+loopy agrega el módulo de pagos
 ```
 
 El agente la planifica, prueba cada parte con un archivo real y responde con el resultado. No tienes que ejecutar comandos manualmente. El Stop hook incluido se queda inactivo salvo que `SUPERLOOPY_STOP_HOOK=on`.

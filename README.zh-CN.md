@@ -23,7 +23,7 @@
 安装后，在 Codex 或 Claude Code 中用 `loopy` 开头输入任务：
 
 ```
-loopy fix the failing login test and prove it with evidence
+loopy 添加支付模块
 ```
 
 代理会规划任务，用真实文件证明每一部分，然后返回结果。你不需要自己运行命令。随包提供的 Stop hook 只有在 `SUPERLOOPY_STOP_HOOK=on` 时才会介入。

@@ -23,7 +23,7 @@
 インストール後、Codex または Claude Code でタスクの先頭に `loopy` を付けて入力します。
 
 ```
-loopy fix the failing login test and prove it with evidence
+loopy 決済モジュールを追加して
 ```
 
 エージェントが計画を立て、各部分を実ファイルで証明し、結果を返します。ユーザーが自分でコマンドを実行する必要はありません。付属の Stop hook は `SUPERLOOPY_STOP_HOOK=on` のときだけ動作します。
