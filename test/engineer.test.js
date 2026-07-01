@@ -209,6 +209,8 @@ test("hasKoreanWritingTrigger steers Korean prose generation without broad Korea
 
   assert.equal(hasKoreanWritingTrigger("번역해줘"), false);
   assert.equal(hasKoreanWritingTrigger("요약해줘"), false);
+  assert.equal(hasKoreanWritingTrigger("영어로 글써줘"), false);
+  assert.equal(hasKoreanWritingTrigger("일본어로 소개글 써줘"), false);
   assert.equal(hasKoreanWritingTrigger("코드 작성해줘"), false);
   assert.equal(hasKoreanWritingTrigger("코드 다듬어줘"), false);
   assert.equal(hasKoreanWritingTrigger("README 작성해줘"), false);
@@ -233,6 +235,18 @@ test("runUserPromptSubmitHook steers Korean writing prompts to post-generation h
   assert.match(parsed.hookSpecificOutput.additionalContext, /Superloopy Korean writing trigger/);
   assert.match(parsed.hookSpecificOutput.additionalContext, /humanize-korean/);
   assert.match(parsed.hookSpecificOutput.additionalContext, /post-generation/);
+  assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
+});
+
+test("runUserPromptSubmitHook stays quiet for explicit non-Korean writing targets", async () => {
+  const repo = await tempRepo();
+  const output = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "영어로 글써줘"
+  });
+
+  assert.equal(output, "");
   assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
 });
 

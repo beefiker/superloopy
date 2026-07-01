@@ -14,5 +14,5 @@
 
 - A: all gates pass, S1 after count is zero, change rate is 0.1 to 0.3.
 - B: all required gates pass, S1 after count is zero, S2 after count is four or fewer.
-- C: protected tokens pass, but change rate warns or S1 remains.
-- D: protected tokens changed, non-Korean input, change rate above 0.5, or new claims were added.
+- C: protected tokens pass, but change rate warns or some S1 remains after a real reduction.
+- D: protected tokens changed, non-Korean input, change rate above 0.5, S1 count is not reduced, or new claims were added.

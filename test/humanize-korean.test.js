@@ -56,3 +56,29 @@ test("humanize audit rejects missing protected tokens", async () => {
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Protected tokens changed/);
 });
+
+test("humanize audit rejects unchanged high-signal AI tells", async () => {
+  const files = await writeCase(
+    "결론적으로, Fileloom은 API를 통해 문서를 열 수 있습니다.",
+    "결론적으로, Fileloom은 API를 통해 문서를 열 수 있습니다."
+  );
+  const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report], {
+    encoding: "utf8"
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /S1 AI-tell count not reduced/);
+});
+
+test("humanize audit protects Korean product names supplied by the caller", async () => {
+  const files = await writeCase(
+    "카카오톡은 2026년 7월 1일에 업데이트됐다.",
+    "메신저는 2026년 7월 1일에 업데이트됐다."
+  );
+  const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report], {
+    encoding: "utf8"
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Protected tokens changed/);
+});

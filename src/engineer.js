@@ -98,6 +98,7 @@ const KOREAN_WRITING_EXCLUSION_PATTERNS = [
   /번역\s*(?:해|해줘|해주세요|해라)/u,
   /요약\s*(?:해|해줘|해주세요|해라)?/u,
   /정리\s*(?:해|해줘|해주세요|해라)/u,
+  /(?:영어|영문|일본어|일문|중국어|중문|프랑스어|독일어|스페인어|포르투갈어|이탈리아어|베트남어|태국어|러시아어|아랍어|인도네시아어|힌디어|터키어|english|japanese|chinese|french|german|spanish|portuguese|italian|vietnamese|thai|russian|arabic|indonesian|hindi|turkish)[^\n]{0,20}(?:글|소개글|소개문|메일|이메일|공지|안내문|답변|댓글|후기\s*답변|문구)?\s*(?:써|작성|draft|write|다듬어|윤문|고쳐)/iu,
   /(?:코드|테스트|README|readme|리드미|릴리즈\s*노트|문서|docs?)[^\n]{0,20}(?:작성|생성|써|써줘|고쳐|수정|다듬어|정리)/iu,
   /(?:법률|계약서|약관)/u,
   /(?:뭐야|알려줘|설명\s*(?:해|해줘|해주세요)?)/u
