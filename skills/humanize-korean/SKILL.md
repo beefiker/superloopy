@@ -1,11 +1,17 @@
 ---
 name: humanize-korean
-description: Korean AI-style humanization for Codex and Superloopy. Use when the user asks to remove Korean AI tells, make Korean text sound human, fix 번역투, remove ChatGPT/Claude/Gemini tone, polish Korean without changing meaning, or says "AI 티 없애줘", "AI 윤문", "번역투 고쳐", "사람이 쓴 것처럼", "humanize Korean", "한글 AI 티 제거". Handles Korean rewriting only; not for translation, fact expansion, SEO rewriting, or generic proofreading.
+description: Korean prose humanizer for Codex and Superloopy that rewrites Korean text so it sounds naturally human while preserving meaning, register, facts, protected tokens, and evidence. Use when the user asks to remove Korean AI tells, make Korean copy sound human, fix 번역투, remove ChatGPT/Claude/Gemini tone, polish Korean without changing meaning, or says "AI 티 없애줘", "AI 윤문", "번역투 고쳐", "사람이 쓴 것처럼", "humanize Korean", "한글 AI 티 제거", "글 자연스럽게 다듬어줘". Inspired by Korean AI-tell ideas from https://github.com/epoko77-ai/im-not-ai. Handles Korean rewriting only; not for translation, fact expansion, SEO rewriting, legal drafting, or generic proofreading.
 ---
 
 # Humanize Korean
 
 SUPERLOOPY HUMANIZE KOREAN ENABLED
+
+## What This Skill Is
+
+Use this skill as a Korean prose post-editor: it takes already-written Korean text and removes AI-like rhythm, translationese, repetitive endings, formulaic transitions, and over-polished phrasing without changing the underlying message.
+
+Shout out to https://github.com/epoko77-ai/im-not-ai for the Korean AI-tell inspiration. This Superloopy version keeps the workflow local, adds protected-span preservation, file-backed audits, and Superloopy evidence receipts.
 
 ## Contract
 
