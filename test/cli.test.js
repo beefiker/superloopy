@@ -27,7 +27,7 @@ function cliPathInvocation(binPath, args, platform = process.platform) {
   const command = process.env.ComSpec || "cmd.exe";
   return {
     command,
-    args: ["/d", "/s", "/c", [quoteWindowsCmdArg(binPath), ...args.map(quoteWindowsCmdArg)].join(" ")]
+    args: ["/d", "/c", ["call", quoteWindowsCmdArg(binPath), ...args.map(quoteWindowsCmdArg)].join(" ")]
   };
 }
 
@@ -58,9 +58,8 @@ test("CLI test wrapper routes Windows command files through cmd.exe", () => {
   const invocation = cliPathInvocation("C:\\tmp\\superloopy.cmd", ["--help"], "win32");
 
   assert.equal(invocation.command.toLowerCase().endsWith("cmd.exe"), true);
-  assert.deepEqual(invocation.args.slice(0, 3), ["/d", "/s", "/c"]);
-  assert.match(invocation.args[3], /superloopy\.cmd/);
-  assert.match(invocation.args[3], /--help/);
+  assert.deepEqual(invocation.args.slice(0, 2), ["/d", "/c"]);
+  assert.match(invocation.args[2], /^call "C:\\tmp\\superloopy\.cmd" "--help"$/);
 });
 
 test("CLI entrypoint runs through a symlinked bin path", { skip: process.platform === "win32" ? "extensionless symlink execution is POSIX-only" : false }, async () => {
