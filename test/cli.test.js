@@ -23,17 +23,17 @@ function runCli(args, options = {}) {
 }
 
 function cliPathInvocation(binPath, args, platform = process.platform) {
-  if (platform !== "win32") return { command: binPath, args };
-  const command = process.env.ComSpec || "cmd.exe";
+  if (platform !== "win32") return { command: binPath, args, options: {} };
   return {
-    command,
-    args: ["/d", "/s", "/c", [quoteWindowsCmdArg(binPath), ...args.map(quoteWindowsCmdArg)].join(" ")]
+    command: quoteWindowsCmdArg(binPath),
+    args,
+    options: { shell: true }
   };
 }
 
 function spawnCliPath(binPath, args, options = {}) {
   const invocation = cliPathInvocation(binPath, args);
-  return spawnSync(invocation.command, invocation.args, options);
+  return spawnSync(invocation.command, invocation.args, { ...options, ...invocation.options });
 }
 
 function quoteWindowsCmdArg(value) {
@@ -57,10 +57,9 @@ test("CLI loop help shows the shortest evidence-backed flow", () => {
 test("CLI test wrapper routes Windows command files through cmd.exe", () => {
   const invocation = cliPathInvocation("C:\\tmp\\superloopy.cmd", ["--help"], "win32");
 
-  assert.equal(invocation.command.toLowerCase().endsWith("cmd.exe"), true);
-  assert.deepEqual(invocation.args.slice(0, 3), ["/d", "/s", "/c"]);
-  assert.match(invocation.args[3], /superloopy\.cmd/);
-  assert.match(invocation.args[3], /--help/);
+  assert.equal(invocation.command, "\"C:\\tmp\\superloopy.cmd\"");
+  assert.deepEqual(invocation.args, ["--help"]);
+  assert.deepEqual(invocation.options, { shell: true });
 });
 
 test("CLI entrypoint runs through a symlinked bin path", { skip: process.platform === "win32" ? "extensionless symlink execution is POSIX-only" : false }, async () => {

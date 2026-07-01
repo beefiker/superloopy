@@ -87,6 +87,7 @@ Total: 100 points.
 | `.github/assets/nami.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
 | `.github/assets/transferloom-clone-reference.png` | Audit coverage and README clone-demo reference. | Must remain a documentation screenshot for the validated Transferloom.com clone, not runtime plugin logic. |
 | `.github/workflows/hol-plugin-scanner.yml` | Hashgraph catalog readiness and GitHub Actions. | Must run the HOL scanner against the plugin root with SHA-pinned actions and no runtime side effects. |
+| `.github/workflows/test.yml` | Cross-platform test CI and GitHub Actions. | Must run `node --test` (no shell glob) across the ubuntu/windows/macos × Node 20/22 matrix with SHA-pinned actions and no runtime side effects. |
 | `docs/superloopy-design-audit.md` | `src/design-audit.js`, `test/doctor.test.js`. | Must keep required decision rows with reason, effect, and guard. |
 | `docs/superloopy-crew-lines.md` | `test/docs.test.js`, audit coverage. | Must record the precedent pattern, no-copied-quotes rule, terminal-only behavior, and presentation-only authority boundary. |
 | `docs/superloopy-file-audit.md` | `test/audit.test.js`, `src/file-audit.js`, doctor file-audit check. | Must list every Git-visible file with non-empty role and compatibility-boundary cells. |
