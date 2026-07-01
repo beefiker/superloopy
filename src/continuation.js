@@ -279,22 +279,20 @@ function readCount(raw, fallback) {
 // at the end) and scans for any lowercase marker. Bounds the scan on multi-MB
 // transcripts that grow with session length. Synchronous so both the async
 // continuation path and the sync hook handlers can share one reader.
-export function transcriptTailHasMarker(transcriptPath, markers) {
-  if (typeof transcriptPath !== "string" || transcriptPath.length === 0) return false;
-  if (!Array.isArray(markers) || markers.length === 0) return false;
+export function readTranscriptTail(transcriptPath) {
+  if (typeof transcriptPath !== "string" || transcriptPath.length === 0) return "";
   let fd;
   try {
     fd = openSync(transcriptPath, "r");
     const { size } = fstatSync(fd);
     const start = size > TRANSCRIPT_TAIL_BYTES ? size - TRANSCRIPT_TAIL_BYTES : 0;
     const length = size - start;
-    if (length <= 0) return false;
+    if (length <= 0) return "";
     const buffer = Buffer.alloc(length);
     readSync(fd, buffer, 0, length, start);
-    const lower = buffer.toString("utf8").toLowerCase();
-    return markers.some((marker) => lower.includes(marker));
+    return buffer.toString("utf8");
   } catch {
-    return false;
+    return "";
   } finally {
     if (fd !== undefined) {
       try {
@@ -304,4 +302,11 @@ export function transcriptTailHasMarker(transcriptPath, markers) {
       }
     }
   }
+}
+
+export function transcriptTailHasMarker(transcriptPath, markers) {
+  if (!Array.isArray(markers) || markers.length === 0) return false;
+  const lower = readTranscriptTail(transcriptPath).toLowerCase();
+  if (lower.length === 0) return false;
+  return markers.some((marker) => lower.includes(marker));
 }

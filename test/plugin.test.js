@@ -32,6 +32,8 @@ test("plugin manifest exposes Superloopy skills and packaged opt-in hooks", asyn
   assert(plugin.hooks.includes("./hooks/user-prompt-submit.json"));
   assert(plugin.hooks.includes("./hooks/pre-tool-use.json"));
   assert(plugin.interface.defaultPrompt.some((line) => /bootstraps the CLI wrapper/.test(line)));
+  assert.ok(plugin.interface.defaultPrompt.length <= 3);
+  assert.ok(plugin.interface.defaultPrompt.every((line) => line.length <= 128));
   assert.equal(plugin.hooks.includes("./hooks/stop.json"), true);
 });
 

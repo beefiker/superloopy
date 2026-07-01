@@ -1,0 +1,24 @@
+{
+  "name": "beefiker",
+  "owner": {
+    "name": "beefiker"
+  },
+  "description": "Superloopy — a strict evidence loop harness that runs on both Claude Code and Codex from one repo.",
+  "plugins": [
+    {
+      "name": "superloopy",
+      "source": "./",
+      "description": "Strict evidence loop harness: repo-local loop state, success criteria, append-only ledgers, evidence-gated completion, plus skills (loop, research, frontend, clone) and a read-only/worker crew. Works on Claude Code and Codex from one repo.",
+      "version": "0.6.3",
+      "license": "MIT",
+      "keywords": [
+        "claude-code",
+        "evidence-gates",
+        "proof-of-done",
+        "loop",
+        "subagents",
+        "skills"
+      ]
+    }
+  ]
+}

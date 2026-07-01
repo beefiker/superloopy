@@ -81,6 +81,10 @@ When a tracked crew handoff finishes, Superloopy can print one original crew lin
 
 ## Install
 
+Superloopy installs on both **Codex** and **Claude Code** from one repo. The core (loop state, evidence gates, doctor) is host-agnostic; each host gets its own thin plugin manifest, hook wiring, and agent format.
+
+### Codex
+
 Needs Node.js ≥ 20 and Codex CLI ≥ 0.131.0 for `codex plugin add`. Superloopy is dependency-free — zero runtime dependencies, just Node.
 
 ```
@@ -91,6 +95,17 @@ codex plugin add superloopy@beefiker
 Restart Codex after installing the plugin. If Codex asks you to review hooks, approve them; the next approved session runs a `SessionStart` hook that does a one-time bootstrap — it installs the `superloopy` command and the agents. If `superloopy` isn't found, its folder isn't on your `PATH`; the bootstrap prints the exact line to add. Check everything with `superloopy doctor`.
 
 Installing from a checkout instead? Run `node src/cli.js install --json`.
+
+### Claude Code
+
+Needs Node.js ≥ 20. From the same repo:
+
+```
+/plugin marketplace add beefiker/superloopy
+/plugin install superloopy@beefiker
+```
+
+Reload plugins (or restart Claude Code) and approve the hooks when prompted. On Claude Code the skills, subagents (`agents/*.md`), and hooks (`hooks/hooks.json`) are **plugin-bundled** — there is no `~/.codex` install step and no `superloopy` wrapper; the hooks invoke the CLI directly via `${CLAUDE_PLUGIN_ROOT}`, and `SessionStart` is a clean no-op (nothing to bootstrap). For local development, point Claude Code at a checkout with `claude --plugin-dir <checkout>`. Verify with `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`. The subagents' advisory model defaults for Claude are documented in `docs/superloopy-model-policy-claude.md`.
 
 ## Update
 

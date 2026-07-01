@@ -60,10 +60,21 @@ Total: 100 points.
 | `.codex/agents/jinbe.toml` | `test/docs.test.js`, audit coverage. | Must define the Superloopy gate-review role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
 | `.codex/agents/usopp.toml` | `test/docs.test.js`, audit coverage. | Must define the Superloopy QA role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
 | `.codex-plugin/plugin.json` | `test/plugin.test.js`, doctor plugin manifest check. | Must expose `./skills/` and the packaged Superloopy hook files, including opt-in Stop. |
+| `.claude-plugin/plugin.json` | Audit coverage; Claude plugin load. | Must declare the Claude plugin (name, skills, agents, hooks/hooks.json) so one repo installs on Claude Code. |
+| `.claude-plugin/marketplace.json` | Audit coverage. | Must expose superloopy as an installable Claude Code marketplace plugin pointing at this repo root. |
+| `hooks/hooks.json` | Audit coverage; Claude hook load. | Must route SessionStart/UserPromptSubmit/Stop/SubagentStop to the CLI via ${CLAUDE_PLUGIN_ROOT}, matching worker/navigator and auditor agent types. |
+| `agents/franky.md` | Audit coverage. | Must define the Claude bounded executor subagent and the SUPERLOOPY_EVIDENCE receipt. |
+| `agents/zoro.md` | Audit coverage. | Must define the Claude code-review subagent and the SUPERLOOPY_EVIDENCE receipt. |
+| `agents/usopp.md` | Audit coverage. | Must define the Claude QA subagent and the SUPERLOOPY_EVIDENCE receipt. |
+| `agents/jinbe.md` | Audit coverage. | Must define the Claude final gate-review subagent and the SUPERLOOPY_EVIDENCE receipt. |
+| `agents/robin.md` | Audit coverage. | Must define the read-only Claude auditor subagent, the SUPERLOOPY_AUDIT receipt, and a read-only tools allowlist. |
+| `agents/nami.md` | Audit coverage. | Must define the read-only Claude navigator subagent (writes no receipt) with a read-only tools allowlist. |
+| `docs/superloopy-model-policy-claude.md` | `test/docs.test.js` model-policy assertions, audit coverage. | Must record the Claude model aliases and the advisory steering-not-proof rule mapped from the Codex policy. |
+| `docs/superloopy-claude-validation.md` | Audit coverage and reviewability check. | Must give a runnable Claude Code validation checklist covering install, components, the SubagentStop receipt/agent_type/env-var/steering linchpins, a full loop, and degrade-safety. |
 | `.gitignore` | Doctor runtime-boundary ignored samples and installed-cache docs coverage. | `.superloopy/`, logs, coverage, dependencies, OS noise, and Codex marketplace metadata must stay out of source control. |
 | `LICENSE` | Audit coverage and reviewability check. | Must remain a source file with no runtime implementation content. |
 | `SECURITY.md` | Hashgraph catalog readiness. | Must document vulnerability reporting without publishing exploit details or secrets. |
-| `README.md` | `test/docs.test.js` public-doc assertions. | Must describe actual Superloopy install, bootstrap, commands, evidence rules, hooks, gates, doctor checks, and locale links. |
+| `README.md` | `test/docs.test.js` public-doc assertions. | Must describe actual Superloopy install on both Codex and Claude Code, bootstrap, commands, evidence rules, hooks, gates, doctor checks, and locale links. |
 | `README.ko.md` | `test/docs.test.js`, audit coverage. | Must provide the Korean README locale and keep install commands aligned with the root README. |
 | `README.zh-CN.md` | `test/docs.test.js`, audit coverage. | Must provide the Simplified Chinese README locale and keep install commands aligned with the root README. |
 | `README.ja.md` | `test/docs.test.js`, audit coverage. | Must provide the Japanese README locale and keep install commands aligned with the root README. |
@@ -227,7 +238,7 @@ Total: 100 points.
 | `src/continuation.js` | `test/golden-continuation.test.js`. | Must drive bounded continuation toward evidence-backed completion and mark blocked (never complete) on a cap or stall. |
 | `src/crew-lines.js` | `test/crew-lines.test.js`, `test/fleet.test.js`. | Must generate original deterministic supported-catalog lines only for known terminal crew handoffs and format them without mutating persisted state. |
 | `src/design-audit.js` | Doctor design-audit tests. | Must fail missing sections, decisions, or incomplete guards. |
-| `src/doctor.js` | `test/doctor.test.js`, `node src/cli.js doctor --json`. | Must verify package, hooks, skill, audits, comparison status, model policy, and reviewability while ignoring generated Codex marketplace install metadata. |
+| `src/doctor.js` | `test/doctor.test.js`, `test/claude-host-wiring.test.js`, `node src/cli.js doctor --json`. | Must verify package, hooks, Claude host wiring, skill, audits, comparison status, Codex + Claude model policy, and reviewability while ignoring generated Codex marketplace install metadata. |
 | `src/engineer.js` | `test/engineer.test.js`, `test/hooks.test.js` engineer-trigger tests. | Must wake the loop engineer on a leading `loopy` keyword or its Korean alias `루피` without mutating state itself, escalate to crew fan-out only on `team`/`crew`/`팀`/`크루`, and detect frontend/visual or Korean-writing intent for guidance-only skill steers. |
 | `src/file-audit.js` | `test/file-audit.test.js`, doctor file-audit check. | Must fail missing, stale, or incomplete inventory rows. |
 | `src/finish.js` | CLI evidence and loop-gate tests. | Must only finalize after all criteria have valid pass artifacts, then write gate and report artifacts. |
@@ -239,9 +250,12 @@ Total: 100 points.
 | `src/install-flow.js` | `test/auto-update.test.js`. | Must distinguish marketplace, checkout, future npx-local snapshot, and unknown install states so unsafe npx updates stay off. |
 | `src/loop.js` | Core loop and CLI tests. | Must preserve lifecycle state, ledger appends, evidence recording, review, checkpoint, status, and steering. |
 | `src/matrix-gate.js` | Matrix gate golden tests. | Must validate compatible matrix gate shape through Superloopy artifacts only. |
-| `src/model-policy.js` | `test/doctor.test.js`. | Must fail doctor when model policy docs or bundled agent TOML defaults drift. |
+| `src/model-policy.js` | `test/doctor.test.js`. | Must fail doctor when the Codex model-policy doc/TOML defaults or the Claude model-policy doc/`agents/*.md` model frontmatter drift. |
 | `src/plan-summary.js` | Guide and status tests through loop outputs. | Must summarize progress without mutating state. |
 | `src/pre-tool-use.js` | `test/pre-tool-use.test.js`, `test/golden-hooks.test.js`. | Must block malformed `create_goal` payloads and premature native `update_goal` completion. |
+| `src/receipt.js` | `test/host-adapter.test.js`, hook tests. | Must recover the worker receipt from last_assistant_message when present, else from the decoded final turn of the subagent transcript, failing closed (re-prompt) when the final message exceeds the tail window, host-agnostically. |
+| `test/host-adapter.test.js` | `npm test`. | Must verify direct and transcript-fallback receipt recovery for both evidence and audit receipts, including trailing-newline, oversized-final-message, tool-use-only, and stale-token cases. |
+| `test/claude-host-wiring.test.js` | `npm test`. | Must verify the doctor Claude-host-wiring check: manifest/hooks presence, SubagentStop CLI wiring, namespaced matcher coverage, and safe handling of invalid regex/JSON. |
 | `src/prove.js` | CLI evidence tests. | Must record command evidence against the active unresolved criterion and return the next guide. |
 | `src/report.js` | Report and CLI evidence tests. | Must write portable evidence reports with summary counts, warnings, timestamps, artifacts, timeline, and next action. |
 | `src/review-gate.js` | Review gate golden tests. | Must validate strict five-section review gate shape through Superloopy artifacts only. |

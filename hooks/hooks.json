@@ -1,0 +1,39 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli.js\" hook session-start", "timeout": 5 }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli.js\" hook user-prompt-submit", "timeout": 5 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli.js\" hook stop", "timeout": 5 }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "^(?:superloopy:)?(?:franky|zoro|usopp|jinbe|nami)$",
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli.js\" hook subagent-stop", "timeout": 5 }
+        ]
+      },
+      {
+        "matcher": "^(?:superloopy:)?robin$",
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli.js\" hook subagent-stop-audit", "timeout": 5 }
+        ]
+      }
+    ]
+  }
+}
