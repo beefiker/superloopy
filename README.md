@@ -109,6 +109,8 @@ Reload plugins (or restart Claude Code) and approve the hooks when prompted. On 
 
 ## Update
 
+### Codex
+
 If you installed from the Codex marketplace, refresh the marketplace snapshot:
 
 ```
@@ -135,13 +137,29 @@ superloopy doctor
 
 Checkout installs are not `npx`-managed. `npx` self-update is reserved for a future installer that writes a `superloopy-install.json` snapshot into a stable install root.
 
+### Claude Code
+
+Refresh the marketplace, reinstall to resolve the new version, then reload — no restart needed:
+
+```
+/plugin marketplace update beefiker
+/plugin install superloopy@beefiker
+/reload-plugins
+```
+
+There is no separate `/plugin update` command: reinstalling from the refreshed marketplace resolves the new version, and `/reload-plugins` applies it in the current session (no Claude Code restart, and hooks do not need re-approval). Verify with `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`. If you loaded a checkout with `--plugin-dir`, just `git pull --ff-only` and run `/reload-plugins`.
+
 ## Troubleshooting
 
 If plugin install or upgrade commands fail, update the Codex CLI first. `codex plugin add` is available in Codex CLI 0.131.0 and newer; older builds can have trouble with current plugin marketplace commands and hook approval flows.
 
 After updating the CLI, restart Codex, run the marketplace install or upgrade command again, approve any Modified hooks, then check with `superloopy doctor`.
 
+On Claude Code, if `/plugin` commands fail or the plugin looks stale, run `/reload-plugins` (or restart Claude Code) and verify with `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`.
+
 ## Uninstall
+
+### Codex
 
 Remove the installed plugin from Codex:
 
@@ -163,5 +181,14 @@ rm -f ~/.codex/agents/franky.toml ~/.codex/agents/zoro.toml ~/.codex/agents/usop
 ```
 
 If you installed with `CODEX_HOME`, `SUPERLOOPY_BIN_DIR`, or `CODEX_LOCAL_BIN_DIR`, clean up those configured paths instead.
+
+### Claude Code
+
+```
+/plugin uninstall superloopy@beefiker
+/plugin marketplace remove beefiker
+```
+
+Then run `/reload-plugins`. Nothing else to clean up — Claude Code installs are fully plugin-bundled (no `superloopy` wrapper, no `~/.codex` writes). Removing the marketplace from its last remaining scope also uninstalls the plugin.
 
 <sub>MIT licensed.</sub>

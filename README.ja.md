@@ -109,6 +109,8 @@ Node.js 20 以上が必要です。同じ repo から:
 
 ## 更新
 
+### Codex
+
 Codex marketplace からインストールした場合は、marketplace snapshot を更新します。
 
 ```
@@ -135,13 +137,29 @@ superloopy doctor
 
 checkout インストールは `npx` 管理ではありません。`npx` self-update は、安定したインストール先に `superloopy-install.json` snapshot を書き込む将来の installer のために予約されています。
 
+### Claude Code
+
+marketplace を更新し、新しいバージョンを解決するために再インストールしてから再読み込みします。再起動は不要です。
+
+```
+/plugin marketplace update beefiker
+/plugin install superloopy@beefiker
+/reload-plugins
+```
+
+別途 `/plugin update` コマンドはありません。更新済み marketplace から再インストールすると新しいバージョンが解決され、`/reload-plugins` が現在のセッションにそれを適用します（Claude Code の再起動は不要で、hooks の再承認も必要ありません）。`node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json` で確認してください。`--plugin-dir` で checkout を読み込んでいる場合は、`git pull --ff-only` を実行して `/reload-plugins` するだけです。
+
 ## トラブルシューティング
 
 プラグインのインストールまたは更新コマンドが失敗する場合は、まず Codex CLI を更新してください。`codex plugin add` は Codex CLI 0.131.0 以降で使えます。古い Codex CLI では、現在の plugin marketplace コマンドや hook 承認フローがうまく動かないことがあります。
 
 CLI 更新後に Codex を再起動し、marketplace のインストールまたは更新コマンドを再実行してください。Modified hooks が表示されたら承認し、`superloopy doctor` で確認します。
 
+Claude Code で `/plugin` コマンドが失敗する、またはプラグインが古いままに見える場合は、`/reload-plugins`（または Claude Code の再起動）を実行し、`node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json` で確認してください。
+
 ## アンインストール
+
+### Codex
 
 Codex からインストール済みプラグインを削除します。
 
@@ -163,5 +181,14 @@ rm -f ~/.codex/agents/franky.toml ~/.codex/agents/zoro.toml ~/.codex/agents/usop
 ```
 
 `CODEX_HOME`、`SUPERLOOPY_BIN_DIR`、`CODEX_LOCAL_BIN_DIR` を使ってインストール先を変えた場合は、その設定先を削除してください。
+
+### Claude Code
+
+```
+/plugin uninstall superloopy@beefiker
+/plugin marketplace remove beefiker
+```
+
+その後 `/reload-plugins` を実行してください。他に片付けるものはありません。Claude Code インストールは完全にプラグインに同梱されています（`superloopy` wrapper も `~/.codex` への書き込みもありません）。最後に残っていたスコープから marketplace を削除すると、プラグインもアンインストールされます。
 
 <sub>MIT ライセンス。</sub>

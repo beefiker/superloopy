@@ -109,6 +109,8 @@ codex plugin add superloopy@beefiker
 
 ## 更新
 
+### Codex
+
 如果通过 Codex marketplace 安装，刷新 marketplace snapshot：
 
 ```
@@ -135,13 +137,29 @@ superloopy doctor
 
 checkout 安装不是 `npx` 管理的。`npx` self-update 只会在未来有稳定 installer、并在安装根目录写入 `superloopy-install.json` snapshot 之后启用。
 
+### Claude Code
+
+刷新 marketplace，重新安装以解析新版本，然后重新加载——无需重启：
+
+```
+/plugin marketplace update beefiker
+/plugin install superloopy@beefiker
+/reload-plugins
+```
+
+没有单独的 `/plugin update` 命令：从已刷新的 marketplace 重新安装即可解析出新版本，`/reload-plugins` 会在当前会话中应用它（无需重启 Claude Code，hooks 也不需要重新批准）。用 `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json` 验证。如果你用 `--plugin-dir` 加载了一个 checkout，只需 `git pull --ff-only` 再运行 `/reload-plugins`。
+
 ## 故障排除
 
 如果插件安装或更新命令失败，请先更新 Codex CLI。`codex plugin add` 从 Codex CLI 0.131.0 开始可用；旧版本可能无法顺利处理当前的 plugin marketplace 命令和 hook 审批流程。
 
 更新 CLI 后重启 Codex，再次运行 marketplace 安装或更新命令，批准所有 Modified hooks，然后用 `superloopy doctor` 检查。
 
+在 Claude Code 上，如果 `/plugin` 命令失败或插件看起来像旧版本，请运行 `/reload-plugins`（或重启 Claude Code），再用 `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json` 验证。
+
 ## 卸载
+
+### Codex
 
 从 Codex 删除已安装插件：
 
@@ -163,5 +181,14 @@ rm -f ~/.codex/agents/franky.toml ~/.codex/agents/zoro.toml ~/.codex/agents/usop
 ```
 
 如果安装时使用了 `CODEX_HOME`、`SUPERLOOPY_BIN_DIR` 或 `CODEX_LOCAL_BIN_DIR`，请清理对应路径。
+
+### Claude Code
+
+```
+/plugin uninstall superloopy@beefiker
+/plugin marketplace remove beefiker
+```
+
+然后运行 `/reload-plugins`。没有其他需要清理的东西——Claude Code 安装完全随插件打包（没有 `superloopy` wrapper，也不写入 `~/.codex`）。从最后一个作用域移除该 marketplace 也会一并卸载插件。
 
 <sub>MIT 许可证。</sub>
