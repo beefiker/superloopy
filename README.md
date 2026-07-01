@@ -2,7 +2,7 @@
 
 # 🌀 Superloopy
 
-**Loop engineering for Codex.** Type `loopy <task>` — an agent does the work, proves each piece with real evidence, and only then says it's done.
+**Loop engineering for Codex and Claude Code.** Type `loopy <task>` — an agent does the work, proves each piece with real evidence, and only then says it's done.
 
 <p>
   <a href="README.md">English</a> ·
@@ -20,21 +20,21 @@
 
 ## Use it
 
-After installing, type your task in Codex with a leading `loopy`:
+After installing, type your task in Codex or Claude Code with a leading `loopy`:
 
 ```
-loopy fix the failing login test and prove it with evidence
+loopy add the payments module
 ```
 
 The agent plans it, proves each piece with a real file, and reports back — you don't run any commands yourself. The packaged Stop hook stays quiet unless `SUPERLOOPY_STOP_HOOK=on`.
 
 ## Why Superloopy?
 
-Superloopy is for Codex work where "done" needs to mean more than a confident status sentence.
+Superloopy is for Codex and Claude Code work where "done" needs to mean more than a confident status sentence.
 
 - Evidence-first: every pass points at a real artifact under `.superloopy/evidence/`.
 - Lightweight by default: one small CLI, repo-local state, zero runtime dependencies.
-- Agent-friendly: skills, hooks, and optional crew lanes guide Codex without hiding the final gate.
+- Agent-friendly: skills, hooks, and optional crew lanes guide the agent without hiding the final gate.
 
 ## Skills
 
@@ -58,7 +58,7 @@ The loop skill is the default guardrail. `loopy` starts or resumes the evidence 
 
 ## The crew
 
-For bigger work, Superloopy ships six optional subagents under `.codex/agents/` — each owns one lane. They install automatically with the plugin (no command needed); `superloopy agents install` just re-copies them if you ever need it. Their advisory model defaults are documented in `docs/superloopy-model-policy.md` and checked by `superloopy doctor`.
+For bigger work, Superloopy ships six optional subagents — each owns one lane (`.codex/agents/*.toml` on Codex, bundled `agents/*.md` on Claude Code). They come with the plugin (no command needed); on Codex, `superloopy agents install` just re-copies them if you ever need it. Their advisory model defaults are documented in `docs/superloopy-model-policy.md` (Codex) and `docs/superloopy-model-policy-claude.md` (Claude Code), and checked by `superloopy doctor`.
 
 <table>
   <tr>
