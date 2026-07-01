@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { hasEngineerTrigger, hasFrontendTrigger, hasTeamTrigger, parseInvocation } from "../src/engineer.js";
+import { hasEngineerTrigger, hasFrontendTrigger, hasKoreanWritingTrigger, hasTeamTrigger, parseInvocation } from "../src/engineer.js";
 import { runUserPromptSubmitHook } from "../src/hooks.js";
 import { createLoop } from "../src/loop.js";
 
@@ -196,6 +196,65 @@ test("runUserPromptSubmitHook lets the loop engineer trigger win over the fronte
   const context = JSON.parse(output).hookSpecificOutput.additionalContext;
   assert.match(context, /Superloopy loop engineer/);
   assert.doesNotMatch(context, /Superloopy frontend trigger/);
+});
+
+test("hasKoreanWritingTrigger steers Korean prose generation without broad Korean prompts", () => {
+  assert.equal(hasKoreanWritingTrigger("AI 티 안 나게 공지 써줘"), true);
+  assert.equal(hasKoreanWritingTrigger("사람이 쓴 것처럼 소개글 써줘"), true);
+  assert.equal(hasKoreanWritingTrigger("한국어로 글 써줘"), true);
+  assert.equal(hasKoreanWritingTrigger("고객에게 보낼 이메일 작성해줘"), true);
+  assert.equal(hasKoreanWritingTrigger("댓글 답변 써줘"), true);
+  assert.equal(hasKoreanWritingTrigger("글써줘"), true);
+  assert.equal(hasKoreanWritingTrigger("메일 문장 자연스럽게 다듬어줘"), true);
+
+  assert.equal(hasKoreanWritingTrigger("번역해줘"), false);
+  assert.equal(hasKoreanWritingTrigger("요약해줘"), false);
+  assert.equal(hasKoreanWritingTrigger("코드 작성해줘"), false);
+  assert.equal(hasKoreanWritingTrigger("코드 다듬어줘"), false);
+  assert.equal(hasKoreanWritingTrigger("README 작성해줘"), false);
+  assert.equal(hasKoreanWritingTrigger("README 문장 다듬어줘"), false);
+  assert.equal(hasKoreanWritingTrigger("계약서 작성해줘"), false);
+  assert.equal(hasKoreanWritingTrigger("애니메이션 자연스럽게 만들어줘"), false);
+  assert.equal(hasKoreanWritingTrigger("UI 다듬어줘"), false);
+  assert.equal(hasKoreanWritingTrigger("이 에러가 뭐야?"), false);
+  assert.equal(hasKoreanWritingTrigger(""), false);
+  assert.equal(hasKoreanWritingTrigger(null), false);
+});
+
+test("runUserPromptSubmitHook steers Korean writing prompts to post-generation humanization", async () => {
+  const repo = await tempRepo();
+  const output = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "고객에게 보낼 안내문 글써줘"
+  });
+  const parsed = JSON.parse(output);
+  assert.equal(parsed.hookSpecificOutput.hookEventName, "UserPromptSubmit");
+  assert.match(parsed.hookSpecificOutput.additionalContext, /Superloopy Korean writing trigger/);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /humanize-korean/);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /post-generation/);
+  assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
+});
+
+test("runUserPromptSubmitHook keeps explicit loop and frontend triggers ahead of Korean writing steer", async () => {
+  const repo = await tempRepo();
+  const loopOutput = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "loopy 한국어로 글 써줘"
+  });
+  const loopContext = JSON.parse(loopOutput).hookSpecificOutput.additionalContext;
+  assert.match(loopContext, /Superloopy loop engineer/);
+  assert.doesNotMatch(loopContext, /Superloopy Korean writing trigger/);
+
+  const frontendOutput = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "landing page hero 문구 써줘"
+  });
+  const frontendContext = JSON.parse(frontendOutput).hookSpecificOutput.additionalContext;
+  assert.match(frontendContext, /Superloopy frontend trigger/);
+  assert.doesNotMatch(frontendContext, /Superloopy Korean writing trigger/);
 });
 
 test("the Korean alias 루피 wakes the loop engineer like loopy", () => {

@@ -5,7 +5,7 @@ import { parseJson } from "./args.js";
 import { resolveEvidenceArtifact } from "./artifacts.js";
 import { buildGuide } from "./guide.js";
 import { decideContinuation, transcriptTailHasMarker } from "./continuation.js";
-import { hasEngineerTrigger, hasFrontendTrigger, renderFrontendTriggerContext, runEngineerTriggerHook } from "./engineer.js";
+import { hasEngineerTrigger, hasFrontendTrigger, hasKoreanWritingTrigger, renderFrontendTriggerContext, renderKoreanWritingTriggerContext, runEngineerTriggerHook } from "./engineer.js";
 import { applySteering, statusLoop } from "./loop.js";
 import { appendLedger, evidenceRelativeDir, goalsPath, scopeFromSessionId } from "./store.js";
 import { MAX_SUBAGENT_ATTEMPTS, clearAttemptState, nextAttemptState, recordSubagentLedger } from "./subagent-attempts.js";
@@ -82,6 +82,9 @@ export async function runUserPromptSubmitHook(payload) {
     // Auto-steer UI/visual prompts to the frontend skill even without a `loopy` keyword. Guidance
     // only (no state mutation), so it fires regardless of SUPERLOOPY_AUTO_CONTEXT.
     if (hasFrontendTrigger(payload.prompt)) return formatAdditionalContext("UserPromptSubmit", renderFrontendTriggerContext());
+    // Auto-steer Korean prose generation toward a light post-generation humanize-korean pass.
+    // Kept after frontend so UI/page requests get the stronger visual-work steer.
+    if (hasKoreanWritingTrigger(payload.prompt)) return formatAdditionalContext("UserPromptSubmit", renderKoreanWritingTriggerContext());
     if (!envOn(process.env, "SUPERLOOPY_AUTO_CONTEXT")) return "";
     return await runContextInjectionHook(payload, "UserPromptSubmit");
   }

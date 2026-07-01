@@ -94,6 +94,49 @@ export function renderFrontendTriggerContext() {
   ].join("\n");
 }
 
+const KOREAN_WRITING_EXCLUSION_PATTERNS = [
+  /번역\s*(?:해|해줘|해주세요|해라)/u,
+  /요약\s*(?:해|해줘|해주세요|해라)?/u,
+  /정리\s*(?:해|해줘|해주세요|해라)/u,
+  /(?:코드|테스트|README|readme|리드미|릴리즈\s*노트|문서|docs?)[^\n]{0,20}(?:작성|생성|써|써줘|고쳐|수정|다듬어|정리)/iu,
+  /(?:법률|계약서|약관)/u,
+  /(?:뭐야|알려줘|설명\s*(?:해|해줘|해주세요)?)/u
+];
+
+const KOREAN_WRITING_TRIGGER_PATTERNS = [
+  /AI\s*티\s*(?:안\s*나게|없게|없애|제거)/iu,
+  /(?:사람|인간)(?:이)?\s*쓴\s*것처럼/u,
+  /번역투\s*(?:없이|고쳐|줄여|없애|안\s*나게)/u,
+  /(?:글|문장|문구|카피|공지|안내문|메일|이메일|소개글|소개문|답변|댓글|후기\s*답변)\s*(?:자연스럽게|어색하지\s*않게|다듬어|윤문|고쳐)/u,
+  /윤문/u,
+  /한국어로\s*글\s*(?:써|작성)/u,
+  /글\s*(?:써줘|써\s*줘|작성해줘|작성\s*해줘)/u,
+  /글써줘/u,
+  /(?:공지|안내문|메일|이메일|소개글|소개문|답변|댓글|후기\s*답변|문구)\s*(?:써줘|써\s*줘|작성해줘|작성\s*해줘|작성)/u
+];
+
+// True when the prompt asks for Korean prose generation or human-sounding Korean copy.
+// The exclusions keep broad Korean requests like translation, summary, code, legal text,
+// and factual Q&A from getting an unnecessary post-generation humanization steer.
+export function hasKoreanWritingTrigger(prompt) {
+  if (typeof prompt !== "string") return false;
+  if (KOREAN_WRITING_EXCLUSION_PATTERNS.some((pattern) => pattern.test(prompt))) return false;
+  return KOREAN_WRITING_TRIGGER_PATTERNS.some((pattern) => pattern.test(prompt));
+}
+
+export function renderKoreanWritingTriggerContext() {
+  return [
+    "Superloopy Korean writing trigger",
+    "",
+    "This request appears to ask for Korean prose generation or human-sounding Korean copy. Draft the Korean text normally, then apply the humanize-korean skill as a light post-generation polish pass. This is guidance only; it does not mutate Superloopy state.",
+    "",
+    "- Use `humanize-korean` after drafting, not before: remove AI tells, translationese, formulaic transitions, repeated endings, and over-smoothed phrasing.",
+    "- Preserve facts, claims, register, numbers, dates, URLs, product names, model names, acronyms, quoted spans, and user-provided constraints.",
+    "- Keep the pass light unless the user explicitly asks for strong rewriting; avoid adding examples, metaphors, citations, or marketing claims.",
+    "- Do not apply this steer to translation, exact summaries, code/test/docs generation, legal/contract text, or factual Q&A unless the user explicitly asks for Korean humanization."
+  ].join("\n");
+}
+
 // Strip the leading trigger keyword and report whether crew fan-out was requested,
 // alongside the cleaned task brief.
 export function parseInvocation(prompt) {
