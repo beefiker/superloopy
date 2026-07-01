@@ -106,6 +106,8 @@ Total: 100 points.
 | `scripts/sync-version.mjs` | `test/sync-version.test.js`. | Must stamp `package.json` and `.codex-plugin/plugin.json` from one authoritative version without publishing or adding dependencies. |
 | `skills/superloopy-clone/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must describe authorized browser-assisted website cloning with specs, assets, build validation, visual QA, and Superloopy evidence receipts. |
 | `skills/superloopy-clone/agents/openai.yaml` | Audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for website cloning. |
+| `skills/superloopy-doctor/SKILL.md` | `test/plugin.test.js`, doctor skill check, audit coverage. | Must diagnose Superloopy install health with `superloopy doctor --json`, plugin cache, wrapper, agents, hook/bootstrap, and no mutation before approval. |
+| `skills/superloopy-doctor/agents/openai.yaml` | `test/plugin.test.js`, audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for install diagnostics. |
 | `skills/superloopy-loop/SKILL.md` | `test/docs.test.js`, doctor skill check. | Must describe guide, proof, capture, evidence, check, finish, gates, and receipt rules accurately. |
 | `skills/superloopy-loop/agents/openai.yaml` | Audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata. |
 | `skills/superloopy-research/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must describe exhaustive deep research with EXPAND waves, claim verification, cited synthesis, and Superloopy evidence receipts. |

@@ -122,11 +122,16 @@ async function checkHooks(cwd, hooks) {
 }
 
 async function checkSkills(cwd) {
-  const path = join(cwd, "skills", "superloopy-loop", "SKILL.md");
-  if (!existsSync(path)) return fail("Missing skills/superloopy-loop/SKILL.md.");
-  const content = normalizeLineEndings(await readFile(path, "utf8"));
-  if (!/^---\nname: superloopy-loop/m.test(content)) return fail("superloopy-loop skill frontmatter is invalid.");
-  return { ok: true };
+  const skills = ["superloopy-loop", "superloopy-doctor"];
+  const missing = [], invalid = [];
+  for (const name of skills) {
+    const path = join(cwd, "skills", name, "SKILL.md");
+    if (!existsSync(path)) missing.push(`skills/${name}/SKILL.md`);
+    else if (!new RegExp(`^---\\nname: ${name}$`, "m").test(normalizeLineEndings(await readFile(path, "utf8")))) invalid.push(name);
+  }
+  if (missing.length > 0) return fail(`Missing skill files: ${missing.join(", ")}.`);
+  if (invalid.length > 0) return fail(`Invalid skill frontmatter: ${invalid.join(", ")}.`);
+  return { ok: true, skills };
 }
 
 function normalizeLineEndings(content) {
