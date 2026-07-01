@@ -15,17 +15,17 @@ Shout out to https://github.com/epoko77-ai/im-not-ai for the Korean AI-tell insp
 
 ## Comparison Examples
 
-Use these as calibration examples for the amount of change this skill should make. They show the intended behavior: remove stock AI transitions and translationese, preserve product names and facts, and keep the result close enough to audit cleanly.
+Use these as calibration examples for the amount of change this skill should make. The `Before` side is intentionally more AI-like so the repair shape is obvious: remove stock transitions, translationese, inflated significance claims, and `~인 것입니다`-style endings while preserving product names and facts.
 
 | Before | After |
 | --- | --- |
-| `결론적으로, Fileloom은 무료로 사용할 수 있는 파일 뷰어 앱입니다.` | `Fileloom은 무료로 사용할 수 있는 파일 뷰어 앱입니다.` |
+| `결론적으로, Fileloom은 무료로 사용할 수 있는 파일 뷰어 앱이라고 할 수 있습니다.` | `Fileloom은 무료로 사용할 수 있는 파일 뷰어 앱입니다.` |
 | `이 앱은 PDF, EPUB, DOCX, PPTX, HWP, ZIP 등 다양한 파일 포맷을 열 수 있다는 점에서 주목할 만합니다.` | `이 앱은 PDF, EPUB, DOCX, PPTX, HWP, ZIP 등 다양한 파일 포맷을 열 수 있습니다.` |
 | `또한 광고 없이 제공되기 때문에 사용자는 파일을 확인하는 과정에 있어 방해 요소 없이 문서를 읽을 수 있는 것입니다.` | `광고 없이 제공되기 때문에 사용자는 파일을 확인하는 과정에서 방해 요소 없이 문서를 읽을 수 있습니다.` |
-| `결론적으로, Superloopy는 Codex 작업을 더 안정적으로 진행할 수 있도록 도와주는 루프 기반 개발 도구입니다.` | `Superloopy는 Codex 작업을 더 안정적으로 진행하도록 돕는 루프 기반 개발 도구입니다.` |
-| `계획, 검증, 증거 기록을 통해 작업의 진행 상황을 관리할 수 있다는 점에서 주목할 만합니다.` | `계획, 검증, 증거 기록으로 작업의 진행 상황을 관리할 수 있습니다.` |
+| `따라서 Superloopy는 Codex 작업을 수행함에 있어 안정성을 높여주는 도구라고 할 수 있습니다.` | `Superloopy는 Codex 작업의 안정성을 높여주는 도구입니다.` |
+| `이는 계획, 검증, 증거 기록을 통해 작업의 진행 상황을 관리할 수 있다는 점에서 매우 중요한 의미를 가지고 있습니다.` | `계획, 검증, 증거 기록으로 작업 진행 상황을 관리할 수 있습니다.` |
 
-These examples scored audit grade `A` with protected tokens preserved. Do not copy their product claims into unrelated text; use them only as a rewrite-shape reference.
+These examples scored audit grade `A` with protected tokens preserved and a 29.43% change rate. Do not copy their product claims into unrelated text; use them only as a rewrite-shape reference.
 
 ## Contract
 
