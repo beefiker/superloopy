@@ -74,7 +74,9 @@ export async function installBinShim(cwd, argv, options = {}) {
   const content = binShimContent(CLI_PATH, platform);
 
   await mkdir(targetDir, { recursive: true });
-  const status = await installOneTextFile(target, content, force, platform === "win32" ? undefined : 0o755);
+  const status = await installOneTextFile(target, content, force, platform === "win32" ? undefined : 0o755, {
+    replaceIf: (existing) => isGeneratedSuperloopyBinShim(existing, platform)
+  });
   const onPath = pathContainsDir(env.PATH, targetDir, platform);
   return {
     ok: status !== "conflict",
@@ -116,9 +118,28 @@ export function formatBinInstallResult(result) {
   ].join("\n") + "\n";
 }
 
+// Claude Code exports CLAUDE_PLUGIN_ROOT into the plugin's hook subprocess; Codex does not.
+// It is the host signal that distinguishes the two runtimes at bootstrap time.
+export function isClaudeHost(env = process.env) {
+  return typeof env.CLAUDE_PLUGIN_ROOT === "string" && env.CLAUDE_PLUGIN_ROOT.trim().length > 0;
+}
+
 export async function bootstrapSuperloopy(cwd, argv = [], options = {}) {
   const env = options.env ?? process.env;
   const homeDir = options.homeDir ?? homedir();
+  // On Claude Code the agents (agents/*.md), hooks, and skills are plugin-bundled and the hooks
+  // invoke the CLI directly via ${CLAUDE_PLUGIN_ROOT}, so there is nothing to install into
+  // ~/.codex and no command wrapper to place. Skip the Codex bootstrap cleanly.
+  if (isClaudeHost(env)) {
+    return {
+      ok: true,
+      kind: "bootstrap",
+      host: "claude",
+      bin: { status: "unchanged", onPath: true, target: "(plugin-bundled)", next: "On Claude Code, Superloopy runs from the bundled plugin; no CLI wrapper is installed." },
+      agents: { ok: true, target: "(plugin-bundled)", agents: [] },
+      next: "Superloopy is plugin-bundled on Claude Code (skills, agents, hooks). No ~/.codex install performed."
+    };
+  }
   const bin = await installBinShim(cwd, argv, {
     env,
     homeDir,
@@ -186,7 +207,7 @@ async function installOneAgent(sourcePath, targetPath, force) {
   return "updated";
 }
 
-async function installOneTextFile(targetPath, content, force, mode) {
+async function installOneTextFile(targetPath, content, force, mode, options = {}) {
   if (!existsSync(targetPath)) {
     await writeFile(targetPath, content, "utf8");
     if (mode !== undefined) await chmod(targetPath, mode);
@@ -197,10 +218,27 @@ async function installOneTextFile(targetPath, content, force, mode) {
     if (mode !== undefined) await chmod(targetPath, mode);
     return "unchanged";
   }
-  if (!force) return "conflict";
+  if (!force && !options.replaceIf?.(targetContent)) return "conflict";
   await writeFile(targetPath, content, "utf8");
   if (mode !== undefined) await chmod(targetPath, mode);
   return "updated";
+}
+
+// A marker line embedded in every shim we generate, so a shim is recognized as ours regardless of
+// the install directory name (checkout/fork dirs are not named `superloopy`) and a foreign shim
+// without the marker is never overwritten.
+const BIN_SHIM_MARKER = "superloopy-generated bin shim";
+
+function isGeneratedSuperloopyBinShim(content, platform) {
+  const normalized = content.replace(/\r\n/gu, "\n");
+  // Marked shims (this version onward) are ours in any directory.
+  if (normalized.includes(BIN_SHIM_MARKER)) return true;
+  // Legacy (pre-marker) shims are recognized by their generated structure with a `superloopy` path
+  // segment, so existing marketplace installs still upgrade in place without --force.
+  if (platform === "win32") {
+    return /^@echo off\nnode "[^"\n]*[\\/]superloopy(?:[\\/][^"\n]*)?[\\/]src[\\/]cli\.js" %\*\n?$/iu.test(normalized);
+  }
+  return /^#!\/usr\/bin\/env sh\nexec node .*[\\/]superloopy(?:[\\/][^'"\n ]*)?[\\/]src[\\/]cli\.js'? "\$@"\n?$/u.test(normalized);
 }
 
 function resolveBinDir(cwd, argv, env, homeDir) {
@@ -219,9 +257,9 @@ function resolveBinDir(cwd, argv, env, homeDir) {
 
 function binShimContent(cliPath, platform) {
   if (platform === "win32") {
-    return `@echo off\r\nnode "${cliPath}" %*\r\n`;
+    return `@echo off\r\n@rem ${BIN_SHIM_MARKER}\r\nnode "${cliPath}" %*\r\n`;
   }
-  return `#!/usr/bin/env sh\nexec node ${shellQuote(cliPath)} "$@"\n`;
+  return `#!/usr/bin/env sh\n# ${BIN_SHIM_MARKER}\nexec node ${shellQuote(cliPath)} "$@"\n`;
 }
 
 function shellQuote(value) {

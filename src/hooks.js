@@ -1,10 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
-import { bootstrapHasUserSignal, bootstrapSuperloopy, formatBootstrapHookContext } from "./agents.js";
+import { bootstrapHasUserSignal, bootstrapSuperloopy, formatBootstrapHookContext, isClaudeHost } from "./agents.js";
 import { runAutoUpdateCheck } from "./auto-update.js";
 import { parseJson } from "./args.js";
 import { resolveEvidenceArtifact } from "./artifacts.js";
 import { buildGuide } from "./guide.js";
 import { decideContinuation, transcriptTailHasMarker } from "./continuation.js";
+import { normalizeAgentType, receiptFromPayload, subagentTranscriptPath } from "./receipt.js";
 import { hasEngineerTrigger, hasFrontendTrigger, hasKoreanWritingTrigger, renderFrontendTriggerContext, renderKoreanWritingTriggerContext, runEngineerTriggerHook } from "./engineer.js";
 import { applySteering, statusLoop } from "./loop.js";
 import { appendLedger, evidenceRelativeDir, goalsPath, scopeFromSessionId } from "./store.js";
@@ -34,9 +35,11 @@ const PROTECTED_STEERING_KEYS = new Set([
 export function runSubagentStopHook(payload) {
   if (!isRecord(payload)) return "";
   if (payload.hook_event_name !== "SubagentStop") return "";
-  if (!EVIDENCE_RECEIPT_AGENT_TYPES.has(payload.agent_type)) return "";
-  if (transcriptHasContextPressureMarker(payload.transcript_path)) return "";
-  const receipt = extractReceipt(payload.last_assistant_message);
+  if (!EVIDENCE_RECEIPT_AGENT_TYPES.has(normalizeAgentType(payload.agent_type))) return "";
+  // Read the SAME transcript the receipt recovery reads, so a context-pressure marker in a
+  // different transcript (e.g. the parent session on Claude) can't skip the receipt gate.
+  if (transcriptHasContextPressureMarker(subagentTranscriptPath(payload))) return "";
+  const receipt = receiptFromPayload(payload);
   if (receipt !== null) {
     try {
       resolveEvidenceReceipt(payload, receipt);
@@ -109,8 +112,12 @@ export async function runSessionStartHook(payload) {
   if (transcriptHasContextPressureMarker(payload.transcript_path)) return "";
   const contexts = [];
   try {
-    const update = await runAutoUpdateCheck({ env: process.env });
-    if (update.notices.length > 0) contexts.push(update.notices.join("\n\n"));
+    // Auto-update is the Codex install-flow concern; on Claude Code updates are managed by
+    // `/plugin`, so skip it there (like the bootstrap no-op) to avoid emitting Codex upgrade notices.
+    if (!isClaudeHost()) {
+      const update = await runAutoUpdateCheck({ env: process.env });
+      if (update.notices.length > 0) contexts.push(update.notices.join("\n\n"));
+    }
   } catch {
     // Update checks must never break the bootstrap/session context hook.
   }
@@ -224,11 +231,6 @@ function readNonEmptyString(value) {
   return trimmed.length === 0 ? null : trimmed;
 }
 
-function extractReceipt(message) {
-  if (typeof message !== "string") return null;
-  const match = /(?:EVIDENCE_RECORDED|SUPERLOOPY_EVIDENCE):\s*(\S+)/u.exec(message);
-  return match?.[1] ?? null;
-}
 
 async function runContextInjectionHook(payload, hookEventName) {
   const context = await readContextInjection(payload);

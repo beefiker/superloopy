@@ -1,6 +1,6 @@
 {
   "name": "superloopy",
-  "version": "0.5.2",
+  "version": "0.6.3",
   "description": "Lightweight loop harness with strict evidence gates.",
   "homepage": "https://github.com/beefiker/superloopy#readme",
   "repository": "https://github.com/beefiker/superloopy",
@@ -36,10 +36,9 @@
       "Context Injection"
     ],
     "defaultPrompt": [
-      "Use superloopy loop begin for new tasks.",
-      "After hook approval, Superloopy bootstraps the CLI wrapper and bundled custom agents on SessionStart.",
+      "After hook approval, Superloopy bootstraps the CLI wrapper and custom agents on SessionStart.",
       "Run superloopy loop guide --json before choosing the next Superloopy command.",
-      "Record Superloopy evidence for this change, using superloopy loop prove when command output is the proof."
+      "Record evidence with superloopy loop prove when command output is proof."
     ],
     "brandColor": "#2563EB",
     "screenshots": [],
