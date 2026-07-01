@@ -36,6 +36,8 @@ Superloopy is for Codex and Claude Code work where "done" needs to mean more tha
 - Lightweight by default: one small CLI, repo-local state, zero runtime dependencies.
 - Agent-friendly: skills, hooks, and optional crew lanes guide the agent without hiding the final gate.
 
+**Guarantee scope.** Command-backed criteria are the strong guarantee: at completion Superloopy re-runs each command in-process and requires it to reproduce, so a stale or fabricated pass cannot reach "done". Manual (commandless) criteria are verified as a non-empty evidence artifact plus auditor/human judgment — their correctness rests on review, not the deterministic re-run.
+
 ## Skills
 
 Superloopy keeps the command layer small. Skills carry the specialist workflow: when to use it, what the agent should inspect, and what proof must be left under `.superloopy/evidence/`.

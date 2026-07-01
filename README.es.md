@@ -36,6 +36,8 @@ Superloopy es para trabajo en Codex y Claude Code donde "terminado" tiene que si
 - Ligero por defecto: un CLI pequeño, estado local al repo, cero dependencias de runtime.
 - Amigable con agentes: skills, hooks y crew lanes opcionales guían al agente sin ocultar el gate final.
 
+**Alcance de la garantía.** Los criterios respaldados por un comando son la garantía fuerte: al finalizar, Superloopy vuelve a ejecutar cada comando en proceso y exige que se reproduzca, de modo que un pass obsoleto o fabricado no puede llegar a "hecho". Los criterios manuales (sin comando) se verifican como la existencia de un artefacto de evidencia no vacío más el juicio del auditor/humano: su corrección depende de la revisión, no de la reejecución determinista.
+
 ## Skills
 
 Superloopy mantiene pequeña la capa de comandos. Las skills guardan el flujo especializado: cuándo usarlas, qué debe revisar el agente y qué prueba debe quedar en `.superloopy/evidence/`.

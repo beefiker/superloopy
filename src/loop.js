@@ -352,16 +352,21 @@ function readEvidenceStatus(value) {
 }
 
 function parseCommandFlag(raw) {
+  // Absent flag => a manual (commandless) criterion, which is legitimate. But a PRESENT
+  // `--command` that fails to parse must fail loud: silently dropping it would downgrade a
+  // command-backed criterion to an existence-only manual check, weakening the completion gate
+  // from a single payload typo with no signal.
   if (raw === undefined) return null;
+  let parsed;
   try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0 && parsed.every((part) => typeof part === "string")) {
-      return parsed;
-    }
+    parsed = JSON.parse(raw);
   } catch {
-    // ignore malformed command payloads; the criterion simply records no command
+    throw new Error(`--command must be a JSON array of strings (e.g. '["node","test.js"]'); could not parse: ${raw}`);
   }
-  return null;
+  if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every((part) => typeof part === "string")) {
+    throw new Error(`--command must be a non-empty JSON array of strings (e.g. '["node","test.js"]'); got: ${raw}`);
+  }
+  return parsed;
 }
 
 function readCheckpointStatus(value) {
