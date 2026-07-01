@@ -94,6 +94,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.pluginManifest.ok, true);
   assert.equal(parsed.checks.hooks.ok, true);
   assert.equal(parsed.checks.skills.ok, true);
+  assert.deepEqual(parsed.checks.skills.skills, ["superloopy-loop", "superloopy-doctor"]);
   assert.equal(parsed.checks.cli.ok, true);
   assert.equal(parsed.checks.dependencies.ok, true);
   assert.equal(parsed.checks.dependencies.count, 0);
@@ -186,6 +187,17 @@ test("doctor accepts skill frontmatter after CRLF checkout", async () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.checks.skills.ok, true);
+});
+
+test("doctor skill check requires the bundled doctor skill", async () => {
+  const repo = await tempRepoCopy();
+  await rm(join(repo, "skills", "superloopy-doctor"), { recursive: true, force: true });
+
+  const result = await runDoctor(repo);
+
+  assert.equal(result.ok, false);
+  assert.equal(result.checks.skills.ok, false);
+  assert.match(result.checks.skills.message, /superloopy-doctor/);
 });
 
 test("doctor text reports whether comparison scanning was skipped", () => {

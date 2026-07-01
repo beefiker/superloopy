@@ -104,6 +104,43 @@ test("plugin packages Superloopy research and website-clone skills", async () =>
   }
 });
 
+test("plugin packages the Superloopy doctor skill with read-only install diagnostics", async () => {
+  const doctor = await readSkill("superloopy-doctor");
+
+  assert.match(doctor.frontmatter, /^name: superloopy-doctor$/m);
+  assert.match(doctor.frontmatter, /doctor|health|install|wrapper|plugin cache|bootstrap/i);
+  assert.match(doctor.content, /SUPERLOOPY DOCTOR ENABLED/);
+  assert.match(doctor.content, /superloopy doctor --json/);
+  assert.match(doctor.content, /codex plugin list --json/);
+  assert.match(doctor.content, /installed plugin cache/i);
+  assert.match(doctor.content, /node src\/cli\.js install --force --json/);
+  assert.match(doctor.content, /read-only by default/i);
+
+  assert.equal(existsSync("skills/superloopy-doctor/agents/openai.yaml"), true);
+  const metadata = await readFile("skills/superloopy-doctor/agents/openai.yaml", "utf8");
+  assert.match(metadata, /display_name:/);
+  assert.match(metadata, /short_description:/);
+  assert.match(metadata, /default_prompt:/);
+});
+
+test("doctor skill stays Superloopy-native instead of LazyCodex-style source drift auditing", async () => {
+  const doctor = await readSkill("superloopy-doctor");
+
+  for (const pattern of [
+    /\.superloopy\/evidence\//,
+    /deterministic completion floor/i,
+    /superloopy loop check/,
+    /superloopy loop status --json/,
+    /hostContract/,
+    /dispatchCoherence/,
+    /reviewability/
+  ]) {
+    assert.match(doctor.content, pattern);
+  }
+
+  assert.doesNotMatch(doctor.content, /LazyCodex|lcx|omo|ulw-loop|\.omo|oh-my-openagent|latest sources|\/tmp\/lazycodex-source|gh issue list/i);
+});
+
 test("plugin packages the Superloopy frontend skill with auto-activation and gates", async () => {
   const frontend = await readSkill("superloopy-frontend");
 

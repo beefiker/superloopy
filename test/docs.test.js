@@ -116,6 +116,7 @@ test("README lists the packaged Superloopy skills and their jobs", async () => {
     assert.match(content, /superloopy-research/);
     assert.match(content, /superloopy-clone/);
     assert.match(content, /humanize-korean/);
+    assert.match(content, /superloopy-doctor/);
     assert.match(content, /transferloom-clone-reference\.png/);
     assert.match(content, /Transferloom\.com/);
     assert.match(content, /AI|Korean|한국어|한글|윤문/u);

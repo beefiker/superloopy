@@ -45,6 +45,7 @@ Superloopy はコマンド層を小さく保ちます。専門的な進め方は
 | Skill | 使う場面 | 残すもの |
 | --- | --- | --- |
 | `superloopy-loop` | 完全な loop は `loopy <task>` または `loopy team <task>` で始めます。`loopywork`、`lpy`、`$lpy` は guidance だけが必要なときに使います。 | 完全な loop は軽量な計画、次の行動、コマンドで検証した証拠、品質 gate、最終 evidence report を残します。Guidance alias は状態を変更しません。 |
+| `superloopy-doctor` | install、wrapper、plugin cache、hook/bootstrap、agent、Codex/Claude Code host wiring、stale version の問題を診断するとき。 | 読み取り専用の health report: wrapper/cache/version の証拠、失敗した check、承認後にだけ実行する正確な修復コマンド。 |
 | `superloopy-research` | `loopy research`、deep research、exhaustive investigation、または引用付きレポートを求めるとき。 | 調査軸、拡張 wave、claim ledger、検証メモ、引用付き synthesis artifact。 |
 | `superloopy-clone` | `loopy clone`、許可された Web サイトのクローン、再構築、移行、ピクセル単位の復元を求めるとき。 | ブラウザ取得、ページ構造、デザイントークン、アセット一覧、実装メモ、build 出力、visual QA 証拠。 |
 | `superloopy-frontend` | UI/ページ/コンポーネントを構築・スタイリング・再設計するとき、または「デザインされた見た目」にしたいとき（視覚的な作業で自動起動）。 | DESIGN.md のトークン契約、anti-slop の事前チェック結果、実ブラウザでの visual QA 証拠 artifact。 |
