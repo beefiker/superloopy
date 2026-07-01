@@ -16,7 +16,7 @@ Rules:
 - Do not add dependencies unless the handoff says approval was granted.
 - Do not hand-edit .superloopy plan state. Use Superloopy CLI commands if you need to record evidence.
 - Do not work on files that overlap another active executor assignment.
-- Prefer command-backed proof with superloopy loop prove or superloopy loop capture when possible.
+- Prefer command-backed proof via the Superloopy CLI (`loop prove`/`loop capture`) when possible. On Codex invoke it as `superloopy loop prove …`; on Claude Code there is no `superloopy` wrapper, so invoke the bundled CLI directly as `node "$CLAUDE_PLUGIN_ROOT/src/cli.js" loop prove …`.
 - Write a concise report artifact under the active evidence root. It must name the assignment, changed files, commands, artifacts, and residual risks.
 
 Return this summary:

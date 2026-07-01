@@ -238,7 +238,7 @@ Total: 100 points.
 | `src/continuation.js` | `test/golden-continuation.test.js`. | Must drive bounded continuation toward evidence-backed completion and mark blocked (never complete) on a cap or stall. |
 | `src/crew-lines.js` | `test/crew-lines.test.js`, `test/fleet.test.js`. | Must generate original deterministic supported-catalog lines only for known terminal crew handoffs and format them without mutating persisted state. |
 | `src/design-audit.js` | Doctor design-audit tests. | Must fail missing sections, decisions, or incomplete guards. |
-| `src/doctor.js` | `test/doctor.test.js`, `node src/cli.js doctor --json`. | Must verify package, hooks, skill, audits, comparison status, model policy, and reviewability while ignoring generated Codex marketplace install metadata. |
+| `src/doctor.js` | `test/doctor.test.js`, `test/claude-host-wiring.test.js`, `node src/cli.js doctor --json`. | Must verify package, hooks, Claude host wiring, skill, audits, comparison status, Codex + Claude model policy, and reviewability while ignoring generated Codex marketplace install metadata. |
 | `src/engineer.js` | `test/engineer.test.js`, `test/hooks.test.js` engineer-trigger tests. | Must wake the loop engineer on a leading `loopy` keyword or its Korean alias `루피` without mutating state itself, escalate to crew fan-out only on `team`/`crew`/`팀`/`크루`, and detect frontend/visual or Korean-writing intent for guidance-only skill steers. |
 | `src/file-audit.js` | `test/file-audit.test.js`, doctor file-audit check. | Must fail missing, stale, or incomplete inventory rows. |
 | `src/finish.js` | CLI evidence and loop-gate tests. | Must only finalize after all criteria have valid pass artifacts, then write gate and report artifacts. |
@@ -250,11 +250,12 @@ Total: 100 points.
 | `src/install-flow.js` | `test/auto-update.test.js`. | Must distinguish marketplace, checkout, future npx-local snapshot, and unknown install states so unsafe npx updates stay off. |
 | `src/loop.js` | Core loop and CLI tests. | Must preserve lifecycle state, ledger appends, evidence recording, review, checkpoint, status, and steering. |
 | `src/matrix-gate.js` | Matrix gate golden tests. | Must validate compatible matrix gate shape through Superloopy artifacts only. |
-| `src/model-policy.js` | `test/doctor.test.js`. | Must fail doctor when model policy docs or bundled agent TOML defaults drift. |
+| `src/model-policy.js` | `test/doctor.test.js`. | Must fail doctor when the Codex model-policy doc/TOML defaults or the Claude model-policy doc/`agents/*.md` model frontmatter drift. |
 | `src/plan-summary.js` | Guide and status tests through loop outputs. | Must summarize progress without mutating state. |
 | `src/pre-tool-use.js` | `test/pre-tool-use.test.js`, `test/golden-hooks.test.js`. | Must block malformed `create_goal` payloads and premature native `update_goal` completion. |
-| `src/receipt.js` | `test/host-adapter.test.js`, hook tests. | Must recover the worker receipt from last_assistant_message or, when absent, the subagent transcript tail's last match, host-agnostically. |
-| `test/host-adapter.test.js` | `npm test`. | Must verify direct and transcript-fallback receipt recovery for both evidence and audit receipts. |
+| `src/receipt.js` | `test/host-adapter.test.js`, hook tests. | Must recover the worker receipt from last_assistant_message when present, else from the decoded final turn of the subagent transcript, failing closed (re-prompt) when the final message exceeds the tail window, host-agnostically. |
+| `test/host-adapter.test.js` | `npm test`. | Must verify direct and transcript-fallback receipt recovery for both evidence and audit receipts, including trailing-newline, oversized-final-message, tool-use-only, and stale-token cases. |
+| `test/claude-host-wiring.test.js` | `npm test`. | Must verify the doctor Claude-host-wiring check: manifest/hooks presence, SubagentStop CLI wiring, namespaced matcher coverage, and safe handling of invalid regex/JSON. |
 | `src/prove.js` | CLI evidence tests. | Must record command evidence against the active unresolved criterion and return the next guide. |
 | `src/report.js` | Report and CLI evidence tests. | Must write portable evidence reports with summary counts, warnings, timestamps, artifacts, timeline, and next action. |
 | `src/review-gate.js` | Review gate golden tests. | Must validate strict five-section review gate shape through Superloopy artifacts only. |

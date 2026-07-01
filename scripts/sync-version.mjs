@@ -83,6 +83,29 @@ export function manifestTargets(repoRoot) {
   ];
 }
 
+// The Claude marketplace manifest carries the version under plugins[].version rather than a
+// top-level field, so it needs its own stamper to stay in lockstep with the authoritative version.
+async function stampMarketplaceVersion(path, version) {
+  let parsed;
+  try {
+    parsed = await readJson(path);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return false;
+    throw error;
+  }
+  if (typeof parsed !== "object" || parsed === null || !Array.isArray(parsed.plugins)) return false;
+  let changed = false;
+  for (const plugin of parsed.plugins) {
+    if (plugin && typeof plugin === "object" && "version" in plugin && plugin.version !== version) {
+      plugin.version = version;
+      changed = true;
+    }
+  }
+  if (!changed) return false;
+  await writeJson(path, parsed);
+  return true;
+}
+
 export async function syncVersion(options = {}) {
   const repoRoot = options.repoRoot ?? defaultRepoRoot;
   const version = options.version ?? (await resolveAuthoritativeVersion({ ...options, version: undefined }));
@@ -93,6 +116,8 @@ export async function syncVersion(options = {}) {
   }
   const packageLock = join(repoRoot, "package-lock.json");
   if (await stampPackageLockVersion(packageLock, version)) changed.push(packageLock);
+  const marketplace = join(repoRoot, ".claude-plugin", "marketplace.json");
+  if (await stampMarketplaceVersion(marketplace, version)) changed.push(marketplace);
   return { version, targets, changed };
 }
 

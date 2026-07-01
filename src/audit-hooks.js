@@ -15,7 +15,7 @@ import { dirname, join } from "node:path";
 import { resolveEvidenceArtifact } from "./artifacts.js";
 import { auditMaxFails, auditOneCriterion, recordAuditFailure } from "./audit.js";
 import { transcriptTailHasMarker } from "./continuation.js";
-import { auditReceiptFromPayload, normalizeAgentType } from "./receipt.js";
+import { auditReceiptFromPayload, normalizeAgentType, subagentTranscriptPath } from "./receipt.js";
 import { validateAuditVerdict, verifyVerdictAgainstState } from "./audit-verdict.js";
 import { appendLedger, auditStatePath, evidenceRelativeDir, goalsPath, nowIso, scopeFromSessionId, withFileLock, writeJsonAtomic } from "./store.js";
 
@@ -33,7 +33,9 @@ export async function runAuditorStopHook(payload) {
   if (payload.hook_event_name !== "SubagentStop") return "";
   if (normalizeAgentType(payload.agent_type) !== "robin") return "";
   if (typeof payload.cwd !== "string") return "";
-  if (transcriptTailHasMarker(payload.transcript_path, CONTEXT_PRESSURE_MARKERS)) return "";
+  // Read the SAME transcript the audit receipt recovery reads (agent_transcript_path on Claude),
+  // so a marker in a different transcript can't skip the audit gate.
+  if (transcriptTailHasMarker(subagentTranscriptPath(payload), CONTEXT_PRESSURE_MARKERS)) return "";
 
   const scope = scopeFromSessionId(payload.session_id);
   const useScope = scope !== undefined && existsSync(goalsPath(payload.cwd, scope)) ? scope : undefined;

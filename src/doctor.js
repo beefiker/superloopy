@@ -6,7 +6,7 @@ import { checkDesignAudit } from "./design-audit.js";
 import { checkFileAudit } from "./file-audit.js";
 import { checkComparisonSimilarity } from "./comparison-similarity.js";
 import { SUPERLOOPY_AGENT_NAMES } from "./agents.js";
-import { checkModelPolicy } from "./model-policy.js";
+import { checkClaudeModelPolicy, checkModelPolicy } from "./model-policy.js";
 
 const FILE_AUDIT_PATH = "docs/superloopy-file-audit.md";
 const GATE_NOTES_PATH = "docs/superloopy-gate-notes.md";
@@ -51,9 +51,11 @@ export async function runDoctor(cwd, options = {}) {
   });
   const reviewability = await checkReviewability(cwd);
   const dispatchCoherence = await checkDispatchCoherence(cwd);
+  const claudeHostWiring = await checkClaudeHostWiring(cwd);
   const modelPolicy = await checkModelPolicy(cwd);
+  const claudeModelPolicy = await checkClaudeModelPolicy(cwd);
   const hostContract = checkHostContract();
-  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, modelPolicy, hostContract };
+  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, modelPolicy, claudeModelPolicy, hostContract };
   return {
     ok: Object.values(checks).every((check) => check.ok),
     checks
@@ -299,6 +301,10 @@ function walkVisibleFiles(cwd, prefix, files) {
 const SKIP_FILESYSTEM_DIRS = new Set([".git", ".superloopy", "coverage", "dist", "node_modules", "vendor"]);
 
 function isNotGitRepository(result) {
+  // The `git` binary itself is missing (spawn failed: error set / status null / no stderr) OR the cwd
+  // is not a repo. Either way, degrade to a filesystem walk rather than throwing — a Claude
+  // marketplace install may have neither git nor a .git directory.
+  if (result.error !== undefined || result.status === null) return true;
   return /not a git repository/u.test(result.stderr ?? "");
 }
 
@@ -375,6 +381,96 @@ async function collectDispatchedAgentTypes(cwd) {
     while ((match = pattern.exec(content)) !== null) names.add(match[1]);
   }
   return [...names];
+}
+
+// Validate the Claude Code wiring that lives OUTSIDE the Codex plugin manifest: the pure-metadata
+// `.claude-plugin/plugin.json`, and `hooks/hooks.json` (auto-loaded by Claude). The Codex checks
+// above never touch these, so without this a broken Claude install would still show doctor green.
+// The key guarantee is that the SubagentStop matchers fire on Claude's PLUGIN-NAMESPACED agent
+// types (`superloopy:franky`), not just the bare Codex names.
+export async function checkClaudeHostWiring(cwd) {
+  const problems = [];
+  const manifestPath = join(cwd, ".claude-plugin", "plugin.json");
+  if (!existsSync(manifestPath)) {
+    problems.push("missing .claude-plugin/plugin.json");
+  } else {
+    try {
+      const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+      if (manifest?.name !== "superloopy") problems.push(".claude-plugin/plugin.json name must be superloopy");
+    } catch (error) {
+      problems.push(`.claude-plugin/plugin.json invalid JSON (${errorText(error)})`);
+    }
+  }
+
+  const hooksPath = join(cwd, "hooks", "hooks.json");
+  const matcherSources = [];
+  if (!existsSync(hooksPath)) {
+    problems.push("missing hooks/hooks.json (Claude hook wiring)");
+  } else {
+    let parsed;
+    let parseFailed = false;
+    try {
+      parsed = JSON.parse(await readFile(hooksPath, "utf8"));
+    } catch (error) {
+      parseFailed = true;
+      problems.push(`hooks/hooks.json invalid JSON (${errorText(error)})`);
+    }
+    if (!parseFailed) {
+      // `parsed` may legitimately be null / a non-object here; optional chaining keeps this safe and
+      // falls through to the "declares no SubagentStop hooks" problem below.
+      const rawEntries = parsed?.hooks?.SubagentStop;
+      const subagentStop = Array.isArray(rawEntries) ? rawEntries.filter((entry) => entry && typeof entry === "object") : [];
+      if (subagentStop.length === 0) {
+        problems.push("hooks/hooks.json declares no SubagentStop hooks");
+      } else {
+        // Coverage requires the SAME entry to BOTH match an agent AND invoke the CLI, so a broken
+        // command on one entry can't be masked by a healthy sibling, and a CLI entry that matches
+        // nothing real can't be propped up by a non-CLI entry that does. Matchers are compiled
+        // defensively (an invalid pattern is a reported problem, not a doctor crash) and tested with
+        // a FULL (anchored) match against the namespace Claude sends (`superloopy:<name>`), so a bare
+        // Codex-style matcher that only substring-matches is rejected. Claude treats a missing/empty
+        // matcher as match-all.
+        const entries = subagentStop.map((entry) => {
+          const commands = (Array.isArray(entry.hooks) ? entry.hooks : [])
+            .map((hook) => hook?.command)
+            .filter((command) => typeof command === "string");
+          const invokesCli = commands.some(
+            (command) => command.includes("${CLAUDE_PLUGIN_ROOT}/src/cli.js") && command.includes(" hook ")
+          );
+          const matcher = typeof entry.matcher === "string" ? entry.matcher : "";
+          if (matcher.length > 0) matcherSources.push(matcher);
+          let regex;
+          if (matcher.length === 0) {
+            regex = /.*/u;
+          } else {
+            try {
+              regex = new RegExp(`^(?:${matcher})$`, "u");
+            } catch {
+              regex = null;
+              problems.push(`hooks/hooks.json SubagentStop matcher is not a valid regex: ${matcher}`);
+            }
+          }
+          return { regex, invokesCli };
+        });
+
+        const uncovered = SUPERLOOPY_AGENT_NAMES.filter(
+          (name) => !entries.some((entry) => entry.invokesCli && entry.regex !== null && entry.regex.test(`superloopy:${name}`))
+        );
+        if (uncovered.length > 0) {
+          problems.push(`no CLI-invoking SubagentStop hook covers plugin-namespaced agents: ${uncovered.map((n) => `superloopy:${n}`).join(", ")}`);
+        }
+      }
+    }
+  }
+
+  if (problems.length > 0) {
+    return { ok: false, policy: "claude-host-wiring-present-and-namespaced", message: `Claude host wiring: ${problems.join("; ")}.` };
+  }
+  return { ok: true, policy: "claude-host-wiring-present-and-namespaced", matchers: matcherSources };
+}
+
+function errorText(error) {
+  return error instanceof Error ? error.message : String(error);
 }
 
 // Advisory (always ok): state plainly the host behaviors Superloopy's hook-layer gates depend on

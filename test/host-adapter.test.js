@@ -19,7 +19,7 @@ test("receiptFromPayload reads last_assistant_message directly (Codex path)", ()
   assert.equal(r, ".superloopy/evidence/a.md");
 });
 
-test("receiptFromPayload falls back to the subagent transcript tail and takes the LAST match (Claude path)", async () => {
+test("receiptFromPayload reads the subagent's FINAL assistant message on the Claude path", async () => {
   const path = await transcript([
     JSON.stringify({ role: "assistant", content: "SUPERLOOPY_EVIDENCE: .superloopy/evidence/old.md" }),
     JSON.stringify({ role: "user", content: "retry" }),
@@ -27,6 +27,122 @@ test("receiptFromPayload falls back to the subagent transcript tail and takes th
   ]);
   const r = receiptFromPayload({ agent_transcript_path: path }); // no last_assistant_message
   assert.equal(r, ".superloopy/evidence/final.md");
+});
+
+test("receiptFromPayload keeps the path clean when a newline follows the receipt (Claude JSONL escapes it) [regression]", async () => {
+  // Claude stores transcript text JSON-escaped, so a worker that ends its message with the receipt
+  // line + newline writes `\` + `n`. Realistic Claude record: message.content is an array of blocks.
+  const path = await transcript([
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "All done.\nSUPERLOOPY_EVIDENCE: .superloopy/evidence/report.md\n" }] } })
+  ]);
+  assert.equal(receiptFromPayload({ transcript_path: path }), ".superloopy/evidence/report.md");
+});
+
+test("receiptFromPayload keeps the path clean when prose follows the receipt (Claude) [regression]", async () => {
+  const path = await transcript([
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "SUPERLOOPY_EVIDENCE: .superloopy/evidence/report.md\nThanks!" }] } })
+  ]);
+  assert.equal(receiptFromPayload({ transcript_path: path }), ".superloopy/evidence/report.md");
+});
+
+test("receiptFromPayload trusts last_assistant_message exclusively; a stale transcript token cannot satisfy the stop (Codex) [regression]", async () => {
+  // Codex provides last_assistant_message. When THIS attempt's final message carries no receipt,
+  // the stop must NOT be satisfied by an older token lingering in the transcript tail.
+  const path = await transcript([
+    JSON.stringify({ role: "assistant", content: "SUPERLOOPY_EVIDENCE: .superloopy/evidence/old-attempt.md" })
+  ]);
+  assert.equal(
+    receiptFromPayload({ last_assistant_message: "I could not finish; no receipt this attempt.", transcript_path: path }),
+    null
+  );
+});
+
+test("receiptFromPayload ignores an earlier turn's receipt on Claude when the final message has none [regression]", async () => {
+  const path = await transcript([
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "SUPERLOOPY_EVIDENCE: .superloopy/evidence/old.md" }] } }),
+    JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "tool_result", content: "ok" }] } }),
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "I still could not produce evidence." }] } })
+  ]);
+  assert.equal(receiptFromPayload({ transcript_path: path }), null);
+});
+
+test("auditReceiptFromPayload keeps the path clean with a trailing newline on the Claude path [regression]", async () => {
+  const path = await transcript([
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "SUPERLOOPY_AUDIT: .superloopy/evidence/audit/v.json\n" }] } })
+  ]);
+  assert.equal(auditReceiptFromPayload({ transcript_path: path }), ".superloopy/evidence/audit/v.json");
+});
+
+test("receiptFromPayload fails closed (null) when the final message exceeds the 64KB tail window, never accepting a stale token [regression]", async () => {
+  // The final record is one JSON line larger than the tail window, so readTranscriptTail returns a
+  // fragment that starts mid-record and never parses. The code must NOT fall back to scanning the raw
+  // tail (which would pick the stale earlier token); it returns null and the worker is re-prompted.
+  const huge = "X".repeat(70000);
+  const path = await transcript([
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "SUPERLOOPY_EVIDENCE: .superloopy/evidence/stale.md" }] } }),
+    JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "tool_result", content: "ok" }] } }),
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: `${huge}\nSUPERLOOPY_EVIDENCE: .superloopy/evidence/big.md\n` }] } })
+  ]);
+  assert.equal(receiptFromPayload({ transcript_path: path }), null);
+});
+
+test("receiptFromPayload extracts the receipt from a mixed text+tool_use final record [regression]", async () => {
+  const path = await transcript([
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [
+      { type: "text", text: "Recorded.\nSUPERLOOPY_EVIDENCE: .superloopy/evidence/mixed.md" },
+      { type: "tool_use", name: "Bash", input: {} }
+    ] } })
+  ]);
+  assert.equal(receiptFromPayload({ transcript_path: path }), ".superloopy/evidence/mixed.md");
+});
+
+test("receiptFromPayload recovers a receipt when a closing line follows it as a separate record in the same turn [regression]", async () => {
+  const path = await transcript([
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "SUPERLOOPY_EVIDENCE: .superloopy/evidence/split.md" }] } }),
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "Done — total cost 1234 tokens." }] } })
+  ]);
+  assert.equal(receiptFromPayload({ transcript_path: path }), ".superloopy/evidence/split.md");
+});
+
+test("receiptFromPayload fails closed on a partial (mid-write) final line, never reaching a prior turn's receipt [regression]", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "superloopy-receipt-"));
+  const path = join(dir, "transcript.jsonl");
+  const good = JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "SUPERLOOPY_EVIDENCE: .superloopy/evidence/stale.md" }] } });
+  const partial = '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"still writin'; // truncated, invalid JSON
+  await writeFile(path, `${good}\n${partial}`, "utf8");
+  assert.equal(receiptFromPayload({ transcript_path: path }), null);
+});
+
+test("receiptFromPayload picks the same (first) token on both hosts for identical final output [regression]", async () => {
+  const finalText = "SUPERLOOPY_EVIDENCE: .superloopy/evidence/a.md then SUPERLOOPY_EVIDENCE: .superloopy/evidence/b.md";
+  const codex = receiptFromPayload({ last_assistant_message: finalText });
+  const path = await transcript([
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: finalText }] } })
+  ]);
+  assert.equal(codex, ".superloopy/evidence/a.md"); // first token, matching main's original Codex behavior
+  assert.equal(receiptFromPayload({ transcript_path: path }), codex); // host parity: first token on both
+});
+
+test("receiptFromPayload captures a path containing brackets/quotes whole, matching main's \\S+ behavior [regression]", () => {
+  // The capture must not narrow below main's \S+, or paths with brackets/quotes get truncated.
+  assert.equal(
+    receiptFromPayload({ last_assistant_message: "EVIDENCE_RECORDED: .superloopy/evidence/run(1).md" }),
+    ".superloopy/evidence/run(1).md"
+  );
+});
+
+test("receiptFromPayload treats an empty last_assistant_message as absent and falls back to the transcript [regression]", async () => {
+  const path = await transcript([
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "SUPERLOOPY_EVIDENCE: .superloopy/evidence/fromtx.md" }] } })
+  ]);
+  assert.equal(receiptFromPayload({ last_assistant_message: "   ", transcript_path: path }), ".superloopy/evidence/fromtx.md");
+});
+
+test("receiptFromPayload preserves a backslash in the receipt path on the plain-text path [regression]", () => {
+  // The direct/decoded path must not truncate a token that legitimately contains a backslash
+  // (Windows / non-normalized path); backslash exclusion is confined to the raw JSON-escaped fallback.
+  const r = receiptFromPayload({ last_assistant_message: "SUPERLOOPY_EVIDENCE: C:\\evidence\\report.md" });
+  assert.equal(r, "C:\\evidence\\report.md");
 });
 
 test("receiptFromPayload accepts the EVIDENCE_RECORDED compatibility alias", () => {
@@ -51,10 +167,9 @@ test("auditReceiptFromPayload mirrors the same direct/transcript fallback for SU
     ".superloopy/evidence/audit/v.json"
   );
   const path = await transcript([
-    JSON.stringify({ role: "assistant", content: "SUPERLOOPY_AUDIT: .superloopy/evidence/audit/old.json" }),
-    JSON.stringify({ role: "assistant", content: "SUPERLOOPY_AUDIT: .superloopy/evidence/audit/new.json" })
+    JSON.stringify({ role: "assistant", content: "SUPERLOOPY_AUDIT: .superloopy/evidence/audit/v2.json" })
   ]);
-  assert.equal(auditReceiptFromPayload({ agent_transcript_path: path }), ".superloopy/evidence/audit/new.json");
+  assert.equal(auditReceiptFromPayload({ agent_transcript_path: path }), ".superloopy/evidence/audit/v2.json");
 });
 
 test("normalizeAgentType strips a host namespace so SubagentStop matchers fire on both hosts", () => {

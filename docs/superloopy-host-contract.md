@@ -51,8 +51,8 @@ Superloopy's `SubagentStop` handlers read these fields from the JSON piped on st
 | `agent_id` | Keys the per-attempt counter. Optional — Superloopy falls back to a session/cwd key so the 3-attempt cap still counts. |
 | `session_id` | Selects scoped `.superloopy/sessions/<id>/` state when present. |
 | `cwd` | Repo root; required. |
-| `last_assistant_message` | Scanned for the receipt (`SUPERLOOPY_EVIDENCE:`/`EVIDENCE_RECORDED:` for workers, `SUPERLOOPY_AUDIT:` for the auditor). |
-| `transcript_path` | Tail-scanned for context-pressure markers; on a hit the handler pauses without burning an attempt. |
+| `last_assistant_message` | When present and non-empty, the sole receipt source (`SUPERLOOPY_EVIDENCE:`/`EVIDENCE_RECORDED:` for workers, `SUPERLOOPY_AUDIT:` for the auditor); a stale token elsewhere never satisfies the stop (Codex). |
+| `agent_transcript_path` / `transcript_path` | When `last_assistant_message` is absent (Claude), the receipt is recovered from the subagent's own transcript — `agent_transcript_path` preferred, else `transcript_path` — reading only the decoded final turn. The same source is tail-scanned for context-pressure markers; on a hit the handler pauses without burning an attempt. |
 
 Handler output (stdout): a `block` decision re-prompts the subagent; an empty string allows the
 stop.

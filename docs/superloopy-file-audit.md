@@ -196,7 +196,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/continuation.js` | Bounded, progress-gated Stop-hook engine that drives the loop toward evidence-backed completion and marks blocked on a cap or stall. | Superloopy-native continuation; never force-completes. |
 | `src/crew-lines.js` | Deterministic original localized one-line responses for known crew handoffs with terminal verdicts. | Output-only flavor; pending or unknown lanes stay silent and persisted handoff state is not decorated. |
 | `src/design-audit.js` | Verifies Superloopy design audit sections and decision rows. | Guards Superloopy-native decisions. |
-| `src/doctor.js` | Local health check orchestrator for package, hooks, docs, comparison scan, model policy, and reviewability. | Enforces file audits, design audits, and advisory model defaults. |
+| `src/doctor.js` | Local health check orchestrator for package, hooks, Claude host wiring, docs, comparison scan, Codex + Claude model policy, and reviewability. | Enforces file audits, design audits, Claude host wiring, and advisory model defaults on both hosts. |
 | `src/engineer.js` | Loop-engineer trigger that turns the `loopy` keyword (and Korean alias `루피`) into a guided drive of begin, prove, check, and finish, plus guidance-only frontend and Korean-writing steers. | Superloopy keyword activation and guide-backed context. |
 | `src/file-audit.js` | Row-level file inventory verifier for audit coverage, stale rows, incomplete rows, and native boundary policy. | Checks Superloopy audit structure. |
 | `src/finish.js` | One-command finalization that writes the default gate, checkpoints remaining goals, writes the report, and returns the complete guide. | Superloopy-specific lighter flow. |
@@ -208,11 +208,12 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/install-flow.js` | Distinguishes marketplace, checkout, future npx-local snapshot, and unknown install states. | Prevents unsafe npx self-update when Superloopy was installed from marketplace or checkout. |
 | `src/loop.js` | Core plan lifecycle: create, status, next, evidence, review, checkpoint, and steering. | Original `.superloopy` state machine. |
 | `src/matrix-gate.js` | Validator for strict matrix quality gates. | Keeps compatible shape under Superloopy-native module name. |
-| `src/model-policy.js` | Doctor helper that checks model-policy docs and bundled agent TOML defaults. | Advisory policy only; never treats model choice as proof. |
+| `src/model-policy.js` | Doctor helper that checks the Codex model-policy doc + agent TOML defaults and the Claude model-policy doc + `agents/*.md` model frontmatter. | Advisory policy only; never treats model choice as proof. |
 | `src/plan-summary.js` | Compact derived progress summary. | Superloopy-only helper. |
 | `src/pre-tool-use.js` | PreToolUse guard for malformed `create_goal` calls and premature native `update_goal` completion. | Uses Superloopy plan completion as the authority before native goal completion. |
-| `src/receipt.js` | Host-agnostic receipt recovery for SubagentStop: prefers last_assistant_message, falls back to the subagent transcript tail's last match. | Superloopy-native; node-only, shared by the Codex and Claude hook paths. |
+| `src/receipt.js` | Host-agnostic receipt recovery for SubagentStop: trusts last_assistant_message when present, else scans the decoded final turn of the subagent transcript, failing closed (re-prompt) when the final message exceeds the tail window. | Superloopy-native; node-only, shared by the Codex and Claude hook paths. |
 | `test/host-adapter.test.js` | Unit tests for host-agnostic receipt recovery (direct + transcript fallback, evidence + audit). | Superloopy-native test only. |
+| `test/claude-host-wiring.test.js` | Unit tests for the doctor Claude-host-wiring check (manifest presence, SubagentStop CLI wiring, namespaced matcher coverage, invalid-regex/JSON handling). | Superloopy-native test only. |
 | `src/prove.js` | ID-free proof shortcut for the active next unresolved criterion. | Superloopy-specific proof path. |
 | `src/report.js` | Writes portable markdown evidence reports with Evidence Summary section, Evidence Warnings section, and next action. | Superloopy-only reporting layer. |
 | `src/review-gate.js` | Validator for strict five-section review quality gates. | Keeps compatible shape under Superloopy-native module name. |
@@ -262,7 +263,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 
 ## Weight Notes
 
-- Current largest source file: `src/hooks.js`, kept under the reviewability cap.
+- Current largest source file: `src/doctor.js`, kept under the reviewability cap.
 - No package dependencies are added; `package.json` stays dependency-free and `superloopy doctor --json` checks that boundary.
 - Marketplace update checks are advisory and self-update only runs for a future npx-local snapshot; current marketplace and checkout installs keep their documented update commands.
 - Runtime state is ignored under `.superloopy/`; `superloopy doctor --json` verifies runtime samples are ignored and not tracked.

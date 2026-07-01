@@ -86,7 +86,9 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
     "comparisonSimilarity",
     "reviewability",
     "dispatchCoherence",
+    "claudeHostWiring",
     "modelPolicy",
+    "claudeModelPolicy",
     "hostContract"
   ]);
   assert.equal(parsed.checks.pluginManifest.ok, true);
@@ -121,6 +123,13 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.modelPolicy.agents.zoro.model_reasoning_effort, "xhigh");
   assert.equal(parsed.checks.hostContract.ok, true);
   assert.ok(parsed.checks.hostContract.cannotVerify.length >= 3);
+  assert.equal(parsed.checks.claudeHostWiring.ok, true);
+  assert.equal(parsed.checks.claudeHostWiring.policy, "claude-host-wiring-present-and-namespaced");
+  assert.ok(parsed.checks.claudeHostWiring.matchers.length >= 1);
+  assert.equal(parsed.checks.claudeModelPolicy.ok, true);
+  assert.equal(parsed.checks.claudeModelPolicy.policyPath, "docs/superloopy-model-policy-claude.md");
+  assert.equal(parsed.checks.claudeModelPolicy.agents.nami, "haiku");
+  assert.equal(parsed.checks.claudeModelPolicy.agents.zoro, "opus");
 });
 
 test("doctor model policy fails when bundled agent defaults drift", async () => {

@@ -224,8 +224,17 @@ async function installOneTextFile(targetPath, content, force, mode, options = {}
   return "updated";
 }
 
+// A marker line embedded in every shim we generate, so a shim is recognized as ours regardless of
+// the install directory name (checkout/fork dirs are not named `superloopy`) and a foreign shim
+// without the marker is never overwritten.
+const BIN_SHIM_MARKER = "superloopy-generated bin shim";
+
 function isGeneratedSuperloopyBinShim(content, platform) {
   const normalized = content.replace(/\r\n/gu, "\n");
+  // Marked shims (this version onward) are ours in any directory.
+  if (normalized.includes(BIN_SHIM_MARKER)) return true;
+  // Legacy (pre-marker) shims are recognized by their generated structure with a `superloopy` path
+  // segment, so existing marketplace installs still upgrade in place without --force.
   if (platform === "win32") {
     return /^@echo off\nnode "[^"\n]*[\\/]superloopy(?:[\\/][^"\n]*)?[\\/]src[\\/]cli\.js" %\*\n?$/iu.test(normalized);
   }
@@ -248,9 +257,9 @@ function resolveBinDir(cwd, argv, env, homeDir) {
 
 function binShimContent(cliPath, platform) {
   if (platform === "win32") {
-    return `@echo off\r\nnode "${cliPath}" %*\r\n`;
+    return `@echo off\r\n@rem ${BIN_SHIM_MARKER}\r\nnode "${cliPath}" %*\r\n`;
   }
-  return `#!/usr/bin/env sh\nexec node ${shellQuote(cliPath)} "$@"\n`;
+  return `#!/usr/bin/env sh\n# ${BIN_SHIM_MARKER}\nexec node ${shellQuote(cliPath)} "$@"\n`;
 }
 
 function shellQuote(value) {

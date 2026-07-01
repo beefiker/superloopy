@@ -1,58 +1,121 @@
 // Host-agnostic receipt recovery for SubagentStop handlers.
 //
-// Codex puts the worker's final text in `last_assistant_message`; Claude Code may omit it but
-// provides the subagent's own transcript. So we prefer the direct field and otherwise fall back
-// to the bounded transcript tail, taking the LAST match (the most recent message). This works
-// whether or not `last_assistant_message` exists and regardless of the transcript JSONL schema —
-// we scan for the receipt token, not a specific record shape. On a miss the caller blocks/retries
-// and the deterministic completion floor still gates the loop, exactly as the host contract states.
+// Codex puts the worker's final text in `last_assistant_message`; Claude Code omits it but provides
+// the subagent's transcript. When the direct field carries content we trust it EXCLUSIVELY (a stale
+// token elsewhere must never satisfy THIS stop); otherwise we scan the DECODED text of the worker's
+// FINAL TURN in the transcript — the trailing assistant records after the last user/tool-result
+// record. Decoding turns an escaped newline back into real whitespace so the path capture is clean,
+// and bounding the scan to the final turn keeps a receipt from an earlier attempt out. Both paths
+// take the FIRST token (matching the original Codex behavior so that path is unchanged), so the two
+// hosts agree. On a miss the caller blocks/retries and the deterministic completion floor still
+// gates the loop, exactly as the host contract states.
 
 import { readTranscriptTail } from "./continuation.js";
 
-// Capture the path but stop at quotes (and whitespace): when the fallback scans a transcript
-// JSONL tail, the receipt is embedded in JSON (..."SUPERLOOPY_EVIDENCE: <path>"}), so a greedy
-// \S+ would swallow the trailing `"}`. Evidence-root paths never contain quotes, so excluding
-// them yields the clean path on both the direct (plain-text) and transcript (JSON) paths.
-const EVIDENCE = /(?:EVIDENCE_RECORDED|SUPERLOOPY_EVIDENCE):\s*([^\s"']+)/u;
-const EVIDENCE_G = /(?:EVIDENCE_RECORDED|SUPERLOOPY_EVIDENCE):\s*([^\s"']+)/gu;
-const AUDIT = /SUPERLOOPY_AUDIT:\s*([^\s"']+)/u;
-const AUDIT_G = /SUPERLOOPY_AUDIT:\s*([^\s"']+)/gu;
+// Capture the path as any run of non-whitespace, matching the original Codex behavior exactly. Both
+// sources we scan are plain text (the Codex direct field, or the DECODED transcript text where an
+// escaped newline is already a real whitespace char), so there is no JSON quoting to exclude and no
+// need to narrow the class — narrowing would truncate legitimate paths containing quotes/brackets.
+const EVIDENCE = /(?:EVIDENCE_RECORDED|SUPERLOOPY_EVIDENCE):\s*(\S+)/u;
+const AUDIT = /SUPERLOOPY_AUDIT:\s*(\S+)/u;
 
-// Claude SubagentStop carries the subagent's own transcript separately; prefer it so the
-// fallback reads THIS worker's final message, not a sibling's. Codex uses transcript_path.
-function subagentTranscriptPath(payload) {
+// Claude SubagentStop carries the subagent's own transcript separately; prefer it so the fallback
+// reads THIS worker's final turn, not a sibling's. Codex uses transcript_path. Exported so the
+// hooks' context-pressure guard reads the SAME transcript this receipt recovery does.
+export function subagentTranscriptPath(payload) {
   return payload?.agent_transcript_path ?? payload?.transcript_path;
 }
 
-function firstMatch(message, regex) {
-  if (typeof message !== "string") return null;
-  return regex.exec(message)?.[1] ?? null;
-}
-
-function lastMatch(text, globalRegex) {
-  if (typeof text !== "string" || text.length === 0) return null;
-  let last = null;
-  let m;
-  while ((m = globalRegex.exec(text)) !== null) last = m[1];
-  return last;
+function firstMatch(text, regex) {
+  if (typeof text !== "string") return null;
+  return text.match(regex)?.[1] ?? null;
 }
 
 export function receiptFromPayload(payload) {
-  return (
-    firstMatch(payload?.last_assistant_message, EVIDENCE) ??
-    lastMatch(readTranscriptTail(subagentTranscriptPath(payload)), EVIDENCE_G)
-  );
+  return recoverReceipt(payload, EVIDENCE);
 }
 
 export function auditReceiptFromPayload(payload) {
-  return (
-    firstMatch(payload?.last_assistant_message, AUDIT) ??
-    lastMatch(readTranscriptTail(subagentTranscriptPath(payload)), AUDIT_G)
-  );
+  return recoverReceipt(payload, AUDIT);
 }
 
-// A host may namespace a plugin-bundled agent type (Claude sends `superloopy:franky`); Codex
-// sends the bare `franky`. Strip any leading `<ns>:` so the SubagentStop matchers fire on both.
+function recoverReceipt(payload, regex) {
+  const direct = payload?.last_assistant_message;
+  // A present, non-empty direct field is the worker's final message verbatim (Codex): trust it
+  // exclusively. An empty/whitespace-only value means the host gave us nothing here, so fall back to
+  // the transcript rather than suppressing recovery.
+  if (typeof direct === "string" && direct.trim().length > 0) {
+    return firstMatch(direct, regex);
+  }
+  return firstMatch(finalTurnText(subagentTranscriptPath(payload)), regex);
+}
+
+// Decoded text of the worker's FINAL TURN: the trailing assistant records, stopping at the first
+// user/tool-result record (an earlier turn's boundary) or at an unparseable line (a partial write,
+// or a byte-sliced tail that began mid-record). Bounding to the final turn keeps a stale token from
+// an earlier attempt out; stopping at an unparseable line fails closed rather than reaching back
+// past it. Empty when nothing in the final turn parsed (e.g. a final message larger than the 64KB
+// tail window) -> caller treats it as no receipt and re-prompts, never accepting a stale token.
+function finalTurnText(transcriptPath) {
+  const tail = readTranscriptTail(transcriptPath);
+  if (tail.length === 0) return "";
+  const lines = tail.split(/\r?\n/);
+  const parts = [];
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i].trim();
+    if (line.length === 0) continue;
+    let record;
+    try {
+      record = JSON.parse(line);
+    } catch {
+      break; // partial/truncated line -> hard boundary; never reach back past it
+    }
+    if (isTurnBoundary(record)) break; // start of the final turn reached
+    if (!isAssistantRecord(record)) continue;
+    const text = assistantRecordText(record);
+    if (text.length > 0) parts.push(text);
+  }
+  if (parts.length === 0) return "";
+  parts.reverse();
+  return parts.join("\n");
+}
+
+// A turn boundary is the user/tool-result record that precedes the worker's final assistant turn.
+// Match an explicit user role, or any record carrying a tool_result block even if the host does not
+// wrap it in a user record, so the scan never reaches back past the final turn.
+function isTurnBoundary(record) {
+  if (record === null || typeof record !== "object") return false;
+  if (record.type === "user" || record.role === "user" || record.message?.role === "user") return true;
+  const content = record.message?.content ?? record.content;
+  return Array.isArray(content) && content.some((block) => block?.type === "tool_result");
+}
+
+function isAssistantRecord(record) {
+  if (record === null || typeof record !== "object") return false;
+  return record.type === "assistant" || record.role === "assistant" || record.message?.role === "assistant";
+}
+
+// Join the text blocks of an assistant record, tolerating the common transcript shapes: a plain
+// string body, an array of {type:"text",text} blocks (Claude), or a bare `text` field. Non-text
+// blocks (tool_use/tool_result) contribute nothing.
+function assistantRecordText(record) {
+  const content = record.message?.content ?? record.content;
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((block) => {
+        if (typeof block === "string") return block;
+        if (block?.type === "text" && typeof block.text === "string") return block.text;
+        return "";
+      })
+      .filter((part) => part.length > 0)
+      .join("\n");
+  }
+  return typeof record.text === "string" ? record.text : "";
+}
+
+// A host may namespace a plugin-bundled agent type (Claude sends `superloopy:franky`); Codex sends
+// the bare `franky`. Strip any leading `<ns>:` so the SubagentStop matchers fire on both.
 export function normalizeAgentType(agentType) {
   if (typeof agentType !== "string") return agentType;
   const idx = agentType.lastIndexOf(":");

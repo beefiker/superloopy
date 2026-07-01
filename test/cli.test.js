@@ -173,6 +173,44 @@ test("CLI bin install updates an older generated Superloopy shim without --force
   assert.match(updated, /src[\\/]cli\.js/);
 });
 
+test("CLI bin install updates a marked shim in a non-superloopy directory without --force [regression]", async () => {
+  const repo = await tempRepo();
+  const binDir = join(repo, "bin");
+  await mkdir(binDir, { recursive: true });
+  const binPath = join(binDir, process.platform === "win32" ? "superloopy.cmd" : "superloopy");
+  // A shim we generated but installed from a checkout dir NOT named `superloopy` (e.g. `loopy`).
+  const markedShim = process.platform === "win32"
+    ? '@echo off\r\n@rem superloopy-generated bin shim\r\nnode "C:\\Users\\me\\loopy\\src\\cli.js" %*\r\n'
+    : "#!/usr/bin/env sh\n# superloopy-generated bin shim\nexec node '/Users/me/loopy/src/cli.js' \"$@\"\n";
+  await writeFile(binPath, markedShim, "utf8");
+
+  const result = await installBinShim(repo, ["--bin-dir", binDir], {
+    env: { PATH: `${binDir}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}` },
+    homeDir: join(repo, "home")
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.status, "updated");
+});
+
+test("CLI bin install refuses to overwrite a foreign (unmarked) shim without --force [regression]", async () => {
+  const repo = await tempRepo();
+  const binDir = join(repo, "bin");
+  await mkdir(binDir, { recursive: true });
+  const binPath = join(binDir, process.platform === "win32" ? "superloopy.cmd" : "superloopy");
+  const foreignShim = process.platform === "win32"
+    ? '@echo off\r\nnode "C:\\Users\\me\\other-tool\\src\\cli.js" %*\r\n'
+    : "#!/usr/bin/env sh\nexec node '/Users/me/other-tool/src/cli.js' \"$@\"\n";
+  await writeFile(binPath, foreignShim, "utf8");
+
+  const result = await installBinShim(repo, ["--bin-dir", binDir], {
+    env: { PATH: `${binDir}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}` },
+    homeDir: join(repo, "home")
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "conflict");
+  assert.equal(await readFile(binPath, "utf8"), foreignShim); // left untouched
+});
+
 test("CLI bin install uses Windows-safe PATH detection and PowerShell hint", async () => {
   const repo = await tempRepo();
   const binDir = join(repo, "Bin");
