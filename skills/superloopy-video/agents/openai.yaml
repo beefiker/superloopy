@@ -1,0 +1,4 @@
+interface:
+  display_name: "Superloopy Video"
+  short_description: "Make well-made video with HyperFrames, gated by Superloopy evidence"
+  default_prompt: "Use superloopy-video for any video work: orchestrate the official HyperFrames skills, enforce a STORYBOARD.md beat contract and the anti-slop motion rules, and gate done on a frame-by-beat render-QA artifact."

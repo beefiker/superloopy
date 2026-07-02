@@ -95,7 +95,7 @@ test("plugin packages Superloopy research and website-clone skills", async () =>
   assert.match(clone.content, /Visual QA/i);
   assert.match(clone.content, /SUPERLOOPY_EVIDENCE/);
 
-  for (const name of ["superloopy-research", "superloopy-clone", "superloopy-frontend"]) {
+  for (const name of ["superloopy-research", "superloopy-clone", "superloopy-frontend", "superloopy-video"]) {
     assert.equal(existsSync(`skills/${name}/agents/openai.yaml`), true);
     const metadata = await readFile(`skills/${name}/agents/openai.yaml`, "utf8");
     assert.match(metadata, /display_name:/);
@@ -163,6 +163,43 @@ test("plugin packages the Superloopy frontend skill with auto-activation and gat
 
   const designSystem = await readFile("skills/superloopy-frontend/references/design-system.md", "utf8");
   assert.match(designSystem, /7 sections|7-section/i);
+});
+
+test("plugin packages the Superloopy video skill as a HyperFrames quality harness", async () => {
+  const video = await readSkill("superloopy-video");
+
+  assert.match(video.frontmatter, /^name: superloopy-video$/m);
+  assert.match(video.frontmatter, /MUST USE for ANY video/i);
+  assert.match(video.frontmatter, /Auto-activates/i);
+  assert.match(video.content, /SUPERLOOPY VIDEO ENABLED/);
+  assert.match(video.content, /STORYBOARD\.md/);
+  assert.match(video.content, /npx hyperframes skills check/);
+  assert.match(video.content, /anti-slop/i);
+  assert.match(video.content, /SUPERLOOPY_EVIDENCE/);
+  assert.match(video.content, /\.superloopy\/evidence\/video/);
+
+  // Thin-orchestrator boundary: composition syntax stays in the official
+  // HyperFrames skills; this skill must not vendor it.
+  assert.doesNotMatch(video.content, /data-start|data-duration|data-track-index/);
+
+  // Proportionality + user-authority invariants: the harness scales to the
+  // ask, explicit user choices win, and upstream skills are never overridden.
+  assert.match(video.content, /Proportionality and user authority/i);
+  assert.match(video.content, /user's explicit choice always wins/i);
+  assert.match(video.content, /light path/i);
+  assert.match(video.content, /Never override upstream/i);
+
+  const storyboard = await readFile("skills/superloopy-video/references/storyboard.md", "utf8");
+  assert.match(storyboard, /\[t=0s d=2s\]/);
+  assert.match(storyboard, /Beat sheet/i);
+
+  const antiSlop = await readFile("skills/superloopy-video/references/anti-slop-video.md", "utf8");
+  assert.match(antiSlop, /pre-flight checklist/i);
+  assert.match(antiSlop, /Named-default bans/i);
+
+  const renderQa = await readFile("skills/superloopy-video/references/render-qa.md", "utf8");
+  assert.match(renderQa, /frame-qa\.mjs/);
+  assert.match(renderQa, /Anti-gaming/i);
 });
 
 test("clone skill preserves exact extraction pipeline and crew dispatch guardrails", async () => {
