@@ -76,23 +76,36 @@ const FRONTEND_TRIGGER_PATTERNS = [
   /\banti[\s-]?slop\b|\bawwwards\b|\bpolish the (?:ui|design|page|frontend|landing)\b/iu
 ];
 
+// Non-visual contexts that share vocabulary with UI work — "responsive to <X>",
+// a backend/systems noun tied to (un)responsive, or the concurrency "UI thread".
+// Checked FIRST so a bare ui/ux/responsive token in a systems prompt does not fire
+// the visual steer. Mirrors the Korean-writing exclusion gate; a false exclusion only
+// costs a missed steer (the skill's own model-judged activation still covers it).
+const FRONTEND_EXCLUSION_PATTERNS = [
+  /\bresponsive(?:ness)?\s+to\b/iu,
+  /\b(?:un)?responsive\b[^.\n]{0,24}\b(?:server|service|api|endpoint|backend|database|thread|process|socket|node|cluster|daemon|request)\b/iu,
+  /\b(?:server|service|api|endpoint|backend|database|thread|process|socket|node|cluster|daemon|request)\b[^.\n]{0,24}\b(?:un)?responsive\b/iu,
+  /\bui\s+thread\b/iu
+];
+
 // True when the prompt reads as frontend/visual work. Used by the prompt hook to
-// inject a steer toward the superloopy-frontend skill (no state mutation).
+// inject a steer toward the superloopy-frontend skill (no state mutation). The steer
+// is a light pointer; the superloopy-frontend skill carries the rules and loads them
+// on demand, so an occasional over-fire costs a couple of context lines, not a rulebook.
 export function hasFrontendTrigger(prompt) {
   if (typeof prompt !== "string") return false;
+  if (FRONTEND_EXCLUSION_PATTERNS.some((pattern) => pattern.test(prompt))) return false;
   return FRONTEND_TRIGGER_PATTERNS.some((pattern) => pattern.test(prompt));
 }
 
-// Guidance-only steer: tell the agent to engage the frontend skill and its gates.
+// Guidance-only steer: a light pointer to the frontend skill, which carries the actual
+// rules (DESIGN.md gate, anti-slop pre-flight, visual-QA evidence) and loads them on
+// demand. Kept compact on purpose so an over-fire is cheap — the skill is the rulebook.
 export function renderFrontendTriggerContext() {
   return [
     "Superloopy frontend trigger",
     "",
-    "This request involves UI/visual work. Engage the superloopy-frontend skill before writing UI. This is guidance only; it does not mutate Superloopy state.",
-    "",
-    "- Establish or read a DESIGN.md token contract FIRST — no design system, no UI work; every color/spacing/type value traces to a token.",
-    "- Load `skills/superloopy-frontend/references/anti-slop.md` and pass its pre-flight: zero em-dashes, eyebrow/consistency locks, no AI-default purple/gradient or Inter/beige palette, real assets (no div-fake screenshots).",
-    "- Verify in a real browser at 390/768/1280 px and record a `VISUAL_QA.md` artifact under `.superloopy/evidence/frontend/` before claiming done."
+    "This looks like UI/visual work — engage the `superloopy-frontend` skill (guidance only; no state change). It is a router that loads only the rules a request needs: a mandatory DESIGN.md token gate, the anti-slop pre-flight, and a real-browser visual-QA artifact under `.superloopy/evidence/frontend/` before done. Follow the skill; do not expand these rules here."
   ].join("\n");
 }
 

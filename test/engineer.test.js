@@ -171,6 +171,18 @@ test("hasFrontendTrigger fires on UI/visual intent and stays quiet on backend wo
   assert.equal(hasFrontendTrigger(null), false);
 });
 
+test("hasFrontendTrigger excludes systems vocabulary that shares UI keywords", () => {
+  // "responsive" as reactivity/latency, not responsive design.
+  assert.equal(hasFrontendTrigger("make the server responsive to incoming signals"), false);
+  assert.equal(hasFrontendTrigger("the payment API endpoint is unresponsive under load"), false);
+  assert.equal(hasFrontendTrigger("keep the worker responsive to backpressure requests"), false);
+  // "UI thread" as concurrency, not the user-interface surface.
+  assert.equal(hasFrontendTrigger("fix the UI thread deadlock in the native runtime"), false);
+  // Genuine responsive-design intent still fires despite the shared word.
+  assert.equal(hasFrontendTrigger("make the landing page responsive on mobile"), true);
+  assert.equal(hasFrontendTrigger("the layout is not responsive at 768px"), true);
+});
+
 test("runUserPromptSubmitHook steers UI prompts to the frontend skill without mutating state", async () => {
   const repo = await tempRepo();
   const output = await runUserPromptSubmitHook({
@@ -184,6 +196,24 @@ test("runUserPromptSubmitHook steers UI prompts to the frontend skill without mu
   assert.match(parsed.hookSpecificOutput.additionalContext, /DESIGN\.md/);
   assert.match(parsed.hookSpecificOutput.additionalContext, /\.superloopy\/evidence\/frontend\//);
   assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
+});
+
+test("runUserPromptSubmitHook suppresses the frontend steer when SUPERLOOPY_FRONTEND_STEER=off", async () => {
+  const repo = await tempRepo();
+  const previous = process.env.SUPERLOOPY_FRONTEND_STEER;
+  process.env.SUPERLOOPY_FRONTEND_STEER = "off";
+  try {
+    const output = await runUserPromptSubmitHook({
+      hook_event_name: "UserPromptSubmit",
+      cwd: repo,
+      prompt: "build a landing page hero that does not look generic"
+    });
+    assert.equal(output, "");
+    assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
+  } finally {
+    if (previous === undefined) delete process.env.SUPERLOOPY_FRONTEND_STEER;
+    else process.env.SUPERLOOPY_FRONTEND_STEER = previous;
+  }
 });
 
 test("runUserPromptSubmitHook lets the loop engineer trigger win over the frontend steer", async () => {
