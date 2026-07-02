@@ -7,6 +7,7 @@ import { checkFileAudit } from "./file-audit.js";
 import { checkComparisonSimilarity } from "./comparison-similarity.js";
 import { SUPERLOOPY_AGENT_NAMES } from "./agents.js";
 import { checkClaudeModelPolicy, checkModelPolicy } from "./model-policy.js";
+import { checkInterop } from "./interop.js";
 
 const FILE_AUDIT_PATH = "docs/superloopy-file-audit.md";
 const GATE_NOTES_PATH = "docs/superloopy-gate-notes.md";
@@ -54,8 +55,7 @@ export async function runDoctor(cwd, options = {}) {
   const claudeHostWiring = await checkClaudeHostWiring(cwd);
   const modelPolicy = await checkModelPolicy(cwd);
   const claudeModelPolicy = await checkClaudeModelPolicy(cwd);
-  const hostContract = checkHostContract();
-  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, modelPolicy, claudeModelPolicy, hostContract };
+  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, modelPolicy, claudeModelPolicy, hostContract: checkHostContract(), interop: checkInterop(options) };
   return {
     ok: Object.values(checks).every((check) => check.ok),
     checks

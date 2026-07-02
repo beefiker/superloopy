@@ -89,7 +89,8 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
     "claudeHostWiring",
     "modelPolicy",
     "claudeModelPolicy",
-    "hostContract"
+    "hostContract",
+    "interop"
   ]);
   assert.equal(parsed.checks.pluginManifest.ok, true);
   assert.equal(parsed.checks.hooks.ok, true);
@@ -131,6 +132,10 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.claudeModelPolicy.policyPath, "docs/superloopy-model-policy-claude.md");
   assert.equal(parsed.checks.claudeModelPolicy.agents.nami, "haiku");
   assert.equal(parsed.checks.claudeModelPolicy.agents.zoro, "opus");
+  // Interop is informational: it never fails and does not gate overall health.
+  assert.equal(parsed.checks.interop.ok, true);
+  assert.equal(parsed.checks.interop.informational, true);
+  assert.equal(typeof parsed.checks.interop.installed, "boolean");
 });
 
 test("doctor model policy fails when bundled agent defaults drift", async () => {

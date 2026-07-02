@@ -82,6 +82,22 @@ full 크루 실행에서는 부모 에이전트가 각 레인을 `superloopy loo
 
 추적 중인 크루 handoff가 끝나면 Superloopy가 일반 `handoff` 또는 `fleet` 상태 앞에 원본 크루 라인을 한 줄 붙일 수 있습니다. 지원 카탈로그에 맞으면 할당문이나 스코프 brief의 언어를 따르고, 아니면 안전하게 영어로 돌아갑니다. 이 문장은 분위기용일 뿐이고, 판정·근거 artifact·outstanding 목록·attention 목록이 실제 기준입니다.
 
+## Superpowers와 함께 쓰기
+
+Superloopy는 [Superpowers](https://github.com/obra/superpowers) 플러그인과 잘 맞습니다. 한 작업의 서로 다른 반쪽을 맡기 때문에 둘 중 하나를 고를 필요가 없습니다.
+
+- Superpowers는 루프의 앞단을 담당합니다: 브레인스토밍, 계획, 그리고 TDD·코드리뷰 방법론.
+- Superloopy는 마무리를 담당합니다: 완료 시점에 다시 실행되는 command 기반 기준. 그래서 "완료"가 말이 아니라 증거로 남습니다.
+
+Superpowers가 설치돼 있으면(Codex든 Claude Code든) Superloopy가 이를 감지해서 자기 안내를 거기에 맞춰 조정합니다. 설계·계획·TDD는 Superpowers에 맡기고, 자신은 바깥쪽 증거 게이트로 남습니다. 감지는 best-effort이고 안내에만 영향을 줄 뿐 게이트를 약하게 만들지 않습니다. 끄려면 `SUPERLOOPY_SUPERPOWERS=off`, 강제로 켜려면 `on`으로 두고, `superloopy doctor`로 무엇을 찾았는지 확인할 수 있습니다. 자세한 내용은 [docs/superloopy-interop-superpowers.md](docs/superloopy-interop-superpowers.md)에 있습니다.
+
+### Q&A
+
+- **둘 다 설치해야 하나요?** 아니요. Superloopy는 단독으로도 동작합니다. Superpowers가 함께 있으면 겹치지 않고 서로 손발을 맞춥니다.
+- **각자 어느 단계를 맡나요?** Superpowers가 브레인스토밍·계획·구현을 맡고, Superloopy가 마지막 증명을 맡습니다. 한 작업에는 운전자 하나만 두세요. 같은 슬라이스에 `loopy team`과 Superpowers 서브에이전트 흐름을 동시에 돌리지 마세요.
+- **완료 판단은 누가 하나요?** Superloopy입니다. 마지막에 실제 command를 다시 실행해서 가짜 통과를 막습니다.
+- **Superpowers 설치는 어떻게 감지하나요?** Codex와 Claude Code의 플러그인 폴더를 살펴봅니다. `SUPERLOOPY_SUPERPOWERS=on|off`로 언제든 바꿀 수 있습니다.
+
 ## 설치
 
 Superloopy는 하나의 repo에서 **Codex**와 **Claude Code** 양쪽에 설치됩니다. 코어(loop 상태, evidence 게이트, doctor)는 호스트에 독립적이고, 각 호스트는 얇은 플러그인 manifest, hook 배선, agent 포맷을 따로 받습니다.

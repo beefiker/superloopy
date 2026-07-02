@@ -82,6 +82,22 @@ Loop skill 是默认护栏。`loopy` 会启动或继续 evidence loop；`loopy t
 
 当已跟踪的 crew handoff 完成时，Superloopy 可以在普通 `handoff` 或 `fleet` 状态前输出一句原创 crew line。它会从 assignment 或 scoped brief 中推断语言，只要该语言在支持的目录内就会跟随；无法推断时回退到英语。这句话只用于展示，真正权威仍然是 verdict、evidence artifact、outstanding 列表和 attention 列表。
 
+## 与 Superpowers 搭配使用
+
+Superloopy 和 [Superpowers](https://github.com/obra/superpowers) 插件配合得很好。两者负责同一件事的不同一半，所以不用二选一。
+
+- Superpowers 负责循环的前半段：头脑风暴、规划，以及它的 TDD 和代码评审方法。
+- Superloopy 负责收尾：在完成时重新运行的 command 支撑判据，让“完成”是被证明的，而不是嘴上说说。
+
+如果装了 Superpowers（无论在 Codex 还是 Claude Code 上），Superloopy 会察觉并相应调整自己的引导。它把设计、规划和 TDD 交给 Superpowers，自己留在外层做 evidence gate。检测是尽力而为的，只影响建议，绝不削弱 gate。用 `SUPERLOOPY_SUPERPOWERS=off` 关闭，用 `on` 强制开启，用 `superloopy doctor` 查看检测到了什么。详见 [docs/superloopy-interop-superpowers.md](docs/superloopy-interop-superpowers.md)。
+
+### Q&A
+
+- **两个都要装吗？** 不用。Superloopy 单独也能用。如果同时装了 Superpowers，两者会协作而不是重叠。
+- **各自负责哪个阶段？** Superpowers 负责头脑风暴、规划和实现，Superloopy 负责最后的证明。一个任务只留一个主导者：不要在同一批切片上同时跑 `loopy team` 和 Superpowers 的子代理流程。
+- **谁来判断任务完成？** Superloopy。它在结尾重新运行真实 command，挡住假的通过。
+- **怎么检测 Superpowers 是否安装？** 查看你的 Codex 和 Claude Code 插件目录。随时可用 `SUPERLOOPY_SUPERPOWERS=on|off` 覆盖。
+
 ## 安装
 
 Superloopy 可以从同一个仓库同时安装到 **Codex** 和 **Claude Code**。核心部分（loop 状态、evidence gate、doctor）与宿主无关；每个宿主各有自己的轻量插件清单、hook 接线和 agent 格式。

@@ -82,6 +82,22 @@ For full crew runs, the parent records each lane with `superloopy loop handoff`,
 
 When a tracked crew handoff finishes, Superloopy can print one original crew line before the normal `handoff` or `fleet` status. It follows the user's language from the assignment or scoped brief when it matches the supported catalog, with English as the safe fallback. The line is personality only; the verdict, evidence artifact, outstanding list, and attention list stay authoritative.
 
+## Works with Superpowers
+
+Superloopy sits well next to the [Superpowers](https://github.com/obra/superpowers) plugin. They handle different halves of the same job, so you don't have to choose one.
+
+- Superpowers runs the front of the loop: brainstorming, planning, and its TDD and code-review methodology.
+- Superloopy runs the finish: command-backed criteria that re-run at completion, so "done" is proven, not just claimed.
+
+When Superpowers is installed (on Codex or Claude Code), Superloopy notices and steers its own guidance to match. It leaves design, planning, and TDD to Superpowers and keeps itself as the outer evidence gate. Detection is best-effort and only shapes advice; it never weakens a gate. Set `SUPERLOOPY_SUPERPOWERS=off` to opt out or `on` to force it, and run `superloopy doctor` to see what was found. More in [docs/superloopy-interop-superpowers.md](docs/superloopy-interop-superpowers.md).
+
+### Q&A
+
+- **Do I need both?** No. Superloopy works on its own. If Superpowers is there too, the two coordinate instead of overlapping.
+- **Which stage does each own?** Superpowers owns brainstorm, plan, and build. Superloopy owns the proof at the end. Keep one driver per task: don't run `loopy team` and the Superpowers subagent flow on the same slices at once.
+- **Who decides a task is done?** Superloopy. Its check re-runs the real command at the end and blocks a false pass.
+- **How is Superpowers detected?** By looking in your Codex and Claude Code plugin folders. You can always override with `SUPERLOOPY_SUPERPOWERS=on|off`.
+
 ## Install
 
 Superloopy installs on both **Codex** and **Claude Code** from one repo. The core (loop state, evidence gates, doctor) is host-agnostic; each host gets its own thin plugin manifest, hook wiring, and agent format.

@@ -7,6 +7,8 @@
 // single source of truth. This module stays dependency-free; the hook runtime
 // injects the helpers it needs.
 
+import { detectSuperpowers } from "./interop.js";
+
 // Leading invocation keyword: ASCII `loopy` (with a word boundary so `loopyfoo`/`loopycrew`
 // stay out) or its Korean alias `루피`. Hangul has no `\b`, so `루피` matches as a leading
 // token and the optional separators are consumed the same way.
@@ -159,19 +161,21 @@ export function parseInvocation(prompt) {
 export async function runEngineerTriggerHook(payload, deps) {
   const { statusForPayload, guideForPayload, renderSuperloopyContext, formatAdditionalContext } = deps;
   const { orchestrate } = parseInvocation(payload.prompt);
+  // Best-effort coexistence check; never throws, so compute it outside the try.
+  const interop = detectSuperpowers();
   try {
     const status = await statusForPayload(payload);
     if (status.summary.aggregateComplete) {
-      return formatAdditionalContext("UserPromptSubmit", renderComplete(status));
+      return formatAdditionalContext("UserPromptSubmit", renderComplete(status, interop));
     }
     const guide = guideForPayload(payload, status.plan);
-    return formatAdditionalContext("UserPromptSubmit", renderResume(renderSuperloopyContext(status, guide), orchestrate));
+    return formatAdditionalContext("UserPromptSubmit", renderResume(renderSuperloopyContext(status, guide), orchestrate, interop));
   } catch {
-    return formatAdditionalContext("UserPromptSubmit", renderStart(payload, orchestrate));
+    return formatAdditionalContext("UserPromptSubmit", renderStart(payload, orchestrate, interop));
   }
 }
 
-function renderStart(payload, orchestrate) {
+function renderStart(payload, orchestrate, interop) {
   const { brief } = parseInvocation(payload.prompt);
   if (brief.length === 0) {
     return [
@@ -186,7 +190,8 @@ function renderStart(payload, orchestrate) {
       "- Follow `superloopy loop guide --json` for each next command; do not ask the user to run Superloopy.",
       "- Prove every criterion with `superloopy loop prove -- <validation-command>` (real artifacts only).",
       "- Preflight `superloopy loop check`, then `superloopy loop finish --evidence \"<summary>\" --artifact .superloopy/evidence/gate.json --json`.",
-      ...(orchestrate ? ["", ...orchestrationLines()] : [])
+      ...interopBlock(interop),
+      ...(orchestrate ? ["", ...orchestrationLines(interop)] : [])
     ].join("\n");
   }
   return [
@@ -203,25 +208,41 @@ function renderStart(payload, orchestrate) {
     "- Preflight with `superloopy loop check`, then complete with `superloopy loop finish --evidence \"<summary>\" --artifact .superloopy/evidence/gate.json --json`.",
     "- Report progress in plain terms (criteria proven, next step), not raw command dumps.",
     "- Keep it light unless the task needs heavier review. The Stop hook blocks completion until evidence exists.",
+    ...interopBlock(interop),
     "",
-    ...(orchestrate ? orchestrationLines() : [baselineDelegationLine()])
+    ...(orchestrate ? orchestrationLines(interop) : [baselineDelegationLine()])
   ].join("\n");
 }
 
-function renderResume(context, orchestrate) {
+function renderResume(context, orchestrate, interop) {
   return [
     HEADER,
     "",
     "A loop is already in progress. Resume as the loop engineer and run the next action yourself; do not start a second plan or ask the user to run Superloopy commands.",
+    ...interopBlock(interop),
     ...(orchestrate
-      ? ["", "You opened this with `loopy team`: keep delegating independent slices to the crew via `multi_agent_v1.spawn_agent`, and record only artifact-backed proof.", "", ...orchestrationLines()]
+      ? ["", "You opened this with `loopy team`: keep delegating independent slices to the crew via `multi_agent_v1.spawn_agent`, and record only artifact-backed proof.", "", ...orchestrationLines(interop)]
       : []),
     "",
     context
   ].join("\n");
 }
 
-function renderComplete(status) {
+// Coexistence routing (guidance only): when the Superpowers methodology plugin is
+// installed, keep the two plugins in their lanes instead of double-driving the task.
+// Returns [] when Superpowers is absent so solo output is unchanged.
+function interopBlock(interop) {
+  if (!interop || interop.installed !== true) return [];
+  return [
+    "",
+    "Superpowers coexistence (detected):",
+    "- Superpowers is installed. Use its skills for the front of the loop: `brainstorming` and `writing-plans` for design and planning, and `test-driven-development` plus its code-review skills while implementing. Do not re-derive a second plan here.",
+    "- Superloopy owns proof-of-done: capture the work as command-backed criteria and re-run them at `finish`. Register the TDD test command with `superloopy loop prove -- <test command>` so it re-runs deterministically at completion.",
+    "- One orchestrator per task: if Superpowers is running subagent-driven development, do not also fan out the Superloopy crew on the same slices."
+  ];
+}
+
+function renderComplete(status, interop) {
   const session = status.plan.sessionId === undefined ? "" : ` --session-id ${shellQuote(status.plan.sessionId)}`;
   return [
     HEADER,
@@ -229,7 +250,8 @@ function renderComplete(status) {
     "The current Superloopy aggregate is already complete.",
     "",
     `- Inspect: \`superloopy loop status${session} --json\`.`,
-    "- For new work, begin a fresh loop and keep it separate with a new --session-id."
+    "- For new work, begin a fresh loop and keep it separate with a new --session-id.",
+    ...interopBlock(interop)
   ].join("\n");
 }
 
@@ -240,9 +262,12 @@ function baselineDelegationLine() {
 }
 
 // Tier 2 (escalation): the crew fan-out playbook, wired to Superloopy's receipt gate.
-function orchestrationLines() {
+function orchestrationLines(interop) {
   return [
     "Crew fan-out (team mode):",
+    ...(interop && interop.installed === true
+      ? ["- Superpowers is installed: pick ONE orchestrator for this task. If Superpowers drives planning and implementation, keep the Superloopy crew for evidence lanes (usopp QA, robin audit, jinbe gate) and the command-backed final gate — do not run both on the same slices."]
+      : []),
     "- If the requested repository path differs from `cwd`, verify and state the exact target path before editing or dispatching workers.",
     "- This task is big enough to split. Delegate independent slices to parallel workers instead of doing everything in one thread.",
     "- Spawn each worker with the host's native tool, and ALWAYS set `agent_type` to the crew role so the child loads that role's model and instructions, e.g.: `multi_agent_v1.spawn_agent({\"message\": \"TASK: act as franky — <self-contained assignment>\", \"agent_type\": \"franky\", \"fork_context\": false})`.",
