@@ -45,7 +45,7 @@ Total: 100 points.
 | LG-03 | Hooks keep long-running work from ending early. | `node --test test/hooks.test.js test/golden-hooks.test.js` | Stop, prompt, receipt, scoped session, and steering hooks are fail-closed and guide-backed. |
 | LG-04 | Goal parsing and scoped state stay stable across turns. | `node --test test/goals.test.js test/golden-matrix-gate.test.js` | `@goal` stories, scoped sessions, and matrix gate rows remain deterministic. |
 | LG-05 | Quality gates reject weak proof. | `node --test test/golden-review-gate.test.js test/golden-matrix-gate.test.js test/loop-gates.test.js` | Weak QA, not-applicable shortcuts, missing matrix rows, and inline-only proof fail. |
-| LG-06 | Public docs and packaging stay executable. | `node --test test/docs.test.js test/plugin.test.js test/doctor.test.js` | Docs describe the real command surface, plugin hooks are valid, and doctor remains dependency-free. |
+| LG-06 | Public docs and packaging stay executable. | `node --test test/docs.test.js test/plugin.test.js test/doctor.test.js test/doctor-review-feedback.test.js` | Docs describe the real command surface, plugin hooks are valid, and doctor remains dependency-free. |
 | LG-07 | Whole-repo health stays strict. | `npm test` and `node src/cli.js doctor --json` | All tests pass, doctor reports `ok: true`, and no file exceeds the reviewability limit. |
 | LG-08 | The continuation engine drives bounded multi-iteration work to evidence-backed completion. | `node --test test/golden-continuation.test.js` | Blocks while incomplete and under budget, resets the stall counter only above a recorded-proof high-water mark, and stops blocked-not-complete on a cap or no-progress; aggregate completion clears loop-control state. |
 | LG-09 | Crew completion lines stay localized and presentation-only. | `node --test test/crew-lines.test.js test/fleet.test.js` | Terminal known crew handoffs may speak once in a supported catalog language, pending/unknown lanes stay quiet, and evidence/status fields remain authoritative. |
@@ -237,12 +237,13 @@ Total: 100 points.
 | `src/begin.js` | CLI begin tests. | Must create a plan, start the first goal, and return an immediate proof guide. |
 | `src/capture.js` | CLI evidence tests. | Must write command transcripts and mark pass/fail from command exit status. |
 | `src/check.js` | Loop-gate and CLI evidence tests. | Must be non-mutating and print warnings plus repair commands for every unresolved or invalid proof. |
-| `src/cli.js` | CLI, plugin, doctor, and crew-line tests. | Must dispatch install, loop, bin, agents, doctor, hook commands, generic comparison-check flags, symlinked bin execution, and status-safe handoff/fleet text. |
+| `src/cli.js` | CLI, plugin, doctor, and crew-line tests. | Must dispatch install, loop, bin, agents, doctor, hook commands, generic comparison-check flags, symlinked bin execution, doctor-root resolution, and status-safe handoff/fleet text. |
 | `src/comparison-similarity.js` | Doctor comparison tests. | Must compare code-shaped files only when an explicit comparison path is provided. |
 | `src/continuation.js` | `test/golden-continuation.test.js`. | Must drive bounded continuation toward evidence-backed completion and mark blocked (never complete) on a cap or stall. |
 | `src/crew-lines.js` | `test/crew-lines.test.js`, `test/fleet.test.js`. | Must generate original deterministic supported-catalog lines only for known terminal crew handoffs and format them without mutating persisted state. |
 | `src/design-audit.js` | Doctor design-audit tests. | Must fail missing sections, decisions, or incomplete guards. |
-| `src/doctor.js` | `test/doctor.test.js`, `test/claude-host-wiring.test.js`, `node src/cli.js doctor --json`. | Must verify package, hooks, Claude host wiring, skill, audits, comparison status, Codex + Claude model policy, and reviewability while ignoring generated Codex marketplace install metadata. |
+| `src/doctor.js` | `test/doctor.test.js`, `test/claude-host-wiring.test.js`, `node src/cli.js doctor --json`. | Must verify package, hooks, Claude host wiring, bundled skills, audits, comparison status, Codex + Claude model policy, and reviewability while ignoring generated Codex marketplace install metadata. |
+| `src/doctor-skills.js` | `test/doctor.test.js`, `test/doctor-review-feedback.test.js`, `node src/cli.js doctor --json`. | Must require every shipped skill directory, validate each `SKILL.md` frontmatter name, and return structured failures for unreadable skill paths. |
 | `src/engineer.js` | `test/engineer.test.js`, `test/hooks.test.js` engineer-trigger tests. | Must wake the loop engineer on a leading `loopy` keyword or its Korean alias `루피` without mutating state itself, escalate to crew fan-out only on `team`/`crew`/`팀`/`크루`, and detect frontend/visual or Korean-writing intent for guidance-only skill steers. |
 | `src/file-audit.js` | `test/file-audit.test.js`, doctor file-audit check. | Must fail missing, stale, or incomplete inventory rows. |
 | `src/finish.js` | CLI evidence and loop-gate tests. | Must only finalize after all criteria have valid pass artifacts, then write gate and report artifacts. |
@@ -278,6 +279,7 @@ Total: 100 points.
 | `test/crew-lines.test.js` | `npm test`. | Must prove crew completion lines are original deterministic localized presentation, pending/unknown lanes stay silent, and CLI status remains visible. |
 | `test/docs.test.js` | `npm test`. | Must keep README, skill, gate notes, design audit, and this golden set aligned with enforced behavior. |
 | `test/doctor.test.js` | `npm test`. | Must cover doctor checks for package, audits, comparison, design decisions, model policy, generated install metadata, and reviewability. |
+| `test/doctor-review-feedback.test.js` | `npm test`. | Must cover review-requested doctor hardening for broken checkout manifests and non-directory skills paths. |
 | `test/file-audit.test.js` | `npm test`. | Must prove the file-audit verifier fails stale inventory rows. |
 | `test/humanize-korean.test.js` | `node --test test/humanize-korean.test.js`. | Must prove the Korean humanizer audit script accepts preserved Korean output and rejects non-Korean or token-dropping output. |
 | `test/fleet.test.js` | `npm test`. | Must prove verdict normalization, artifact-bound accept verdicts, handoff recording/update, fleet reconciliation, crew-line decoration, and the parallel-cap warning. |
