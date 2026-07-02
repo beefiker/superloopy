@@ -143,27 +143,35 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.wrapper.informational, true);
 });
 
-test("evaluateWrapperCurrency flags a stale versioned cache but not a current or checkout one", () => {
-  const files = new Set([
-    "/c/superloopy/0.7.0/src/cli.js",
-    "/c/superloopy/0.7.1/src/cli.js"
-  ]);
-  const dirs = { "/c/superloopy": ["0.7.0", "0.7.1"] };
-  const fs = {
-    existsSync: (p) => files.has(p),
-    readdirSync: (p) => { if (!(p in dirs)) throw new Error("ENOENT"); return dirs[p]; }
+// Build paths with node:path.join so the fake-fs keys match what the module computes on the
+// host platform (win32 uses backslashes) — the earlier hardcoded POSIX literals only matched
+// on non-Windows. Colon-free segments keep the linux-mode PATH split (`:`) intact.
+function slPaths(root) {
+  const superloopyDir = join(root, "cache", "superloopy");
+  return {
+    superloopyDir,
+    binDir: join(root, "bin"),
+    cliOf: (version) => join(superloopyDir, version, "src", "cli.js")
   };
-  const stale = evaluateWrapperCurrency("/c/superloopy/0.7.0/src/cli.js", fs);
+}
+
+test("evaluateWrapperCurrency flags a stale versioned cache but not a current or checkout one", () => {
+  const { superloopyDir, cliOf } = slPaths("wrktest");
+  const present = new Set([cliOf("0.7.0"), cliOf("0.7.1")]);
+  const fs = {
+    existsSync: (p) => present.has(p),
+    readdirSync: (p) => { if (p !== superloopyDir) throw new Error("ENOENT"); return ["0.7.0", "0.7.1"]; }
+  };
+  const stale = evaluateWrapperCurrency(cliOf("0.7.0"), fs);
   assert.equal(stale.state, "stale");
   assert.equal(stale.wrapperVersion, "0.7.0");
   assert.equal(stale.latestVersion, "0.7.1");
-  assert.equal(stale.latestCliPath, "/c/superloopy/0.7.1/src/cli.js");
+  assert.equal(stale.latestCliPath, cliOf("0.7.1"));
 
-  const current = evaluateWrapperCurrency("/c/superloopy/0.7.1/src/cli.js", fs);
-  assert.equal(current.state, "current");
+  assert.equal(evaluateWrapperCurrency(cliOf("0.7.1"), fs).state, "current");
 
   // A checkout path (no parseable version dir) is not version-tracked.
-  const checkout = evaluateWrapperCurrency("/home/dev/loopy/src/cli.js", {
+  const checkout = evaluateWrapperCurrency(join("home", "dev", "loopy", "src", "cli.js"), {
     existsSync: () => true,
     readdirSync: () => { throw new Error("unused"); }
   });
@@ -171,10 +179,13 @@ test("evaluateWrapperCurrency flags a stale versioned cache but not a current or
 });
 
 test("evaluateWrapperCurrency ignores a newer version dir with no cli.js", () => {
-  const files = new Set(["/c/superloopy/0.7.0/src/cli.js"]); // 0.8.0 dir exists but has no cli.js
-  const dirs = { "/c/superloopy": ["0.7.0", "0.8.0"] };
-  const fs = { existsSync: (p) => files.has(p), readdirSync: (p) => dirs[p] };
-  assert.equal(evaluateWrapperCurrency("/c/superloopy/0.7.0/src/cli.js", fs).state, "current");
+  const { superloopyDir, cliOf } = slPaths("wrktest");
+  const present = new Set([cliOf("0.7.0")]); // 0.8.0 dir is listed but has no cli.js
+  const fs = {
+    existsSync: (p) => present.has(p),
+    readdirSync: (p) => (p === superloopyDir ? ["0.7.0", "0.8.0"] : [])
+  };
+  assert.equal(evaluateWrapperCurrency(cliOf("0.7.0"), fs).state, "current");
 });
 
 function shimFor(cliPath) {
@@ -182,18 +193,15 @@ function shimFor(cliPath) {
 }
 
 test("checkWrapper reports a stale wrapper as an optional suggestion", () => {
-  const files = {
-    "/bin/superloopy": shimFor("/c/superloopy/0.7.0/src/cli.js"),
-    "/c/superloopy/0.7.0/src/cli.js": "x",
-    "/c/superloopy/0.7.1/src/cli.js": "x"
-  };
-  const dirs = { "/c/superloopy": ["0.7.0", "0.7.1"] };
+  const { superloopyDir, binDir, cliOf } = slPaths("wrktest");
+  const wrapperPath = join(binDir, "superloopy");
+  const files = { [wrapperPath]: shimFor(cliOf("0.7.0")), [cliOf("0.7.0")]: "x", [cliOf("0.7.1")]: "x" };
   const fs = {
-    existsSync: (p) => p in files || p in dirs,
+    existsSync: (p) => p in files || p === superloopyDir,
     readFileSync: (p) => { if (!(p in files)) throw new Error("ENOENT"); return files[p]; },
-    readdirSync: (p) => { if (!(p in dirs)) throw new Error("ENOENT"); return dirs[p]; }
+    readdirSync: (p) => { if (p !== superloopyDir) throw new Error("ENOENT"); return ["0.7.0", "0.7.1"]; }
   };
-  const result = checkWrapper({ env: { PATH: "/bin" }, platform: "linux", fs });
+  const result = checkWrapper({ env: { PATH: binDir }, platform: "linux", fs });
   assert.equal(result.ok, true);
   assert.equal(result.informational, true);
   assert.equal(result.stale, true);
@@ -202,13 +210,15 @@ test("checkWrapper reports a stale wrapper as an optional suggestion", () => {
 });
 
 test("checkWrapper reports a dangling wrapper after a pruned cache", () => {
-  const files = { "/bin/superloopy": shimFor("/c/superloopy/0.7.0/src/cli.js") }; // cli.js gone
+  const { binDir, cliOf } = slPaths("wrktest");
+  const wrapperPath = join(binDir, "superloopy");
+  const files = { [wrapperPath]: shimFor(cliOf("0.7.0")) }; // cli.js gone
   const fs = {
     existsSync: (p) => p in files,
     readFileSync: (p) => { if (!(p in files)) throw new Error("ENOENT"); return files[p]; },
     readdirSync: () => { throw new Error("ENOENT"); }
   };
-  const result = checkWrapper({ env: { PATH: "/bin" }, platform: "linux", fs });
+  const result = checkWrapper({ env: { PATH: binDir }, platform: "linux", fs });
   assert.equal(result.ok, true);
   assert.equal(result.dangling, true);
   assert.match(result.message, /no longer exists/);
