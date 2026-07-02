@@ -42,7 +42,7 @@
     ],
     "brandColor": "#2563EB",
     "screenshots": [],
-    "composerIcon": "./web/assets/luffy.svg",
-    "logo": "./web/assets/luffy.svg"
+    "composerIcon": "./web/favicon.svg",
+    "logo": "./web/favicon.svg"
   }
 }

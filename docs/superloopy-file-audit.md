@@ -261,20 +261,64 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/pre-tool-use.test.js` | Focused unit tests for native goal-tool lifecycle guards. | Prevents premature native completion while Superloopy state is incomplete. |
 | `test/report.test.js` | Focused report artifact tests. | Tests report portability and guide output. |
 | `test/sync-version.test.js` | Release-helper tests for stamping package and plugin manifests from one version. | Tests Superloopy release metadata sync only. |
-| `web/README.md` | Static landing-page notes for the Superloopy web preview. | Documentation for the static site only; no plugin runtime behavior. |
-| `web/_headers` | Static-hosting security/cache headers for the Superloopy web preview. | Web deployment configuration only; does not affect the plugin package. |
-| `web/assets/franky.png` | Static landing-page agent illustration for franky. | Web presentation asset only; no executable plugin logic. |
-| `web/assets/jinbe.png` | Static landing-page agent illustration for jinbe. | Web presentation asset only; no executable plugin logic. |
-| `web/assets/luffy.svg` | Static landing-page logo/illustration asset. | Web presentation asset only; no executable plugin logic. |
-| `web/assets/nami.png` | Static landing-page agent illustration for nami. | Web presentation asset only; no executable plugin logic. |
-| `web/assets/robin.png` | Static landing-page agent illustration for robin. | Web presentation asset only; no executable plugin logic. |
-| `web/assets/usopp.png` | Static landing-page agent illustration for usopp. | Web presentation asset only; no executable plugin logic. |
-| `web/assets/zoro.png` | Static landing-page agent illustration for zoro. | Web presentation asset only; no executable plugin logic. |
-| `web/index.html` | Static marketing landing page for Superloopy. | Web preview only; kept separate from CLI/plugin runtime. |
+| `web/README.md` | Static landing-page notes for the Superloopy web preview. | Web deployment only; separate from the CLI/plugin runtime and Superloopy evidence engine. |
+| `web/_headers` | Static-hosting security and cache headers for the Superloopy web preview. | Web deployment only; separate from the CLI/plugin runtime and Superloopy evidence engine. |
+| `web/_nuxt/B3ZW860h.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/B5CWAcHC.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/BGJUq9Xl.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/B_u25p9U.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/Bf5EjdSh.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/Bxf0_WhZ.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/BzE5KGSD.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/C_jbpiZQ.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/CdqAplfn.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/Cw6SDRPZ.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/DRhX74SU.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/DTod98oU.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/Dp6Br8A9.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/GMIvKI3C.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/Geist_Mono-300-6.B_7UjwxQ.woff2` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/Instrument_Sans-400-13.B5bTHO_g.woff2` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/Instrument_Sans-400-14.BbzFLZTg.woff2` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/KkTQbRs5.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/LogoTile.B-K2MDYy.css` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/builds/meta/587bbe40-e7b6-4f66-ab17-632623d299f6.json` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/entry.Bn-A-Q0v.css` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/index.DJdoYH0P.css` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/kOqgKnzc.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/legal-notice.Czn4C2L1.css` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/ty4JC5yh.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_nuxt/w4_qzAi3.js` | Generated Nuxt/WebGL runtime asset required by the static orbit landing. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/_payload.json` | Generated static payload metadata for the landing export. | Web presentation asset only; no executable plugin logic. |
+| `web/apple-touch-icon.png` | Static landing preview, favicon, app icon, or demo image asset. | Web presentation asset only; no executable plugin logic. |
+| `web/basis/basis_transcoder.js` | Basis texture decoder asset required by the landing WebGL runtime. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/basis/basis_transcoder.wasm` | Basis texture decoder asset required by the landing WebGL runtime. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/draco/draco_decoder.wasm` | Draco mesh decoder asset required by the landing WebGL runtime. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/draco/draco_wasm_wrapper.js` | Draco mesh decoder asset required by the landing WebGL runtime. | Generated browser bundle/decoder artifact; reviewed by browser QA rather than source-line cap. |
+| `web/favicon-96x96.png` | Static landing preview, favicon, app icon, or demo image asset. | Web presentation asset only; no executable plugin logic. |
+| `web/favicon.ico` | Static landing preview, favicon, app icon, or demo image asset. | Web presentation asset only; no executable plugin logic. |
+| `web/favicon.svg` | Static landing preview, favicon, app icon, or demo image asset. | Web presentation asset only; no executable plugin logic. |
+| `web/index.html` | Generated static WebGL/orbit landing-page shell for Superloopy. | Web deployment only; separate from the CLI/plugin runtime and Superloopy evidence engine. |
+| `web/loopy-card-back.png` | Static landing preview, favicon, app icon, or demo image asset. | Web presentation asset only; no executable plugin logic. |
+| `web/loopy-copy.js` | Superloopy landing overlay, copy, language switcher, card reveal, and scroll-transition controller. | Web deployment only; separate from the CLI/plugin runtime and Superloopy evidence engine. |
+| `web/loopy-demo-transferloom.png` | Static landing preview, favicon, app icon, or demo image asset. | Web presentation asset only; no executable plugin logic. |
+| `web/loopy-og.jpg` | Static landing preview, favicon, app icon, or demo image asset. | Web presentation asset only; no executable plugin logic. |
+| `web/site.webmanifest` | Static landing preview, favicon, app icon, or demo image asset. | Web presentation asset only; no executable plugin logic. |
+| `web/web-app-manifest-192x192.png` | Static landing preview, favicon, app icon, or demo image asset. | Web presentation asset only; no executable plugin logic. |
+| `web/web-app-manifest-512x512.png` | Static landing preview, favicon, app icon, or demo image asset. | Web presentation asset only; no executable plugin logic. |
+| `web/webgl/models/crypto-inner-sphere-points.glb` | Pruned GLB orbit model used by the landing WebGL scene. | Only the three visible orbit models and their required textures are tracked; unused Blueyard GLBs/assets stay pruned. |
+| `web/webgl/models/crypto-outer-sphere-points.glb` | Pruned GLB orbit model used by the landing WebGL scene. | Only the three visible orbit models and their required textures are tracked; unused Blueyard GLBs/assets stay pruned. |
+| `web/webgl/models/eye.glb` | Pruned GLB orbit model used by the landing WebGL scene. | Only the three visible orbit models and their required textures are tracked; unused Blueyard GLBs/assets stay pruned. |
+| `web/webgl/textures/gradient-noise.jpg` | Pruned WebGL texture used by the landing orbit materials. | Only the three visible orbit models and their required textures are tracked; unused Blueyard GLBs/assets stay pruned. |
+| `web/webgl/textures/hex-ao.ktx2` | Pruned WebGL texture used by the landing orbit materials. | Only the three visible orbit models and their required textures are tracked; unused Blueyard GLBs/assets stay pruned. |
+| `web/webgl/textures/hex-normal.ktx2` | Pruned WebGL texture used by the landing orbit materials. | Only the three visible orbit models and their required textures are tracked; unused Blueyard GLBs/assets stay pruned. |
+| `web/webgl/textures/normalMapSphere.ktx2` | Pruned WebGL texture used by the landing orbit materials. | Only the three visible orbit models and their required textures are tracked; unused Blueyard GLBs/assets stay pruned. |
+| `web/webgl/textures/soft-light-env.webp` | Pruned WebGL texture used by the landing orbit materials. | Only the three visible orbit models and their required textures are tracked; unused Blueyard GLBs/assets stay pruned. |
+| `web/webgl/textures/studio-env.ktx2` | Pruned WebGL texture used by the landing orbit materials. | Only the three visible orbit models and their required textures are tracked; unused Blueyard GLBs/assets stay pruned. |
 
 ## Weight Notes
 
-- Current largest source file: `src/hooks.js`, below the reviewability cap (500 lines). Keep new checks in helper modules (for example `src/interop.js` holds `checkInterop` and `src/doctor-skills.js` holds bundled skill checks) rather than growing orchestrators past the cap.
+- Current largest source file: `src/doctor.js`, below the reviewability cap (500 lines). Keep new checks in helper modules (for example `src/interop.js` holds `checkInterop` and `src/doctor-skills.js` holds bundled skill checks) rather than growing orchestrators past the cap.
 - No package dependencies are added; `package.json` stays dependency-free and `superloopy doctor --json` checks that boundary.
 - Marketplace update checks are advisory and self-update only runs for a future npx-local snapshot; current marketplace and checkout installs keep their documented update commands.
 - Runtime state is ignored under `.superloopy/`; `superloopy doctor --json` verifies runtime samples are ignored and not tracked.

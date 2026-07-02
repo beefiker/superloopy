@@ -303,16 +303,60 @@ Total: 100 points.
 | `test/pre-tool-use.test.js` | `npm test`. | Must verify Superloopy blocks native complete status until aggregate completion is real. |
 | `test/report.test.js` | `npm test`. | Must verify report artifacts remain portable and guide-backed. |
 | `test/sync-version.test.js` | `npm test`. | Must prove Superloopy package and plugin manifest versions are stamped from one release version. |
-| `web/README.md` | Static landing-page documentation. | Must describe the static web preview without changing plugin runtime contracts. |
-| `web/_headers` | Static-hosting headers. | Must remain deployment configuration only. |
-| `web/assets/franky.png` | Static landing-page franky asset. | Must remain a web presentation image, not runtime plugin logic. |
-| `web/assets/jinbe.png` | Static landing-page jinbe asset. | Must remain a web presentation image, not runtime plugin logic. |
-| `web/assets/luffy.svg` | Static landing-page logo/illustration asset. | Must remain a web presentation image, not runtime plugin logic. |
-| `web/assets/nami.png` | Static landing-page nami asset. | Must remain a web presentation image, not runtime plugin logic. |
-| `web/assets/robin.png` | Static landing-page robin asset. | Must remain a web presentation image, not runtime plugin logic. |
-| `web/assets/usopp.png` | Static landing-page usopp asset. | Must remain a web presentation image, not runtime plugin logic. |
-| `web/assets/zoro.png` | Static landing-page zoro asset. | Must remain a web presentation image, not runtime plugin logic. |
-| `web/index.html` | Static marketing landing page. | Must stay separate from the CLI/plugin runtime and within reviewability limits. |
+| `web/README.md` | Static landing-page documentation. | Must stay separate from the CLI/plugin runtime and be validated through real-browser QA. |
+| `web/_headers` | Static-hosting headers. | Must stay separate from the CLI/plugin runtime and be validated through real-browser QA. |
+| `web/_nuxt/B3ZW860h.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/B5CWAcHC.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/BGJUq9Xl.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/B_u25p9U.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/Bf5EjdSh.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/Bxf0_WhZ.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/BzE5KGSD.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/C_jbpiZQ.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/CdqAplfn.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/Cw6SDRPZ.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/DRhX74SU.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/DTod98oU.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/Dp6Br8A9.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/GMIvKI3C.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/Geist_Mono-300-6.B_7UjwxQ.woff2` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/Instrument_Sans-400-13.B5bTHO_g.woff2` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/Instrument_Sans-400-14.BbzFLZTg.woff2` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/KkTQbRs5.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/LogoTile.B-K2MDYy.css` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/builds/meta/587bbe40-e7b6-4f66-ab17-632623d299f6.json` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/entry.Bn-A-Q0v.css` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/index.DJdoYH0P.css` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/kOqgKnzc.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/legal-notice.Czn4C2L1.css` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/ty4JC5yh.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_nuxt/w4_qzAi3.js` | Generated Nuxt/WebGL browser bundle asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/_payload.json` | Static web preview image or metadata asset. | Must remain a web presentation asset, not runtime plugin logic. |
+| `web/apple-touch-icon.png` | Static web preview image or metadata asset. | Must remain a web presentation asset, not runtime plugin logic. |
+| `web/basis/basis_transcoder.js` | WebGL decoder runtime asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/basis/basis_transcoder.wasm` | WebGL decoder runtime asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/draco/draco_decoder.wasm` | WebGL decoder runtime asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/draco/draco_wasm_wrapper.js` | WebGL decoder runtime asset. | Must remain a generated deployment artifact; reviewability is enforced through browser QA, not source-line review. |
+| `web/favicon-96x96.png` | Static web preview image or metadata asset. | Must remain a web presentation asset, not runtime plugin logic. |
+| `web/favicon.ico` | Static web preview image or metadata asset. | Must remain a web presentation asset, not runtime plugin logic. |
+| `web/favicon.svg` | Static web preview image or metadata asset. | Must remain a web presentation asset, not runtime plugin logic. |
+| `web/index.html` | Generated static WebGL/orbit landing shell. | Must stay separate from the CLI/plugin runtime and be validated through real-browser QA. |
+| `web/loopy-card-back.png` | Static web preview image or metadata asset. | Must remain a web presentation asset, not runtime plugin logic. |
+| `web/loopy-copy.js` | Superloopy overlay, language, card reveal, and scroll-transition controller. | Must stay separate from the CLI/plugin runtime and be validated through real-browser QA. |
+| `web/loopy-demo-transferloom.png` | Static web preview image or metadata asset. | Must remain a web presentation asset, not runtime plugin logic. |
+| `web/loopy-og.jpg` | Static web preview image or metadata asset. | Must remain a web presentation asset, not runtime plugin logic. |
+| `web/site.webmanifest` | Static web preview image or metadata asset. | Must remain a web presentation asset, not runtime plugin logic. |
+| `web/web-app-manifest-192x192.png` | Static web preview image or metadata asset. | Must remain a web presentation asset, not runtime plugin logic. |
+| `web/web-app-manifest-512x512.png` | Static web preview image or metadata asset. | Must remain a web presentation asset, not runtime plugin logic. |
+| `web/webgl/models/crypto-inner-sphere-points.glb` | Pruned visible orbit GLB model. | Must stay pruned to the visible orbit assets; unused Blueyard GLBs/assets remain absent. |
+| `web/webgl/models/crypto-outer-sphere-points.glb` | Pruned visible orbit GLB model. | Must stay pruned to the visible orbit assets; unused Blueyard GLBs/assets remain absent. |
+| `web/webgl/models/eye.glb` | Pruned visible orbit GLB model. | Must stay pruned to the visible orbit assets; unused Blueyard GLBs/assets remain absent. |
+| `web/webgl/textures/gradient-noise.jpg` | Required orbit WebGL texture. | Must stay pruned to the visible orbit assets; unused Blueyard GLBs/assets remain absent. |
+| `web/webgl/textures/hex-ao.ktx2` | Required orbit WebGL texture. | Must stay pruned to the visible orbit assets; unused Blueyard GLBs/assets remain absent. |
+| `web/webgl/textures/hex-normal.ktx2` | Required orbit WebGL texture. | Must stay pruned to the visible orbit assets; unused Blueyard GLBs/assets remain absent. |
+| `web/webgl/textures/normalMapSphere.ktx2` | Required orbit WebGL texture. | Must stay pruned to the visible orbit assets; unused Blueyard GLBs/assets remain absent. |
+| `web/webgl/textures/soft-light-env.webp` | Required orbit WebGL texture. | Must stay pruned to the visible orbit assets; unused Blueyard GLBs/assets remain absent. |
+| `web/webgl/textures/studio-env.ktx2` | Required orbit WebGL texture. | Must stay pruned to the visible orbit assets; unused Blueyard GLBs/assets remain absent. |
 
 ## Run History
 
