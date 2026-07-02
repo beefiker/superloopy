@@ -47,14 +47,13 @@ export function hasTeamTrigger(prompt) {
   return TEAM_TRIGGER_PATTERN.test(prompt.replace(ENGINEER_TRIGGER_PATTERN, ""));
 }
 
-// Frontend intent: keyword/phrase patterns that mark UI/visual work so the prompt
-// hook can steer toward the superloopy-frontend skill even when the user never
-// typed `loopy`. Curated for precision — bare "design"/"layout"/"component" are
-// excluded (they collide with API/data work); the steer is guidance-only, so an
-// occasional miss costs nothing more than a few unused context lines.
+// Unambiguous frontend intent: keyword/phrase patterns that mark UI/visual work and
+// NEVER collide with backend/systems talk, so the prompt hook can steer toward the
+// superloopy-frontend skill even without `loopy`. These always fire — a systems phrase
+// elsewhere in the prompt must never veto them (bare "design"/"layout"/"component" are
+// excluded because they DO collide with API/data work). The steer is guidance-only.
 const FRONTEND_TRIGGER_PATTERNS = [
   /\bfront[\s-]?end\b/iu,
-  /\bu[ix]\b/iu,
   /\bui\/ux\b|\bux\/ui\b/iu,
   /\buser interface\b/iu,
   /\b(css|scss|tailwind|tailwindcss)\b/iu,
@@ -67,7 +66,6 @@ const FRONTEND_TRIGGER_PATTERNS = [
   /\bcolor (palette|scheme)\b/iu,
   /\bfont (pairing|stack)\b/iu,
   /\bdark mode\b/iu,
-  /\bresponsive\b/iu,
   /\bredesign\b|\brestyle\b|\bre-?skin\b/iu,
   /\bmock-?up\b|\bwireframe\b/iu,
   /\bmake (?:it|this|the [\w-]+) (?:look|feel) (?:better|good|nicer|prettier|premium|professional|polished|designed|modern|clean)\b/iu,
@@ -76,38 +74,35 @@ const FRONTEND_TRIGGER_PATTERNS = [
   /\banti[\s-]?slop\b|\bawwwards\b|\bpolish the (?:ui|design|page|frontend|landing)\b/iu
 ];
 
-// Non-visual contexts that share vocabulary with UI work. Each exclusion requires an
-// explicit backend/systems noun sitting next to the shared token — there is deliberately
-// NO blanket "responsive to", because an explicit frontend trigger must win unless the
-// nearby wording is genuinely systems vocabulary (e.g. "responsive to touch input" and
-// "responsive to dark mode changes" are UI and must still steer; "responsive to incoming
-// signals" / "API endpoint unresponsive" / "UI thread" are systems and must not). Mirrors
-// the Korean-writing exclusion gate; a false exclusion only costs a missed steer.
+// Ambiguous shared tokens: bare "ui"/"ux" and "responsive" mean UI work in a visual
+// prompt but systems work in a backend one. They fire ONLY when no systems vocabulary
+// sits next to them (see FRONTEND_EXCLUSION_PATTERNS). Never let them — or the exclusion —
+// override an unambiguous trigger above.
+const AMBIGUOUS_TRIGGER_PATTERNS = [
+  /\bu[ix]\b/iu,
+  /\bresponsive\b/iu
+];
+
+// Non-visual contexts for the ambiguous tokens. Each requires an explicit backend/systems
+// noun sitting next to the shared token — there is deliberately NO blanket "responsive to",
+// because "responsive to touch input" / "responsive to dark mode changes" are UI. These
+// only gate AMBIGUOUS_TRIGGER_PATTERNS; they never suppress an unambiguous trigger.
 const FRONTEND_EXCLUSION_PATTERNS = [
   /\b(?:un)?responsive\b[^.\n]{0,24}\b(?:server|service|api|endpoint|backend|database|thread|process|socket|node|cluster|daemon|requests?|workers?|queue|signals?|handler|listener|webhook|rpc|grpc|stream|packets?|event loop)\b/iu,
   /\b(?:server|service|api|endpoint|backend|database|thread|process|socket|node|cluster|daemon|requests?|workers?|queue|signals?|handler|listener|webhook|rpc|grpc|stream|packets?|event loop)\b[^.\n]{0,24}\b(?:un)?responsive\b/iu,
   /\bui\s+thread\b/iu
 ];
 
-// Genuine responsive-DESIGN wording that must keep the steer even though it says
-// "responsive to ..." — e.g. "responsive to different screen sizes / mobile breakpoints".
-// When a real visual target is named, the exclusion gate is bypassed: over-firing is now
-// cheap (the payload is a light pointer), while missing this UI work is the real harm.
-const RESPONSIVE_VISUAL_TARGET = /\bresponsive(?:ness)?\b[^.\n]{0,40}\b(?:screens?|screen ?sizes?|breakpoints?|mobile|tablet|desktop|viewport|devices?|resolutions?|layouts?|orientation|widths?|form ?factors?)\b/iu;
-
-// True when the prompt reads as frontend/visual work. Used by the prompt hook to
-// inject a steer toward the superloopy-frontend skill (no state mutation). The steer
-// is a light pointer; the superloopy-frontend skill carries the rules and loads them
-// on demand, so an occasional over-fire costs a couple of context lines, not a rulebook.
+// True when the prompt reads as frontend/visual work. Used by the prompt hook to inject a
+// steer toward the superloopy-frontend skill (no state mutation). Precedence matters:
+// an unambiguous visual trigger always wins, so a mixed prompt like "fix the unresponsive
+// API and redesign the navbar" still steers; only the ambiguous shared tokens are gated by
+// adjacent systems vocabulary. The steer is a light pointer; the skill carries the rules.
 export function hasFrontendTrigger(prompt) {
   if (typeof prompt !== "string") return false;
-  // A named visual target ("responsive to mobile breakpoints") overrides the systems-
-  // vocabulary exclusions, so genuine responsive-design work is never suppressed.
-  if (!RESPONSIVE_VISUAL_TARGET.test(prompt)
-      && FRONTEND_EXCLUSION_PATTERNS.some((pattern) => pattern.test(prompt))) {
-    return false;
-  }
-  return FRONTEND_TRIGGER_PATTERNS.some((pattern) => pattern.test(prompt));
+  if (FRONTEND_TRIGGER_PATTERNS.some((pattern) => pattern.test(prompt))) return true;
+  if (FRONTEND_EXCLUSION_PATTERNS.some((pattern) => pattern.test(prompt))) return false;
+  return AMBIGUOUS_TRIGGER_PATTERNS.some((pattern) => pattern.test(prompt));
 }
 
 // Guidance-only steer: a light pointer to the frontend skill, which carries the actual

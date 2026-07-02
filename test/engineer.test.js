@@ -190,6 +190,10 @@ test("hasFrontendTrigger excludes systems vocabulary that shares UI keywords", (
   // adjacent backend/systems vocabulary suppresses (PR #11 second-round reviewer case).
   assert.equal(hasFrontendTrigger("make the UI responsive to touch input"), true);
   assert.equal(hasFrontendTrigger("make the UI responsive to dark mode changes"), true);
+  // A mixed backend+UI prompt: an unambiguous visual trigger wins over a systems phrase
+  // elsewhere — the exclusion only gates the ambiguous shared tokens (PR #11 third-round case).
+  assert.equal(hasFrontendTrigger("fix the API endpoint that is unresponsive and redesign the navbar"), true);
+  assert.equal(hasFrontendTrigger("the worker queue is unresponsive; also restyle the pricing page"), true);
 });
 
 test("runUserPromptSubmitHook steers UI prompts to the frontend skill without mutating state", async () => {
