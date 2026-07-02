@@ -203,7 +203,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/doctor.js` | Local health check orchestrator for package, hooks, Claude host wiring, docs, comparison scan, Codex + Claude model policy, reviewability, and advisory bin wrapper currency. | Enforces file audits, design audits, Claude host wiring, bundled skill coverage, and advisory model defaults on both hosts. |
 | `src/doctor-skills.js` | Bundled skill-directory verifier used by doctor. | Requires every shipped skill to exist and validates each `SKILL.md` frontmatter name without host-specific state. |
 | `src/engineer.js` | Loop-engineer trigger that turns the `loopy` keyword (and Korean alias `루피`) into a guided drive of begin, prove, check, and finish, plus guidance-only frontend and Korean-writing steers. | Superloopy keyword activation and guide-backed context. |
-| `src/file-audit.js` | Row-level file inventory verifier for audit coverage, stale rows, incomplete rows, and native boundary policy. | Checks Superloopy audit structure. |
+| `src/file-audit.js` | Row-level file inventory verifier for audit coverage, stale rows, incomplete rows, and native boundary policy; tolerates packaging-stripped repo-only files in packed (non-git) roots. | Checks Superloopy audit structure. |
 | `src/finish.js` | One-command finalization that writes the default gate, checkpoints remaining goals, writes the report, and returns the complete guide. | Superloopy-specific lighter flow. |
 | `src/fleet.js` | Parent-side subagent coordination: a handoff registry, artifact-bound accept verdicts, fleet reconciliation, and presentation-only crew-line decoration. | Superloopy-native; parent-side only, never spawns or completes. |
 | `src/goals.js` | Goal parsing, seeded evidence criteria, lookup, completion guards, and artifact collection. | Original Superloopy plan model. |
@@ -237,6 +237,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/crew-lines.test.js` | Unit and CLI coverage for presentation-only localized crew completion lines. | Prevents crew flavor from replacing status or speaking for pending/unknown lanes. |
 | `test/docs.test.js` | Public documentation contract tests for Superloopy-native docs and threshold history. | Keeps docs aligned with product contract. |
 | `test/doctor.test.js` | Doctor coverage for package, audit, comparison, design audit, and reviewability checks. | Uses synthetic fixtures only. |
+| `test/doctor-packed.test.js` | Regression coverage proving doctor accepts an npm-packed install (packaging-stripped repo-only files absent) from an arbitrary cwd. | Simulated pack extract; Superloopy-native coverage only. |
 | `test/doctor-review-feedback.test.js` | Regression tests for PR review hardening around doctor root selection and corrupt skills paths. | Superloopy-native review-feedback coverage only. |
 | `test/file-audit.test.js` | Direct unit coverage for row-level file audit verifier. | Tests Superloopy audit parser. |
 | `test/humanize-korean.test.js` | Contract tests for the Korean humanizer audit script's accept and reject paths. | Superloopy-native test for dependency-free safeguards and protected-token gating. |
