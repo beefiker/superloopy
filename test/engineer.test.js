@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { hasEngineerTrigger, hasFrontendTrigger, hasKoreanWritingTrigger, hasTeamTrigger, parseInvocation } from "../src/engineer.js";
+import { hasEngineerTrigger, hasFrontendTrigger, hasKoreanWritingTrigger, hasTeamTrigger, parseInvocation, renderFrontendTriggerContext } from "../src/engineer.js";
 import { runUserPromptSubmitHook } from "../src/hooks.js";
 import { createLoop } from "../src/loop.js";
 
@@ -213,6 +213,36 @@ test("runUserPromptSubmitHook suppresses the frontend steer when SUPERLOOPY_FRON
   } finally {
     if (previous === undefined) delete process.env.SUPERLOOPY_FRONTEND_STEER;
     else process.env.SUPERLOOPY_FRONTEND_STEER = previous;
+  }
+});
+
+test("renderFrontendTriggerContext adds Superpowers coexistence routing only when detected", () => {
+  const withSuperpowers = renderFrontendTriggerContext({ installed: true, source: "env-override" });
+  assert.match(withSuperpowers, /Superloopy frontend trigger/);
+  assert.match(withSuperpowers, /Superpowers coexistence/);
+  assert.match(withSuperpowers, /one orchestrator/i);
+
+  const solo = renderFrontendTriggerContext({ installed: false, source: "filesystem" });
+  assert.match(solo, /Superloopy frontend trigger/);
+  assert.doesNotMatch(solo, /Superpowers coexistence/);
+});
+
+test("runUserPromptSubmitHook frontend steer honors the Superpowers override env", async () => {
+  const repo = await tempRepo();
+  const previous = process.env.SUPERLOOPY_SUPERPOWERS;
+  const prompt = "build a landing page hero that does not look generic";
+  try {
+    process.env.SUPERLOOPY_SUPERPOWERS = "on";
+    const on = JSON.parse(await runUserPromptSubmitHook({ hook_event_name: "UserPromptSubmit", cwd: repo, prompt }));
+    assert.match(on.hookSpecificOutput.additionalContext, /Superpowers coexistence/);
+
+    process.env.SUPERLOOPY_SUPERPOWERS = "off";
+    const off = JSON.parse(await runUserPromptSubmitHook({ hook_event_name: "UserPromptSubmit", cwd: repo, prompt }));
+    assert.match(off.hookSpecificOutput.additionalContext, /Superloopy frontend trigger/);
+    assert.doesNotMatch(off.hookSpecificOutput.additionalContext, /Superpowers coexistence/);
+  } finally {
+    if (previous === undefined) delete process.env.SUPERLOOPY_SUPERPOWERS;
+    else process.env.SUPERLOOPY_SUPERPOWERS = previous;
   }
 });
 

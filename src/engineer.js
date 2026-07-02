@@ -101,12 +101,22 @@ export function hasFrontendTrigger(prompt) {
 // Guidance-only steer: a light pointer to the frontend skill, which carries the actual
 // rules (DESIGN.md gate, anti-slop pre-flight, visual-QA evidence) and loads them on
 // demand. Kept compact on purpose so an over-fire is cheap — the skill is the rulebook.
-export function renderFrontendTriggerContext() {
-  return [
+// Interop-aware to match the engineer trigger's `interopBlock`: this is a separate
+// (non-`loopy`) guidance path, so it carries the same coexistence routing rather than
+// double-driving design when Superpowers is installed. `interop` is injectable for tests.
+export function renderFrontendTriggerContext(interop = detectSuperpowers()) {
+  const lines = [
     "Superloopy frontend trigger",
     "",
     "This looks like UI/visual work — engage the `superloopy-frontend` skill (guidance only; no state change). It is a router that loads only the rules a request needs: a mandatory DESIGN.md token gate, the anti-slop pre-flight, and a real-browser visual-QA artifact under `.superloopy/evidence/frontend/` before done. Follow the skill; do not expand these rules here."
-  ].join("\n");
+  ];
+  if (interop && interop.installed === true) {
+    lines.push(
+      "",
+      "Superpowers coexistence (detected): let Superpowers drive brainstorming, planning, and TDD; superloopy-frontend still owns the visual layer — the DESIGN.md token gate, the anti-slop pre-flight, and the visual-QA evidence. Keep one orchestrator: do not open a second design/plan pass here."
+    );
+  }
+  return lines.join("\n");
 }
 
 const KOREAN_WRITING_EXCLUSION_PATTERNS = [
