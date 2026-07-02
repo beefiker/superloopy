@@ -29,9 +29,12 @@ export function checkWrapper(options = {}) {
     if (located === null) {
       return informational("no Superloopy bin wrapper on PATH (Claude Code, checkout, or not installed) - wrapper currency not tracked", { found: false });
     }
-    const cliPath = parseBinShimCliPath(located.content, platform);
+    const cliPath = located.content === null ? null : parseBinShimCliPath(located.content, platform);
     if (cliPath === null) {
-      return informational(`bin wrapper at ${located.path} is not a recognized Superloopy shim - skipped`, { found: true });
+      // Something other than our generated shim owns the `superloopy` name that resolves first
+      // on PATH (a package-manager or checkout shim). That is what the shell actually runs, so
+      // report it rather than a generated shim later on PATH the user never invokes.
+      return informational(`the \`superloopy\` that resolves first on PATH (${located.path}) is not a Superloopy-generated wrapper - currency not tracked`, { found: true, recognized: false });
     }
     if (!fs.existsSync(cliPath)) {
       return informational(
@@ -55,8 +58,11 @@ export function checkWrapper(options = {}) {
   }
 }
 
-// Find the first PATH entry holding a file named `superloopy` (or `superloopy.cmd`) whose
-// content is one of our generated shims. Returns { path, content } or null.
+// Find the wrapper the shell would actually run: the FIRST PATH entry holding a file named
+// `superloopy` (or `superloopy.cmd`), regardless of its content. Returns { path, content }
+// (content is null when unreadable) or null when no such file is on PATH. The caller decides
+// whether that resolved file is one of our generated shims — scanning past it to a later
+// generated shim would report on a command the user never invokes.
 function locateWrapper(env, platform, fs) {
   const wrapperName = platform === "win32" ? "superloopy.cmd" : "superloopy";
   const rawPath = typeof env.PATH === "string" ? env.PATH : typeof env.Path === "string" ? env.Path : "";
@@ -65,13 +71,20 @@ function locateWrapper(env, platform, fs) {
     const dir = entry.trim().replace(/^"|"$/gu, "");
     if (dir.length === 0) continue;
     const candidate = join(dir, wrapperName);
+    let exists = false;
     try {
-      if (!fs.existsSync(candidate)) continue;
-      const content = fs.readFileSync(candidate, "utf8");
-      if (parseBinShimCliPath(content, platform) !== null) return { path: candidate, content };
+      exists = fs.existsSync(candidate);
     } catch {
-      // Unreadable PATH entry; keep scanning.
+      exists = false;
     }
+    if (!exists) continue;
+    let content = null;
+    try {
+      content = fs.readFileSync(candidate, "utf8");
+    } catch {
+      content = null;
+    }
+    return { path: candidate, content };
   }
   return null;
 }

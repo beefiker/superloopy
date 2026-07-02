@@ -224,6 +224,29 @@ test("checkWrapper reports a dangling wrapper after a pruned cache", () => {
   assert.match(result.message, /no longer exists/);
 });
 
+test("checkWrapper reports the first-resolved wrapper, not a later generated shim", () => {
+  const early = slPaths("earlyroot");
+  const late = slPaths("lateroot");
+  const earlyWrapper = join(early.binDir, "superloopy"); // a foreign shim, resolves FIRST on PATH
+  const lateWrapper = join(late.binDir, "superloopy"); // our generated (stale) shim, later on PATH
+  const files = {
+    [earlyWrapper]: "#!/bin/sh\nexec some-other-tool \"$@\"\n",
+    [lateWrapper]: shimFor(late.cliOf("0.7.0")),
+    [late.cliOf("0.7.0")]: "x",
+    [late.cliOf("0.7.1")]: "x"
+  };
+  const fs = {
+    existsSync: (p) => p in files || p === late.superloopyDir,
+    readFileSync: (p) => { if (!(p in files)) throw new Error("ENOENT"); return files[p]; },
+    readdirSync: (p) => { if (p !== late.superloopyDir) throw new Error("ENOENT"); return ["0.7.0", "0.7.1"]; }
+  };
+  const result = checkWrapper({ env: { PATH: `${early.binDir}:${late.binDir}` }, platform: "linux", fs });
+  assert.equal(result.ok, true);
+  assert.equal(result.found, true);
+  assert.equal(result.recognized, false); // the winning PATH entry is not our shim
+  assert.doesNotMatch(result.message, /is installed/); // must NOT report the later shim as stale
+});
+
 test("checkWrapper stays silent when no wrapper is on PATH", () => {
   const fs = { existsSync: () => false, readFileSync: () => "", readdirSync: () => [] };
   const result = checkWrapper({ env: { PATH: "/nowhere" }, platform: "linux", fs });
