@@ -181,6 +181,11 @@ test("hasFrontendTrigger excludes systems vocabulary that shares UI keywords", (
   // Genuine responsive-design intent still fires despite the shared word.
   assert.equal(hasFrontendTrigger("make the landing page responsive on mobile"), true);
   assert.equal(hasFrontendTrigger("the layout is not responsive at 768px"), true);
+  // "responsive to <visual target>" is real responsive design — a named visual target
+  // overrides the responsive-to systems guard (PR #11 reviewer case).
+  assert.equal(hasFrontendTrigger("make the landing page responsive to different screen sizes"), true);
+  assert.equal(hasFrontendTrigger("make the pricing page responsive to mobile breakpoints"), true);
+  assert.equal(hasFrontendTrigger("the component should be responsive to the viewport width"), true);
 });
 
 test("runUserPromptSubmitHook steers UI prompts to the frontend skill without mutating state", async () => {

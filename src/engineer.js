@@ -88,13 +88,24 @@ const FRONTEND_EXCLUSION_PATTERNS = [
   /\bui\s+thread\b/iu
 ];
 
+// Genuine responsive-DESIGN wording that must keep the steer even though it says
+// "responsive to ..." — e.g. "responsive to different screen sizes / mobile breakpoints".
+// When a real visual target is named, the exclusion gate is bypassed: over-firing is now
+// cheap (the payload is a light pointer), while missing this UI work is the real harm.
+const RESPONSIVE_VISUAL_TARGET = /\bresponsive(?:ness)?\b[^.\n]{0,40}\b(?:screens?|screen ?sizes?|breakpoints?|mobile|tablet|desktop|viewport|devices?|resolutions?|layouts?|orientation|widths?|form ?factors?)\b/iu;
+
 // True when the prompt reads as frontend/visual work. Used by the prompt hook to
 // inject a steer toward the superloopy-frontend skill (no state mutation). The steer
 // is a light pointer; the superloopy-frontend skill carries the rules and loads them
 // on demand, so an occasional over-fire costs a couple of context lines, not a rulebook.
 export function hasFrontendTrigger(prompt) {
   if (typeof prompt !== "string") return false;
-  if (FRONTEND_EXCLUSION_PATTERNS.some((pattern) => pattern.test(prompt))) return false;
+  // A named visual target ("responsive to mobile breakpoints") overrides the systems-
+  // vocabulary exclusions, so genuine responsive-design work is never suppressed.
+  if (!RESPONSIVE_VISUAL_TARGET.test(prompt)
+      && FRONTEND_EXCLUSION_PATTERNS.some((pattern) => pattern.test(prompt))) {
+    return false;
+  }
   return FRONTEND_TRIGGER_PATTERNS.some((pattern) => pattern.test(prompt));
 }
 
