@@ -9,6 +9,7 @@ import test from "node:test";
 import { normalizeComparisonPath } from "../src/comparison-similarity.js";
 import { formatDoctor, runDoctor } from "../src/doctor.js";
 import { checkWrapper, evaluateWrapperCurrency } from "../src/wrapper-check.js";
+import { parseBinShimCliPath } from "../src/agents.js";
 
 function runCli(args, options = {}) {
   return spawnSync(process.execPath, [join(process.cwd(), "src/cli.js"), ...args], {
@@ -191,6 +192,14 @@ test("evaluateWrapperCurrency ignores a newer version dir with no cli.js", () =>
 function shimFor(cliPath) {
   return `#!/usr/bin/env sh\n# superloopy-generated bin shim\nexec node '${cliPath}' "$@"\n`;
 }
+
+test("parseBinShimCliPath decodes a shell-quoted path containing an apostrophe", () => {
+  // What shellQuote emits for /home/o'connor/superloopy/0.7.1/src/cli.js: interior ' -> '\''.
+  const shim = "#!/usr/bin/env sh\n# superloopy-generated bin shim\nexec node '/home/o'\\''connor/superloopy/0.7.1/src/cli.js' \"$@\"\n";
+  assert.equal(parseBinShimCliPath(shim, "linux"), "/home/o'connor/superloopy/0.7.1/src/cli.js");
+  // A plain path still round-trips unchanged.
+  assert.equal(parseBinShimCliPath(shimFor("/opt/superloopy/0.7.1/src/cli.js"), "linux"), "/opt/superloopy/0.7.1/src/cli.js");
+});
 
 test("checkWrapper reports a stale wrapper as an optional suggestion", () => {
   const { superloopyDir, binDir, cliOf } = slPaths("wrktest");

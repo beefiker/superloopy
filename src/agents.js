@@ -272,7 +272,10 @@ export function parseBinShimCliPath(content, platform = process.platform) {
     const match = /^node "([^"\n]+)" %\*/mu.exec(normalized);
     return match === null ? null : match[1];
   }
-  const match = /^exec node (?:'((?:[^'\\]|\\.)*)'|(\S+)) "\$@"/mu.exec(normalized);
+  // Reverse shellQuote: a single-quoted token whose interior apostrophes are encoded as the
+  // 4-char sequence '\'' — so the quoted branch must treat '\'' as content, not a close-quote,
+  // or a path like /home/o'connor falls through to the raw \S+ token and never resolves.
+  const match = /^exec node (?:'((?:[^']|'\\'')*)'|(\S+)) "\$@"/mu.exec(normalized);
   if (match === null) return null;
   return match[1] === undefined ? match[2] : match[1].replaceAll("'\\''", "'");
 }
