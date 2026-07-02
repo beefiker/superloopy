@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { hasEngineerTrigger, hasFrontendTrigger, hasKoreanWritingTrigger, hasTeamTrigger, parseInvocation } from "../src/engineer.js";
+import { hasEngineerTrigger, hasFrontendTrigger, hasKoreanWritingTrigger, hasTeamTrigger, parseInvocation, renderFrontendTriggerContext } from "../src/engineer.js";
 import { runUserPromptSubmitHook } from "../src/hooks.js";
 import { createLoop } from "../src/loop.js";
 
@@ -171,6 +171,42 @@ test("hasFrontendTrigger fires on UI/visual intent and stays quiet on backend wo
   assert.equal(hasFrontendTrigger(null), false);
 });
 
+test("hasFrontendTrigger excludes systems vocabulary that shares UI keywords", () => {
+  // "responsive" as reactivity/latency, not responsive design.
+  assert.equal(hasFrontendTrigger("make the server responsive to incoming signals"), false);
+  assert.equal(hasFrontendTrigger("the payment API endpoint is unresponsive under load"), false);
+  assert.equal(hasFrontendTrigger("keep the worker responsive to backpressure requests"), false);
+  // "UI thread" as concurrency, not the user-interface surface.
+  assert.equal(hasFrontendTrigger("fix the UI thread deadlock in the native runtime"), false);
+  // Genuine responsive-design intent still fires despite the shared word.
+  assert.equal(hasFrontendTrigger("make the landing page responsive on mobile"), true);
+  assert.equal(hasFrontendTrigger("the layout is not responsive at 768px"), true);
+  // "responsive to <visual target>" is real responsive design — a named visual target
+  // overrides the responsive-to systems guard (PR #11 reviewer case).
+  assert.equal(hasFrontendTrigger("make the landing page responsive to different screen sizes"), true);
+  assert.equal(hasFrontendTrigger("make the pricing page responsive to mobile breakpoints"), true);
+  assert.equal(hasFrontendTrigger("the component should be responsive to the viewport width"), true);
+  // An explicit frontend trigger wins over a non-systems "responsive to" object: only
+  // adjacent backend/systems vocabulary suppresses (PR #11 second-round reviewer case).
+  assert.equal(hasFrontendTrigger("make the UI responsive to touch input"), true);
+  assert.equal(hasFrontendTrigger("make the UI responsive to dark mode changes"), true);
+  // A mixed backend+UI prompt: an unambiguous visual trigger wins over a systems phrase
+  // elsewhere — the exclusion only gates the ambiguous shared tokens (PR #11 third-round case).
+  assert.equal(hasFrontendTrigger("fix the API endpoint that is unresponsive and redesign the navbar"), true);
+  assert.equal(hasFrontendTrigger("the worker queue is unresponsive; also restyle the pricing page"), true);
+  // Mixed prompt where the UI half uses ONLY ambiguous tokens: the systems clause must not
+  // veto the separate UI clause (PR #11 fourth-round case). Clause-local exclusion.
+  assert.equal(hasFrontendTrigger("fix the unresponsive API and make the UI responsive"), true);
+  assert.equal(hasFrontendTrigger("the server is unresponsive and the ui feels sluggish"), true);
+  // Same clause, both a systems noun and a real UI token: the systems match disqualifies
+  // only itself, so the standalone "ui" token still fires.
+  assert.equal(hasFrontendTrigger("make the API dashboard ui responsive"), true);
+  // But a single systems clause with no separate UI ask stays excluded.
+  assert.equal(hasFrontendTrigger("make the server responsive to incoming signals"), false);
+  assert.equal(hasFrontendTrigger("make the API endpoint responsive under load"), false);
+  assert.equal(hasFrontendTrigger("restart the api and drain the worker queue"), false);
+});
+
 test("runUserPromptSubmitHook steers UI prompts to the frontend skill without mutating state", async () => {
   const repo = await tempRepo();
   const output = await runUserPromptSubmitHook({
@@ -184,6 +220,54 @@ test("runUserPromptSubmitHook steers UI prompts to the frontend skill without mu
   assert.match(parsed.hookSpecificOutput.additionalContext, /DESIGN\.md/);
   assert.match(parsed.hookSpecificOutput.additionalContext, /\.superloopy\/evidence\/frontend\//);
   assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
+});
+
+test("runUserPromptSubmitHook suppresses the frontend steer when SUPERLOOPY_FRONTEND_STEER=off", async () => {
+  const repo = await tempRepo();
+  const previous = process.env.SUPERLOOPY_FRONTEND_STEER;
+  process.env.SUPERLOOPY_FRONTEND_STEER = "off";
+  try {
+    const output = await runUserPromptSubmitHook({
+      hook_event_name: "UserPromptSubmit",
+      cwd: repo,
+      prompt: "build a landing page hero that does not look generic"
+    });
+    assert.equal(output, "");
+    assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
+  } finally {
+    if (previous === undefined) delete process.env.SUPERLOOPY_FRONTEND_STEER;
+    else process.env.SUPERLOOPY_FRONTEND_STEER = previous;
+  }
+});
+
+test("renderFrontendTriggerContext adds Superpowers coexistence routing only when detected", () => {
+  const withSuperpowers = renderFrontendTriggerContext({ installed: true, source: "env-override" });
+  assert.match(withSuperpowers, /Superloopy frontend trigger/);
+  assert.match(withSuperpowers, /Superpowers coexistence/);
+  assert.match(withSuperpowers, /one orchestrator/i);
+
+  const solo = renderFrontendTriggerContext({ installed: false, source: "filesystem" });
+  assert.match(solo, /Superloopy frontend trigger/);
+  assert.doesNotMatch(solo, /Superpowers coexistence/);
+});
+
+test("runUserPromptSubmitHook frontend steer honors the Superpowers override env", async () => {
+  const repo = await tempRepo();
+  const previous = process.env.SUPERLOOPY_SUPERPOWERS;
+  const prompt = "build a landing page hero that does not look generic";
+  try {
+    process.env.SUPERLOOPY_SUPERPOWERS = "on";
+    const on = JSON.parse(await runUserPromptSubmitHook({ hook_event_name: "UserPromptSubmit", cwd: repo, prompt }));
+    assert.match(on.hookSpecificOutput.additionalContext, /Superpowers coexistence/);
+
+    process.env.SUPERLOOPY_SUPERPOWERS = "off";
+    const off = JSON.parse(await runUserPromptSubmitHook({ hook_event_name: "UserPromptSubmit", cwd: repo, prompt }));
+    assert.match(off.hookSpecificOutput.additionalContext, /Superloopy frontend trigger/);
+    assert.doesNotMatch(off.hookSpecificOutput.additionalContext, /Superpowers coexistence/);
+  } finally {
+    if (previous === undefined) delete process.env.SUPERLOOPY_SUPERPOWERS;
+    else process.env.SUPERLOOPY_SUPERPOWERS = previous;
+  }
 });
 
 test("runUserPromptSubmitHook lets the loop engineer trigger win over the frontend steer", async () => {
