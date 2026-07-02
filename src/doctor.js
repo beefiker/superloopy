@@ -216,6 +216,12 @@ function countLines(content) {
 }
 
 function listGitVisibleFiles(cwd) {
+  // A root without its own .git marker is an installed/packed tree, not a source checkout.
+  // It may still sit INSIDE an enclosing Git repository (e.g. node_modules/superloopy under
+  // a user project), where `git ls-files` would answer for the parent repo — typically
+  // returning nothing because the install dir is ignored — so the git answer would be
+  // wrong rather than merely absent. List the filesystem instead.
+  if (!existsSync(join(cwd, ".git"))) return listFilesystemVisibleFiles(cwd);
   const result = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
     cwd,
     encoding: "utf8"
@@ -234,6 +240,9 @@ function listGitVisibleFiles(cwd) {
 }
 
 function listGitTrackedFiles(cwd) {
+  // Same enclosing-repo hazard as listGitVisibleFiles: never let a parent repo answer
+  // for an installed/packed root that has no .git marker of its own.
+  if (!existsSync(join(cwd, ".git"))) return [];
   const result = spawnSync("git", ["ls-files", "--cached"], {
     cwd,
     encoding: "utf8"
@@ -250,6 +259,9 @@ function listGitTrackedFiles(cwd) {
 }
 
 function listIgnoredSamples(cwd, samples) {
+  // Same enclosing-repo hazard: a parent repo's ignore rules say nothing about this
+  // install root, so treat a non-git root like a non-repo (samples count as ignored).
+  if (!existsSync(join(cwd, ".git"))) return new Set(samples);
   const result = spawnSync("git", ["check-ignore", "--stdin"], {
     cwd,
     encoding: "utf8",
