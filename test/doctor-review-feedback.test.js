@@ -80,6 +80,20 @@ test("doctor CLI diagnoses a checkout whose .codex-plugin was deleted", async ()
   assert.equal(parsed.checks.pluginManifest.ok, false);
 });
 
+test("doctor CLI diagnoses a checkout with a malformed package.json", async () => {
+  const repo = await tempRepoCopy();
+  await writeFile(join(repo, "package.json"), "{ not valid json\n", "utf8");
+
+  const result = runCli(["doctor", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 1, result.stderr);
+  const parsed = JSON.parse(result.stdout);
+  // package.json is broken, but the plugin manifest / signature still identify the
+  // checkout, so its own dependency check is reported instead of a green CLI_ROOT.
+  assert.equal(parsed.root, repo);
+  assert.equal(parsed.checks.dependencies.ok, false);
+});
+
 test("doctor CLI falls back to CLI root from an unrelated Codex plugin project", async () => {
   const project = await mkdtemp(join(tmpdir(), "superloopy-doctor-foreign-"));
   await mkdir(join(project, ".codex-plugin"), { recursive: true });

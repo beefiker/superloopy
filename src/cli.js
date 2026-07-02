@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { hasFlag, parseJson, readFlag, readStdin } from "./args.js";
@@ -124,20 +124,30 @@ function resolveDoctorRoot(cwd, argv) {
 }
 
 function isLikelySuperloopyPluginRoot(cwd) {
-  // Identify a Superloopy checkout by package identity alone, never by the files that
-  // doctor is meant to test. A real checkout with a broken/wrong-name plugin.json, or
-  // with .codex-plugin or src/cli.js deleted, still gets diagnosed so pluginManifest and
-  // cli checks can surface the failure; an unrelated Codex plugin project (different
-  // package name) falls back to CLI_ROOT instead of collecting Superloopy false failures.
-  return readPackageName(cwd) === "superloopy";
+  // Identify a Superloopy checkout by any stable signal, never by a single file that
+  // doctor itself tests. Keying on one marker (package.json name, the plugin manifest,
+  // or a given file's existence) means a break in that marker silently falls back to
+  // CLI_ROOT and hides the very failure doctor should surface. With any-of, a checkout
+  // is only skipped when every signal is simultaneously broken -- a genuinely
+  // unidentifiable directory -- while an unrelated Codex plugin (no Superloopy identity
+  // and no signature files) still falls back instead of collecting false failures.
+  return jsonNameIs(join(cwd, "package.json"), "superloopy")
+    || jsonNameIs(join(cwd, ".codex-plugin", "plugin.json"), "superloopy")
+    || hasSuperloopySignature(cwd);
 }
 
-function readPackageName(cwd) {
+function jsonNameIs(path, expected) {
   try {
-    return JSON.parse(readFileSync(join(cwd, "package.json"), "utf8")).name;
+    return JSON.parse(readFileSync(path, "utf8")).name === expected;
   } catch {
-    return null;
+    return false;
   }
+}
+
+function hasSuperloopySignature(cwd) {
+  return existsSync(join(cwd, "src", "cli.js"))
+    && existsSync(join(cwd, "src", "doctor.js"))
+    && existsSync(join(cwd, "skills", "superloopy-loop", "SKILL.md"));
 }
 
 async function runLoop(subcommand, argv, stdout, cwd) {
