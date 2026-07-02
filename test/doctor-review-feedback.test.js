@@ -66,6 +66,20 @@ test("doctor CLI returns a structured skills failure when skills is not a direct
   assert.match(parsed.checks.skills.message, /Missing skill files: .*superloopy-doctor/);
 });
 
+test("doctor CLI diagnoses a checkout whose .codex-plugin was deleted", async () => {
+  const repo = await tempRepoCopy();
+  await rm(join(repo, ".codex-plugin"), { recursive: true, force: true });
+
+  const result = runCli(["doctor", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 1, result.stderr);
+  const parsed = JSON.parse(result.stdout);
+  // Identified as Superloopy by package.json name, so the deletion is reported
+  // instead of silently falling back to the installed CLI root.
+  assert.equal(parsed.root, repo);
+  assert.equal(parsed.checks.pluginManifest.ok, false);
+});
+
 test("doctor CLI falls back to CLI root from an unrelated Codex plugin project", async () => {
   const project = await mkdtemp(join(tmpdir(), "superloopy-doctor-foreign-"));
   await mkdir(join(project, ".codex-plugin"), { recursive: true });
