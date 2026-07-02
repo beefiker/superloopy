@@ -200,7 +200,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/continuation.js` | Bounded, progress-gated Stop-hook engine that drives the loop toward evidence-backed completion and marks blocked on a cap or stall. | Superloopy-native continuation; never force-completes. |
 | `src/crew-lines.js` | Deterministic original localized one-line responses for known crew handoffs with terminal verdicts. | Output-only flavor; pending or unknown lanes stay silent and persisted handoff state is not decorated. |
 | `src/design-audit.js` | Verifies Superloopy design audit sections and decision rows. | Guards Superloopy-native decisions. |
-| `src/doctor.js` | Local health check orchestrator for package, hooks, Claude host wiring, docs, comparison scan, Codex + Claude model policy, and reviewability. | Enforces file audits, design audits, Claude host wiring, and advisory model defaults on both hosts. |
+| `src/doctor.js` | Local health check orchestrator for package, hooks, Claude host wiring, docs, comparison scan, Codex + Claude model policy, reviewability, and advisory bin wrapper currency. | Enforces file audits, design audits, Claude host wiring, and advisory model defaults on both hosts. |
 | `src/engineer.js` | Loop-engineer trigger that turns the `loopy` keyword (and Korean alias `루피`) into a guided drive of begin, prove, check, and finish, plus guidance-only frontend and Korean-writing steers. | Superloopy keyword activation and guide-backed context. |
 | `src/file-audit.js` | Row-level file inventory verifier for audit coverage, stale rows, incomplete rows, and native boundary policy. | Checks Superloopy audit structure. |
 | `src/finish.js` | One-command finalization that writes the default gate, checkpoints remaining goals, writes the report, and returns the complete guide. | Superloopy-specific lighter flow. |
@@ -226,6 +226,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/spawn-command.js` | Cross-platform process invocation helper for npm/npx command shims. | Minimal Superloopy utility used by update planning only. |
 | `src/subagent-attempts.js` | SubagentStop evidence-receipt attempt tracking and the post-cap ledger signal, factored out of hooks.js. | Superloopy-native; keeps hooks.js within the reviewability budget. |
 | `src/trace.js` | Builds compact evidence trail with summary counts, warnings, missing proof, suggested paths, and timeline. | Superloopy-only inspection surface. |
+| `src/wrapper-check.js` | Advisory doctor check that reads the installed `superloopy` bin wrapper and reports when it points at a stale or pruned versioned cache after an upgrade. | Superloopy-native; informational only (never fails health), no-throw, and dependency-injectable. |
 | `test/audit.test.js` | Prevents this audit from missing repository files or reviewability limits. | Tests Superloopy file inventory. |
 | `test/auto-update.test.js` | Auto-update contract tests for marketplace skip notices, checkout skip behavior, npx-local snapshot behavior, semver planning, install-flow detection, and Windows npx shims. | Tests Superloopy's adapted LazyCodex-style update flow without requiring an npm publish. |
 | `test/subagent-receipt.test.js` | SubagentStop attempt-cap robustness and exhaustion ledger-signal tests. | Tests Superloopy receipt gate behavior. |

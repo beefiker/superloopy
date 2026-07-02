@@ -8,6 +8,7 @@ import test from "node:test";
 
 import { normalizeComparisonPath } from "../src/comparison-similarity.js";
 import { formatDoctor, runDoctor } from "../src/doctor.js";
+import { checkWrapper, evaluateWrapperCurrency } from "../src/wrapper-check.js";
 
 function runCli(args, options = {}) {
   return spawnSync(process.execPath, [join(process.cwd(), "src/cli.js"), ...args], {
@@ -90,7 +91,8 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
     "modelPolicy",
     "claudeModelPolicy",
     "hostContract",
-    "interop"
+    "interop",
+    "wrapper"
   ]);
   assert.equal(parsed.checks.pluginManifest.ok, true);
   assert.equal(parsed.checks.hooks.ok, true);
@@ -136,6 +138,87 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.interop.ok, true);
   assert.equal(parsed.checks.interop.informational, true);
   assert.equal(typeof parsed.checks.interop.installed, "boolean");
+  // Wrapper currency is advisory: upgrade is a suggestion, so it never gates health.
+  assert.equal(parsed.checks.wrapper.ok, true);
+  assert.equal(parsed.checks.wrapper.informational, true);
+});
+
+test("evaluateWrapperCurrency flags a stale versioned cache but not a current or checkout one", () => {
+  const files = new Set([
+    "/c/superloopy/0.7.0/src/cli.js",
+    "/c/superloopy/0.7.1/src/cli.js"
+  ]);
+  const dirs = { "/c/superloopy": ["0.7.0", "0.7.1"] };
+  const fs = {
+    existsSync: (p) => files.has(p),
+    readdirSync: (p) => { if (!(p in dirs)) throw new Error("ENOENT"); return dirs[p]; }
+  };
+  const stale = evaluateWrapperCurrency("/c/superloopy/0.7.0/src/cli.js", fs);
+  assert.equal(stale.state, "stale");
+  assert.equal(stale.wrapperVersion, "0.7.0");
+  assert.equal(stale.latestVersion, "0.7.1");
+  assert.equal(stale.latestCliPath, "/c/superloopy/0.7.1/src/cli.js");
+
+  const current = evaluateWrapperCurrency("/c/superloopy/0.7.1/src/cli.js", fs);
+  assert.equal(current.state, "current");
+
+  // A checkout path (no parseable version dir) is not version-tracked.
+  const checkout = evaluateWrapperCurrency("/home/dev/loopy/src/cli.js", {
+    existsSync: () => true,
+    readdirSync: () => { throw new Error("unused"); }
+  });
+  assert.equal(checkout.state, "untracked");
+});
+
+test("evaluateWrapperCurrency ignores a newer version dir with no cli.js", () => {
+  const files = new Set(["/c/superloopy/0.7.0/src/cli.js"]); // 0.8.0 dir exists but has no cli.js
+  const dirs = { "/c/superloopy": ["0.7.0", "0.8.0"] };
+  const fs = { existsSync: (p) => files.has(p), readdirSync: (p) => dirs[p] };
+  assert.equal(evaluateWrapperCurrency("/c/superloopy/0.7.0/src/cli.js", fs).state, "current");
+});
+
+function shimFor(cliPath) {
+  return `#!/usr/bin/env sh\n# superloopy-generated bin shim\nexec node '${cliPath}' "$@"\n`;
+}
+
+test("checkWrapper reports a stale wrapper as an optional suggestion", () => {
+  const files = {
+    "/bin/superloopy": shimFor("/c/superloopy/0.7.0/src/cli.js"),
+    "/c/superloopy/0.7.0/src/cli.js": "x",
+    "/c/superloopy/0.7.1/src/cli.js": "x"
+  };
+  const dirs = { "/c/superloopy": ["0.7.0", "0.7.1"] };
+  const fs = {
+    existsSync: (p) => p in files || p in dirs,
+    readFileSync: (p) => { if (!(p in files)) throw new Error("ENOENT"); return files[p]; },
+    readdirSync: (p) => { if (!(p in dirs)) throw new Error("ENOENT"); return dirs[p]; }
+  };
+  const result = checkWrapper({ env: { PATH: "/bin" }, platform: "linux", fs });
+  assert.equal(result.ok, true);
+  assert.equal(result.informational, true);
+  assert.equal(result.stale, true);
+  assert.match(result.message, /v0\.7\.1 is installed/);
+  assert.match(result.message, /optional/i);
+});
+
+test("checkWrapper reports a dangling wrapper after a pruned cache", () => {
+  const files = { "/bin/superloopy": shimFor("/c/superloopy/0.7.0/src/cli.js") }; // cli.js gone
+  const fs = {
+    existsSync: (p) => p in files,
+    readFileSync: (p) => { if (!(p in files)) throw new Error("ENOENT"); return files[p]; },
+    readdirSync: () => { throw new Error("ENOENT"); }
+  };
+  const result = checkWrapper({ env: { PATH: "/bin" }, platform: "linux", fs });
+  assert.equal(result.ok, true);
+  assert.equal(result.dangling, true);
+  assert.match(result.message, /no longer exists/);
+});
+
+test("checkWrapper stays silent when no wrapper is on PATH", () => {
+  const fs = { existsSync: () => false, readFileSync: () => "", readdirSync: () => [] };
+  const result = checkWrapper({ env: { PATH: "/nowhere" }, platform: "linux", fs });
+  assert.equal(result.ok, true);
+  assert.equal(result.found, false);
 });
 
 test("doctor model policy fails when bundled agent defaults drift", async () => {
