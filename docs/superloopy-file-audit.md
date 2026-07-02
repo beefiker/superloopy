@@ -195,12 +195,13 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/begin.js` | One-command entrypoint that creates a plan and starts the first goal. | Superloopy-specific ease-of-start flow. |
 | `src/capture.js` | Runs validation commands and records transcript artifacts as pass/fail evidence. | Superloopy evidence convenience layer. |
 | `src/check.js` | Non-mutating evidence preflight with summary counts, warnings, repair plan, and exact commands. | Superloopy-only strictness layer. |
-| `src/cli.js` | Single command dispatcher for install, loop, bin, agents, doctor, hook entrypoints, and handoff/fleet text output; supports symlinked bin execution. | Public doctor scan uses generic comparison paths; install writes only local wrapper and agent files; crew lines remain presentation-only. |
+| `src/cli.js` | Single command dispatcher for install, loop, bin, agents, doctor, hook entrypoints, and handoff/fleet text output; supports symlinked bin execution. | Public doctor scan uses generic comparison paths and resolves the checked plugin root explicitly; install writes only local wrapper and agent files; crew lines remain presentation-only. |
 | `src/comparison-similarity.js` | Optional copied-block scanner against a caller-provided folder. | Generic comparison; no named source coupling. |
 | `src/continuation.js` | Bounded, progress-gated Stop-hook engine that drives the loop toward evidence-backed completion and marks blocked on a cap or stall. | Superloopy-native continuation; never force-completes. |
 | `src/crew-lines.js` | Deterministic original localized one-line responses for known crew handoffs with terminal verdicts. | Output-only flavor; pending or unknown lanes stay silent and persisted handoff state is not decorated. |
 | `src/design-audit.js` | Verifies Superloopy design audit sections and decision rows. | Guards Superloopy-native decisions. |
-| `src/doctor.js` | Local health check orchestrator for package, hooks, Claude host wiring, docs, comparison scan, Codex + Claude model policy, reviewability, and advisory bin wrapper currency. | Enforces file audits, design audits, Claude host wiring, and advisory model defaults on both hosts. |
+| `src/doctor.js` | Local health check orchestrator for package, hooks, Claude host wiring, docs, comparison scan, Codex + Claude model policy, reviewability, and advisory bin wrapper currency. | Enforces file audits, design audits, Claude host wiring, bundled skill coverage, and advisory model defaults on both hosts. |
+| `src/doctor-skills.js` | Bundled skill-directory verifier used by doctor. | Requires every shipped skill to exist and validates each `SKILL.md` frontmatter name without host-specific state. |
 | `src/engineer.js` | Loop-engineer trigger that turns the `loopy` keyword (and Korean alias `루피`) into a guided drive of begin, prove, check, and finish, plus guidance-only frontend and Korean-writing steers. | Superloopy keyword activation and guide-backed context. |
 | `src/file-audit.js` | Row-level file inventory verifier for audit coverage, stale rows, incomplete rows, and native boundary policy. | Checks Superloopy audit structure. |
 | `src/finish.js` | One-command finalization that writes the default gate, checkpoints remaining goals, writes the report, and returns the complete guide. | Superloopy-specific lighter flow. |
@@ -236,6 +237,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/crew-lines.test.js` | Unit and CLI coverage for presentation-only localized crew completion lines. | Prevents crew flavor from replacing status or speaking for pending/unknown lanes. |
 | `test/docs.test.js` | Public documentation contract tests for Superloopy-native docs and threshold history. | Keeps docs aligned with product contract. |
 | `test/doctor.test.js` | Doctor coverage for package, audit, comparison, design audit, and reviewability checks. | Uses synthetic fixtures only. |
+| `test/doctor-review-feedback.test.js` | Regression tests for PR review hardening around doctor root selection and corrupt skills paths. | Superloopy-native review-feedback coverage only. |
 | `test/file-audit.test.js` | Direct unit coverage for row-level file audit verifier. | Tests Superloopy audit parser. |
 | `test/humanize-korean.test.js` | Contract tests for the Korean humanizer audit script's accept and reject paths. | Superloopy-native test for dependency-free safeguards and protected-token gating. |
 | `test/fleet.test.js` | Handoff registry, fleet reconciliation, verdict-normalization, and crew-line decoration tests. | Tests Superloopy parent-side coordination without persisting presentation flavor. |
@@ -270,7 +272,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 
 ## Weight Notes
 
-- Current largest source file: `src/doctor.js`, at the reviewability cap (500 lines). Keep new checks in helper modules (for example `src/interop.js` holds `checkInterop`) rather than growing `doctor.js` past the cap.
+- Current largest source file: `src/hooks.js`, below the reviewability cap (500 lines). Keep new checks in helper modules (for example `src/interop.js` holds `checkInterop` and `src/doctor-skills.js` holds bundled skill checks) rather than growing orchestrators past the cap.
 - No package dependencies are added; `package.json` stays dependency-free and `superloopy doctor --json` checks that boundary.
 - Marketplace update checks are advisory and self-update only runs for a future npx-local snapshot; current marketplace and checkout installs keep their documented update commands.
 - Runtime state is ignored under `.superloopy/`; `superloopy doctor --json` verifies runtime samples are ignored and not tracked.

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { hasFlag, parseJson, readFlag, readStdin } from "./args.js";
 import {
@@ -40,6 +41,9 @@ import {
   runSubagentStopHook,
   runUserPromptSubmitHook
 } from "./hooks.js";
+
+const CLI_FILE = fileURLToPath(import.meta.url);
+const CLI_ROOT = dirname(dirname(CLI_FILE));
 
 async function main(argv, stdin, stdout, stderr, cwd) {
   const [command, subcommand, ...rest] = argv;
@@ -108,9 +112,19 @@ async function runInstall(argv, stdout, cwd) {
 async function runDoctorCommand(argv, stdout, cwd) {
   const json = hasFlag(argv, "--json");
   const comparisonPath = readFlag(argv, "--comparison-path");
-  const result = await runDoctor(cwd, { comparisonPath });
+  const result = await runDoctor(resolveDoctorRoot(cwd, argv), { comparisonPath });
   stdout.write(json ? `${JSON.stringify(result, null, 2)}\n` : formatDoctor(result));
   return result.ok ? 0 : 1;
+}
+
+function resolveDoctorRoot(cwd, argv) {
+  const explicit = readFlag(argv, "--root") ?? readFlag(argv, "--plugin-root");
+  if (explicit !== undefined) return resolve(cwd, explicit);
+  return isLikelySuperloopyPluginRoot(cwd) ? cwd : CLI_ROOT;
+}
+
+function isLikelySuperloopyPluginRoot(cwd) {
+  return existsSync(join(cwd, ".codex-plugin")) && existsSync(join(cwd, "src", "cli.js"));
 }
 
 async function runLoop(subcommand, argv, stdout, cwd) {
@@ -251,7 +265,7 @@ function topHelp() {
     "  superloopy install [--bin-dir PATH] [--target PATH] [--force] [--json]",
     "  superloopy bin install [--bin-dir PATH] [--force] [--json]",
     "  superloopy agents install [--target PATH] [--force] [--json]",
-    "  superloopy doctor [--json] [--comparison-path PATH]",
+    "  superloopy doctor [--json] [--root PATH] [--comparison-path PATH]",
     "  superloopy hook session-start|pre-tool-use|stop|subagent-stop|user-prompt-submit",
     "",
     helpText()
@@ -292,8 +306,8 @@ export { main };
 function isDirectCliInvocation() {
   if (process.argv[1] === undefined) return false;
   try {
-    return realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+    return realpathSync(process.argv[1]) === CLI_FILE;
   } catch {
-    return process.argv[1] === fileURLToPath(import.meta.url);
+    return process.argv[1] === CLI_FILE;
   }
 }

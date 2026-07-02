@@ -19,14 +19,14 @@ This is a Superloopy health check, not a generic plugin drift audit.
 - Treat loop commands as the behavioral truth surface, but keep their limits clear: `superloopy loop status --json`, `superloopy loop check`, `superloopy loop guide --json`, and evidence files under `.superloopy/evidence/` can show current plan and artifact readiness.
 - Read the installed plugin cache only to identify which Superloopy code the wrapper runs.
 - Do not clone external repos, search issue trackers, or compare unrelated harness layouts unless the user separately asks for research.
-- Do not diagnose from an arbitrary cwd. If `doctor` reports missing `.codex-plugin/plugin.json`, rerun from the checkout or installed plugin cache before calling Superloopy broken.
+- `superloopy doctor` reports the plugin root it checked: by default it uses the current directory when that is a Superloopy checkout, otherwise it checks the installed CLI root. Use `superloopy doctor --root <checkout-or-cache> --json` when you need to pin the target explicitly.
 
 ## Diagnostic Spine
 
 1. Identify the target root: `pwd`, `git rev-parse --show-toplevel` when it is a checkout, and the installed plugin cache path when the wrapper points into one.
 2. Locate the user-visible command: `command -v superloopy`, `which -a superloopy`, and the wrapper text or symlink target.
 3. Inspect Codex registry state with `codex plugin list --json` when Codex is available; use it only to locate `superloopy@beefiker` and its version.
-4. Run `superloopy doctor --json`. If the wrapper is missing or stale, run `node src/cli.js doctor --json` from the checkout or installed cache being evaluated.
+4. Run `superloopy doctor --json` and record the reported `root`. If the wrapper is missing or stale, run `node src/cli.js doctor --root <checkout-or-cache> --json` from the checkout or installed cache being evaluated.
 5. Read the named doctor checks, especially `skills`, `fileAudit`, `reviewability`, `dispatchCoherence`, `hostContract`, `modelPolicy`, and `claudeHostWiring`.
 6. Probe loop readiness without changing state: use `superloopy loop status --json` if a plan exists, otherwise note "no active plan" instead of creating one. Use `superloopy loop check` only to validate trace/artifact readiness for an existing plan; read-only diagnosis cannot prove completion safety because it does not re-run recorded commands. If the user asks whether completion is actually safe, point at the real gates: `superloopy loop review`, `superloopy loop checkpoint`, or `superloopy loop finish`.
 7. Verify crew install shape by name: `franky`, `zoro`, `usopp`, `jinbe`, `robin`, and `nami`; judge by files and doctor checks, not by role labels alone.

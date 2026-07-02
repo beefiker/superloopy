@@ -211,6 +211,6 @@ After any accepted steering, follow the returned guide; run `superloopy loop sta
 
 ## Doctor
 
-`superloopy doctor --json` checks the package, hooks, skill, CLI, dependency-free boundary, runtime ignore policy, file inventory, gate notes, design audit, generic comparison scan status, dispatch coherence, model policy, and reviewability.
+`superloopy doctor --json` checks the package, hooks, bundled skills, CLI, dependency-free boundary, runtime ignore policy, file inventory, gate notes, design audit, generic comparison scan status, dispatch coherence, model policy, and reviewability.
 
 Use `superloopy doctor --comparison-path /path/to/comparison --json` only when you need copied-block evidence against an external folder. The generic comparison scan compares code-shaped files for substantial contiguous blocks without naming or coupling Superloopy to any source project.

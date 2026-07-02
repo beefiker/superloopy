@@ -11,6 +11,8 @@ import { formatDoctor, runDoctor } from "../src/doctor.js";
 import { checkWrapper, evaluateWrapperCurrency } from "../src/wrapper-check.js";
 import { parseBinShimCliPath } from "../src/agents.js";
 
+const EXPECTED_SKILLS = ["humanize-korean", "superloopy-clone", "superloopy-doctor", "superloopy-frontend", "superloopy-loop", "superloopy-research"];
+
 function runCli(args, options = {}) {
   return spawnSync(process.execPath, [join(process.cwd(), "src/cli.js"), ...args], {
     cwd: options.cwd ?? process.cwd(),
@@ -75,6 +77,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.ok, true);
+  assert.equal(parsed.root, process.cwd());
   assert.deepEqual(Object.keys(parsed.checks), [
     "pluginManifest",
     "hooks",
@@ -98,7 +101,8 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.pluginManifest.ok, true);
   assert.equal(parsed.checks.hooks.ok, true);
   assert.equal(parsed.checks.skills.ok, true);
-  assert.deepEqual(parsed.checks.skills.skills, ["superloopy-loop", "superloopy-doctor"]);
+  assert.deepEqual(parsed.checks.skills.skills, EXPECTED_SKILLS);
+  assert.deepEqual(parsed.checks.skills.requiredSkills, EXPECTED_SKILLS);
   assert.equal(parsed.checks.cli.ok, true);
   assert.equal(parsed.checks.dependencies.ok, true);
   assert.equal(parsed.checks.dependencies.count, 0);
@@ -281,6 +285,28 @@ test("checkWrapper stays silent when no wrapper is on PATH", () => {
   assert.equal(result.found, false);
 });
 
+test("doctor CLI falls back to the CLI root outside a Superloopy checkout", async () => {
+  const project = await mkdtemp(join(tmpdir(), "superloopy-doctor-project-"));
+  const result = runCli(["doctor", "--json"], { cwd: project });
+
+  assert.equal(result.status, 0, result.stderr);
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.root, process.cwd());
+  assert.equal(parsed.checks.pluginManifest.ok, true);
+});
+
+test("doctor CLI accepts an explicit diagnostic root", async () => {
+  const repo = await tempRepoCopy();
+  const result = runCli(["doctor", "--root", repo, "--json"], { cwd: tmpdir() });
+
+  assert.equal(result.status, 0, result.stderr);
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.root, repo);
+  assert.deepEqual(parsed.checks.skills.skills, EXPECTED_SKILLS);
+});
+
 test("doctor model policy fails when bundled agent defaults drift", async () => {
   const repo = await tempRepoCopy();
   const agentPath = join(repo, ".codex", "agents", "nami.toml");
@@ -346,6 +372,17 @@ test("doctor skill check requires the bundled doctor skill", async () => {
   assert.equal(result.ok, false);
   assert.equal(result.checks.skills.ok, false);
   assert.match(result.checks.skills.message, /superloopy-doctor/);
+});
+
+test("doctor skill check requires every bundled skill", async () => {
+  const repo = await tempRepoCopy();
+  await rm(join(repo, "skills", "superloopy-frontend"), { recursive: true, force: true });
+
+  const result = await runDoctor(repo);
+
+  assert.equal(result.ok, false);
+  assert.equal(result.checks.skills.ok, false);
+  assert.match(result.checks.skills.message, /superloopy-frontend/);
 });
 
 test("doctor text reports whether comparison scanning was skipped", () => {
