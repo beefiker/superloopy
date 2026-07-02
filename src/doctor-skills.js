@@ -32,6 +32,7 @@ export async function checkSkills(cwd) {
       .map((name) => `skills/${name}/SKILL.md`)
   );
   const invalid = [];
+  const unreadable = [];
 
   for (const name of skills) {
     const path = join(skillsDir, name, "SKILL.md");
@@ -39,13 +40,22 @@ export async function checkSkills(cwd) {
       missing.add(`skills/${name}/SKILL.md`);
       continue;
     }
-    const declaredName = readSkillName(await readFile(path, "utf8"));
-    if (declaredName !== name) invalid.push(name);
+    let content;
+    try {
+      content = await readFile(path, "utf8");
+    } catch (error) {
+      // A corrupt cache can have SKILL.md as a directory or otherwise unreadable;
+      // report it as a structured skill problem rather than aborting the whole report.
+      unreadable.push(`skills/${name}/SKILL.md (${errorText(error)})`);
+      continue;
+    }
+    if (readSkillName(content) !== name) invalid.push(name);
   }
 
   const problems = [];
   if (readError !== null) problems.push(`Unable to read skills directory: ${readError}.`);
   if (missing.size > 0) problems.push(`Missing skill files: ${[...missing].sort().join(", ")}.`);
+  if (unreadable.length > 0) problems.push(`Unreadable skill files: ${unreadable.sort().join(", ")}.`);
   if (invalid.length > 0) problems.push(`Invalid skill frontmatter: ${invalid.sort().join(", ")}.`);
   if (problems.length > 0) {
     return { ok: false, skills, requiredSkills: REQUIRED_SKILLS, message: problems.join(" ") };

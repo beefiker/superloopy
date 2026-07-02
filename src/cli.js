@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { hasFlag, parseJson, readFlag, readStdin } from "./args.js";
@@ -124,7 +124,22 @@ function resolveDoctorRoot(cwd, argv) {
 }
 
 function isLikelySuperloopyPluginRoot(cwd) {
-  return existsSync(join(cwd, ".codex-plugin")) && existsSync(join(cwd, "src", "cli.js"));
+  if (!existsSync(join(cwd, ".codex-plugin")) || !existsSync(join(cwd, "src", "cli.js"))) {
+    return false;
+  }
+  // Identify Superloopy by package identity, not the .codex-plugin manifest: a real
+  // checkout with a broken/wrong-name plugin.json still gets diagnosed (so its
+  // pluginManifest check can fail), while an unrelated Codex plugin project falls
+  // back to CLI_ROOT instead of collecting Superloopy-specific false failures.
+  return readPackageName(cwd) === "superloopy";
+}
+
+function readPackageName(cwd) {
+  try {
+    return JSON.parse(readFileSync(join(cwd, "package.json"), "utf8")).name;
+  } catch {
+    return null;
+  }
 }
 
 async function runLoop(subcommand, argv, stdout, cwd) {
