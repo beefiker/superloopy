@@ -6,6 +6,7 @@ import { checkDesignAudit } from "./design-audit.js";
 import { checkFileAudit } from "./file-audit.js";
 import { checkComparisonSimilarity } from "./comparison-similarity.js";
 import { SUPERLOOPY_AGENT_NAMES } from "./agents.js";
+import { checkSkills } from "./doctor-skills.js";
 import { checkClaudeModelPolicy, checkModelPolicy } from "./model-policy.js";
 import { checkInterop } from "./interop.js";
 import { checkWrapper } from "./wrapper-check.js";
@@ -55,6 +56,7 @@ export async function runDoctor(cwd, options = {}) {
   const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, modelPolicy, claudeModelPolicy, hostContract: checkHostContract(), interop: checkInterop(options), wrapper: checkWrapper(options) };
   return {
     ok: Object.values(checks).every((check) => check.ok),
+    root: cwd,
     checks
   };
 }
@@ -116,23 +118,6 @@ async function checkHooks(cwd, hooks) {
   if (missing.length > 0) return fail(`Missing hook files: ${missing.join(", ")}.`);
   if (invalid.length > 0) return fail(`Invalid hook files: ${invalid.join(", ")}.`);
   return { ok: true, count: hooks.length };
-}
-
-async function checkSkills(cwd) {
-  const skills = ["superloopy-loop", "superloopy-doctor"];
-  const missing = [], invalid = [];
-  for (const name of skills) {
-    const path = join(cwd, "skills", name, "SKILL.md");
-    if (!existsSync(path)) missing.push(`skills/${name}/SKILL.md`);
-    else if (!new RegExp(`^---\\nname: ${name}$`, "m").test(normalizeLineEndings(await readFile(path, "utf8")))) invalid.push(name);
-  }
-  if (missing.length > 0) return fail(`Missing skill files: ${missing.join(", ")}.`);
-  if (invalid.length > 0) return fail(`Invalid skill frontmatter: ${invalid.join(", ")}.`);
-  return { ok: true, skills };
-}
-
-function normalizeLineEndings(content) {
-  return content.replace(/\r\n?/gu, "\n");
 }
 
 function checkCli(cwd) {
