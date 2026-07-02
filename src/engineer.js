@@ -47,14 +47,13 @@ export function hasTeamTrigger(prompt) {
   return TEAM_TRIGGER_PATTERN.test(prompt.replace(ENGINEER_TRIGGER_PATTERN, ""));
 }
 
-// Frontend intent: keyword/phrase patterns that mark UI/visual work so the prompt
-// hook can steer toward the superloopy-frontend skill even when the user never
-// typed `loopy`. Curated for precision — bare "design"/"layout"/"component" are
-// excluded (they collide with API/data work); the steer is guidance-only, so an
-// occasional miss costs nothing more than a few unused context lines.
+// Unambiguous frontend intent: keyword/phrase patterns that mark UI/visual work and
+// NEVER collide with backend/systems talk, so the prompt hook can steer toward the
+// superloopy-frontend skill even without `loopy`. These always fire — a systems phrase
+// elsewhere in the prompt must never veto them (bare "design"/"layout"/"component" are
+// excluded because they DO collide with API/data work). The steer is guidance-only.
 const FRONTEND_TRIGGER_PATTERNS = [
   /\bfront[\s-]?end\b/iu,
-  /\bu[ix]\b/iu,
   /\bui\/ux\b|\bux\/ui\b/iu,
   /\buser interface\b/iu,
   /\b(css|scss|tailwind|tailwindcss)\b/iu,
@@ -67,7 +66,6 @@ const FRONTEND_TRIGGER_PATTERNS = [
   /\bcolor (palette|scheme)\b/iu,
   /\bfont (pairing|stack)\b/iu,
   /\bdark mode\b/iu,
-  /\bresponsive\b/iu,
   /\bredesign\b|\brestyle\b|\bre-?skin\b/iu,
   /\bmock-?up\b|\bwireframe\b/iu,
   /\bmake (?:it|this|the [\w-]+) (?:look|feel) (?:better|good|nicer|prettier|premium|professional|polished|designed|modern|clean)\b/iu,
@@ -76,24 +74,70 @@ const FRONTEND_TRIGGER_PATTERNS = [
   /\banti[\s-]?slop\b|\bawwwards\b|\bpolish the (?:ui|design|page|frontend|landing)\b/iu
 ];
 
-// True when the prompt reads as frontend/visual work. Used by the prompt hook to
-// inject a steer toward the superloopy-frontend skill (no state mutation).
-export function hasFrontendTrigger(prompt) {
-  if (typeof prompt !== "string") return false;
-  return FRONTEND_TRIGGER_PATTERNS.some((pattern) => pattern.test(prompt));
+// Ambiguous shared tokens: bare "ui"/"ux" and "responsive" mean UI work in a visual prompt
+// but systems work in a backend one. Each is judged per clause against ONLY its own systems
+// collision (see clauseHasAmbiguousUiIntent); they never override an unambiguous trigger above.
+const AMBIGUOUS_UI_PATTERN = /\bu[ix]\b/iu;
+const AMBIGUOUS_RESPONSIVE_PATTERN = /\bresponsive\b/iu;
+
+// The only systems collision for a bare "ui"/"ux" token is the concurrency "UI thread".
+const UI_SYSTEMS_PATTERN = /\bui\s+thread\b/iu;
+// "responsive" is systems talk only when a backend/systems noun sits right next to it —
+// there is deliberately NO blanket "responsive to", because "responsive to touch input" /
+// "responsive to dark mode changes" are UI. Kept as a shared alternation for both sides.
+const SYSTEMS_NOUN = "server|service|api|endpoint|backend|database|thread|process|socket|node|cluster|daemon|requests?|workers?|queue|signals?|handler|listener|webhook|rpc|grpc|stream|packets?|event loop";
+const RESPONSIVE_SYSTEMS_PATTERNS = [
+  new RegExp(`\\b(?:un)?responsive\\b[^.\\n]{0,24}\\b(?:${SYSTEMS_NOUN})\\b`, "iu"),
+  new RegExp(`\\b(?:${SYSTEMS_NOUN})\\b[^.\\n]{0,24}\\b(?:un)?responsive\\b`, "iu")
+];
+
+// Split a prompt into rough clauses (sentence punctuation, commas, coordinating words) so a
+// systems clause ("fix the unresponsive API") can't veto a separate UI clause elsewhere.
+function splitClauses(prompt) {
+  return prompt.split(/[.;\n]+|,|\s+(?:and|but|then|also|plus)\s+/iu);
 }
 
-// Guidance-only steer: tell the agent to engage the frontend skill and its gates.
-export function renderFrontendTriggerContext() {
-  return [
+// Does this single clause carry ambiguous-token UI intent? Each token is judged against ONLY
+// its own systems collision — a "ui" token fires unless it is "ui thread"; a "responsive"
+// token fires unless a systems noun is adjacent — so a systems phrase never disqualifies a
+// separate UI token in the same clause ("make the API dashboard ui responsive" still fires).
+function clauseHasAmbiguousUiIntent(clause) {
+  if (AMBIGUOUS_UI_PATTERN.test(clause) && !UI_SYSTEMS_PATTERN.test(clause)) return true;
+  if (AMBIGUOUS_RESPONSIVE_PATTERN.test(clause)
+      && !RESPONSIVE_SYSTEMS_PATTERNS.some((pattern) => pattern.test(clause))) return true;
+  return false;
+}
+
+// True when the prompt reads as frontend/visual work. Used by the prompt hook to inject a
+// steer toward the superloopy-frontend skill (no state mutation). Precedence matters: an
+// unambiguous visual trigger always wins on the whole prompt; the ambiguous shared tokens
+// (bare ui/ux, responsive) are then judged per clause and per token, so no systems phrase
+// can veto a real UI ask. The steer is a light pointer; the skill carries the rules.
+export function hasFrontendTrigger(prompt) {
+  if (typeof prompt !== "string") return false;
+  if (FRONTEND_TRIGGER_PATTERNS.some((pattern) => pattern.test(prompt))) return true;
+  return splitClauses(prompt).some((clause) => clauseHasAmbiguousUiIntent(clause));
+}
+
+// Guidance-only steer: a light pointer to the frontend skill, which carries the actual
+// rules (DESIGN.md gate, anti-slop pre-flight, visual-QA evidence) and loads them on
+// demand. Kept compact on purpose so an over-fire is cheap — the skill is the rulebook.
+// Interop-aware to match the engineer trigger's `interopBlock`: this is a separate
+// (non-`loopy`) guidance path, so it carries the same coexistence routing rather than
+// double-driving design when Superpowers is installed. `interop` is injectable for tests.
+export function renderFrontendTriggerContext(interop = detectSuperpowers()) {
+  const lines = [
     "Superloopy frontend trigger",
     "",
-    "This request involves UI/visual work. Engage the superloopy-frontend skill before writing UI. This is guidance only; it does not mutate Superloopy state.",
-    "",
-    "- Establish or read a DESIGN.md token contract FIRST — no design system, no UI work; every color/spacing/type value traces to a token.",
-    "- Load `skills/superloopy-frontend/references/anti-slop.md` and pass its pre-flight: zero em-dashes, eyebrow/consistency locks, no AI-default purple/gradient or Inter/beige palette, real assets (no div-fake screenshots).",
-    "- Verify in a real browser at 390/768/1280 px and record a `VISUAL_QA.md` artifact under `.superloopy/evidence/frontend/` before claiming done."
-  ].join("\n");
+    "This looks like UI/visual work — engage the `superloopy-frontend` skill (guidance only; no state change). It is a router that loads only the rules a request needs: a mandatory DESIGN.md token gate, the anti-slop pre-flight, and a real-browser visual-QA artifact under `.superloopy/evidence/frontend/` before done. Follow the skill; do not expand these rules here."
+  ];
+  if (interop && interop.installed === true) {
+    lines.push(
+      "",
+      "Superpowers coexistence (detected): let Superpowers drive brainstorming, planning, and TDD; superloopy-frontend still owns the visual layer — the DESIGN.md token gate, the anti-slop pre-flight, and the visual-QA evidence. Keep one orchestrator: do not open a second design/plan pass here."
+    );
+  }
+  return lines.join("\n");
 }
 
 const KOREAN_WRITING_EXCLUSION_PATTERNS = [

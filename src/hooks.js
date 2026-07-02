@@ -83,8 +83,11 @@ export async function runUserPromptSubmitHook(payload) {
     if (hasEngineerTrigger(payload.prompt)) return await runEngineerTriggerHook(payload, { statusForPayload, guideForPayload, renderSuperloopyContext, formatAdditionalContext });
     if (hasLoosePromptTrigger(payload.prompt)) return await runLoosePromptTriggerHook(payload);
     // Auto-steer UI/visual prompts to the frontend skill even without a `loopy` keyword. Guidance
-    // only (no state mutation), so it fires regardless of SUPERLOOPY_AUTO_CONTEXT.
-    if (hasFrontendTrigger(payload.prompt)) return formatAdditionalContext("UserPromptSubmit", renderFrontendTriggerContext());
+    // only (no state mutation), so it fires regardless of SUPERLOOPY_AUTO_CONTEXT. Default-on;
+    // set SUPERLOOPY_FRONTEND_STEER=off to silence it without uninstalling.
+    if (!envOff(process.env, "SUPERLOOPY_FRONTEND_STEER") && hasFrontendTrigger(payload.prompt)) {
+      return formatAdditionalContext("UserPromptSubmit", renderFrontendTriggerContext());
+    }
     // Auto-steer Korean prose generation toward a light post-generation humanize-korean pass.
     // Kept after frontend so UI/page requests get the stronger visual-work steer.
     if (hasKoreanWritingTrigger(payload.prompt)) return formatAdditionalContext("UserPromptSubmit", renderKoreanWritingTriggerContext());
@@ -276,6 +279,12 @@ function formatAdditionalContext(hookEventName, additionalContext) {
 
 function envOn(env, key) {
   return String(env[key] ?? "off").toLowerCase() === "on";
+}
+
+// Default-on gate: true only when the key is explicitly set to "off". For steers that
+// fire by default (e.g. the frontend visual-work steer) but need an opt-out switch.
+function envOff(env, key) {
+  return String(env[key] ?? "on").toLowerCase() === "off";
 }
 
 function renderLoosePromptStarter(payload) {

@@ -51,7 +51,7 @@ Superloopy はコマンド層を小さく保ちます。専門的な進め方は
 | `superloopy-frontend` | UI/ページ/コンポーネントを構築・スタイリング・再設計するとき、または「デザインされた見た目」にしたいとき（視覚的な作業で自動起動）。 | DESIGN.md のトークン契約、anti-slop の事前チェック結果、実ブラウザでの visual QA 証拠 artifact。 |
 | `humanize-korean` | 韓国語テキストの AI っぽさや翻訳調を抑え、事実を変えずに人が書いたように整えるとき。 | `final.md`、`summary.md`、`audit.json` を書き、Superloopy loop では `.superloopy/evidence/humanize-korean/` に証拠を残します。 |
 
-Loop skill が標準のガードレールです。`loopy` は evidence loop を開始または再開し、`loopy team` は crew mode に上げます。`loopywork`、`lpy`、`$lpy` は最初の guidance だけを注入します。Research と clone は明示的に使う専門モードで、どちらも完了文だけを信用せず Superloopy evidence を残して終わります。
+Loop skill が標準のガードレールです。`loopy` は evidence loop を開始または再開し、`loopy team` は crew mode に上げます。`loopywork`、`lpy`、`$lpy` は最初の guidance だけを注入します。Research と clone は明示的に使う専門モードで、どちらも完了文だけを信用せず Superloopy evidence を残して終わります。Frontend skill は視覚的な作業で自動起動し、guidance のみの短い誘導を注入します。`SUPERLOOPY_FRONTEND_STEER=off` で無効化できます。
 
 ## クローンデモ
 
