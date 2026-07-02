@@ -242,10 +242,10 @@ Total: 100 points.
 | `src/continuation.js` | `test/golden-continuation.test.js`. | Must drive bounded continuation toward evidence-backed completion and mark blocked (never complete) on a cap or stall. |
 | `src/crew-lines.js` | `test/crew-lines.test.js`, `test/fleet.test.js`. | Must generate original deterministic supported-catalog lines only for known terminal crew handoffs and format them without mutating persisted state. |
 | `src/design-audit.js` | Doctor design-audit tests. | Must fail missing sections, decisions, or incomplete guards. |
-| `src/doctor.js` | `test/doctor.test.js`, `test/claude-host-wiring.test.js`, `node src/cli.js doctor --json`. | Must verify package, hooks, Claude host wiring, bundled skills, audits, comparison status, Codex + Claude model policy, and reviewability while ignoring generated Codex marketplace install metadata. |
+| `src/doctor.js` | `test/doctor.test.js`, `test/claude-host-wiring.test.js`, `node src/cli.js doctor --json`. | Must verify package, hooks, Claude host wiring, bundled skills, audits, comparison status, Codex + Claude model policy, and reviewability while ignoring generated Codex marketplace install metadata; must list a non-git root's own filesystem instead of consulting an enclosing Git repository. |
 | `src/doctor-skills.js` | `test/doctor.test.js`, `test/doctor-review-feedback.test.js`, `node src/cli.js doctor --json`. | Must require every shipped skill directory, validate each `SKILL.md` frontmatter name, and return structured failures for unreadable skill paths. |
 | `src/engineer.js` | `test/engineer.test.js`, `test/hooks.test.js` engineer-trigger tests. | Must wake the loop engineer on a leading `loopy` keyword or its Korean alias `루피` without mutating state itself, escalate to crew fan-out only on `team`/`crew`/`팀`/`크루`, and detect frontend/visual or Korean-writing intent for guidance-only skill steers. |
-| `src/file-audit.js` | `test/file-audit.test.js`, doctor file-audit check. | Must fail missing, stale, or incomplete inventory rows. |
+| `src/file-audit.js` | `test/file-audit.test.js`, doctor file-audit check. | Must fail missing, stale, or incomplete inventory rows in source checkouts while exempting packaging-stripped repo-only rows in packed (non-git) roots. |
 | `src/finish.js` | CLI evidence and loop-gate tests. | Must only finalize after all criteria have valid pass artifacts, then write gate and report artifacts. |
 | `src/fleet.js` | `test/fleet.test.js`, `test/crew-lines.test.js`. | Must record handoffs under a lock, require evidence for accepted verdicts, reconcile dispatched-vs-outstanding, normalize APPROVE/PASS/REJECT-style verdicts, and decorate terminal known crew lanes for output only. |
 | `src/goals.js` | `test/goals.test.js`, loop tests. | Must keep deterministic goal parsing, criteria lookup, completion guards, and evidence collection. |
@@ -267,6 +267,7 @@ Total: 100 points.
 | `src/review-gate.js` | Review gate golden tests. | Must validate strict five-section review gate shape through Superloopy artifacts only. |
 | `src/store.js` | Loop, hook, and scoped-session tests. | Must normalize sessions, isolate `.superloopy/` state, write JSON atomically, and append ledger entries. |
 | `src/spawn-command.js` | `test/auto-update.test.js`. | Must route npm/npx through Windows `.cmd` shims and leave other commands unchanged. |
+| `src/source-checkout.js` | `test/doctor-packed.test.js`, `test/file-audit.test.js`. | Must classify own-`.git` roots and tracked monorepo subdirectories as source checkouts and packed/ignored install roots as installs, so no enclosing repo answers for an install. |
 | `src/subagent-attempts.js` | `npm test`, doctor reviewability. | Must count the 3-attempt cap (with a session/cwd fallback key) and record the exhaustion ledger signal. |
 | `src/trace.js` | Loop-gate and CLI evidence tests. | Must show artifact-backed proof, warnings, missing proof, suggested paths, ledger timeline, and evidence summary counts. |
 | `src/wrapper-check.js` | `test/doctor.test.js`. | Must read the installed bin wrapper and advise (never fail) when it points at a stale or pruned versioned cache after an upgrade; informational, no-throw, and dependency-injectable. |
@@ -279,6 +280,7 @@ Total: 100 points.
 | `test/crew-lines.test.js` | `npm test`. | Must prove crew completion lines are original deterministic localized presentation, pending/unknown lanes stay silent, and CLI status remains visible. |
 | `test/docs.test.js` | `npm test`. | Must keep README, skill, gate notes, design audit, and this golden set aligned with enforced behavior. |
 | `test/doctor.test.js` | `npm test`. | Must cover doctor checks for package, audits, comparison, design decisions, model policy, generated install metadata, and reviewability. |
+| `test/doctor-packed.test.js` | `npm test`. | Must prove `doctor --json` reports ok against an npm-pack-shaped root (no `.git`, `.gitignore`, or `package-lock.json`) run from an arbitrary cwd, including a root nested in a parent Git repository that ignores it. |
 | `test/doctor-review-feedback.test.js` | `npm test`. | Must cover review-requested doctor hardening for broken checkout manifests and non-directory skills paths. |
 | `test/file-audit.test.js` | `npm test`. | Must prove the file-audit verifier fails stale inventory rows. |
 | `test/humanize-korean.test.js` | `node --test test/humanize-korean.test.js`. | Must prove the Korean humanizer audit script accepts preserved Korean output and rejects non-Korean or token-dropping output. |
