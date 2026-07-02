@@ -37,8 +37,14 @@ export function checkWrapper(options = {}) {
       return informational(`the \`superloopy\` that resolves first on PATH (${located.path}) is not a Superloopy-generated wrapper - currency not tracked`, { found: true, recognized: false });
     }
     if (!fs.existsSync(cliPath)) {
+      // The `superloopy` command IS this broken wrapper, so never tell the user to run it. Point
+      // at a surviving sibling cli.js if one exists; otherwise let the bootstrap re-point it.
+      const live = newestLiveSiblingCli(cliPath, fs);
+      const repair = live
+        ? `run \`node "${live}" bin install --force\` to re-point it`
+        : "re-approve the Modified hooks and start a new Codex session so the installer re-points it";
       return informational(
-        `bin wrapper at ${located.path} points at ${cliPath}, which no longer exists (a marketplace upgrade likely pruned that cached version). The \`superloopy\` command will not run until re-pointed: re-approve the Modified hooks and start a new Codex session, or run \`superloopy bin install --force\` from the current version.`,
+        `bin wrapper at ${located.path} points at ${cliPath}, which no longer exists (a marketplace upgrade likely pruned that cached version). The \`superloopy\` command will not run until re-pointed: ${repair}.`,
         { found: true, dangling: true, wrapperPath: located.path, cliPath }
       );
     }
@@ -87,6 +93,32 @@ function locateWrapper(env, platform, fs) {
     return { path: candidate, content };
   }
   return null;
+}
+
+// Given a wrapper's (possibly missing) cli.js, find the newest sibling version dir under the
+// same .../superloopy container whose src/cli.js still exists — a live CLI the repair command
+// can actually invoke. Returns the cli.js path or null when the whole container is gone.
+function newestLiveSiblingCli(cliPath, fs) {
+  const container = dirname(dirname(dirname(cliPath))); // .../superloopy
+  let names;
+  try {
+    names = fs.readdirSync(container);
+  } catch {
+    return null;
+  }
+  let bestCli = null;
+  let bestVersion = null;
+  for (const name of names) {
+    const parsed = parseVersion(name);
+    if (parsed === null) continue;
+    const cli = join(container, name, "src", "cli.js");
+    if (!fs.existsSync(cli)) continue;
+    if (bestVersion === null || compareVersions(parsed, bestVersion) > 0) {
+      bestVersion = parsed;
+      bestCli = cli;
+    }
+  }
+  return bestCli;
 }
 
 // Decide currency from the versioned-cache layout .../superloopy/<version>/src/cli.js: compare

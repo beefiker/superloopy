@@ -231,6 +231,24 @@ test("checkWrapper reports a dangling wrapper after a pruned cache", () => {
   assert.equal(result.ok, true);
   assert.equal(result.dangling, true);
   assert.match(result.message, /no longer exists/);
+  // The broken wrapper cannot repair itself; with no live sibling, point at the bootstrap.
+  assert.match(result.message, /re-approve the Modified hooks/);
+  assert.doesNotMatch(result.message, /`superloopy bin install/);
+});
+
+test("checkWrapper points a dangling wrapper at a surviving sibling cli, not itself", () => {
+  const { superloopyDir, binDir, cliOf } = slPaths("wrktest");
+  const wrapperPath = join(binDir, "superloopy");
+  const files = { [wrapperPath]: shimFor(cliOf("0.7.0")), [cliOf("0.7.1")]: "x" }; // 0.7.0 pruned, 0.7.1 live
+  const fs = {
+    existsSync: (p) => p in files,
+    readFileSync: (p) => { if (!(p in files)) throw new Error("ENOENT"); return files[p]; },
+    readdirSync: (p) => { if (p !== superloopyDir) throw new Error("ENOENT"); return ["0.7.0", "0.7.1"]; }
+  };
+  const result = checkWrapper({ env: { PATH: binDir }, platform: "linux", fs });
+  assert.equal(result.dangling, true);
+  assert.match(result.message, /node ".*0\.7\.1.*cli\.js" bin install --force/); // a runnable live CLI
+  assert.doesNotMatch(result.message, /`superloopy bin install/);
 });
 
 test("checkWrapper reports the first-resolved wrapper, not a later generated shim", () => {
