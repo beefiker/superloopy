@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -14,15 +14,14 @@ const NPM_PACK_STRIPPED = new Set([".gitignore", "package-lock.json"]);
 // Mirrors an `npm pack` extract: every Git-visible file except the npm-stripped set,
 // with no .git directory. Built by copy instead of running `npm pack` + `tar` so the
 // test stays dependency-free on the Windows CI runners.
-async function tempNpmPackedCopy(destination) {
-  const repo = destination ?? await mkdtemp(join(tmpdir(), "superloopy-packed-"));
+async function copyGitVisibleFiles(repo, skip) {
   const result = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
     cwd: process.cwd(),
     encoding: "utf8"
   });
   assert.equal(result.status, 0, result.stderr);
   for (const file of result.stdout.split("\n").filter(Boolean)) {
-    if (NPM_PACK_STRIPPED.has(file)) continue;
+    if (skip.has(file)) continue;
     const source = join(process.cwd(), file);
     if (!existsSync(source)) continue;
     const target = join(repo, file);
@@ -30,6 +29,16 @@ async function tempNpmPackedCopy(destination) {
     await writeFile(target, await readFile(source));
   }
   return repo;
+}
+
+async function tempNpmPackedCopy(destination) {
+  const repo = destination ?? await mkdtemp(join(tmpdir(), "superloopy-packed-"));
+  return copyGitVisibleFiles(repo, NPM_PACK_STRIPPED);
+}
+
+// Full source-tree copy: keeps the repo-only files a checkout ships with.
+async function tempSourceTreeCopy(destination) {
+  return copyGitVisibleFiles(destination, new Set());
 }
 
 test("doctor accepts an npm-packed install run from an arbitrary cwd", async () => {
@@ -74,4 +83,31 @@ test("doctor accepts an npm-packed install nested inside a parent Git repository
   assert.equal(parsed.checks.fileAudit.ok, true);
   assert.deepEqual(parsed.checks.fileAudit.staleRows, []);
   assert.equal(parsed.checks.runtimeBoundary.ok, true);
+});
+
+// A source checkout that is a TRACKED subdirectory of a larger repo (monorepo layout):
+// .git lives only in the ancestor, so a bare .git-marker signal would misclassify it as
+// a packed install and stop enforcing stale rows. Deleting a repo-only file there must
+// still fail the file audit.
+test("doctor still flags stale packaging rows in a tracked monorepo subdirectory", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "superloopy-monorepo-"));
+  const init = spawnSync("git", ["init"], { cwd: parent, encoding: "utf8" });
+  assert.equal(init.status, 0, init.stderr);
+  const checkout = join(parent, "tools", "superloopy");
+  await mkdir(checkout, { recursive: true });
+  await tempSourceTreeCopy(checkout);
+  const add = spawnSync("git", ["add", "-A"], { cwd: parent, encoding: "utf8" });
+  assert.equal(add.status, 0, add.stderr);
+  await rm(join(checkout, ".gitignore"));
+
+  const result = spawnSync(process.execPath, [join(checkout, "src", "cli.js"), "doctor", "--json"], {
+    cwd: checkout,
+    encoding: "utf8",
+    timeout: 30_000
+  });
+
+  assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`);
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(parsed.checks.fileAudit.ok, false);
+  assert.ok(parsed.checks.fileAudit.staleRows.includes(".gitignore"), JSON.stringify(parsed.checks.fileAudit.staleRows));
 });

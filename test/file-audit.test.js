@@ -76,3 +76,19 @@ test("checkFileAudit still flags packaging-stripped rows in a source checkout", 
   assert.deepEqual(result.staleRows, [".gitignore", "package-lock.json"]);
   assert.match(result.message, /File audit rows without Git-visible files/);
 });
+
+test("checkFileAudit honors an explicit sourceCheckout signal over the .git fallback", async () => {
+  const repo = await tempRepo();
+  await writePackagingStrippedAudit(repo);
+
+  // No .git marker at the root — a tracked monorepo subdirectory looks like this.
+  // The caller-supplied signal must keep stale-row enforcement on.
+  const result = await checkFileAudit(repo, {
+    auditPath: "docs/audit.md",
+    listFiles: () => ["live.js"],
+    sourceCheckout: true
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.staleRows, [".gitignore", "package-lock.json"]);
+});

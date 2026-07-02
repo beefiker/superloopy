@@ -267,6 +267,7 @@ Total: 100 points.
 | `src/review-gate.js` | Review gate golden tests. | Must validate strict five-section review gate shape through Superloopy artifacts only. |
 | `src/store.js` | Loop, hook, and scoped-session tests. | Must normalize sessions, isolate `.superloopy/` state, write JSON atomically, and append ledger entries. |
 | `src/spawn-command.js` | `test/auto-update.test.js`. | Must route npm/npx through Windows `.cmd` shims and leave other commands unchanged. |
+| `src/source-checkout.js` | `test/doctor-packed.test.js`, `test/file-audit.test.js`. | Must classify own-`.git` roots and tracked monorepo subdirectories as source checkouts and packed/ignored install roots as installs, so no enclosing repo answers for an install. |
 | `src/subagent-attempts.js` | `npm test`, doctor reviewability. | Must count the 3-attempt cap (with a session/cwd fallback key) and record the exhaustion ledger signal. |
 | `src/trace.js` | Loop-gate and CLI evidence tests. | Must show artifact-backed proof, warnings, missing proof, suggested paths, ledger timeline, and evidence summary counts. |
 | `src/wrapper-check.js` | `test/doctor.test.js`. | Must read the installed bin wrapper and advise (never fail) when it points at a stale or pruned versioned cache after an upgrade; informational, no-throw, and dependency-injectable. |

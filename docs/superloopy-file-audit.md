@@ -225,6 +225,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/review-gate.js` | Validator for strict five-section review quality gates. | Keeps compatible shape under Superloopy-native module name. |
 | `src/store.js` | `.superloopy/` path construction, session normalization, atomic JSON writes, and ledger appends. | Original storage layer. |
 | `src/spawn-command.js` | Cross-platform process invocation helper for npm/npx command shims. | Minimal Superloopy utility used by update planning only. |
+| `src/source-checkout.js` | Distinguishes a source checkout (own `.git` or tracked monorepo subdirectory) from an installed/packed root for doctor's Git-vs-filesystem semantics. | Original Superloopy root classifier. |
 | `src/subagent-attempts.js` | SubagentStop evidence-receipt attempt tracking and the post-cap ledger signal, factored out of hooks.js. | Superloopy-native; keeps hooks.js within the reviewability budget. |
 | `src/trace.js` | Builds compact evidence trail with summary counts, warnings, missing proof, suggested paths, and timeline. | Superloopy-only inspection surface. |
 | `src/wrapper-check.js` | Advisory doctor check that reads the installed `superloopy` bin wrapper and reports when it points at a stale or pruned versioned cache after an upgrade. | Superloopy-native; informational only (never fails health), no-throw, and dependency-injectable. |
