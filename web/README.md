@@ -1,7 +1,7 @@
 # Superloopy landing page
 
 Static, self-contained landing page for [Superloopy](https://github.com/beefiker/superloopy).
-No build step — `index.html` + `assets/` only.
+No build step — Cloudflare Pages serves the generated WebGL/orbit export from this folder.
 
 ## Deploy to Cloudflare Pages
 

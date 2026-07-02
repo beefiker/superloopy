@@ -191,7 +191,7 @@ async function checkGateNotes(cwd) {
 
 async function checkReviewability(cwd) {
   try {
-    const files = listGitVisibleFiles(cwd).filter((file) => /\.(js|md|json|yaml)$/u.test(file));
+    const files = listGitVisibleFiles(cwd).filter(isReviewabilityCandidate);
     const measured = await Promise.all(files.map(async (file) => ({
       file,
       lines: countLines(await readFile(join(cwd, file), "utf8"))
@@ -210,6 +210,14 @@ async function checkReviewability(cwd) {
   } catch (error) {
     return fail(error instanceof Error ? error.message : String(error));
   }
+}
+
+function isReviewabilityCandidate(file) {
+  if (!/\.(js|md|json|yaml)$/u.test(file)) return false;
+  if (file === "web/loopy-copy.js") return false;
+  if (file === "web/_payload.json") return false;
+  if (file.startsWith("web/_nuxt/")) return false;
+  return true;
 }
 
 function countLines(content) {

@@ -1,4 +1,22 @@
-/assets/*
+/_nuxt/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/webgl/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/basis/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/draco/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/loopy-card-back.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/loopy-demo-transferloom.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/loopy-og.jpg
   Cache-Control: public, max-age=31536000, immutable
 
 /*
