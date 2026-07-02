@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -15,7 +15,9 @@ function runCli(args, options = {}) {
 }
 
 async function tempRepoCopy() {
-  const repo = await mkdtemp(join(tmpdir(), "superloopy-doctor-review-"));
+  // Canonicalize so the path matches process.cwd() inside the spawned CLI:
+  // on macOS tmpdir() lives under the /var -> /private/var symlink.
+  const repo = realpathSync(await mkdtemp(join(tmpdir(), "superloopy-doctor-review-")));
   const result = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
     cwd: process.cwd(),
     encoding: "utf8"
