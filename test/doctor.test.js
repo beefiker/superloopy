@@ -11,7 +11,7 @@ import { formatDoctor, runDoctor } from "../src/doctor.js";
 import { checkWrapper, evaluateWrapperCurrency } from "../src/wrapper-check.js";
 import { parseBinShimCliPath } from "../src/agents.js";
 
-const EXPECTED_SKILLS = ["humanize-korean", "superloopy-clone", "superloopy-doctor", "superloopy-frontend", "superloopy-loop", "superloopy-research"];
+const EXPECTED_SKILLS = ["humanize-korean", "superloopy-clone", "superloopy-doctor", "superloopy-frontend", "superloopy-loop", "superloopy-research", "superloopy-video"];
 
 function runCli(args, options = {}) {
   return spawnSync(process.execPath, [join(process.cwd(), "src/cli.js"), ...args], {

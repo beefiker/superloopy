@@ -8,7 +8,8 @@ const REQUIRED_SKILLS = [
   "superloopy-doctor",
   "superloopy-frontend",
   "superloopy-loop",
-  "superloopy-research"
+  "superloopy-research",
+  "superloopy-video"
 ];
 
 export async function checkSkills(cwd) {
