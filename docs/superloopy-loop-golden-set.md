@@ -93,6 +93,7 @@ Total: 100 points.
 | `docs/superloopy-file-audit.md` | `test/audit.test.js`, `src/file-audit.js`, doctor file-audit check. | Must list every Git-visible file with non-empty role and compatibility-boundary cells. |
 | `docs/superloopy-gate-notes.md` | Doctor gate-notes check. | Must keep gate compatibility, native naming, golden scenario, and host contract sections visible. |
 | `docs/superloopy-host-contract.md` | `test/cli.test.js`, doctor hostContract/gate-notes. | Must document the SubagentStop payload contract and the host behaviors Superloopy cannot verify. |
+| `docs/superloopy-interop-superpowers.md` | `test/interop.test.js`, audit coverage. | Must document the Superpowers division of labor, best-effort detection, the override, and the doctor visibility check. |
 | `docs/superloopy-loop-golden-set.md` | `test/docs.test.js` golden-set assertions. | Must list every Git-visible file, score each accepted run, and keep threshold history append-only. |
 | `docs/superloopy-model-policy.md` | `test/docs.test.js`, `test/doctor.test.js`. | Must record allowed model values and state that model choice is steering, not proof. |
 | `hooks/pre-tool-use.json` | `test/plugin.test.js`, doctor hook check. | Must route to `node "${PLUGIN_ROOT}/src/cli.js" hook pre-tool-use`. |
@@ -251,6 +252,7 @@ Total: 100 points.
 | `src/help.js` | CLI help tests. | Must show the shortest evidence-backed flow and pass-artifact rule. |
 | `src/hooks.js` | Hook and golden-hook tests. | Must keep startup bootstrap, marketplace update notices, stop continuation, prompt context, steering, scoped roots, and receipt validation fail-closed. |
 | `src/install-flow.js` | `test/auto-update.test.js`. | Must distinguish marketplace, checkout, future npx-local snapshot, and unknown install states so unsafe npx updates stay off. |
+| `src/interop.js` | `test/interop.test.js`. | Must detect a neighboring Superpowers install best-effort across both hosts, honor the `SUPERLOOPY_SUPERPOWERS` override, and never mutate state or fail a hook. |
 | `src/loop.js` | Core loop and CLI tests. | Must preserve lifecycle state, ledger appends, evidence recording, review, checkpoint, status, and steering. |
 | `src/matrix-gate.js` | Matrix gate golden tests. | Must validate compatible matrix gate shape through Superloopy artifacts only. |
 | `src/model-policy.js` | `test/doctor.test.js`. | Must fail doctor when the Codex model-policy doc/TOML defaults or the Claude model-policy doc/`agents/*.md` model frontmatter drift. |
@@ -289,6 +291,7 @@ Total: 100 points.
 | `test/golden-review-gate.test.js` | `npm test`. | Must keep strict five-section review-gate acceptance and rejection behavior. |
 | `test/engineer.test.js` | `npm test`. | Must keep team/crew escalation parsing strict and inject the crew fan-out directive only on `loopy team`. |
 | `test/hooks.test.js` | `npm test`. | Must cover hook unit behavior for guards, receipts, steering, context, and stop handling. |
+| `test/interop.test.js` | `npm test`. | Must cover Superpowers detection, the informational doctor interop check, and coexistence routing in loop guidance. |
 | `test/loop-gates.test.js` | `npm test`. | Must cover gate, report, trace, check, review, finish, and checkpoint behavior. |
 | `test/loop.test.js` | `npm test`. | Must cover core lifecycle, evidence recording, steering, and command capture. |
 | `test/plugin.test.js` | `npm test`. | Must verify plugin manifest, hook route integrity, and packaged skill metadata. |

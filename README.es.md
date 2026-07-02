@@ -82,6 +82,22 @@ En ejecuciones con la crew completa, el padre registra cada línea con `superloo
 
 Cuando un handoff de crew registrado termina, Superloopy puede imprimir una línea original de crew antes del estado normal de `handoff` o `fleet`. Sigue el idioma del usuario detectado en la asignación o el brief del scope cuando coincide con el catálogo soportado, con el inglés como fallback seguro. La línea solo da personalidad; el verdict, el evidence artifact, la lista outstanding y la lista attention siguen siendo la autoridad.
 
+## Funciona con Superpowers
+
+Superloopy encaja bien junto al plugin [Superpowers](https://github.com/obra/superpowers). Cada uno cubre una mitad distinta del mismo trabajo, así que no tienes que elegir.
+
+- Superpowers lleva la primera parte del loop: lluvia de ideas, planificación y su metodología de TDD y revisión de código.
+- Superloopy lleva el cierre: criterios respaldados por comandos que se vuelven a ejecutar al terminar, para que "hecho" quede probado y no solo dicho.
+
+Si Superpowers está instalado (en Codex o en Claude Code), Superloopy lo detecta y ajusta su propia guía. Deja el diseño, la planificación y el TDD a Superpowers y se queda como el evidence gate exterior. La detección es de mejor esfuerzo y solo afecta a los consejos; nunca debilita un gate. Usa `SUPERLOOPY_SUPERPOWERS=off` para desactivarlo o `on` para forzarlo, y ejecuta `superloopy doctor` para ver qué se encontró. Más detalles en [docs/superloopy-interop-superpowers.md](docs/superloopy-interop-superpowers.md).
+
+### Q&A
+
+- **¿Necesito los dos?** No. Superloopy funciona por su cuenta. Si Superpowers también está, los dos se coordinan en vez de solaparse.
+- **¿Qué etapa lleva cada uno?** Superpowers lleva la lluvia de ideas, la planificación y la implementación; Superloopy lleva la prueba final. Deja un solo conductor por tarea: no ejecutes `loopy team` y el flujo de subagentes de Superpowers sobre las mismas partes a la vez.
+- **¿Quién decide que una tarea está hecha?** Superloopy. Vuelve a ejecutar el comando real al final y bloquea un falso aprobado.
+- **¿Cómo se detecta Superpowers?** Mirando en tus carpetas de plugins de Codex y Claude Code. Puedes anularlo cuando quieras con `SUPERLOOPY_SUPERPOWERS=on|off`.
+
 ## Instalación
 
 Superloopy se instala tanto en **Codex** como en **Claude Code** desde un mismo repo. El núcleo (loop state, evidence gates, doctor) es agnóstico del host; cada host recibe su propio manifest de plugin liviano, su cableado de hooks y su formato de agents.
