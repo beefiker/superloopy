@@ -262,6 +262,24 @@ function binShimContent(cliPath, platform) {
   return `#!/usr/bin/env sh\n# ${BIN_SHIM_MARKER}\nexec node ${shellQuote(cliPath)} "$@"\n`;
 }
 
+// Extract the cli.js path a generated Superloopy shim executes, or null when the content is
+// not one of our shims. Recognizes both the marked form and the legacy structure, so doctor
+// can read where an installed wrapper actually points (e.g. a stale versioned cache path).
+export function parseBinShimCliPath(content, platform = process.platform) {
+  if (typeof content !== "string" || !isGeneratedSuperloopyBinShim(content, platform)) return null;
+  const normalized = content.replace(/\r\n/gu, "\n");
+  if (platform === "win32") {
+    const match = /^node "([^"\n]+)" %\*/mu.exec(normalized);
+    return match === null ? null : match[1];
+  }
+  // Reverse shellQuote: a single-quoted token whose interior apostrophes are encoded as the
+  // 4-char sequence '\'' — so the quoted branch must treat '\'' as content, not a close-quote,
+  // or a path like /home/o'connor falls through to the raw \S+ token and never resolves.
+  const match = /^exec node (?:'((?:[^']|'\\'')*)'|(\S+)) "\$@"/mu.exec(normalized);
+  if (match === null) return null;
+  return match[1] === undefined ? match[2] : match[1].replaceAll("'\\''", "'");
+}
+
 function shellQuote(value) {
   return `'${value.replaceAll("'", "'\\''")}'`;
 }

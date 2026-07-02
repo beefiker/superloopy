@@ -8,6 +8,8 @@ import test from "node:test";
 
 import { normalizeComparisonPath } from "../src/comparison-similarity.js";
 import { formatDoctor, runDoctor } from "../src/doctor.js";
+import { checkWrapper, evaluateWrapperCurrency } from "../src/wrapper-check.js";
+import { parseBinShimCliPath } from "../src/agents.js";
 
 function runCli(args, options = {}) {
   return spawnSync(process.execPath, [join(process.cwd(), "src/cli.js"), ...args], {
@@ -90,7 +92,8 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
     "modelPolicy",
     "claudeModelPolicy",
     "hostContract",
-    "interop"
+    "interop",
+    "wrapper"
   ]);
   assert.equal(parsed.checks.pluginManifest.ok, true);
   assert.equal(parsed.checks.hooks.ok, true);
@@ -136,6 +139,146 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.interop.ok, true);
   assert.equal(parsed.checks.interop.informational, true);
   assert.equal(typeof parsed.checks.interop.installed, "boolean");
+  // Wrapper currency is advisory: upgrade is a suggestion, so it never gates health.
+  assert.equal(parsed.checks.wrapper.ok, true);
+  assert.equal(parsed.checks.wrapper.informational, true);
+});
+
+// Build paths with node:path.join so the fake-fs keys match what the module computes on the
+// host platform (win32 uses backslashes) — the earlier hardcoded POSIX literals only matched
+// on non-Windows. Colon-free segments keep the linux-mode PATH split (`:`) intact.
+function slPaths(root) {
+  const superloopyDir = join(root, "cache", "superloopy");
+  return {
+    superloopyDir,
+    binDir: join(root, "bin"),
+    cliOf: (version) => join(superloopyDir, version, "src", "cli.js")
+  };
+}
+
+test("evaluateWrapperCurrency flags a stale versioned cache but not a current or checkout one", () => {
+  const { superloopyDir, cliOf } = slPaths("wrktest");
+  const present = new Set([cliOf("0.7.0"), cliOf("0.7.1")]);
+  const fs = {
+    existsSync: (p) => present.has(p),
+    readdirSync: (p) => { if (p !== superloopyDir) throw new Error("ENOENT"); return ["0.7.0", "0.7.1"]; }
+  };
+  const stale = evaluateWrapperCurrency(cliOf("0.7.0"), fs);
+  assert.equal(stale.state, "stale");
+  assert.equal(stale.wrapperVersion, "0.7.0");
+  assert.equal(stale.latestVersion, "0.7.1");
+  assert.equal(stale.latestCliPath, cliOf("0.7.1"));
+
+  assert.equal(evaluateWrapperCurrency(cliOf("0.7.1"), fs).state, "current");
+
+  // A checkout path (no parseable version dir) is not version-tracked.
+  const checkout = evaluateWrapperCurrency(join("home", "dev", "loopy", "src", "cli.js"), {
+    existsSync: () => true,
+    readdirSync: () => { throw new Error("unused"); }
+  });
+  assert.equal(checkout.state, "untracked");
+});
+
+test("evaluateWrapperCurrency ignores a newer version dir with no cli.js", () => {
+  const { superloopyDir, cliOf } = slPaths("wrktest");
+  const present = new Set([cliOf("0.7.0")]); // 0.8.0 dir is listed but has no cli.js
+  const fs = {
+    existsSync: (p) => present.has(p),
+    readdirSync: (p) => (p === superloopyDir ? ["0.7.0", "0.8.0"] : [])
+  };
+  assert.equal(evaluateWrapperCurrency(cliOf("0.7.0"), fs).state, "current");
+});
+
+function shimFor(cliPath) {
+  return `#!/usr/bin/env sh\n# superloopy-generated bin shim\nexec node '${cliPath}' "$@"\n`;
+}
+
+test("parseBinShimCliPath decodes a shell-quoted path containing an apostrophe", () => {
+  // What shellQuote emits for /home/o'connor/superloopy/0.7.1/src/cli.js: interior ' -> '\''.
+  const shim = "#!/usr/bin/env sh\n# superloopy-generated bin shim\nexec node '/home/o'\\''connor/superloopy/0.7.1/src/cli.js' \"$@\"\n";
+  assert.equal(parseBinShimCliPath(shim, "linux"), "/home/o'connor/superloopy/0.7.1/src/cli.js");
+  // A plain path still round-trips unchanged.
+  assert.equal(parseBinShimCliPath(shimFor("/opt/superloopy/0.7.1/src/cli.js"), "linux"), "/opt/superloopy/0.7.1/src/cli.js");
+});
+
+test("checkWrapper reports a stale wrapper as an optional suggestion", () => {
+  const { superloopyDir, binDir, cliOf } = slPaths("wrktest");
+  const wrapperPath = join(binDir, "superloopy");
+  const files = { [wrapperPath]: shimFor(cliOf("0.7.0")), [cliOf("0.7.0")]: "x", [cliOf("0.7.1")]: "x" };
+  const fs = {
+    existsSync: (p) => p in files || p === superloopyDir,
+    readFileSync: (p) => { if (!(p in files)) throw new Error("ENOENT"); return files[p]; },
+    readdirSync: (p) => { if (p !== superloopyDir) throw new Error("ENOENT"); return ["0.7.0", "0.7.1"]; }
+  };
+  const result = checkWrapper({ env: { PATH: binDir }, platform: "linux", fs });
+  assert.equal(result.ok, true);
+  assert.equal(result.informational, true);
+  assert.equal(result.stale, true);
+  assert.match(result.message, /v0\.7\.1 is installed/);
+  assert.match(result.message, /optional/i);
+});
+
+test("checkWrapper reports a dangling wrapper after a pruned cache", () => {
+  const { binDir, cliOf } = slPaths("wrktest");
+  const wrapperPath = join(binDir, "superloopy");
+  const files = { [wrapperPath]: shimFor(cliOf("0.7.0")) }; // cli.js gone
+  const fs = {
+    existsSync: (p) => p in files,
+    readFileSync: (p) => { if (!(p in files)) throw new Error("ENOENT"); return files[p]; },
+    readdirSync: () => { throw new Error("ENOENT"); }
+  };
+  const result = checkWrapper({ env: { PATH: binDir }, platform: "linux", fs });
+  assert.equal(result.ok, true);
+  assert.equal(result.dangling, true);
+  assert.match(result.message, /no longer exists/);
+  // The broken wrapper cannot repair itself; with no live sibling, point at the bootstrap.
+  assert.match(result.message, /re-approve the Modified hooks/);
+  assert.doesNotMatch(result.message, /`superloopy bin install/);
+});
+
+test("checkWrapper points a dangling wrapper at a surviving sibling cli, not itself", () => {
+  const { superloopyDir, binDir, cliOf } = slPaths("wrktest");
+  const wrapperPath = join(binDir, "superloopy");
+  const files = { [wrapperPath]: shimFor(cliOf("0.7.0")), [cliOf("0.7.1")]: "x" }; // 0.7.0 pruned, 0.7.1 live
+  const fs = {
+    existsSync: (p) => p in files,
+    readFileSync: (p) => { if (!(p in files)) throw new Error("ENOENT"); return files[p]; },
+    readdirSync: (p) => { if (p !== superloopyDir) throw new Error("ENOENT"); return ["0.7.0", "0.7.1"]; }
+  };
+  const result = checkWrapper({ env: { PATH: binDir }, platform: "linux", fs });
+  assert.equal(result.dangling, true);
+  assert.match(result.message, /node ".*0\.7\.1.*cli\.js" bin install --force/); // a runnable live CLI
+  assert.doesNotMatch(result.message, /`superloopy bin install/);
+});
+
+test("checkWrapper reports the first-resolved wrapper, not a later generated shim", () => {
+  const early = slPaths("earlyroot");
+  const late = slPaths("lateroot");
+  const earlyWrapper = join(early.binDir, "superloopy"); // a foreign shim, resolves FIRST on PATH
+  const lateWrapper = join(late.binDir, "superloopy"); // our generated (stale) shim, later on PATH
+  const files = {
+    [earlyWrapper]: "#!/bin/sh\nexec some-other-tool \"$@\"\n",
+    [lateWrapper]: shimFor(late.cliOf("0.7.0")),
+    [late.cliOf("0.7.0")]: "x",
+    [late.cliOf("0.7.1")]: "x"
+  };
+  const fs = {
+    existsSync: (p) => p in files || p === late.superloopyDir,
+    readFileSync: (p) => { if (!(p in files)) throw new Error("ENOENT"); return files[p]; },
+    readdirSync: (p) => { if (p !== late.superloopyDir) throw new Error("ENOENT"); return ["0.7.0", "0.7.1"]; }
+  };
+  const result = checkWrapper({ env: { PATH: `${early.binDir}:${late.binDir}` }, platform: "linux", fs });
+  assert.equal(result.ok, true);
+  assert.equal(result.found, true);
+  assert.equal(result.recognized, false); // the winning PATH entry is not our shim
+  assert.doesNotMatch(result.message, /is installed/); // must NOT report the later shim as stale
+});
+
+test("checkWrapper stays silent when no wrapper is on PATH", () => {
+  const fs = { existsSync: () => false, readFileSync: () => "", readdirSync: () => [] };
+  const result = checkWrapper({ env: { PATH: "/nowhere" }, platform: "linux", fs });
+  assert.equal(result.ok, true);
+  assert.equal(result.found, false);
 });
 
 test("doctor model policy fails when bundled agent defaults drift", async () => {
