@@ -74,35 +74,49 @@ const FRONTEND_TRIGGER_PATTERNS = [
   /\banti[\s-]?slop\b|\bawwwards\b|\bpolish the (?:ui|design|page|frontend|landing)\b/iu
 ];
 
-// Ambiguous shared tokens: bare "ui"/"ux" and "responsive" mean UI work in a visual
-// prompt but systems work in a backend one. They fire ONLY when no systems vocabulary
-// sits next to them (see FRONTEND_EXCLUSION_PATTERNS). Never let them — or the exclusion —
-// override an unambiguous trigger above.
-const AMBIGUOUS_TRIGGER_PATTERNS = [
-  /\bu[ix]\b/iu,
-  /\bresponsive\b/iu
+// Ambiguous shared tokens: bare "ui"/"ux" and "responsive" mean UI work in a visual prompt
+// but systems work in a backend one. Each is judged per clause against ONLY its own systems
+// collision (see clauseHasAmbiguousUiIntent); they never override an unambiguous trigger above.
+const AMBIGUOUS_UI_PATTERN = /\bu[ix]\b/iu;
+const AMBIGUOUS_RESPONSIVE_PATTERN = /\bresponsive\b/iu;
+
+// The only systems collision for a bare "ui"/"ux" token is the concurrency "UI thread".
+const UI_SYSTEMS_PATTERN = /\bui\s+thread\b/iu;
+// "responsive" is systems talk only when a backend/systems noun sits right next to it —
+// there is deliberately NO blanket "responsive to", because "responsive to touch input" /
+// "responsive to dark mode changes" are UI. Kept as a shared alternation for both sides.
+const SYSTEMS_NOUN = "server|service|api|endpoint|backend|database|thread|process|socket|node|cluster|daemon|requests?|workers?|queue|signals?|handler|listener|webhook|rpc|grpc|stream|packets?|event loop";
+const RESPONSIVE_SYSTEMS_PATTERNS = [
+  new RegExp(`\\b(?:un)?responsive\\b[^.\\n]{0,24}\\b(?:${SYSTEMS_NOUN})\\b`, "iu"),
+  new RegExp(`\\b(?:${SYSTEMS_NOUN})\\b[^.\\n]{0,24}\\b(?:un)?responsive\\b`, "iu")
 ];
 
-// Non-visual contexts for the ambiguous tokens. Each requires an explicit backend/systems
-// noun sitting next to the shared token — there is deliberately NO blanket "responsive to",
-// because "responsive to touch input" / "responsive to dark mode changes" are UI. These
-// only gate AMBIGUOUS_TRIGGER_PATTERNS; they never suppress an unambiguous trigger.
-const FRONTEND_EXCLUSION_PATTERNS = [
-  /\b(?:un)?responsive\b[^.\n]{0,24}\b(?:server|service|api|endpoint|backend|database|thread|process|socket|node|cluster|daemon|requests?|workers?|queue|signals?|handler|listener|webhook|rpc|grpc|stream|packets?|event loop)\b/iu,
-  /\b(?:server|service|api|endpoint|backend|database|thread|process|socket|node|cluster|daemon|requests?|workers?|queue|signals?|handler|listener|webhook|rpc|grpc|stream|packets?|event loop)\b[^.\n]{0,24}\b(?:un)?responsive\b/iu,
-  /\bui\s+thread\b/iu
-];
+// Split a prompt into rough clauses (sentence punctuation, commas, coordinating words) so a
+// systems clause ("fix the unresponsive API") can't veto a separate UI clause elsewhere.
+function splitClauses(prompt) {
+  return prompt.split(/[.;\n]+|,|\s+(?:and|but|then|also|plus)\s+/iu);
+}
+
+// Does this single clause carry ambiguous-token UI intent? Each token is judged against ONLY
+// its own systems collision — a "ui" token fires unless it is "ui thread"; a "responsive"
+// token fires unless a systems noun is adjacent — so a systems phrase never disqualifies a
+// separate UI token in the same clause ("make the API dashboard ui responsive" still fires).
+function clauseHasAmbiguousUiIntent(clause) {
+  if (AMBIGUOUS_UI_PATTERN.test(clause) && !UI_SYSTEMS_PATTERN.test(clause)) return true;
+  if (AMBIGUOUS_RESPONSIVE_PATTERN.test(clause)
+      && !RESPONSIVE_SYSTEMS_PATTERNS.some((pattern) => pattern.test(clause))) return true;
+  return false;
+}
 
 // True when the prompt reads as frontend/visual work. Used by the prompt hook to inject a
-// steer toward the superloopy-frontend skill (no state mutation). Precedence matters:
-// an unambiguous visual trigger always wins, so a mixed prompt like "fix the unresponsive
-// API and redesign the navbar" still steers; only the ambiguous shared tokens are gated by
-// adjacent systems vocabulary. The steer is a light pointer; the skill carries the rules.
+// steer toward the superloopy-frontend skill (no state mutation). Precedence matters: an
+// unambiguous visual trigger always wins on the whole prompt; the ambiguous shared tokens
+// (bare ui/ux, responsive) are then judged per clause and per token, so no systems phrase
+// can veto a real UI ask. The steer is a light pointer; the skill carries the rules.
 export function hasFrontendTrigger(prompt) {
   if (typeof prompt !== "string") return false;
   if (FRONTEND_TRIGGER_PATTERNS.some((pattern) => pattern.test(prompt))) return true;
-  if (FRONTEND_EXCLUSION_PATTERNS.some((pattern) => pattern.test(prompt))) return false;
-  return AMBIGUOUS_TRIGGER_PATTERNS.some((pattern) => pattern.test(prompt));
+  return splitClauses(prompt).some((clause) => clauseHasAmbiguousUiIntent(clause));
 }
 
 // Guidance-only steer: a light pointer to the frontend skill, which carries the actual

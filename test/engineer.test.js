@@ -194,6 +194,17 @@ test("hasFrontendTrigger excludes systems vocabulary that shares UI keywords", (
   // elsewhere — the exclusion only gates the ambiguous shared tokens (PR #11 third-round case).
   assert.equal(hasFrontendTrigger("fix the API endpoint that is unresponsive and redesign the navbar"), true);
   assert.equal(hasFrontendTrigger("the worker queue is unresponsive; also restyle the pricing page"), true);
+  // Mixed prompt where the UI half uses ONLY ambiguous tokens: the systems clause must not
+  // veto the separate UI clause (PR #11 fourth-round case). Clause-local exclusion.
+  assert.equal(hasFrontendTrigger("fix the unresponsive API and make the UI responsive"), true);
+  assert.equal(hasFrontendTrigger("the server is unresponsive and the ui feels sluggish"), true);
+  // Same clause, both a systems noun and a real UI token: the systems match disqualifies
+  // only itself, so the standalone "ui" token still fires.
+  assert.equal(hasFrontendTrigger("make the API dashboard ui responsive"), true);
+  // But a single systems clause with no separate UI ask stays excluded.
+  assert.equal(hasFrontendTrigger("make the server responsive to incoming signals"), false);
+  assert.equal(hasFrontendTrigger("make the API endpoint responsive under load"), false);
+  assert.equal(hasFrontendTrigger("restart the api and drain the worker queue"), false);
 });
 
 test("runUserPromptSubmitHook steers UI prompts to the frontend skill without mutating state", async () => {
