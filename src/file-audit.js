@@ -2,6 +2,13 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+// `npm pack` unconditionally strips these repo-only files from the tarball, so an
+// installed/packed root legitimately lacks them even though the audit doc keeps their
+// inventory rows. Only a source checkout treats their absence as a stale row. The
+// caller supplies the checkout signal via options.sourceCheckout (doctor derives it
+// from Git); when absent, a `.git` marker at the root is the fallback signal.
+const PACKAGING_STRIPPED_FILES = new Set([".gitignore", "package-lock.json"]);
+
 export async function checkFileAudit(cwd, options) {
   const path = join(cwd, options.auditPath);
   if (!existsSync(path)) return fail(`Missing ${options.auditPath}.`);
@@ -11,9 +18,13 @@ export async function checkFileAudit(cwd, options) {
     const rows = parseAuditRows(audit);
     const rowByFile = new Map(rows.map((row) => [row.file, row]));
     const fileSet = new Set(files);
+    const sourceCheckout = options.sourceCheckout ?? existsSync(join(cwd, ".git"));
     const missing = files.filter((file) => !audit.includes(`\`${file}\``));
     const missingRows = files.filter((file) => !rowByFile.has(file));
-    const staleRows = rows.map((row) => row.file).filter((file) => !fileSet.has(file));
+    const staleRows = rows
+      .map((row) => row.file)
+      .filter((file) => !fileSet.has(file))
+      .filter((file) => sourceCheckout || !PACKAGING_STRIPPED_FILES.has(file));
     const incompleteRows = files.filter((file) => {
       const row = rowByFile.get(file);
       return row !== undefined && (row.role.length === 0 || row.referenceBoundary.length === 0);
