@@ -186,6 +186,10 @@ test("hasFrontendTrigger excludes systems vocabulary that shares UI keywords", (
   assert.equal(hasFrontendTrigger("make the landing page responsive to different screen sizes"), true);
   assert.equal(hasFrontendTrigger("make the pricing page responsive to mobile breakpoints"), true);
   assert.equal(hasFrontendTrigger("the component should be responsive to the viewport width"), true);
+  // An explicit frontend trigger wins over a non-systems "responsive to" object: only
+  // adjacent backend/systems vocabulary suppresses (PR #11 second-round reviewer case).
+  assert.equal(hasFrontendTrigger("make the UI responsive to touch input"), true);
+  assert.equal(hasFrontendTrigger("make the UI responsive to dark mode changes"), true);
 });
 
 test("runUserPromptSubmitHook steers UI prompts to the frontend skill without mutating state", async () => {

@@ -76,15 +76,16 @@ const FRONTEND_TRIGGER_PATTERNS = [
   /\banti[\s-]?slop\b|\bawwwards\b|\bpolish the (?:ui|design|page|frontend|landing)\b/iu
 ];
 
-// Non-visual contexts that share vocabulary with UI work — "responsive to <X>",
-// a backend/systems noun tied to (un)responsive, or the concurrency "UI thread".
-// Checked FIRST so a bare ui/ux/responsive token in a systems prompt does not fire
-// the visual steer. Mirrors the Korean-writing exclusion gate; a false exclusion only
-// costs a missed steer (the skill's own model-judged activation still covers it).
+// Non-visual contexts that share vocabulary with UI work. Each exclusion requires an
+// explicit backend/systems noun sitting next to the shared token — there is deliberately
+// NO blanket "responsive to", because an explicit frontend trigger must win unless the
+// nearby wording is genuinely systems vocabulary (e.g. "responsive to touch input" and
+// "responsive to dark mode changes" are UI and must still steer; "responsive to incoming
+// signals" / "API endpoint unresponsive" / "UI thread" are systems and must not). Mirrors
+// the Korean-writing exclusion gate; a false exclusion only costs a missed steer.
 const FRONTEND_EXCLUSION_PATTERNS = [
-  /\bresponsive(?:ness)?\s+to\b/iu,
-  /\b(?:un)?responsive\b[^.\n]{0,24}\b(?:server|service|api|endpoint|backend|database|thread|process|socket|node|cluster|daemon|request)\b/iu,
-  /\b(?:server|service|api|endpoint|backend|database|thread|process|socket|node|cluster|daemon|request)\b[^.\n]{0,24}\b(?:un)?responsive\b/iu,
+  /\b(?:un)?responsive\b[^.\n]{0,24}\b(?:server|service|api|endpoint|backend|database|thread|process|socket|node|cluster|daemon|requests?|workers?|queue|signals?|handler|listener|webhook|rpc|grpc|stream|packets?|event loop)\b/iu,
+  /\b(?:server|service|api|endpoint|backend|database|thread|process|socket|node|cluster|daemon|requests?|workers?|queue|signals?|handler|listener|webhook|rpc|grpc|stream|packets?|event loop)\b[^.\n]{0,24}\b(?:un)?responsive\b/iu,
   /\bui\s+thread\b/iu
 ];
 
