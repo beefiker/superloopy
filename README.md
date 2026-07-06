@@ -2,7 +2,7 @@
 
 # 🌀 Superloopy
 
-**Loop engineering for Codex.** Type `loopy <task>` — an agent does the work, proves each piece with real evidence, and only then says it's done.
+**Loop engineering for Codex and Claude Code.** Type `loopy <task>` — an agent does the work, proves each piece with real evidence, and only then says it's done.
 
 <p>
   <a href="README.md">English</a> ·
@@ -20,21 +20,23 @@
 
 ## Use it
 
-After installing, type your task in Codex with a leading `loopy`:
+After installing, type your task in Codex or Claude Code with a leading `loopy`:
 
 ```
-loopy fix the failing login test and prove it with evidence
+loopy add the payments module
 ```
 
 The agent plans it, proves each piece with a real file, and reports back — you don't run any commands yourself. The packaged Stop hook stays quiet unless `SUPERLOOPY_STOP_HOOK=on`.
 
 ## Why Superloopy?
 
-Superloopy is for Codex work where "done" needs to mean more than a confident status sentence.
+Superloopy is for Codex and Claude Code work where "done" needs to mean more than a confident status sentence.
 
 - Evidence-first: every pass points at a real artifact under `.superloopy/evidence/`.
 - Lightweight by default: one small CLI, repo-local state, zero runtime dependencies.
-- Agent-friendly: skills, hooks, and optional crew lanes guide Codex without hiding the final gate.
+- Agent-friendly: skills, hooks, and optional crew lanes guide the agent without hiding the final gate.
+
+**Guarantee scope.** Command-backed criteria are the strong guarantee: at completion Superloopy re-runs each command in-process and requires it to reproduce, so a stale or fabricated pass cannot reach "done". Manual (commandless) criteria are verified as a non-empty evidence artifact plus auditor/human judgment — their correctness rests on review, not the deterministic re-run.
 
 ## Skills
 
@@ -43,12 +45,13 @@ Superloopy keeps the command layer small. Skills carry the specialist workflow: 
 | Skill | Use it when | What it produces |
 | --- | --- | --- |
 | `superloopy-loop` | You type `loopy <task>` or `loopy team <task>` for a full loop; use `loopywork`, `lpy`, or `$lpy` for guidance-only context. | Full loops produce a lightweight plan, guided next actions, command-backed proof, a quality gate, and a final evidence report. Guidance aliases do not mutate state. |
+| `superloopy-doctor` | You diagnose install, wrapper, plugin cache, hook/bootstrap, agent, Codex/Claude Code host wiring, or stale-version problems. | A read-only health report with wrapper/cache/version evidence, failing checks, and the exact repair command to run only if approved. |
 | `superloopy-research` | You ask for `loopy research`, deep research, exhaustive investigation, or a cited report. | Research axes, expansion waves, a claim ledger, verification notes, and a cited synthesis artifact. |
 | `superloopy-clone` | You ask for `loopy clone`, authorized website cloning, rebuilding, migration, or pixel-focused page recovery. | Browser captures, page topology, design tokens, asset inventory, implementation notes, build output, and visual QA evidence. |
 | `superloopy-frontend` | You build, style, or redesign any UI/page/component, or ask to make something look designed (auto-activates on visual work). | A DESIGN.md token contract, an anti-slop pre-flight result, and a real-browser visual-QA evidence artifact. |
 | `humanize-korean` | Use when Korean users ask to remove AI tone, fix 번역투, or make Korean text sound human without changing facts. | Writes `final.md`, `summary.md`, and `audit.json`; in Superloopy loops it records evidence under `.superloopy/evidence/humanize-korean/`. |
 
-The loop skill is the default guardrail. `loopy` starts or resumes the evidence loop; `loopy team` escalates to crew mode. `loopywork`, `lpy`, and `$lpy` only inject starter guidance. Research and clone are opt-in specialist modes, and both still finish by recording Superloopy evidence instead of trusting a status sentence.
+The loop skill is the default guardrail. `loopy` starts or resumes the evidence loop; `loopy team` escalates to crew mode. `loopywork`, `lpy`, and `$lpy` only inject starter guidance. Research and clone are opt-in specialist modes, and both still finish by recording Superloopy evidence instead of trusting a status sentence. The frontend skill auto-activates on visual work and injects a short guidance-only steer; set `SUPERLOOPY_FRONTEND_STEER=off` to silence it.
 
 ## Clone Demo
 
@@ -58,7 +61,7 @@ The loop skill is the default guardrail. `loopy` starts or resumes the evidence 
 
 ## The crew
 
-For bigger work, Superloopy ships six optional subagents under `.codex/agents/` — each owns one lane. They install automatically with the plugin (no command needed); `superloopy agents install` just re-copies them if you ever need it. Their advisory model defaults are documented in `docs/superloopy-model-policy.md` and checked by `superloopy doctor`.
+For bigger work, Superloopy ships six optional subagents — each owns one lane (`.codex/agents/*.toml` on Codex, bundled `agents/*.md` on Claude Code). They come with the plugin (no command needed); on Codex, `superloopy agents install` just re-copies them if you ever need it. Their advisory model defaults are documented in `docs/superloopy-model-policy.md` (Codex) and `docs/superloopy-model-policy-claude.md` (Claude Code), and checked by `superloopy doctor`.
 
 <table>
   <tr>
@@ -78,6 +81,22 @@ For bigger work, Superloopy ships six optional subagents under `.codex/agents/` 
 For full crew runs, the parent records each lane with `superloopy loop handoff`, checks `superloopy loop fleet --json`, and keeps the human final gate report separate from the machine gate JSON. A gate report can be Markdown evidence; `superloopy loop finish --artifact` is for `.json` quality gate output.
 
 When a tracked crew handoff finishes, Superloopy can print one original crew line before the normal `handoff` or `fleet` status. It follows the user's language from the assignment or scoped brief when it matches the supported catalog, with English as the safe fallback. The line is personality only; the verdict, evidence artifact, outstanding list, and attention list stay authoritative.
+
+## Works with Superpowers
+
+Superloopy sits well next to the [Superpowers](https://github.com/obra/superpowers) plugin. They handle different halves of the same job, so you don't have to choose one.
+
+- Superpowers runs the front of the loop: brainstorming, planning, and its TDD and code-review methodology.
+- Superloopy runs the finish: command-backed criteria that re-run at completion, so "done" is proven, not just claimed.
+
+When Superpowers is installed (on Codex or Claude Code), Superloopy notices and steers its own guidance to match. It leaves design, planning, and TDD to Superpowers and keeps itself as the outer evidence gate. Detection is best-effort and only shapes advice; it never weakens a gate. Set `SUPERLOOPY_SUPERPOWERS=off` to opt out or `on` to force it, and run `superloopy doctor` to see what was found. More in [docs/superloopy-interop-superpowers.md](docs/superloopy-interop-superpowers.md).
+
+### Q&A
+
+- **Do I need both?** No. Superloopy works on its own. If Superpowers is there too, the two coordinate instead of overlapping.
+- **Which stage does each own?** Superpowers owns brainstorm, plan, and build. Superloopy owns the proof at the end. Keep one driver per task: don't run `loopy team` and the Superpowers subagent flow on the same slices at once.
+- **Who decides a task is done?** Superloopy. Its check re-runs the real command at the end and blocks a false pass.
+- **How is Superpowers detected?** By looking in your Codex and Claude Code plugin folders. You can always override with `SUPERLOOPY_SUPERPOWERS=on|off`.
 
 ## Install
 
@@ -109,6 +128,8 @@ Reload plugins (or restart Claude Code) and approve the hooks when prompted. On 
 
 ## Update
 
+### Codex
+
 If you installed from the Codex marketplace, refresh the marketplace snapshot:
 
 ```
@@ -135,13 +156,29 @@ superloopy doctor
 
 Checkout installs are not `npx`-managed. `npx` self-update is reserved for a future installer that writes a `superloopy-install.json` snapshot into a stable install root.
 
+### Claude Code
+
+Refresh the marketplace, reinstall to resolve the new version, then reload — no restart needed:
+
+```
+/plugin marketplace update beefiker
+/plugin install superloopy@beefiker
+/reload-plugins
+```
+
+There is no separate `/plugin update` command: reinstalling from the refreshed marketplace resolves the new version, and `/reload-plugins` applies it in the current session (no Claude Code restart, and hooks do not need re-approval). Verify with `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`. If you loaded a checkout with `--plugin-dir`, just `git pull --ff-only` and run `/reload-plugins`.
+
 ## Troubleshooting
 
 If plugin install or upgrade commands fail, update the Codex CLI first. `codex plugin add` is available in Codex CLI 0.131.0 and newer; older builds can have trouble with current plugin marketplace commands and hook approval flows.
 
 After updating the CLI, restart Codex, run the marketplace install or upgrade command again, approve any Modified hooks, then check with `superloopy doctor`.
 
+On Claude Code, if `/plugin` commands fail or the plugin looks stale, run `/reload-plugins` (or restart Claude Code) and verify with `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`.
+
 ## Uninstall
+
+### Codex
 
 Remove the installed plugin from Codex:
 
@@ -163,5 +200,14 @@ rm -f ~/.codex/agents/franky.toml ~/.codex/agents/zoro.toml ~/.codex/agents/usop
 ```
 
 If you installed with `CODEX_HOME`, `SUPERLOOPY_BIN_DIR`, or `CODEX_LOCAL_BIN_DIR`, clean up those configured paths instead.
+
+### Claude Code
+
+```
+/plugin uninstall superloopy@beefiker
+/plugin marketplace remove beefiker
+```
+
+Then run `/reload-plugins`. Nothing else to clean up — Claude Code installs are fully plugin-bundled (no `superloopy` wrapper, no `~/.codex` writes). Removing the marketplace from its last remaining scope also uninstalls the plugin.
 
 <sub>MIT licensed.</sub>

@@ -57,6 +57,18 @@ Superloopy's `SubagentStop` handlers read these fields from the JSON piped on st
 Handler output (stdout): a `block` decision re-prompts the subagent; an empty string allows the
 stop.
 
+## PreToolUse hook (Codex planning nudge, not a command blocker)
+
+On Codex a `PreToolUse` hook matches only the native planning tools `create_goal` and
+`update_goal`. It denies a `create_goal` that carries anything beyond `objective`, and denies an
+`update_goal status=complete` issued before Superloopy has recorded aggregate completion. That is a
+workflow nudge — it keeps the Codex plan from being marked done ahead of the evidence — **not** a
+dangerous-command blocker: it never inspects shell, file, or network tools. Claude Code registers
+no `PreToolUse` hook and has no `create_goal`/`update_goal` tools, so this nudge is Codex-only and
+inert on Claude. As with every hook, completion authority never rests here — it is the
+deterministic in-process floor (`loop check`/`review`/`finish`); the hook layer is advisory on both
+hosts.
+
 ## What Superloopy cannot verify (advisory limits)
 
 Superloopy cannot confirm, from inside a hook, that the host:

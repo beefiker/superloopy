@@ -45,7 +45,7 @@ Total: 100 points.
 | LG-03 | Hooks keep long-running work from ending early. | `node --test test/hooks.test.js test/golden-hooks.test.js` | Stop, prompt, receipt, scoped session, and steering hooks are fail-closed and guide-backed. |
 | LG-04 | Goal parsing and scoped state stay stable across turns. | `node --test test/goals.test.js test/golden-matrix-gate.test.js` | `@goal` stories, scoped sessions, and matrix gate rows remain deterministic. |
 | LG-05 | Quality gates reject weak proof. | `node --test test/golden-review-gate.test.js test/golden-matrix-gate.test.js test/loop-gates.test.js` | Weak QA, not-applicable shortcuts, missing matrix rows, and inline-only proof fail. |
-| LG-06 | Public docs and packaging stay executable. | `node --test test/docs.test.js test/plugin.test.js test/doctor.test.js` | Docs describe the real command surface, plugin hooks are valid, and doctor remains dependency-free. |
+| LG-06 | Public docs and packaging stay executable. | `node --test test/docs.test.js test/plugin.test.js test/doctor.test.js test/doctor-review-feedback.test.js` | Docs describe the real command surface, plugin hooks are valid, and doctor remains dependency-free. |
 | LG-07 | Whole-repo health stays strict. | `npm test` and `node src/cli.js doctor --json` | All tests pass, doctor reports `ok: true`, and no file exceeds the reviewability limit. |
 | LG-08 | The continuation engine drives bounded multi-iteration work to evidence-backed completion. | `node --test test/golden-continuation.test.js` | Blocks while incomplete and under budget, resets the stall counter only above a recorded-proof high-water mark, and stops blocked-not-complete on a cap or no-progress; aggregate completion clears loop-control state. |
 | LG-09 | Crew completion lines stay localized and presentation-only. | `node --test test/crew-lines.test.js test/fleet.test.js` | Terminal known crew handoffs may speak once in a supported catalog language, pending/unknown lanes stay quiet, and evidence/status fields remain authoritative. |
@@ -87,11 +87,13 @@ Total: 100 points.
 | `.github/assets/nami.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
 | `.github/assets/transferloom-clone-reference.png` | Audit coverage and README clone-demo reference. | Must remain a documentation screenshot for the validated Transferloom.com clone, not runtime plugin logic. |
 | `.github/workflows/hol-plugin-scanner.yml` | Hashgraph catalog readiness and GitHub Actions. | Must run the HOL scanner against the plugin root with SHA-pinned actions and no runtime side effects. |
+| `.github/workflows/test.yml` | Cross-platform test CI and GitHub Actions. | Must run `node --test` (no shell glob) across the ubuntu/windows/macos × Node 20/22 matrix with SHA-pinned actions and no runtime side effects. |
 | `docs/superloopy-design-audit.md` | `src/design-audit.js`, `test/doctor.test.js`. | Must keep required decision rows with reason, effect, and guard. |
 | `docs/superloopy-crew-lines.md` | `test/docs.test.js`, audit coverage. | Must record the precedent pattern, no-copied-quotes rule, terminal-only behavior, and presentation-only authority boundary. |
 | `docs/superloopy-file-audit.md` | `test/audit.test.js`, `src/file-audit.js`, doctor file-audit check. | Must list every Git-visible file with non-empty role and compatibility-boundary cells. |
 | `docs/superloopy-gate-notes.md` | Doctor gate-notes check. | Must keep gate compatibility, native naming, golden scenario, and host contract sections visible. |
 | `docs/superloopy-host-contract.md` | `test/cli.test.js`, doctor hostContract/gate-notes. | Must document the SubagentStop payload contract and the host behaviors Superloopy cannot verify. |
+| `docs/superloopy-interop-superpowers.md` | `test/interop.test.js`, audit coverage. | Must document the Superpowers division of labor, best-effort detection, the override, and the doctor visibility check. |
 | `docs/superloopy-loop-golden-set.md` | `test/docs.test.js` golden-set assertions. | Must list every Git-visible file, score each accepted run, and keep threshold history append-only. |
 | `docs/superloopy-model-policy.md` | `test/docs.test.js`, `test/doctor.test.js`. | Must record allowed model values and state that model choice is steering, not proof. |
 | `hooks/pre-tool-use.json` | `test/plugin.test.js`, doctor hook check. | Must route to `node "${PLUGIN_ROOT}/src/cli.js" hook pre-tool-use`. |
@@ -105,6 +107,8 @@ Total: 100 points.
 | `scripts/sync-version.mjs` | `test/sync-version.test.js`. | Must stamp `package.json` and `.codex-plugin/plugin.json` from one authoritative version without publishing or adding dependencies. |
 | `skills/superloopy-clone/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must describe authorized browser-assisted website cloning with specs, assets, build validation, visual QA, and Superloopy evidence receipts. |
 | `skills/superloopy-clone/agents/openai.yaml` | Audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for website cloning. |
+| `skills/superloopy-doctor/SKILL.md` | `test/plugin.test.js`, doctor skill check, audit coverage. | Must diagnose Superloopy install health with `superloopy doctor --json`, plugin cache, wrapper, agents, hook/bootstrap, and no mutation before approval. |
+| `skills/superloopy-doctor/agents/openai.yaml` | `test/plugin.test.js`, audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for install diagnostics. |
 | `skills/superloopy-loop/SKILL.md` | `test/docs.test.js`, doctor skill check. | Must describe guide, proof, capture, evidence, check, finish, gates, and receipt rules accurately. |
 | `skills/superloopy-loop/agents/openai.yaml` | Audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata. |
 | `skills/superloopy-research/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must describe exhaustive deep research with EXPAND waves, claim verification, cited synthesis, and Superloopy evidence receipts. |
@@ -233,14 +237,15 @@ Total: 100 points.
 | `src/begin.js` | CLI begin tests. | Must create a plan, start the first goal, and return an immediate proof guide. |
 | `src/capture.js` | CLI evidence tests. | Must write command transcripts and mark pass/fail from command exit status. |
 | `src/check.js` | Loop-gate and CLI evidence tests. | Must be non-mutating and print warnings plus repair commands for every unresolved or invalid proof. |
-| `src/cli.js` | CLI, plugin, doctor, and crew-line tests. | Must dispatch install, loop, bin, agents, doctor, hook commands, generic comparison-check flags, symlinked bin execution, and status-safe handoff/fleet text. |
+| `src/cli.js` | CLI, plugin, doctor, and crew-line tests. | Must dispatch install, loop, bin, agents, doctor, hook commands, generic comparison-check flags, symlinked bin execution, doctor-root resolution, and status-safe handoff/fleet text. |
 | `src/comparison-similarity.js` | Doctor comparison tests. | Must compare code-shaped files only when an explicit comparison path is provided. |
 | `src/continuation.js` | `test/golden-continuation.test.js`. | Must drive bounded continuation toward evidence-backed completion and mark blocked (never complete) on a cap or stall. |
 | `src/crew-lines.js` | `test/crew-lines.test.js`, `test/fleet.test.js`. | Must generate original deterministic supported-catalog lines only for known terminal crew handoffs and format them without mutating persisted state. |
 | `src/design-audit.js` | Doctor design-audit tests. | Must fail missing sections, decisions, or incomplete guards. |
-| `src/doctor.js` | `test/doctor.test.js`, `test/claude-host-wiring.test.js`, `node src/cli.js doctor --json`. | Must verify package, hooks, Claude host wiring, skill, audits, comparison status, Codex + Claude model policy, and reviewability while ignoring generated Codex marketplace install metadata. |
+| `src/doctor.js` | `test/doctor.test.js`, `test/claude-host-wiring.test.js`, `node src/cli.js doctor --json`. | Must verify package, hooks, Claude host wiring, bundled skills, audits, comparison status, Codex + Claude model policy, and reviewability while ignoring generated Codex marketplace install metadata; must list a non-git root's own filesystem instead of consulting an enclosing Git repository. |
+| `src/doctor-skills.js` | `test/doctor.test.js`, `test/doctor-review-feedback.test.js`, `node src/cli.js doctor --json`. | Must require every shipped skill directory, validate each `SKILL.md` frontmatter name, and return structured failures for unreadable skill paths. |
 | `src/engineer.js` | `test/engineer.test.js`, `test/hooks.test.js` engineer-trigger tests. | Must wake the loop engineer on a leading `loopy` keyword or its Korean alias `루피` without mutating state itself, escalate to crew fan-out only on `team`/`crew`/`팀`/`크루`, and detect frontend/visual or Korean-writing intent for guidance-only skill steers. |
-| `src/file-audit.js` | `test/file-audit.test.js`, doctor file-audit check. | Must fail missing, stale, or incomplete inventory rows. |
+| `src/file-audit.js` | `test/file-audit.test.js`, doctor file-audit check. | Must fail missing, stale, or incomplete inventory rows in source checkouts while exempting packaging-stripped repo-only rows in packed (non-git) roots. |
 | `src/finish.js` | CLI evidence and loop-gate tests. | Must only finalize after all criteria have valid pass artifacts, then write gate and report artifacts. |
 | `src/fleet.js` | `test/fleet.test.js`, `test/crew-lines.test.js`. | Must record handoffs under a lock, require evidence for accepted verdicts, reconcile dispatched-vs-outstanding, normalize APPROVE/PASS/REJECT-style verdicts, and decorate terminal known crew lanes for output only. |
 | `src/goals.js` | `test/goals.test.js`, loop tests. | Must keep deterministic goal parsing, criteria lookup, completion guards, and evidence collection. |
@@ -248,6 +253,7 @@ Total: 100 points.
 | `src/help.js` | CLI help tests. | Must show the shortest evidence-backed flow and pass-artifact rule. |
 | `src/hooks.js` | Hook and golden-hook tests. | Must keep startup bootstrap, marketplace update notices, stop continuation, prompt context, steering, scoped roots, and receipt validation fail-closed. |
 | `src/install-flow.js` | `test/auto-update.test.js`. | Must distinguish marketplace, checkout, future npx-local snapshot, and unknown install states so unsafe npx updates stay off. |
+| `src/interop.js` | `test/interop.test.js`. | Must detect a neighboring Superpowers install best-effort across both hosts, honor the `SUPERLOOPY_SUPERPOWERS` override, and never mutate state or fail a hook. |
 | `src/loop.js` | Core loop and CLI tests. | Must preserve lifecycle state, ledger appends, evidence recording, review, checkpoint, status, and steering. |
 | `src/matrix-gate.js` | Matrix gate golden tests. | Must validate compatible matrix gate shape through Superloopy artifacts only. |
 | `src/model-policy.js` | `test/doctor.test.js`. | Must fail doctor when the Codex model-policy doc/TOML defaults or the Claude model-policy doc/`agents/*.md` model frontmatter drift. |
@@ -262,8 +268,10 @@ Total: 100 points.
 | `src/review-gate.js` | Review gate golden tests. | Must validate strict five-section review gate shape through Superloopy artifacts only. |
 | `src/store.js` | Loop, hook, and scoped-session tests. | Must normalize sessions, isolate `.superloopy/` state, write JSON atomically, and append ledger entries. |
 | `src/spawn-command.js` | `test/auto-update.test.js`. | Must route npm/npx through Windows `.cmd` shims and leave other commands unchanged. |
+| `src/source-checkout.js` | `test/doctor-packed.test.js`, `test/file-audit.test.js`. | Must classify own-`.git` roots and tracked monorepo subdirectories as source checkouts and packed/ignored install roots as installs, so no enclosing repo answers for an install. |
 | `src/subagent-attempts.js` | `npm test`, doctor reviewability. | Must count the 3-attempt cap (with a session/cwd fallback key) and record the exhaustion ledger signal. |
 | `src/trace.js` | Loop-gate and CLI evidence tests. | Must show artifact-backed proof, warnings, missing proof, suggested paths, ledger timeline, and evidence summary counts. |
+| `src/wrapper-check.js` | `test/doctor.test.js`. | Must read the installed bin wrapper and advise (never fail) when it points at a stale or pruned versioned cache after an upgrade; informational, no-throw, and dependency-injectable. |
 | `test/audit.test.js` | `npm test`. | Must fail if repo files are missing from audit or reviewability limits are exceeded. |
 | `test/auto-update.test.js` | `npm test`. | Must prove marketplace skip notices, checkout skip behavior, future npx-local snapshot behavior, semver planning, install-flow detection, and Windows npx shims. |
 | `test/subagent-receipt.test.js` | `npm test`. | Must prove the attempt cap counts without agent_id and records a ledger signal on exhaustion. |
@@ -273,6 +281,8 @@ Total: 100 points.
 | `test/crew-lines.test.js` | `npm test`. | Must prove crew completion lines are original deterministic localized presentation, pending/unknown lanes stay silent, and CLI status remains visible. |
 | `test/docs.test.js` | `npm test`. | Must keep README, skill, gate notes, design audit, and this golden set aligned with enforced behavior. |
 | `test/doctor.test.js` | `npm test`. | Must cover doctor checks for package, audits, comparison, design decisions, model policy, generated install metadata, and reviewability. |
+| `test/doctor-packed.test.js` | `npm test`. | Must prove `doctor --json` reports ok against an npm-pack-shaped root (no `.git`, `.gitignore`, or `package-lock.json`) run from an arbitrary cwd, including a root nested in a parent Git repository that ignores it. |
+| `test/doctor-review-feedback.test.js` | `npm test`. | Must cover review-requested doctor hardening for broken checkout manifests and non-directory skills paths. |
 | `test/file-audit.test.js` | `npm test`. | Must prove the file-audit verifier fails stale inventory rows. |
 | `test/humanize-korean.test.js` | `node --test test/humanize-korean.test.js`. | Must prove the Korean humanizer audit script accepts preserved Korean output and rejects non-Korean or token-dropping output. |
 | `test/fleet.test.js` | `npm test`. | Must prove verdict normalization, artifact-bound accept verdicts, handoff recording/update, fleet reconciliation, crew-line decoration, and the parallel-cap warning. |
@@ -287,6 +297,7 @@ Total: 100 points.
 | `test/golden-review-gate.test.js` | `npm test`. | Must keep strict five-section review-gate acceptance and rejection behavior. |
 | `test/engineer.test.js` | `npm test`. | Must keep team/crew escalation parsing strict and inject the crew fan-out directive only on `loopy team`. |
 | `test/hooks.test.js` | `npm test`. | Must cover hook unit behavior for guards, receipts, steering, context, and stop handling. |
+| `test/interop.test.js` | `npm test`. | Must cover Superpowers detection, the informational doctor interop check, and coexistence routing in loop guidance. |
 | `test/loop-gates.test.js` | `npm test`. | Must cover gate, report, trace, check, review, finish, and checkpoint behavior. |
 | `test/loop.test.js` | `npm test`. | Must cover core lifecycle, evidence recording, steering, and command capture. |
 | `test/plugin.test.js` | `npm test`. | Must verify plugin manifest, hook route integrity, and packaged skill metadata. |

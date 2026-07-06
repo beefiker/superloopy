@@ -6,7 +6,11 @@ import { checkDesignAudit } from "./design-audit.js";
 import { checkFileAudit } from "./file-audit.js";
 import { checkComparisonSimilarity } from "./comparison-similarity.js";
 import { SUPERLOOPY_AGENT_NAMES } from "./agents.js";
+import { checkSkills } from "./doctor-skills.js";
 import { checkClaudeModelPolicy, checkModelPolicy } from "./model-policy.js";
+import { isSourceCheckoutRoot } from "./source-checkout.js";
+import { checkInterop } from "./interop.js";
+import { checkWrapper } from "./wrapper-check.js";
 
 const FILE_AUDIT_PATH = "docs/superloopy-file-audit.md";
 const GATE_NOTES_PATH = "docs/superloopy-gate-notes.md";
@@ -34,11 +38,7 @@ export async function runDoctor(cwd, options = {}) {
   const cli = checkCli(cwd);
   const dependencies = await checkDependencies(cwd);
   const runtimeBoundary = checkRuntimeBoundary(cwd);
-  const fileAudit = await checkFileAudit(cwd, {
-    auditPath: FILE_AUDIT_PATH,
-    policy: "superloopy-native-boundary",
-    listFiles: listGitVisibleFiles
-  });
+  const fileAudit = await checkFileAudit(cwd, { auditPath: FILE_AUDIT_PATH, policy: "superloopy-native-boundary", listFiles: listGitVisibleFiles, sourceCheckout: isSourceCheckoutRoot(cwd) });
   const gateNotes = await checkGateNotes(cwd);
   const designAudit = await checkDesignAudit(cwd, {
     auditPath: DESIGN_AUDIT_PATH
@@ -54,10 +54,10 @@ export async function runDoctor(cwd, options = {}) {
   const claudeHostWiring = await checkClaudeHostWiring(cwd);
   const modelPolicy = await checkModelPolicy(cwd);
   const claudeModelPolicy = await checkClaudeModelPolicy(cwd);
-  const hostContract = checkHostContract();
-  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, modelPolicy, claudeModelPolicy, hostContract };
+  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, modelPolicy, claudeModelPolicy, hostContract: checkHostContract(), interop: checkInterop(options), wrapper: checkWrapper(options) };
   return {
     ok: Object.values(checks).every((check) => check.ok),
+    root: cwd,
     checks
   };
 }
@@ -119,18 +119,6 @@ async function checkHooks(cwd, hooks) {
   if (missing.length > 0) return fail(`Missing hook files: ${missing.join(", ")}.`);
   if (invalid.length > 0) return fail(`Invalid hook files: ${invalid.join(", ")}.`);
   return { ok: true, count: hooks.length };
-}
-
-async function checkSkills(cwd) {
-  const path = join(cwd, "skills", "superloopy-loop", "SKILL.md");
-  if (!existsSync(path)) return fail("Missing skills/superloopy-loop/SKILL.md.");
-  const content = normalizeLineEndings(await readFile(path, "utf8"));
-  if (!/^---\nname: superloopy-loop/m.test(content)) return fail("superloopy-loop skill frontmatter is invalid.");
-  return { ok: true };
-}
-
-function normalizeLineEndings(content) {
-  return content.replace(/\r\n?/gu, "\n");
 }
 
 function checkCli(cwd) {
@@ -229,6 +217,7 @@ function countLines(content) {
 }
 
 function listGitVisibleFiles(cwd) {
+  if (!isSourceCheckoutRoot(cwd)) return listFilesystemVisibleFiles(cwd);
   const result = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
     cwd,
     encoding: "utf8"
@@ -247,6 +236,8 @@ function listGitVisibleFiles(cwd) {
 }
 
 function listGitTrackedFiles(cwd) {
+  // Same enclosing-repo hazard as listGitVisibleFiles: a parent repo must never answer for an installed/packed root.
+  if (!isSourceCheckoutRoot(cwd)) return [];
   const result = spawnSync("git", ["ls-files", "--cached"], {
     cwd,
     encoding: "utf8"
@@ -263,6 +254,10 @@ function listGitTrackedFiles(cwd) {
 }
 
 function listIgnoredSamples(cwd, samples) {
+  // Same enclosing-repo hazard: a parent repo's ignore rules say nothing about an install
+  // root, so non-checkout roots behave like a non-repo (samples count as ignored). Tracked
+  // monorepo subdirectories keep real check-ignore semantics via the checkout's .gitignore.
+  if (!isSourceCheckoutRoot(cwd)) return new Set(samples);
   const result = spawnSync("git", ["check-ignore", "--stdin"], {
     cwd,
     encoding: "utf8",

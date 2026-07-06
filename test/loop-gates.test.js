@@ -298,3 +298,24 @@ test("default gate completes when a command-backed criterion still reproduces (P
   const result = await checkpointLoop(repo, ["--goal-id", "G001", "--status", "complete", "--evidence", "done", "--quality-gate", ".superloopy/evidence/gate.json"]);
   assert.equal(result.plan.aggregateCompletion.status, "complete");
 });
+
+test("evidence rejects a present-but-malformed --command instead of silently downgrading to manual", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship a CLI loop"]);
+  const c1 = await writeEvidence(repo, "c1.txt");
+
+  // Unparseable JSON payload.
+  await assert.rejects(
+    evidenceLoop(repo, ["--goal-id", "G001", "--criterion-id", "C001", "--status", "pass", "--artifact", c1, "--command", "node -e process.exit(0)"]),
+    /--command must be a JSON array of strings/
+  );
+  // Well-formed JSON but wrong shape (empty array / non-string element).
+  await assert.rejects(
+    evidenceLoop(repo, ["--goal-id", "G001", "--criterion-id", "C001", "--status", "pass", "--artifact", c1, "--command", "[]"]),
+    /--command must be a non-empty JSON array of strings/
+  );
+  await assert.rejects(
+    evidenceLoop(repo, ["--goal-id", "G001", "--criterion-id", "C001", "--status", "pass", "--artifact", c1, "--command", '["node", 1]']),
+    /--command must be a non-empty JSON array of strings/
+  );
+});

@@ -19,6 +19,10 @@ A good report includes:
 
 I will acknowledge valid reports as soon as practical, investigate, and publish a fix or mitigation note when appropriate.
 
+## Trust boundary
+
+Superloopy's evidence capture (`superloopy loop prove -- <command>`) **executes the command the agent chooses, with no allowlist and no sandbox, by design.** Reproducing a criterion means actually running its command, so the trust boundary is the agent (and the human) that decides what to run — not Superloopy. Commands run via `spawnSync` with an argv array and never through a shell (no `shell: true`), so there is no shell-injection surface, but the command itself is run as-is with the caller's privileges. Run Superloopy only on tasks and in environments where executing agent-selected commands is acceptable.
+
 ## Scope
 
 In scope:

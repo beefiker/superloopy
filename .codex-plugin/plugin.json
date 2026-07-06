@@ -1,6 +1,6 @@
 {
   "name": "superloopy",
-  "version": "0.6.3",
+  "version": "0.7.2",
   "description": "Lightweight loop harness with strict evidence gates.",
   "homepage": "https://github.com/beefiker/superloopy#readme",
   "repository": "https://github.com/beefiker/superloopy",
@@ -28,7 +28,7 @@
     "displayName": "Superloopy",
     "developerName": "beefiker",
     "shortDescription": "Strict evidence loop harness without heavyweight ceremony",
-    "longDescription": "Superloopy provides repo-local loop state, explicit success criteria, append-only evidence ledgers, and Codex hook guardrails while keeping workflow overhead low.",
+    "longDescription": "Superloopy provides repo-local loop state, explicit success criteria, append-only evidence ledgers, and advisory Codex hook nudges while keeping workflow overhead low; completion is enforced by a deterministic in-process floor, not by the hooks.",
     "category": "Developer Tools",
     "capabilities": [
       "Hooks",
