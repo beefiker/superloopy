@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./helpers/trust-isolate.js";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,6 +9,7 @@ import { auditLoop } from "../src/audit.js";
 import { validateQualityGate } from "../src/artifacts.js";
 import { captureLoop } from "../src/capture.js";
 import { createLoop, evidenceLoop, nextLoop } from "../src/loop.js";
+import { recordTrustedCommand, trustLoop } from "../src/plan-trust.js";
 
 async function tempRepo() {
   return mkdtemp(join(tmpdir(), "superloopy-audit-"));
@@ -63,6 +65,8 @@ test("auditLoop marks a non-reproducing re-run inconclusive, never auto-fail", a
   const plan = await readJson(repo, ".superloopy", "goals.json");
   Object.assign(plan.goals[0].criteria[0], { status: "pass", artifact, command: ["node", "-e", "process.exit(1)"], exitCode: 0 });
   await writeFile(join(repo, ".superloopy", "goals.json"), JSON.stringify(plan), "utf8");
+  // Audit re-runs only trusted commands; this flaky command was captured locally in the real flow.
+  await recordTrustedCommand(repo, ["node", "-e", "process.exit(1)"]);
 
   const result = await auditLoop(repo, ["--criterion-id", "C001"]);
   assert.equal(result.criteria[0].floor, "inconclusive");
@@ -110,4 +114,60 @@ test("default gate requires an audit section only when SUPERLOOPY_AUDIT=on", asy
     if (previous === undefined) delete process.env.SUPERLOOPY_AUDIT;
     else process.env.SUPERLOOPY_AUDIT = previous;
   }
+});
+
+test("SECURITY: audit refuses to execute an untrusted plan command (repo poisoning)", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  const artifact = await writeArtifact(repo, "poison.txt");
+  const marker = join(repo, "pwned.txt");
+  // A cloned repo ships a passed criterion whose command would run attacker code.
+  const plan = await readJson(repo, ".superloopy", "goals.json");
+  Object.assign(plan.goals[0].criteria[0], {
+    status: "pass",
+    artifact,
+    command: ["node", "-e", `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "pwned")`],
+    exitCode: 0
+  });
+  await writeFile(join(repo, ".superloopy", "goals.json"), JSON.stringify(plan), "utf8");
+
+  // NOTE: no recordTrustedCommand / loop trust — the command was never seen locally.
+  const result = await auditLoop(repo, ["--criterion-id", "C001"]);
+
+  assert.equal(result.criteria[0].rerunStatus, "untrusted-command");
+  assert.equal(result.criteria[0].floor, "fail");
+  await assert.rejects(readFile(marker, "utf8"), { code: "ENOENT" }, "attacker command must NOT have executed");
+
+  // After explicit approval via `loop trust`, the same command is allowed to re-run.
+  // (The failed floor above flipped the criterion off "pass"; restore it as a re-prove would.)
+  await trustLoop(repo, []);
+  const replan = await readJson(repo, ".superloopy", "goals.json");
+  replan.goals[0].criteria[0].status = "pass";
+  await writeFile(join(repo, ".superloopy", "goals.json"), JSON.stringify(replan), "utf8");
+  const afterTrust = await auditLoop(repo, ["--criterion-id", "C001"]);
+  assert.notEqual(afterTrust.criteria[0].rerunStatus, "untrusted-command");
+  assert.equal(await readFile(marker, "utf8"), "pwned");
+});
+
+test("SECURITY: evidence output path rejects a symlink escaping the evidence root", async () => {
+  const { symlink, mkdir: mkdirp } = await import("node:fs/promises");
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  const evidenceRoot = join(repo, ".superloopy", "evidence");
+  await mkdirp(join(evidenceRoot, "audit"), { recursive: true });
+  const outsideTarget = join(repo, "outside-secret.txt");
+  await writeFile(outsideTarget, "original\n", "utf8");
+  // Malicious repo pre-creates the capture path as a symlink pointing outside evidence.
+  const linkPath = join(evidenceRoot, "audit", "G001-C001-rerun.txt");
+  try {
+    await symlink(outsideTarget, linkPath);
+  } catch {
+    return; // symlink unsupported (e.g. unprivileged Windows) — skip
+  }
+  const { resolveEvidenceOutputPath } = await import("../src/artifacts.js");
+  assert.throws(
+    () => resolveEvidenceOutputPath(repo, ".superloopy/evidence/audit/G001-C001-rerun.txt", undefined),
+    /symlink|resolve under/i
+  );
+  assert.equal(await readFile(outsideTarget, "utf8"), "original\n", "target outside evidence must be untouched");
 });

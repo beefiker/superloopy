@@ -127,6 +127,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `skills/superloopy-frontend/references/perfection.md` | Measured-quality methodology: design-system compliance script plus a real-browser Lighthouse protocol via npx with an anti-gaming list. | Superloopy-native; original prose, npx runtime fetch keeps package.json dependency-free, nothing vendored. |
 | `test/visual-diff.test.js` | Unit tests for the visual-diff PNG decode/encode/diff logic. | Superloopy-native test only. |
 | `test/ds-compliance.test.js` | Unit tests for the design-system compliance scanner. | Superloopy-native test only. |
+| `test/helpers/trust-isolate.js` | Test-only side effect isolating the plan-trust approval ledger to a temp dir. | Superloopy-native test helper. |
 | `skills/superloopy-frontend/references/design/_INDEX.md` | Brand design-token library index routing a named brand or mood to one loopy-native teardown. | Superloopy-native; original prose, public brand facts only, no external design files vendored. |
 | `skills/superloopy-frontend/references/image-first.md` | Image-first discipline: secure a visual target before coding, deep-analyze to a spec, implement, then visual-QA, with a no-imagegen degrade path. | Superloopy-native; original prose, public brand facts only, no external design files vendored. |
 | `skills/superloopy-frontend/references/design/stripe.md` | Stripe teardown: weight-300 sohne-var headlines, deep-navy fg, #533afd purple primary, and signature blue-tinted layered shadows. | Superloopy-native; original prose, public brand facts only, no external design files vendored. |
@@ -210,6 +211,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/matrix-gate.js` | Validator for strict matrix quality gates. | Keeps compatible shape under Superloopy-native module name. |
 | `src/model-policy.js` | Doctor helper that checks the Codex model-policy doc + agent TOML defaults and the Claude model-policy doc + `agents/*.md` model frontmatter. | Advisory policy only; never treats model choice as proof. |
 | `src/plan-summary.js` | Compact derived progress summary. | Superloopy-only helper. |
+| `src/plan-trust.js` | Trust boundary for plan-recorded commands: audit re-runs execute only commands captured locally or approved via `loop trust`; the approval ledger lives in the user home so repo contents cannot forge trust. | Superloopy-native repo-poisoning defense. |
 | `src/pre-tool-use.js` | PreToolUse guard for malformed `create_goal` calls and premature native `update_goal` completion. | Uses Superloopy plan completion as the authority before native goal completion. |
 | `src/receipt.js` | Host-agnostic receipt recovery for SubagentStop: trusts last_assistant_message when present, else scans the decoded final turn of the subagent transcript, failing closed (re-prompt) when the final message exceeds the tail window. | Superloopy-native; node-only, shared by the Codex and Claude hook paths. |
 | `test/host-adapter.test.js` | Unit tests for host-agnostic receipt recovery (direct + transcript fallback, evidence + audit). | Superloopy-native test only. |

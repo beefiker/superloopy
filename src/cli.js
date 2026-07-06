@@ -20,6 +20,7 @@ import { finishLoop } from "./finish.js";
 import { formatGuideResult } from "./guide.js";
 import { fleetLoop, handoffLoop } from "./fleet.js";
 import { formatCrewLine } from "./crew-lines.js";
+import { trustLoop } from "./plan-trust.js";
 import { proveLoop } from "./prove.js";
 import { reportLoop } from "./report.js";
 import { formatTraceResult, traceLoop } from "./trace.js";
@@ -157,6 +158,8 @@ async function dispatchLoop(cwd, subcommand, argv) {
       return checkpointLoop(cwd, argv);
     case "audit":
       return auditLoop(cwd, argv);
+    case "trust":
+      return trustLoop(cwd, argv);
     case "handoff":
       return handoffLoop(cwd, argv);
     case "fleet":
@@ -208,6 +211,9 @@ function formatLoopResult(subcommand, result) {
   if (subcommand === "trace") return formatTraceResult(result);
   if (subcommand === "report") return `superloopy report: ${result.artifact.relativePath}\n${formatGuideResult(result)}`;
   if (subcommand === "check") return formatCheckResult(result);
+  if (subcommand === "trust") {
+    return `superloopy trust: ${result.added} command(s) newly approved, ${result.alreadyTrusted} already trusted (${result.total} in plan)\nstore: ${result.store}\n`;
+  }
   if (subcommand === "evidence") {
     return `superloopy evidence: ${result.goal.id}/${result.criterion.id} -> ${result.criterion.status}\n${formatGuideResult(result)}`;
   }

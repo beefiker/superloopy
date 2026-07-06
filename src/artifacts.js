@@ -1,5 +1,5 @@
 import { existsSync, lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { isAbsolute, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { validateAuditSection } from "./audit-verdict.js";
 import { isMatrixQualityGate, validateMatrixQualityGate } from "./matrix-gate.js";
 import { isReviewQualityGate, validateReviewQualityGate } from "./review-gate.js";
@@ -65,13 +65,54 @@ export function resolveEvidenceOutputPath(cwd, artifactPath, scope) {
   if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) {
     throw new Error("Evidence artifact must live under .superloopy/evidence.");
   }
-  if (existsSync(resolved) && !statSync(resolved).isFile()) {
-    throw new Error(`Evidence artifact is not a file: ${artifactPath}`);
+  // Threat model: a malicious repo can pre-create the evidence path as a symlink
+  // (file OR directory component, including a dangling link) pointing outside the
+  // repo; runCaptured() would then write the capture transcript THROUGH the link —
+  // an arbitrary file overwrite with attacker-influenced content. Mirror the
+  // read-side defense: lstat (not stat/existsSync, which follow links) so dangling
+  // symlinks are caught too, reject symlink targets outright, and re-confine the
+  // symlink-resolved real destination to the real evidence root before any write.
+  const targetStat = lstatNoFollow(resolved);
+  if (targetStat) {
+    if (targetStat.isSymbolicLink()) {
+      throw new Error(`Evidence artifact must not be a symlink: ${artifactPath}`);
+    }
+    if (!targetStat.isFile()) {
+      throw new Error(`Evidence artifact is not a file: ${artifactPath}`);
+    }
+  }
+  if (!isPathInsideDirectory(projectRealPath(resolved), projectRealPath(root))) {
+    throw new Error("Evidence artifact must resolve under .superloopy/evidence.");
   }
   return {
     absolutePath: resolved,
     relativePath: repoRelativePath(`${evidenceRelativeDir(scope)}/${rel}`)
   };
+}
+
+function lstatNoFollow(path) {
+  try {
+    return lstatSync(path);
+  } catch {
+    return null;
+  }
+}
+
+// Resolve the deepest existing ancestor through realpath, then re-append the
+// not-yet-created suffix. This surfaces symlinked directories anywhere in the
+// chain (e.g. .superloopy/evidence itself replaced by a link out of the repo):
+// the projected real path lands outside the projected real root and is rejected.
+function projectRealPath(path) {
+  let existing = path;
+  const suffix = [];
+  while (!existsSync(existing)) {
+    const parent = dirname(existing);
+    if (parent === existing) break;
+    suffix.unshift(basename(existing));
+    existing = parent;
+  }
+  const real = existsSync(existing) ? realpathSync(existing) : existing;
+  return suffix.length > 0 ? join(real, ...suffix) : real;
 }
 
 export function validateQualityGate(cwd, value, scope) {
