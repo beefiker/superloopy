@@ -196,6 +196,7 @@ Restart Codex after uninstalling. Optional local bootstrap cleanup: plugin remov
 
 ```
 rm -f ~/.local/bin/superloopy
+Remove-Item "$env:APPDATA\npm\superloopy.cmd" -ErrorAction SilentlyContinue
 rm -f ~/.codex/agents/franky.toml ~/.codex/agents/zoro.toml ~/.codex/agents/usopp.toml ~/.codex/agents/jinbe.toml ~/.codex/agents/robin.toml ~/.codex/agents/nami.toml
 ```
 

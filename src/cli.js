@@ -319,7 +319,7 @@ function binHelp() {
     "  superloopy bin install [--bin-dir PATH] [--force] [--json]",
     "",
     "Installs a small superloopy command wrapper into a PATH directory.",
-    "Default target: $SUPERLOOPY_BIN_DIR, then $CODEX_LOCAL_BIN_DIR, then ~/.local/bin.",
+    "Default target: $SUPERLOOPY_BIN_DIR, then $CODEX_LOCAL_BIN_DIR, then %APPDATA%\\npm on Windows or ~/.local/bin elsewhere.",
     "Existing identical files are left unchanged. Conflicting files require --force.",
     ""
   ].join("\n");
