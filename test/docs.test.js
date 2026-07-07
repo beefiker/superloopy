@@ -75,6 +75,21 @@ test("public docs describe real marketplace install and bootstrap", async () => 
   assert.match(notes, /one-time SessionStart bootstrap/);
 });
 
+test("agent install guide gives host-specific marketplace flows", async () => {
+  const readme = await readFile("README.md", "utf8");
+  const install = await readFile("installation.md", "utf8");
+
+  assert.match(readme, /install https:\/\/github\.com\/beefiker\/superloopy/);
+  assert.match(readme, /\[installation\.md\]\(installation\.md\)/);
+  assert.match(install, /install https:\/\/github\.com\/beefiker\/superloopy/);
+  assert.match(install, /codex plugin marketplace add https:\/\/github\.com\/beefiker\/superloopy/);
+  assert.match(install, /codex plugin add superloopy@beefiker/);
+  assert.match(install, /\/plugin marketplace add beefiker\/superloopy/);
+  assert.match(install, /\/plugin install superloopy@beefiker/);
+  assert.match(install, /node "\$\{CLAUDE_PLUGIN_ROOT\}\/src\/cli\.js" doctor --json/);
+  assert.match(install, /Do not add dependencies/);
+});
+
 test("README locales are discoverable and do not point at removed PDF manuals", async () => {
   const locales = ["README.md", "README.ko.md", "README.zh-CN.md", "README.ja.md", "README.es.md"];
   const root = await readFile("README.md", "utf8");
