@@ -1,4 +1,5 @@
-import { existsSync, lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { constants, existsSync, lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { mkdir, open } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { validateAuditSection } from "./audit-verdict.js";
 import { isMatrixQualityGate, validateMatrixQualityGate } from "./matrix-gate.js";
@@ -89,6 +90,29 @@ export function resolveEvidenceOutputPath(cwd, artifactPath, scope) {
     absolutePath: resolved,
     relativePath: repoRelativePath(`${evidenceRelativeDir(scope)}/${rel}`)
   };
+}
+
+export async function writeEvidenceOutputFile(artifact, content, options = "utf8") {
+  await mkdir(dirname(artifact.absolutePath), { recursive: true });
+  const noFollow = constants.O_NOFOLLOW ?? 0;
+  let handle;
+  try {
+    handle = await open(
+      artifact.absolutePath,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | noFollow,
+      0o666
+    );
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ELOOP") {
+      throw new Error(`Evidence artifact write target must not be a symlink: ${artifact.relativePath}`);
+    }
+    throw error;
+  }
+  try {
+    await handle.writeFile(content, options);
+  } finally {
+    await handle.close();
+  }
 }
 
 function lstatNoFollow(path) {

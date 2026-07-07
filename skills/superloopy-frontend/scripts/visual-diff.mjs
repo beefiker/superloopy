@@ -17,6 +17,8 @@ import { deflateSync, inflateSync } from "node:zlib";
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const GRID_SIZE = 8;
+const MAX_PIXELS = 25_000_000;
+const MAX_INFLATED_BYTES = 128 * 1024 * 1024;
 
 const CRC_TABLE = (() => {
   const table = new Int32Array(256);
@@ -78,9 +80,17 @@ export function decodePng(buffer) {
   if (interlace !== 0) throw new Error("Interlaced PNG is unsupported.");
   const channels = CHANNELS_BY_COLOR_TYPE[colorType];
   if (channels === undefined) throw new Error(`Unsupported PNG color type ${colorType}.`);
+  if (width <= 0 || height <= 0) throw new Error("PNG dimensions must be positive.");
+  const pixelsCount = width * height;
+  const inflatedBytes = height * (width * channels + 1);
+  if (!Number.isSafeInteger(pixelsCount) || pixelsCount > MAX_PIXELS || inflatedBytes > MAX_INFLATED_BYTES) {
+    throw new Error(`PNG dimensions exceed safe decode limits (${width}x${height}).`);
+  }
 
   const raw = inflateSync(Buffer.concat(idat));
   const stride = width * channels;
+  if (raw.length < inflatedBytes) throw new Error("PNG image data is truncated.");
+  if (raw.length > MAX_INFLATED_BYTES) throw new Error("PNG image data exceeds safe decode limits.");
   const pixels = Buffer.alloc(height * stride);
   let prevRow = Buffer.alloc(stride);
   let src = 0;

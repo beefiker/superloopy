@@ -66,6 +66,17 @@ test("withFileLock reclaims a stale lock instead of blocking forever", async () 
   assert.equal(ran, true);
 });
 
+test("withFileLock reclaims a stale corrupt lock token", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "superloopy-lock-"));
+  const target = join(dir, "corrupt.json");
+  await writeFile(`${target}.lock`, "not-a-valid-lock-token\n", "utf8");
+  let ran = false;
+  await withFileLock(target, async () => {
+    ran = true;
+  }, { staleMs: -1, timeoutMs: 1000 });
+  assert.equal(ran, true);
+});
+
 test("withFileLock fails closed when a fresh lock is held past the timeout", async () => {
   const dir = await mkdtemp(join(tmpdir(), "superloopy-lock-"));
   const target = join(dir, "z.json");
@@ -76,4 +87,13 @@ test("withFileLock fails closed when a fresh lock is held past the timeout", asy
   );
   // A live holder's lock must never be reclaimed/deleted by a waiter.
   assert.ok(existsSync(`${target}.lock`));
+});
+
+test("withFileLock release does not delete a successor token", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "superloopy-lock-"));
+  const target = join(dir, "successor.json");
+  await withFileLock(target, async () => {
+    await writeFile(`${target}.lock`, "successor-token\n", "utf8");
+  });
+  assert.equal(await readFile(`${target}.lock`, "utf8"), "successor-token\n");
 });

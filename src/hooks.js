@@ -3,8 +3,8 @@ import { bootstrapHasUserSignal, bootstrapSuperloopy, formatBootstrapHookContext
 import { runAutoUpdateCheck } from "./auto-update.js";
 import { parseJson } from "./args.js";
 import { resolveEvidenceArtifact } from "./artifacts.js";
-import { buildGuide } from "./guide.js";
-import { decideContinuation, transcriptTailHasMarker } from "./continuation.js";
+import { buildGuide, flowStepLine, proofPlanLine, recordedEvidenceLine } from "./guide.js";
+import { CONTEXT_PRESSURE_MARKERS, decideContinuation, transcriptTailHasMarker } from "./continuation.js";
 import { normalizeAgentType, receiptFromPayload, subagentTranscriptPath } from "./receipt.js";
 import { hasEngineerTrigger, hasFrontendTrigger, hasKoreanWritingTrigger, renderFrontendTriggerContext, renderKoreanWritingTriggerContext, runEngineerTriggerHook } from "./engineer.js";
 import { applySteering, statusLoop } from "./loop.js";
@@ -17,11 +17,6 @@ const EVIDENCE_RECEIPT_AGENT_TYPES = new Set(["franky", "zoro", "usopp", "jinbe"
 // An artifact up to this size must carry non-whitespace content to satisfy the receipt gate;
 // only larger artifacts (assumed non-trivial) skip the read. Closes the blank-placeholder hole.
 const MAX_BLANK_CHECK_BYTES = 1_000_000;
-const CONTEXT_PRESSURE_MARKERS = [
-  "context compacted", "context_length_exceeded", "skill descriptions were shortened",
-  "context_too_large", "codex ran out of room in the model's context window",
-  "your input exceeds the context window", "long threads and multiple compactions"
-];
 const LOOSE_TRIGGER_PATTERN = /(^|[^A-Za-z0-9_-])(\$?(?:loopywork|lpy))(?=$|[^A-Za-z0-9_-])/iu;
 const LOOSE_TRIGGER_GLOBAL_PATTERN = /(^|[^A-Za-z0-9_-])(\$?(?:loopywork|lpy))(?=$|[^A-Za-z0-9_-])/giu;
 const PROTECTED_STEERING_KEYS = new Set([
@@ -392,7 +387,7 @@ function renderProofPlan(guide) {
   if (!Array.isArray(guide.proofPlan) || guide.proofPlan.length === 0) return [];
   return [
     "Proof plan:",
-    ...guide.proofPlan.map((item) => `- ${item.ref} ${item.status} capture \`${item.captureCommand}\` or evidence \`${item.evidenceCommand}\``)
+    ...guide.proofPlan.map(proofPlanLine)
   ];
 }
 
@@ -400,7 +395,7 @@ function renderFlow(guide) {
   if (!Array.isArray(guide.flow) || guide.flow.length === 0) return [];
   return [
     "Flow checklist:",
-    ...guide.flow.map((step) => `- [${step.status}] ${step.label}: \`${step.command}\``)
+    ...guide.flow.map(flowStepLine)
   ];
 }
 
@@ -408,12 +403,7 @@ function renderRecordedEvidence(guide) {
   if (!Array.isArray(guide.recordedEvidence) || guide.recordedEvidence.length === 0) return [];
   return [
     "Recorded evidence:",
-    ...guide.recordedEvidence.map((item) => {
-      const artifact = item.artifact === null ? "no artifact" : `\`${item.artifact}\``;
-      const capturedAt = item.capturedAt === null ? "" : ` at ${item.capturedAt}`;
-      const notes = item.notes === undefined ? "" : ` - notes: ${item.notes}`;
-      return `- ${item.ref} ${item.status}${capturedAt} -> ${artifact}${notes}`;
-    })
+    ...guide.recordedEvidence.map(recordedEvidenceLine)
   ];
 }
 

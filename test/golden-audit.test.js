@@ -6,7 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { auditLoop } from "../src/audit.js";
-import { resolveEvidenceOutputPath, validateQualityGate } from "../src/artifacts.js";
+import { resolveEvidenceOutputPath, validateQualityGate, writeEvidenceOutputFile } from "../src/artifacts.js";
 import { captureLoop } from "../src/capture.js";
 import { createLoop, evidenceLoop, nextLoop } from "../src/loop.js";
 import { isTrustedCommand, recordTrustedCommand, trustLoop } from "../src/plan-trust.js";
@@ -185,6 +185,28 @@ test("SECURITY: evidence output path rejects a symlink escaping the evidence roo
     /symlink|resolve under/i
   );
   assert.equal(await readFile(outsideTarget, "utf8"), "original\n", "target outside evidence must be untouched");
+});
+
+test("SECURITY: evidence output write rejects a symlink swapped in after path resolution", async () => {
+  const { symlink, mkdir: mkdirp } = await import("node:fs/promises");
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  const evidenceRoot = join(repo, ".superloopy", "evidence");
+  await mkdirp(evidenceRoot, { recursive: true });
+  const output = resolveEvidenceOutputPath(repo, ".superloopy/evidence/race.txt", undefined);
+  const outsideTarget = join(repo, "outside-race.txt");
+  await writeFile(outsideTarget, "original\n", "utf8");
+  try {
+    await symlink(outsideTarget, output.absolutePath);
+  } catch {
+    return;
+  }
+
+  await assert.rejects(
+    writeEvidenceOutputFile(output, "replacement\n"),
+    /symlink|ELOOP|not follow/i
+  );
+  assert.equal(await readFile(outsideTarget, "utf8"), "original\n");
 });
 
 test("SECURITY: evidence output path rejects a symlinked evidence root", async () => {

@@ -313,7 +313,7 @@ function flowStep(id, label, status, commandText) {
   return { id, label, status, command: commandText };
 }
 
-function flowStepLine(step) {
+export function flowStepLine(step) {
   return `- [${step.status}] ${step.label}: \`${step.command}\``;
 }
 
@@ -330,7 +330,7 @@ function buildProofPlan(unresolvedCriteria, sessionId) {
   }));
 }
 
-function proofPlanLine(item) {
+export function proofPlanLine(item) {
   return `- ${item.ref} ${item.status} capture \`${item.captureCommand}\` or evidence \`${item.evidenceCommand}\``;
 }
 
@@ -338,36 +338,36 @@ function proofTargetLine(target) {
   return `Proof target: ${target.ref} ${target.status} -> \`${target.artifact}\``;
 }
 
-function recordedEvidenceLine(item) {
+export function recordedEvidenceLine(item) {
   const artifact = item.artifact === null ? "no artifact" : `\`${item.artifact}\``;
   const capturedAt = item.capturedAt === null ? "" : ` at ${item.capturedAt}`;
   const notes = item.notes === undefined ? "" : ` - notes: ${item.notes}`;
-  return `- ${item.ref} ${item.status}${capturedAt} -> ${artifact} ${item.scenario}${notes}`;
+  return `- ${item.ref} ${item.status}${capturedAt} -> ${artifact} - ${item.scenario}${notes}`;
 }
 
-function unresolvedCriterionLine(criterion) {
-  return `- ${criterion.ref} ${criterion.status} -> \`${criterion.suggestedArtifact}\` ${criterion.scenario}`;
+export function unresolvedCriterionLine(criterion) {
+  return `- ${criterion.ref} ${criterion.status} -> \`${criterion.suggestedArtifact}\` - ${criterion.scenario}`;
 }
 
-function command(subcommand, sessionId, args) {
+export function command(subcommand, sessionId, args) {
   const parts = ["superloopy", "loop", subcommand];
   if (sessionId) parts.push("--session-id", sessionId);
   return [...parts, ...args.map((arg) => quoteCommandArg(arg))].join(" ");
 }
 
-function captureCommand(sessionId, goalId, criterionId) {
+export function captureCommand(sessionId, goalId, criterionId) {
   return `${command("capture", sessionId, ["--goal-id", goalId, "--criterion-id", criterionId, "--notes", "<summary>"])} -- <validation-command>`;
 }
 
-function evidenceCommand(sessionId, goalId, criterionId, artifact) {
+export function evidenceCommand(sessionId, goalId, criterionId, artifact) {
   return command("evidence", sessionId, ["--goal-id", goalId, "--criterion-id", criterionId, "--status", "pass", "--artifact", artifact, "--notes", "<summary>", "--json"]);
 }
 
-function proveCommand(sessionId) {
+export function proveCommand(sessionId) {
   return `${command("prove", sessionId, [])} -- <validation-command>`;
 }
 
-function quoteCommandArg(value) {
+export function quoteCommandArg(value) {
   if (/^[A-Za-z0-9._/@:=+-]+$/u.test(value)) return value;
   return `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
 }
