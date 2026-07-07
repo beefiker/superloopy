@@ -221,6 +221,7 @@ export async function runEngineerTriggerHook(payload, deps) {
 
 function renderStart(payload, orchestrate, interop) {
   const { brief } = parseInvocation(payload.prompt);
+  const cli = superloopyCommand();
   if (brief.length === 0) {
     return [
       HEADER,
@@ -230,10 +231,10 @@ function renderStart(payload, orchestrate, interop) {
         : "The user woke the loop engineer with `loopy` but named no task.",
       "Ask in one short question what they want built or fixed, then drive the loop yourself:",
       "",
-      "- Start: `superloopy loop begin --brief \"<their answer>\" --mode light --json`.",
-      "- Follow `superloopy loop guide --json` for each next command; do not ask the user to run Superloopy.",
-      "- Prove every criterion with `superloopy loop prove -- <validation-command>` (real artifacts only).",
-      "- Preflight `superloopy loop check`, then `superloopy loop finish --evidence \"<summary>\" --artifact .superloopy/evidence/gate.json --json`.",
+      `- Start: \`${cli} loop begin --brief "<their answer>" --mode light --json\`.`,
+      `- Follow \`${cli} loop guide --json\` for each next command; do not ask the user to run Superloopy.`,
+      `- Prove every criterion with \`${cli} loop prove -- <validation-command>\` (real artifacts only).`,
+      `- Preflight \`${cli} loop check\`, then \`${cli} loop finish --evidence "<summary>" --artifact .superloopy/evidence/gate.json --json\`.`,
       ...interopBlock(interop),
       ...(orchestrate ? ["", ...orchestrationLines(interop)] : [])
     ].join("\n");
@@ -246,10 +247,10 @@ function renderStart(payload, orchestrate, interop) {
       : "The user woke the loop engineer with `loopy`. Own the whole evidence loop; do not ask the user to run Superloopy commands.",
     "",
     `- Brief: ${brief}`,
-    `- Start now: \`superloopy loop begin --brief ${shellQuote(brief)} --mode light --json\`.`,
-    "- Drive each step with `superloopy loop guide --json` and act on its next command.",
-    "- Prove every criterion with `superloopy loop prove -- <validation-command>`; record real artifacts only.",
-    "- Preflight with `superloopy loop check`, then complete with `superloopy loop finish --evidence \"<summary>\" --artifact .superloopy/evidence/gate.json --json`.",
+    `- Start now: \`${cli} loop begin --brief ${shellQuote(brief)} --mode light --json\`.`,
+    `- Drive each step with \`${cli} loop guide --json\` and act on its next command.`,
+    `- Prove every criterion with \`${cli} loop prove -- <validation-command>\`; record real artifacts only.`,
+    `- Preflight with \`${cli} loop check\`, then complete with \`${cli} loop finish --evidence "<summary>" --artifact .superloopy/evidence/gate.json --json\`.`,
     "- Report progress in plain terms (criteria proven, next step), not raw command dumps.",
     "- Keep it light unless the task needs heavier review. The Stop hook blocks completion until evidence exists.",
     ...interopBlock(interop),
@@ -277,23 +278,25 @@ function renderResume(context, orchestrate, interop) {
 // Returns [] when Superpowers is absent so solo output is unchanged.
 function interopBlock(interop) {
   if (!interop || interop.installed !== true) return [];
+  const cli = superloopyCommand();
   return [
     "",
     "Superpowers coexistence (detected):",
     "- Superpowers is installed. Use its skills for the front of the loop: `brainstorming` and `writing-plans` for design and planning, and `test-driven-development` plus its code-review skills while implementing. Do not re-derive a second plan here.",
-    "- Superloopy owns proof-of-done: capture the work as command-backed criteria and re-run them at `finish`. Register the TDD test command with `superloopy loop prove -- <test command>` so it re-runs deterministically at completion.",
+    `- Superloopy owns proof-of-done: capture the work as command-backed criteria and re-run them at \`finish\`. Register the TDD test command with \`${cli} loop prove -- <test command>\` so it re-runs deterministically at completion.`,
     "- One orchestrator per task: if Superpowers is running subagent-driven development, do not also fan out the Superloopy crew on the same slices."
   ];
 }
 
 function renderComplete(status, interop) {
   const session = status.plan.sessionId === undefined ? "" : ` --session-id ${shellQuote(status.plan.sessionId)}`;
+  const cli = superloopyCommand();
   return [
     HEADER,
     "",
     "The current Superloopy aggregate is already complete.",
     "",
-    `- Inspect: \`superloopy loop status${session} --json\`.`,
+    `- Inspect: \`${cli} loop status${session} --json\`.`,
     "- For new work, begin a fresh loop and keep it separate with a new --session-id.",
     ...interopBlock(interop)
   ].join("\n");
@@ -307,6 +310,7 @@ function baselineDelegationLine() {
 
 // Tier 2 (escalation): the crew fan-out playbook, wired to Superloopy's receipt gate.
 function orchestrationLines(interop) {
+  const cli = superloopyCommand();
   return [
     "Crew fan-out (team mode):",
     ...(interop && interop.installed === true
@@ -322,9 +326,9 @@ function orchestrationLines(interop) {
     "- Each worker ends its report with `SUPERLOOPY_EVIDENCE: <path-under-active-evidence-root>` (`robin` uses `SUPERLOOPY_AUDIT:`). Collect them with `multi_agent_v1.wait_agent`; treat a running child as alive, not a timeout.",
     "- After each worker returns, show a concise role completion line with role, normalized verdict, artifact path, risk, and next action before closing or respawning that lane.",
     "- Give `jinbe` a Markdown final gate report such as `.superloopy/evidence/jinbe-final-gate-report.md`; keep it separate from the machine quality gate `.superloopy/evidence/gate.json`.",
-    "- You own the plan: record a criterion pass only from a real artifact via `superloopy loop prove` or `superloopy loop evidence`, never from a worker's claim alone. Track each dispatch with `superloopy loop handoff` and run `superloopy loop fleet --json` before the final gate.",
+    `- You own the plan: record a criterion pass only from a real artifact via \`${cli} loop prove\` or \`${cli} loop evidence\`, never from a worker's claim alone. Track each dispatch with \`${cli} loop handoff\` and run \`${cli} loop fleet --json\` before the final gate.`,
     "- Before the final summary, run `git status --short --untracked-files=all` and `git ls-files --others --exclude-standard` so untracked evidence, scripts, and reports are not omitted.",
-    "- Keep the Superloopy loop the source of truth: you still begin, prove, check, and finish through the CLI yourself with `superloopy loop finish --evidence \"<summary>\" --artifact .superloopy/evidence/gate.json --json`."
+    `- Keep the Superloopy loop the source of truth: you still begin, prove, check, and finish through the CLI yourself with \`${cli} loop finish --evidence "<summary>" --artifact .superloopy/evidence/gate.json --json\`.`
   ];
 }
 
@@ -338,4 +342,14 @@ function normalizeBrief(rest) {
 
 function shellQuote(value) {
   return `'${value.replace(/'/g, "'\"'\"'")}'`;
+}
+
+function superloopyCommand() {
+  if (typeof process.env.CLAUDE_PLUGIN_ROOT === "string" && process.env.CLAUDE_PLUGIN_ROOT.trim().length > 0) {
+    return 'node "${CLAUDE_PLUGIN_ROOT}/src/cli.js"';
+  }
+  if (typeof process.env.PLUGIN_ROOT === "string" && process.env.PLUGIN_ROOT.trim().length > 0) {
+    return 'node "${PLUGIN_ROOT}/src/cli.js"';
+  }
+  return "superloopy";
 }

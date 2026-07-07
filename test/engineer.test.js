@@ -140,6 +140,48 @@ test("runUserPromptSubmitHook stays solo on a plain loopy task but advertises te
   assert.match(context, /genuinely independent slices/);
 });
 
+test("runUserPromptSubmitHook uses plugin-root CLI fallback when available", async () => {
+  const repo = await tempRepo();
+  const previousPluginRoot = process.env.PLUGIN_ROOT;
+  const previousClaudePluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
+  process.env.PLUGIN_ROOT = "C:\\Users\\me\\.codex\\plugins\\cache\\beefiker\\superloopy\\0.7.3";
+  delete process.env.CLAUDE_PLUGIN_ROOT;
+  try {
+    const output = await runUserPromptSubmitHook({
+      hook_event_name: "UserPromptSubmit",
+      cwd: repo,
+      prompt: "loopy add proof-backed login"
+    });
+    const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+    assert.match(context, /node "\$\{PLUGIN_ROOT\}\/src\/cli\.js" loop begin --brief 'add proof-backed login'/);
+    assert.match(context, /node "\$\{PLUGIN_ROOT\}\/src\/cli\.js" loop prove -- <validation-command>/);
+  } finally {
+    if (previousPluginRoot === undefined) delete process.env.PLUGIN_ROOT;
+    else process.env.PLUGIN_ROOT = previousPluginRoot;
+    if (previousClaudePluginRoot === undefined) delete process.env.CLAUDE_PLUGIN_ROOT;
+    else process.env.CLAUDE_PLUGIN_ROOT = previousClaudePluginRoot;
+  }
+});
+
+test("runUserPromptSubmitHook prefers Claude plugin root over bare command", async () => {
+  const repo = await tempRepo();
+  const previous = process.env.CLAUDE_PLUGIN_ROOT;
+  process.env.CLAUDE_PLUGIN_ROOT = "C:\\Users\\me\\.claude\\plugins\\superloopy";
+  try {
+    const output = await runUserPromptSubmitHook({
+      hook_event_name: "UserPromptSubmit",
+      cwd: repo,
+      prompt: "loopy migrate the auth module"
+    });
+    const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+    assert.match(context, /node "\$\{CLAUDE_PLUGIN_ROOT\}\/src\/cli\.js" loop begin --brief 'migrate the auth module'/);
+    assert.match(context, /node "\$\{CLAUDE_PLUGIN_ROOT\}\/src\/cli\.js" loop prove -- <validation-command>/);
+  } finally {
+    if (previous === undefined) delete process.env.CLAUDE_PLUGIN_ROOT;
+    else process.env.CLAUDE_PLUGIN_ROOT = previous;
+  }
+});
+
 test("runUserPromptSubmitHook re-injects the crew playbook when resuming with loopy team", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);

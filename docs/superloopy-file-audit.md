@@ -242,6 +242,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/doctor.test.js` | Doctor coverage for package, audit, comparison, design audit, and reviewability checks. | Uses synthetic fixtures only. |
 | `test/doctor-packed.test.js` | Regression coverage proving doctor accepts an npm-packed install (packaging-stripped repo-only files absent) from an arbitrary cwd, including one nested inside a parent Git repository. | Simulated pack extract; Superloopy-native coverage only. |
 | `test/doctor-review-feedback.test.js` | Regression tests for PR review hardening around doctor root selection and corrupt skills paths. | Superloopy-native review-feedback coverage only. |
+| `test/wrapper-check.test.js` | Wrapper-currency unit coverage for generated shims, stale/pruned plugin caches, first-PATH precedence, and resilient sibling fallback. | Synthetic filesystem fixtures only; no host wrapper mutation. |
 | `test/file-audit.test.js` | Direct unit coverage for row-level file audit verifier. | Tests Superloopy audit parser. |
 | `test/humanize-korean.test.js` | Contract tests for the Korean humanizer audit script's accept and reject paths. | Superloopy-native test for dependency-free safeguards and protected-token gating. |
 | `test/fleet.test.js` | Handoff registry, fleet reconciliation, verdict-normalization, and crew-line decoration tests. | Tests Superloopy parent-side coordination without persisting presentation flavor. |
