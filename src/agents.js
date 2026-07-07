@@ -69,7 +69,7 @@ export async function installBinShim(cwd, argv, options = {}) {
   const env = options.env ?? process.env;
   const homeDir = options.homeDir ?? homedir();
   const platform = options.platform ?? process.platform;
-  const targetDir = resolveBinDir(cwd, argv, env, homeDir);
+  const targetDir = resolveBinDir(cwd, argv, env, homeDir, platform);
   const target = join(targetDir, platform === "win32" ? "superloopy.cmd" : "superloopy");
   const content = binShimContent(CLI_PATH, platform);
 
@@ -77,7 +77,7 @@ export async function installBinShim(cwd, argv, options = {}) {
   const status = await installOneTextFile(target, content, force, platform === "win32" ? undefined : 0o755, {
     replaceIf: (existing) => isGeneratedSuperloopyBinShim(existing, platform)
   });
-  const onPath = pathContainsDir(env.PATH, targetDir, platform);
+  const onPath = pathContainsDir(pathEnvValue(env, platform), targetDir, platform);
   return {
     ok: status !== "conflict",
     kind: "bin_install",
@@ -241,7 +241,7 @@ function isGeneratedSuperloopyBinShim(content, platform) {
   return /^#!\/usr\/bin\/env sh\nexec node .*[\\/]superloopy(?:[\\/][^'"\n ]*)?[\\/]src[\\/]cli\.js'? "\$@"\n?$/u.test(normalized);
 }
 
-function resolveBinDir(cwd, argv, env, homeDir) {
+function resolveBinDir(cwd, argv, env, homeDir, platform = process.platform) {
   const explicit = readFlag(argv, "--bin-dir");
   if (explicit !== undefined) return resolveUserPath(cwd, explicit, homeDir);
   const superloopyBinDir = env.SUPERLOOPY_BIN_DIR;
@@ -252,14 +252,39 @@ function resolveBinDir(cwd, argv, env, homeDir) {
   if (typeof codexLocalBinDir === "string" && codexLocalBinDir.trim().length > 0) {
     return resolveUserPath(cwd, codexLocalBinDir, homeDir);
   }
+  if (platform === "win32") return resolveWindowsBinDir(env, homeDir);
   return join(homeDir, ".local", "bin");
 }
 
 function binShimContent(cliPath, platform) {
   if (platform === "win32") {
-    return `@echo off\r\n@rem ${BIN_SHIM_MARKER}\r\nnode "${cliPath}" %*\r\n`;
+    const resolver = cmdDoubleQuote(shimCliResolverSource());
+    return [
+      "@echo off",
+      `@rem ${BIN_SHIM_MARKER}`,
+      "setlocal",
+      `set "SUPERLOOPY_SHIM_CLI=${cmdSetValue(cliPath)}"`,
+      `for /f "usebackq delims=" %%I in (\`node -e "${resolver}"\`) do set "SUPERLOOPY_CLI=%%I"`,
+      "if not exist \"%SUPERLOOPY_CLI%\" (",
+      "  echo Superloopy CLI target not found: %SUPERLOOPY_SHIM_CLI% 1>&2",
+      "  exit /b 1",
+      ")",
+      "node \"%SUPERLOOPY_CLI%\" %*",
+      ""
+    ].join("\r\n");
   }
-  return `#!/usr/bin/env sh\n# ${BIN_SHIM_MARKER}\nexec node ${shellQuote(cliPath)} "$@"\n`;
+  return [
+    "#!/usr/bin/env sh",
+    `# ${BIN_SHIM_MARKER}`,
+    `SUPERLOOPY_SHIM_CLI=${shellQuote(cliPath)}`,
+    `SUPERLOOPY_CLI=$(SUPERLOOPY_SHIM_CLI="$SUPERLOOPY_SHIM_CLI" node -e ${shellQuote(shimCliResolverSource())}) || exit $?`,
+    "if [ ! -f \"$SUPERLOOPY_CLI\" ]; then",
+    "  echo \"Superloopy CLI target not found: $SUPERLOOPY_SHIM_CLI\" >&2",
+    "  exit 1",
+    "fi",
+    "exec node \"$SUPERLOOPY_CLI\" \"$@\"",
+    ""
+  ].join("\n");
 }
 
 // Extract the cli.js path a generated Superloopy shim executes, or null when the content is
@@ -269,9 +294,13 @@ export function parseBinShimCliPath(content, platform = process.platform) {
   if (typeof content !== "string" || !isGeneratedSuperloopyBinShim(content, platform)) return null;
   const normalized = content.replace(/\r\n/gu, "\n");
   if (platform === "win32") {
+    const envMatch = /^set "SUPERLOOPY_SHIM_CLI=([^"\n]*)"/mu.exec(normalized);
+    if (envMatch !== null) return cmdUnsetValue(envMatch[1]);
     const match = /^node "([^"\n]+)" %\*/mu.exec(normalized);
     return match === null ? null : match[1];
   }
+  const envMatch = /^SUPERLOOPY_SHIM_CLI=(?:'((?:[^']|'\\'')*)'|(\S+))/mu.exec(normalized);
+  if (envMatch !== null) return envMatch[1] === undefined ? envMatch[2] : envMatch[1].replaceAll("'\\''", "'");
   // Reverse shellQuote: a single-quoted token whose interior apostrophes are encoded as the
   // 4-char sequence '\'' — so the quoted branch must treat '\'' as content, not a close-quote,
   // or a path like /home/o'connor falls through to the raw \S+ token and never resolves.
@@ -280,8 +309,63 @@ export function parseBinShimCliPath(content, platform = process.platform) {
   return match[1] === undefined ? match[2] : match[1].replaceAll("'\\''", "'");
 }
 
+export function binShimSupportsSiblingFallback(content, platform = process.platform) {
+  if (typeof content !== "string" || !isGeneratedSuperloopyBinShim(content, platform)) return false;
+  const normalized = content.replace(/\r\n/gu, "\n");
+  return normalized.includes("SUPERLOOPY_SHIM_CLI") && normalized.includes("fs.readdirSync");
+}
+
+function shimCliResolverSource() {
+  return [
+    "const fs=require('node:fs')",
+    "const path=require('node:path')",
+    "const start=process.env.SUPERLOOPY_SHIM_CLI||''",
+    "function live(p){try{return p.length>0&&fs.existsSync(p)}catch{return false}}",
+    "function parse(v){const m=/^(\\d+)\\.(\\d+)\\.(\\d+)(?:-([^+]+))?/.exec(v);return m&&{major:+m[1],minor:+m[2],patch:+m[3],pre:m[4]}}",
+    "function cmp(a,b){for(const k of ['major','minor','patch']){if(a[k]>b[k])return 1;if(a[k]<b[k])return -1}if(a.pre===undefined&&b.pre!==undefined)return 1;if(a.pre!==undefined&&b.pre===undefined)return -1;if(a.pre!==undefined&&b.pre!==undefined)return String(a.pre).localeCompare(String(b.pre));return 0}",
+    "let target=start",
+    "if(!live(target)){let best=null,bv=null;try{const root=path.dirname(path.dirname(path.dirname(start)));for(const name of fs.readdirSync(root)){const v=parse(name);if(!v)continue;const cli=path.join(root,name,'src','cli.js');if(!live(cli))continue;if(!bv||cmp(v,bv)>0){bv=v;best=cli}}}catch{}target=best||start}",
+    "process.stdout.write(target)"
+  ].join(";");
+}
+
 function shellQuote(value) {
   return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function cmdDoubleQuote(value) {
+  return String(value).replaceAll("\"", "\\\"");
+}
+
+function cmdSetValue(value) {
+  return String(value)
+    .replaceAll("^", "^^")
+    .replaceAll("%", "%%")
+    .replaceAll("&", "^&")
+    .replaceAll("<", "^<")
+    .replaceAll(">", "^>")
+    .replaceAll("|", "^|");
+}
+
+function cmdUnsetValue(value) {
+  return String(value)
+    .replaceAll("^^", "^")
+    .replaceAll("%%", "%")
+    .replaceAll("^&", "&")
+    .replaceAll("^<", "<")
+    .replaceAll("^>", ">")
+    .replaceAll("^|", "|");
+}
+
+function resolveWindowsBinDir(env, homeDir) {
+  const appData = env.APPDATA?.trim();
+  if (appData) return join(appData, "npm");
+  return join(homeDir, "AppData", "Roaming", "npm");
+}
+
+function pathEnvValue(env, platform = process.platform) {
+  if (platform === "win32" && typeof env.Path === "string" && env.Path.trim().length > 0) return env.Path;
+  return env.PATH;
 }
 
 function pathContainsDir(pathValue, dir, platform = process.platform) {
