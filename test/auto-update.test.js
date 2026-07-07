@@ -27,7 +27,7 @@ async function makeStorePluginRoot(prefix) {
 
 test("auto update plan schedules the Superloopy npx installer only for npx-local installs", () => {
   const plan = resolveAutoUpdatePlan({
-    env: { SUPERLOOPY_CURRENT_VERSION: "1.0.0", SUPERLOOPY_LATEST_VERSION: "1.0.1" },
+    env: { SUPERLOOPY_CURRENT_VERSION: "1.0.0", SUPERLOOPY_LATEST_VERSION: "1.0.1", SUPERLOOPY_AUTO_UPDATE: "on" },
     now: 90_000_000,
     lastCheckedAt: 0,
     installFlow: "npx-local"
@@ -36,6 +36,19 @@ test("auto update plan schedules the Superloopy npx installer only for npx-local
   assert.equal(plan.shouldRun, true);
   assert.equal(plan.command, "npx");
   assert.deepEqual(plan.args, ["--yes", "superloopy@latest", "install", "--force"]);
+});
+
+test("auto update execution is opt-in: without SUPERLOOPY_AUTO_UPDATE=on it is notice-only", () => {
+  const plan = resolveAutoUpdatePlan({
+    env: { SUPERLOOPY_CURRENT_VERSION: "1.0.0", SUPERLOOPY_LATEST_VERSION: "1.0.1" },
+    now: 90_000_000,
+    lastCheckedAt: 0,
+    installFlow: "npx-local"
+  });
+
+  assert.equal(plan.shouldRun, false);
+  assert.equal(plan.reason, "opt-in-required");
+  assert.equal(plan.latestVersion, "1.0.1");
 });
 
 test("auto update plan skips checkout installs instead of pointing wrappers at npx cache paths", () => {
@@ -138,6 +151,7 @@ test("npx-local auto update check runs the configured installer command and pers
   const spawnLogPath = join(root, "spawn.log");
   const env = autoUpdateEnv(root, {
     PLUGIN_ROOT: pluginRoot,
+    SUPERLOOPY_AUTO_UPDATE: "on",
     SUPERLOOPY_AUTO_UPDATE_INTERVAL_MS: "0",
     SUPERLOOPY_AUTO_UPDATE_WAIT: "1",
     SUPERLOOPY_AUTO_UPDATE_COMMAND: process.execPath,
@@ -158,5 +172,31 @@ test("npx-local auto update check runs the configured installer command and pers
       toVersion: "1.0.1",
       startedAt: 123_456
     }
+  });
+});
+
+test("npx-local auto update check without opt-in emits an update notice and never spawns the installer", async () => {
+  const { root, pluginRoot } = await makeStorePluginRoot("superloopy-auto-update-optin-");
+  await writeFile(join(pluginRoot, "superloopy-install.json"), JSON.stringify({ packageName: "superloopy", version: "1.0.0" }));
+  const spawnLogPath = join(root, "spawn.log");
+  const env = autoUpdateEnv(root, {
+    PLUGIN_ROOT: pluginRoot,
+    SUPERLOOPY_AUTO_UPDATE_INTERVAL_MS: "0",
+    SUPERLOOPY_AUTO_UPDATE_WAIT: "1",
+    SUPERLOOPY_AUTO_UPDATE_COMMAND: process.execPath,
+    SUPERLOOPY_AUTO_UPDATE_ARGS_JSON: JSON.stringify(["-e", `require("node:fs").writeFileSync(${JSON.stringify(spawnLogPath)}, "ok")`])
+  });
+
+  const result = await runAutoUpdateCheck({ env, now: 123_456 });
+
+  assert.equal(result.started, false);
+  assert.equal(result.reason, "opt-in-required");
+  assert.equal(result.notices.length, 1);
+  assert.match(result.notices[0], /Update available/);
+  assert.match(result.notices[0], /SUPERLOOPY_AUTO_UPDATE=on/);
+  await assert.rejects(readFile(spawnLogPath, "utf8"), { code: "ENOENT" });
+  assert.deepEqual(JSON.parse(await readFile(env.SUPERLOOPY_AUTO_UPDATE_STATE_PATH, "utf8")), {
+    lastCheckedAt: 123_456,
+    lastStatus: "success"
   });
 });

@@ -12,6 +12,7 @@
 // CLI:  node visual-diff.mjs <reference.png> <actual.png> [--json] [--tolerance N]
 
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { deflateSync, inflateSync } from "node:zlib";
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -221,7 +222,10 @@ function main(argv) {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+// pathToFileURL (not `file://${argv[1]}`): on Windows argv[1] is `C:\...` while
+// import.meta.url is `file:///C:/...`, so the string compare never matched and the
+// gate silently exited 0 — a passing evidence artifact for an unchecked render.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     main(process.argv.slice(2));
   } catch (error) {

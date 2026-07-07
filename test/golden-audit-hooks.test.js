@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./helpers/trust-isolate.js";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,6 +9,7 @@ import { auditLoop } from "../src/audit.js";
 import { runAuditorStopHook } from "../src/audit-hooks.js";
 import { captureLoop } from "../src/capture.js";
 import { createLoop, nextLoop } from "../src/loop.js";
+
 
 async function auditedRepo() {
   const repo = await mkdtemp(join(tmpdir(), "superloopy-audithook-"));

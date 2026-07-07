@@ -58,6 +58,16 @@ export function resolveAutoUpdatePlan({ env = process.env, now = Date.now(), las
   });
   if (!updatePlan.shouldUpdate) return { shouldRun: false, reason: updatePlan.reason };
 
+  // Auto-EXECUTION is opt-in. The updater runs code fetched from the npm
+  // registry (`npx superloopy@latest`) in the background with no signature or
+  // integrity pinning beyond the dist-tag — a compromised package/account would
+  // execute silently on SessionStart. Default is therefore notice-only: the
+  // version check still runs and the user is told an update exists, but nothing
+  // executes unless the user explicitly set SUPERLOOPY_AUTO_UPDATE=on.
+  if (String(env.SUPERLOOPY_AUTO_UPDATE ?? "").toLowerCase() !== "on") {
+    return { shouldRun: false, reason: "opt-in-required", currentVersion, latestVersion };
+  }
+
   return {
     shouldRun: true,
     command: updatePlan.command,
@@ -122,6 +132,14 @@ export async function runAutoUpdateCheck({ env = process.env, now = Date.now() }
     if (plan.reason === "checkout-flow") {
       return { started: false, reason: plan.reason, notices };
     }
+    if (plan.reason === "opt-in-required") {
+      // Update exists but auto-exec is not opted in: surface a notice and mark
+      // the check successful so the daily throttle applies (no per-session nag).
+      await appendUpdateLog(env, now, "skipped", { kind: "opt-in-required" });
+      await writeState(statePath, { ...state, lastCheckedAt: now, lastStatus: "success" });
+      notices.push(formatOptInRequiredNotice(plan));
+      return { started: false, reason: plan.reason, notices };
+    }
     await appendUpdateLog(env, now, "skipped", { reason: plan.reason });
     if (plan.reason === "up-to-date") {
       await writeState(statePath, { ...state, lastCheckedAt: now, lastStatus: "success" });
@@ -178,6 +196,15 @@ function formatMarketplaceFlowNotice(updateContext) {
     "[Superloopy] Auto-update skipped: this Superloopy install is managed by the Codex plugin marketplace, so npx self-update was not started.",
     versionText,
     "Tell the user, in the user's preferred tone, to upgrade with `codex plugin marketplace upgrade beefiker` when they want the update, and explain that Codex will require hook re-approval after the upgrade."
+  ].join(" ");
+}
+
+function formatOptInRequiredNotice({ currentVersion, latestVersion }) {
+  return [
+    `[Superloopy] Update available: v${currentVersion ?? "unknown"} -> v${latestVersion}.`,
+    "Background auto-install is opt-in (it executes code fetched from npm).",
+    "Tell the user they can update now with `npx --yes superloopy@latest install --force`,",
+    "or enable background auto-updates by setting SUPERLOOPY_AUTO_UPDATE=on."
   ].join(" ");
 }
 

@@ -19,6 +19,7 @@ import { readFlag } from "./args.js";
 import { resolveEvidenceArtifact, resolveEvidenceOutputPath } from "./artifacts.js";
 import { runCaptured } from "./capture.js";
 import { evidenceLoop } from "./loop.js";
+import { isTrustedCommand } from "./plan-trust.js";
 import {
   appendLedger,
   auditStatePath,
@@ -66,7 +67,9 @@ export async function auditLoop(cwd, argv) {
   for (const entry of results.filter((item) => item.floor === "fail" && !item.cached)) {
     const note = resolveEvidenceOutputPath(cwd, `${evidenceRelativeDir(scope)}/audit/${entry.criterion.replace("/", "-")}-floor-fail.txt`, scope);
     await mkdir(dirname(note.absolutePath), { recursive: true });
-    const gap = `Audit could not re-validate the recorded proof for ${entry.criterion}; re-prove it.`;
+    const gap = entry.rerunStatus === "untrusted-command"
+      ? `Audit refused to re-run ${entry.criterion}: its plan command was never executed on this machine (goals.json may have arrived with the repo). Re-prove it with \`superloopy loop prove\`, or approve the plan's commands once with \`superloopy loop trust\`.`
+      : `Audit could not re-validate the recorded proof for ${entry.criterion}; re-prove it.`;
     await writeFile(note.absolutePath, `${gap}\n`, "utf8");
     await recordAuditFailure(cwd, scope, entry.criterion, gap, note.relativePath, entry.failCount, maxFails);
   }
@@ -98,6 +101,23 @@ async function auditCriterion(cwd, scope, goal, criterion, priorEntry, forceReru
   const base = { criterion: key, scenario: criterion.scenario, inputHash, sourceHash, verdict: null, failCount: priorEntry?.failCount ?? 0, auditedAt: nowIso() };
 
   if (Array.isArray(criterion.command) && criterion.command.length > 0) {
+    // Trust boundary: criterion.command comes from goals.json, a repo file. A
+    // poisoned plan in a cloned repo must not become code execution just because
+    // the user ran `loop audit/finish`. Only commands captured locally (loop
+    // capture/prove) or explicitly approved (`loop trust`) may be re-run;
+    // anything else fails closed WITHOUT executing (see plan-trust.js).
+    if (!(await isTrustedCommand(cwd, criterion.command))) {
+      return {
+        ...base,
+        command: criterion.command,
+        rerunStatus: "untrusted-command",
+        rerunExitCode: null,
+        rerunArtifact: null,
+        rerunArtifactHash: null,
+        floor: "fail",
+        failCount: (priorEntry?.failCount ?? 0) + 1
+      };
+    }
     const output = resolveEvidenceOutputPath(cwd, `${evidenceRelativeDir(scope)}/audit/${goal.id}-${criterion.id}-rerun.txt`, scope);
     const capture = await runCaptured(cwd, criterion.command, output);
     const reproduced = capture.status === "pass";

@@ -258,6 +258,7 @@ Total: 100 points.
 | `src/matrix-gate.js` | Matrix gate golden tests. | Must validate compatible matrix gate shape through Superloopy artifacts only. |
 | `src/model-policy.js` | `test/doctor.test.js`. | Must fail doctor when the Codex model-policy doc/TOML defaults or the Claude model-policy doc/`agents/*.md` model frontmatter drift. |
 | `src/plan-summary.js` | Guide and status tests through loop outputs. | Must summarize progress without mutating state. |
+| `src/plan-trust.js` | Audit trust-gate tests. | Must fail closed: an audit re-run of a command never executed or approved on this machine must refuse without executing. |
 | `src/pre-tool-use.js` | `test/pre-tool-use.test.js`, `test/golden-hooks.test.js`. | Must block malformed `create_goal` payloads and premature native `update_goal` completion. |
 | `src/receipt.js` | `test/host-adapter.test.js`, hook tests. | Must recover the worker receipt from last_assistant_message when present, else from the decoded final turn of the subagent transcript, failing closed (re-prompt) when the final message exceeds the tail window, host-agnostically. |
 | `test/host-adapter.test.js` | `npm test`. | Must verify direct and transcript-fallback receipt recovery for both evidence and audit receipts, including trailing-newline, oversized-final-message, tool-use-only, and stale-token cases. |
@@ -303,6 +304,7 @@ Total: 100 points.
 | `test/pre-tool-use.test.js` | `npm test`. | Must verify Superloopy blocks native complete status until aggregate completion is real. |
 | `test/report.test.js` | `npm test`. | Must verify report artifacts remain portable and guide-backed. |
 | `test/sync-version.test.js` | `npm test`. | Must prove Superloopy package and plugin manifest versions are stamped from one release version. |
+| `test/helpers/trust-isolate.js` | `npm test`. | Must isolate the plan-trust ledger to a temp dir so tests never touch the real user-home trust store. |
 | `web/README.md` | Static landing-page documentation. | Must describe the static web preview without changing plugin runtime contracts. |
 | `web/_headers` | Static-hosting headers. | Must remain deployment configuration only. |
 | `web/assets/franky.png` | Static landing-page franky asset. | Must remain a web presentation image, not runtime plugin logic. |

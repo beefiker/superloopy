@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./helpers/trust-isolate.js";
 import { Buffer } from "node:buffer";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -9,6 +10,7 @@ import { beginLoop } from "../src/begin.js";
 import { captureLoop } from "../src/capture.js";
 import { proveLoop } from "../src/prove.js";
 import {
+
   createLoop,
   evidenceLoop,
   guideLoop,
