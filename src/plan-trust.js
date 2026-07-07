@@ -11,10 +11,11 @@
 // explicitly approved the plan with `superloopy loop trust`. The approval
 // ledger lives OUTSIDE the repo (user home, keyed by repo path) precisely so
 // repo contents cannot forge trust; absence of the ledger fails closed.
-import { createHash } from "node:crypto";
-import { mkdir, readFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { readFileSync, realpathSync, statSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { readFlag } from "./args.js";
 import { nowIso, readPlan, scopeFromSessionId, writeJsonAtomic } from "./store.js";
 
@@ -30,15 +31,17 @@ export function commandDigest(command) {
 }
 
 async function readTrustStore(cwd) {
+  const checkoutIdentity = await currentCheckoutIdentity(cwd);
   try {
     const parsed = JSON.parse(await readFile(trustStorePath(cwd), "utf8"));
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && parsed.commands && typeof parsed.commands === "object") {
+      if (parsed.checkoutIdentity !== checkoutIdentity) return emptyTrustStore(checkoutIdentity);
       return parsed;
     }
   } catch {
     // absent or unreadable -> empty store: nothing is trusted (fail-closed)
   }
-  return { version: 1, commands: {} };
+  return emptyTrustStore(checkoutIdentity);
 }
 
 export async function isTrustedCommand(cwd, command) {
@@ -57,6 +60,59 @@ export async function recordTrustedCommand(cwd, command) {
   await mkdir(dirname(path), { recursive: true });
   await writeJsonAtomic(path, store);
   return true;
+}
+
+function emptyTrustStore(checkoutIdentity) {
+  return { version: 1, checkoutIdentity, commands: {} };
+}
+
+async function currentCheckoutIdentity(cwd) {
+  const root = resolve(cwd);
+  const gitDir = resolveGitDir(root);
+  if (gitDir) {
+    const markerPath = join(gitDir, "superloopy-trust-id");
+    let id = "";
+    try {
+      id = readFileSync(markerPath, "utf8").trim();
+    } catch {
+      id = randomUUID();
+      await writeFile(markerPath, `${id}\n`, { encoding: "utf8", flag: "wx" }).catch((error) => {
+        if (error?.code !== "EEXIST") throw error;
+      });
+      id = readFileSync(markerPath, "utf8").trim();
+    }
+    return hash({ kind: "git", root, gitDir, id });
+  }
+
+  const stat = statSync(root);
+  return hash({ kind: "path", root, dev: stat.dev, ino: stat.ino, birthtimeMs: stat.birthtimeMs });
+}
+
+function resolveGitDir(start) {
+  let cursor = resolve(start);
+  while (true) {
+    const candidate = join(cursor, ".git");
+    try {
+      const stat = statSync(candidate);
+      if (stat.isDirectory()) return realpathSync(candidate);
+      if (stat.isFile()) {
+        const match = /^gitdir:\s*(.+)\s*$/iu.exec(readFileSync(candidate, "utf8"));
+        if (match) {
+          const gitDir = match[1];
+          return realpathSync(isAbsolute(gitDir) ? gitDir : resolve(cursor, gitDir));
+        }
+      }
+    } catch {
+      // Keep walking toward the filesystem root.
+    }
+    const parent = dirname(cursor);
+    if (parent === cursor) return null;
+    cursor = parent;
+  }
+}
+
+function hash(value) {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
 // Explicit user approval of every command currently in the plan — the escape

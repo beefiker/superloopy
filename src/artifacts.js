@@ -65,6 +65,7 @@ export function resolveEvidenceOutputPath(cwd, artifactPath, scope) {
   if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) {
     throw new Error("Evidence artifact must live under .superloopy/evidence.");
   }
+  rejectSymlinkInExistingPath(cwd, resolved, artifactPath);
   // Threat model: a malicious repo can pre-create the evidence path as a symlink
   // (file OR directory component, including a dangling link) pointing outside the
   // repo; runCaptured() would then write the capture transcript THROUGH the link —
@@ -95,6 +96,24 @@ function lstatNoFollow(path) {
     return lstatSync(path);
   } catch {
     return null;
+  }
+}
+
+function rejectSymlinkInExistingPath(root, target, artifactPath) {
+  const rel = relative(root, target);
+  const segments = rel.split(/[\\/]+/u).filter(Boolean);
+  let cursor = resolve(root);
+  const candidates = [cursor];
+  for (const segment of segments) {
+    cursor = join(cursor, segment);
+    candidates.push(cursor);
+  }
+  for (const candidate of candidates) {
+    const stat = lstatNoFollow(candidate);
+    if (!stat) continue;
+    if (stat.isSymbolicLink()) {
+      throw new Error(`Evidence artifact must not cross a symlink: ${artifactPath}`);
+    }
   }
 }
 

@@ -6,10 +6,10 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { auditLoop } from "../src/audit.js";
-import { validateQualityGate } from "../src/artifacts.js";
+import { resolveEvidenceOutputPath, validateQualityGate } from "../src/artifacts.js";
 import { captureLoop } from "../src/capture.js";
 import { createLoop, evidenceLoop, nextLoop } from "../src/loop.js";
-import { recordTrustedCommand, trustLoop } from "../src/plan-trust.js";
+import { isTrustedCommand, recordTrustedCommand, trustLoop } from "../src/plan-trust.js";
 
 async function tempRepo() {
   return mkdtemp(join(tmpdir(), "superloopy-audit-"));
@@ -149,6 +149,21 @@ test("SECURITY: audit refuses to execute an untrusted plan command (repo poisoni
   assert.equal(await readFile(marker, "utf8"), "pwned");
 });
 
+test("SECURITY: command trust does not carry into a replaced checkout at the same path", async () => {
+  const root = await mkdtemp(join(tmpdir(), "superloopy-trust-reuse-"));
+  const repo = join(root, "app");
+  const command = ["npm", "test"];
+  await mkdir(join(repo, ".git"), { recursive: true });
+
+  await recordTrustedCommand(repo, command);
+  assert.equal(await isTrustedCommand(repo, command), true);
+
+  await rm(repo, { recursive: true, force: true });
+  await mkdir(join(repo, ".git"), { recursive: true });
+
+  assert.equal(await isTrustedCommand(repo, command), false);
+});
+
 test("SECURITY: evidence output path rejects a symlink escaping the evidence root", async () => {
   const { symlink, mkdir: mkdirp } = await import("node:fs/promises");
   const repo = await tempRepo();
@@ -170,4 +185,21 @@ test("SECURITY: evidence output path rejects a symlink escaping the evidence roo
     /symlink|resolve under/i
   );
   assert.equal(await readFile(outsideTarget, "utf8"), "original\n", "target outside evidence must be untouched");
+});
+
+test("SECURITY: evidence output path rejects a symlinked evidence root", async () => {
+  const { symlink, mkdir: mkdirp } = await import("node:fs/promises");
+  const repo = await tempRepo();
+  await mkdirp(join(repo, ".superloopy"), { recursive: true });
+  const outsideEvidence = await mkdtemp(join(tmpdir(), "superloopy-outside-evidence-"));
+  try {
+    await symlink(outsideEvidence, join(repo, ".superloopy", "evidence"), "dir");
+  } catch {
+    return; // symlink unsupported (e.g. unprivileged Windows) — skip
+  }
+
+  assert.throws(
+    () => resolveEvidenceOutputPath(repo, ".superloopy/evidence/root-symlink.txt", undefined),
+    /symlink/i
+  );
 });
