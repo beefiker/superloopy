@@ -6,6 +6,8 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
+import { isSourceCheckoutRoot } from "../src/source-checkout.js";
+
 // Regression coverage for issue #14: `npm pack` always strips these repo-only files
 // from the tarball, so a packed install legitimately lacks them while the file audit
 // doc still lists their inventory rows. Doctor must not report the install as broken.
@@ -110,4 +112,17 @@ test("doctor still flags stale packaging rows in a tracked monorepo subdirectory
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.checks.fileAudit.ok, false);
   assert.ok(parsed.checks.fileAudit.staleRows.includes(".gitignore"), JSON.stringify(parsed.checks.fileAudit.staleRows));
+});
+
+test("source checkout detection falls back safely when git is unavailable", async () => {
+  const repo = await mkdtemp(join(tmpdir(), "superloopy-source-checkout-"));
+  const oldPath = process.env.PATH;
+  process.env.PATH = "";
+  try {
+    assert.equal(isSourceCheckoutRoot(repo), false);
+    await mkdir(join(repo, ".git"));
+    assert.equal(isSourceCheckoutRoot(repo), true);
+  } finally {
+    process.env.PATH = oldPath;
+  }
 });

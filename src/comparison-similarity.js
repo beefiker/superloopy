@@ -94,13 +94,19 @@ function readGitHead(path, name) {
     timeout: 10_000
   });
   if (result.status !== 0) {
-    throw new Error(result.stderr.trim() || `Unable to read ${name} checkout HEAD.`);
+    throw new Error(readSpawnFailure(result, `Unable to read ${name} checkout HEAD.`));
   }
   const head = result.stdout.trim();
   if (!/^[0-9a-f]{40}$/u.test(head)) {
     throw new Error(`Unable to parse ${name} checkout HEAD.`);
   }
   return head;
+}
+
+function readSpawnFailure(result, fallback) {
+  const stderr = typeof result.stderr === "string" ? result.stderr.trim() : "";
+  const error = result.error instanceof Error ? result.error.message : "";
+  return stderr || error || fallback;
 }
 
 async function buildComparisonBlockIndex(sources) {

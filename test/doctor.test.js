@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
-import { normalizeComparisonPath } from "../src/comparison-similarity.js";
+import { checkComparisonSimilarity, normalizeComparisonPath } from "../src/comparison-similarity.js";
 import { formatDoctor, runDoctor } from "../src/doctor.js";
 
 const EXPECTED_SKILLS = ["humanize-korean", "superloopy-clone", "superloopy-doctor", "superloopy-frontend", "superloopy-loop", "superloopy-research"];
@@ -20,8 +20,8 @@ function runCli(args, options = {}) {
   });
 }
 
-async function tempRepoCopy() {
-  const repo = await mkdtemp(join(tmpdir(), "superloopy-doctor-"));
+async function tempRepoCopy({ initGit = true, prefix = "superloopy-doctor-" } = {}) {
+  const repo = await mkdtemp(join(tmpdir(), prefix));
   const result = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
     cwd: process.cwd(),
     encoding: "utf8"
@@ -34,24 +34,7 @@ async function tempRepoCopy() {
     await mkdir(dirname(target), { recursive: true });
     await writeFile(target, await readFile(source));
   }
-  spawnSync("git", ["init"], { cwd: repo, encoding: "utf8" });
-  return repo;
-}
-
-async function tempInstalledCacheCopy() {
-  const repo = await mkdtemp(join(tmpdir(), "superloopy-cache-"));
-  const result = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
-    cwd: process.cwd(),
-    encoding: "utf8"
-  });
-  assert.equal(result.status, 0, result.stderr);
-  for (const file of result.stdout.split("\n").filter(Boolean)) {
-    const source = join(process.cwd(), file);
-    if (!existsSync(source)) continue;
-    const target = join(repo, file);
-    await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, await readFile(source));
-  }
+  if (initGit) spawnSync("git", ["init"], { cwd: repo, encoding: "utf8" });
   return repo;
 }
 
@@ -202,7 +185,7 @@ test("doctor ignores Codex marketplace install metadata in plugin cache", async 
 });
 
 test("doctor accepts installed plugin caches that are not Git repositories", async () => {
-  const repo = await tempInstalledCacheCopy();
+  const repo = await tempRepoCopy({ initGit: false, prefix: "superloopy-cache-" });
 
   const result = await runDoctor(repo);
 
@@ -282,6 +265,26 @@ test("doctor comparison scan fails on copied-looking blocks", async () => {
 
 test("comparison scan normalizes Windows reference paths in findings", () => {
   assert.equal(normalizeComparisonPath("src\\external-loop.js"), "src/external-loop.js");
+});
+
+test("comparison scan reports missing git binary without a TypeError", async () => {
+  const repo = await tempComparisonTree({});
+  const comparison = await tempComparisonTree({});
+  const oldPath = process.env.PATH;
+  process.env.PATH = "";
+  try {
+    const result = await checkComparisonSimilarity(repo, {
+      sources: [{ key: "external", name: "External comparison", audited: "0".repeat(40) }],
+      comparisonPaths: { external: comparison },
+      listFiles: () => []
+    });
+
+    assert.equal(result.ok, false);
+    assert.doesNotMatch(result.message, /Cannot read properties/);
+    assert.match(result.message, /git|HEAD|spawn/i);
+  } finally {
+    process.env.PATH = oldPath;
+  }
 });
 
 test("doctor file audit fails when an inventory row loses boundary evidence", async () => {

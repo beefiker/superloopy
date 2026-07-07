@@ -1,4 +1,13 @@
-const WINDOWS_CMD_SHIM_COMMANDS = new Set(["npm", "npx"]);
+const WINDOWS_CMD_SHIM_COMMANDS = new Set([
+  "npm",
+  "npx",
+  "pnpm",
+  "yarn",
+  "vitest",
+  "tsc",
+  "eslint",
+  "playwright"
+]);
 
 export function resolveSpawnInvocation(command, args, platform = process.platform) {
   const invocation = { command, args: Array.from(args) };

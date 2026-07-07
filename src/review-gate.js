@@ -118,16 +118,16 @@ function validateCriteriaCoverage(coverage) {
   };
 }
 
-function artifactPath(value, field, resolveArtifactPath) {
+export function artifactPath(value, field, resolveArtifactPath) {
   return resolveArtifactPath(textField(value, field));
 }
 
-function section(value, field) {
+export function section(value, field) {
   if (!isRecord(value)) fail(`${field} must be an object.`);
   return value;
 }
 
-function textField(value, field) {
+export function textField(value, field) {
   if (typeof value !== "string" || value.trim().length === 0) fail(`${field} must be a non-empty string.`);
   const trimmed = value.trim();
   if (/^(todo|tbd|placeholder)$/iu.test(trimmed)) fail(`${field} must not be placeholder text.`);
@@ -139,25 +139,25 @@ function numberField(value, field) {
   return value;
 }
 
-function literal(value, expected, field) {
+export function literal(value, expected, field) {
   if (value !== expected) fail(`${field} must be ${expected}.`);
   return expected;
 }
 
-function emptyBlockers(value, field) {
+export function emptyBlockers(value, field) {
   if (!Array.isArray(value)) fail(`${field} must be an array.`);
   if (value.length !== 0) fail(`${field} must be empty.`);
   return [];
 }
 
-function stringArray(value, field) {
+export function stringArray(value, field) {
   if (!Array.isArray(value) || !value.every((item) => typeof item === "string" && item.trim().length > 0)) {
     fail(`${field} must be a string array.`);
   }
   return value.map((item) => item.trim());
 }
 
-function referencedArtifacts(value, field, byId) {
+export function referencedArtifacts(value, field, byId) {
   return stringArray(value, field).map((id) => {
     const artifact = byId.get(id);
     if (artifact === undefined) fail(`${field} references unknown artifact ${id}.`);
@@ -175,7 +175,7 @@ function artifactKind(value, field) {
   fail(`${field} must be a supported artifact kind.`);
 }
 
-function passedVerdict(value, field) {
+export function passedVerdict(value, field) {
   if (value === "not_applicable") fail(`${field} must not be not_applicable.`);
   return literal(value, "passed", field);
 }
@@ -188,10 +188,10 @@ function artifactCompatible(surface, kind) {
   return false;
 }
 
-function isRecord(value) {
+export function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function fail(message) {
+export function fail(message) {
   throw new Error(message);
 }

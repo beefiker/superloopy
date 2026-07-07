@@ -14,20 +14,12 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { resolveEvidenceArtifact } from "./artifacts.js";
 import { auditMaxFails, auditOneCriterion, recordAuditFailure } from "./audit.js";
-import { transcriptTailHasMarker } from "./continuation.js";
+import { CONTEXT_PRESSURE_MARKERS, transcriptTailHasMarker } from "./continuation.js";
 import { auditReceiptFromPayload, normalizeAgentType, subagentTranscriptPath } from "./receipt.js";
 import { validateAuditVerdict, verifyVerdictAgainstState } from "./audit-verdict.js";
 import { appendLedger, auditStatePath, evidenceRelativeDir, goalsPath, nowIso, scopeFromSessionId, withFileLock, writeJsonAtomic } from "./store.js";
 
 const MAX_AUDIT_ATTEMPTS = 3;
-// Generic context-pressure markers (kept in sync with the hook runtime); on a
-// compaction the handler pauses without burning an attempt.
-const CONTEXT_PRESSURE_MARKERS = [
-  "context compacted", "context_length_exceeded", "skill descriptions were shortened",
-  "context_too_large", "codex ran out of room in the model's context window",
-  "your input exceeds the context window", "long threads and multiple compactions"
-];
-
 export async function runAuditorStopHook(payload) {
   if (payload === null || typeof payload !== "object") return "";
   if (payload.hook_event_name !== "SubagentStop") return "";

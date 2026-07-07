@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
 import { resolveAutoUpdatePlan, resolveSuperloopyUpdatePlan, runAutoUpdateCheck } from "../src/auto-update.js";
+import { acquireLock, readState } from "../src/auto-update-state.js";
 import { detectInstallFlow } from "../src/install-flow.js";
 import { resolveSpawnInvocation } from "../src/spawn-command.js";
 
@@ -81,15 +82,57 @@ test("Superloopy update plan handles semver and malformed versions", () => {
   assert.equal(resolveSuperloopyUpdatePlan({ currentVersion: "1.0.0", latestVersion: "latest" }).reason, "unknown-latest");
 });
 
-test("spawn invocation uses Windows cmd shims for npm and npx only", () => {
+test("spawn invocation routes common Windows command shims through cmd.exe", () => {
   assert.deepEqual(resolveSpawnInvocation("npx", ["--yes", "superloopy@latest"], "win32"), {
     command: "cmd.exe",
     args: ["/d", "/s", "/c", "npx.cmd", "--yes", "superloopy@latest"]
+  });
+  assert.deepEqual(resolveSpawnInvocation("pnpm", ["test"], "win32"), {
+    command: "cmd.exe",
+    args: ["/d", "/s", "/c", "pnpm.cmd", "test"]
+  });
+  assert.deepEqual(resolveSpawnInvocation("vitest", ["run"], "win32"), {
+    command: "cmd.exe",
+    args: ["/d", "/s", "/c", "vitest.cmd", "run"]
   });
   assert.deepEqual(resolveSpawnInvocation("node", ["src/cli.js"], "win32"), {
     command: "node",
     args: ["src/cli.js"]
   });
+});
+
+test("auto-update state rejects corrupt JSON instead of silently resetting", async () => {
+  const root = await mkdtemp(join(tmpdir(), "superloopy-auto-update-corrupt-"));
+  const statePath = join(root, "state.json");
+  await writeFile(statePath, "{not-json", "utf8");
+
+  await assert.rejects(readState(statePath), /Invalid Superloopy auto-update state JSON/);
+});
+
+test("auto-update lock does not reclaim a stale-looking live holder", async () => {
+  const root = await mkdtemp(join(tmpdir(), "superloopy-auto-update-lock-"));
+  const lockPath = join(root, "state.json.lock");
+  await writeFile(lockPath, `${process.pid} 1\n`, "utf8");
+  const old = new Date(Date.now() - 60_000);
+  await utimes(lockPath, old, old);
+
+  const lock = await acquireLock(lockPath, Date.now(), 1);
+
+  assert.equal(lock, null);
+  assert.equal(await readFile(lockPath, "utf8"), `${process.pid} 1\n`);
+});
+
+test("auto-update lock reclaims stale legacy timestamp-only locks", async () => {
+  const root = await mkdtemp(join(tmpdir(), "superloopy-auto-update-legacy-lock-"));
+  const lockPath = join(root, "state.json.lock");
+  await writeFile(lockPath, `${Date.now() - 60_000}\n`, "utf8");
+  const old = new Date(Date.now() - 60_000);
+  await utimes(lockPath, old, old);
+
+  const lock = await acquireLock(lockPath, Date.now(), 1);
+
+  assert.notEqual(lock, null);
+  await lock.release();
 });
 
 test("install flow detects marketplace, npx snapshot, workspace, and unknown snapshot states", async () => {

@@ -425,7 +425,7 @@ test("hook context includes recorded evidence for already-passed criteria", asyn
 
   const context = JSON.parse(output).hookSpecificOutput.additionalContext;
   assert.match(context, /Recorded evidence:/);
-  assert.match(context, /G001\/C001 pass at \d{4}-\d{2}-\d{2}T.* -> `.superloopy\/evidence\/c1.txt` - notes: manual smoke covered/);
+  assert.match(context, /G001\/C001 pass at \d{4}-\d{2}-\d{2}T.* -> `.superloopy\/evidence\/c1.txt` - Happy path works from the real user-facing surface\. - notes: manual smoke covered/);
 });
 
 test("runStopHook stays silent when Superloopy aggregate is complete", async () => withStopHookEnabled(async () => {

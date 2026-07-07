@@ -3,6 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
 
+import { enforceAuditProvenance } from "../src/audit-gate-verify.js";
 import { createLoop } from "../src/loop.js";
 import { reviewStyleQualityGate, runCli, tempRepo, writeEvidence, writeGenuineAuditVerdict, writeQualityGateArtifacts } from "./golden-helpers.js";
 
@@ -66,6 +67,48 @@ test("golden: completion rejects a hand-written audit verdict not bound to a re-
   assert.match(result.stderr, /verdict|audit/i);
   const plan = JSON.parse(await readFile(join(repo, ".superloopy", "goals.json"), "utf8"));
   assert.equal(plan.aggregateCompletion, null); // never force-completed
+});
+
+test("audit provenance direct: rejects hand-written verdict artifacts", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  const c1 = await writeEvidence(repo, "c1.txt");
+  const c2 = await writeEvidence(repo, "c2.txt");
+  runCli(["loop", "evidence", "--goal-id", "G001", "--criterion-id", "C001", "--status", "pass", "--artifact", c1], { cwd: repo });
+  runCli(["loop", "evidence", "--goal-id", "G001", "--criterion-id", "C002", "--status", "pass", "--artifact", c2], { cwd: repo });
+  const gate = reviewStyleQualityGate(await writeQualityGateArtifacts(repo));
+
+  await assert.rejects(
+    enforceAuditProvenance(repo, undefined, gate.audit),
+    /Audit verdict|verdict|audit/i
+  );
+});
+
+test("audit provenance direct: rejects any passed command criterion whose floor no longer reproduces", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  const c1 = await writeEvidence(repo, "c1.txt");
+  const c2 = await writeEvidence(repo, "c2.txt");
+  runCli([
+    "loop",
+    "evidence",
+    "--goal-id",
+    "G001",
+    "--criterion-id",
+    "C001",
+    "--status",
+    "pass",
+    "--artifact",
+    c1,
+    "--command",
+    "[\"node\",\"-e\",\"process.exit(1)\"]"
+  ], { cwd: repo });
+  runCli(["loop", "evidence", "--goal-id", "G001", "--criterion-id", "C002", "--status", "pass", "--artifact", c2], { cwd: repo });
+
+  await assert.rejects(
+    enforceAuditProvenance(repo, undefined, undefined),
+    /G001\/C001|passing floor/
+  );
 });
 
 test("golden: completion re-derives EVERY passed criterion, not just cited ones (uncited failing command criterion is caught)", async () => {

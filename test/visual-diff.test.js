@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import test from "node:test";
 
 import { decodePng, diffImages, encodePng } from "../skills/superloopy-frontend/scripts/visual-diff.mjs";
@@ -15,6 +16,23 @@ function decoded(width, height, rgba) {
   return decodePng(encodePng(width, height, rgba));
 }
 
+function pngWithDimensions(width, height) {
+  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+  const chunk = (type, data) => {
+    const out = Buffer.alloc(12 + data.length);
+    out.writeUInt32BE(data.length, 0);
+    out.write(type, 4, "ascii");
+    data.copy(out, 8);
+    return out;
+  };
+  return Buffer.concat([signature, chunk("IHDR", ihdr), chunk("IEND", Buffer.alloc(0))]);
+}
+
 test("encode/decode round-trips RGBA pixels through all PNG filters", () => {
   const rgba = solid(16, 16, [255, 255, 255, 255]);
   rgba[0] = 10; rgba[1] = 20; rgba[2] = 30; rgba[3] = 200; // one off pixel
@@ -22,6 +40,13 @@ test("encode/decode round-trips RGBA pixels through all PNG filters", () => {
   assert.equal(back.width, 16);
   assert.equal(back.height, 16);
   assert.deepEqual(Array.from(back.rgba.slice(0, 4)), [10, 20, 30, 200]);
+});
+
+test("decodePng rejects oversized IHDR dimensions before inflating pixel data", () => {
+  assert.throws(
+    () => decodePng(pngWithDimensions(40_000, 40_000)),
+    /PNG dimensions exceed/
+  );
 });
 
 test("identical images score 100 with no hotspots", () => {
