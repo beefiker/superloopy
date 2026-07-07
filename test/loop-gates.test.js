@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import "./helpers/trust-isolate.js";
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,6 +13,7 @@ import { reportLoop } from "../src/report.js";
 import { traceLoop } from "../src/trace.js";
 import { checkpointLoop, createLoop, evidenceLoop, reviewLoop, statusLoop } from "../src/loop.js";
 import { recordTrustedCommand } from "../src/plan-trust.js";
+import { goalsPath } from "../src/store.js";
 
 
 async function tempRepo() {
@@ -332,6 +334,32 @@ test("checkpointLoop serializes final plan mutation with concurrent evidence wri
   const persisted = await statusLoop(repo);
   assert.equal(persisted.plan.goals[0].criteria[1].notes, "recorded during final checkpoint");
   assert.equal(persisted.plan.aggregateCompletion.status, "complete");
+});
+
+test("checkpointLoop re-derives audit provenance before acquiring the goals lock", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship a CLI loop"]);
+  const slowCommand = [process.execPath, "-e", "setTimeout(() => process.exit(0), 250)"];
+  const c1 = await writeEvidence(repo, "c1.txt");
+  const c2 = await writeEvidence(repo, "c2.txt");
+  await evidenceLoop(repo, ["--goal-id", "G001", "--criterion-id", "C001", "--status", "pass", "--artifact", c1, "--command", JSON.stringify(slowCommand)]);
+  await evidenceLoop(repo, ["--goal-id", "G001", "--criterion-id", "C002", "--status", "pass", "--artifact", c2]);
+  await recordTrustedCommand(repo, slowCommand);
+  await writeFile(join(repo, ".superloopy", "evidence", "gate.json"), JSON.stringify({ status: "passed", artifacts: [c1, c2] }), "utf8");
+
+  const checkpoint = checkpointLoop(repo, [
+    "--goal-id",
+    "G001",
+    "--status",
+    "complete",
+    "--evidence",
+    "done",
+    "--quality-gate",
+    ".superloopy/evidence/gate.json"
+  ]);
+  await sleep(50);
+  assert.equal(existsSync(`${goalsPath(repo)}.lock`), false, "checkpoint must not hold goals lock while re-deriving audit provenance");
+  await checkpoint;
 });
 
 test("default gate re-derives the floor and blocks completion when a command no longer reproduces (P0.1)", async () => {
