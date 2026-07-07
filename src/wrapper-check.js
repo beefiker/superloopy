@@ -11,7 +11,7 @@
 
 import { existsSync as fsExistsSync, readFileSync as fsReadFileSync, readdirSync as fsReaddirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import { parseBinShimCliPath } from "./agents.js";
+import { binShimSupportsSiblingFallback, parseBinShimCliPath } from "./agents.js";
 import { compareVersions, parseVersion } from "./auto-update-plan.js";
 
 function informational(message, extra = {}) {
@@ -40,6 +40,12 @@ export function checkWrapper(options = {}) {
       // The `superloopy` command IS this broken wrapper, so never tell the user to run it. Point
       // at a surviving sibling cli.js if one exists; otherwise let the bootstrap re-point it.
       const live = newestLiveSiblingCli(cliPath, fs);
+      if (live && binShimSupportsSiblingFallback(located.content, platform)) {
+        return informational(
+          `bin wrapper at ${located.path} points at ${cliPath}, which no longer exists, but this wrapper can fall back to the live sibling CLI at ${live}. Re-run \`node "${live}" bin install --force\` when convenient to refresh the embedded target.`,
+          { found: true, recovered: true, wrapperPath: located.path, cliPath, resolvedCliPath: live }
+        );
+      }
       const repair = live
         ? `run \`node "${live}" bin install --force\` to re-point it`
         : "re-approve the Modified hooks and start a new Codex session so the installer re-points it";

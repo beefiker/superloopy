@@ -45,7 +45,7 @@ Total: 100 points.
 | LG-03 | Hooks keep long-running work from ending early. | `node --test test/hooks.test.js test/golden-hooks.test.js` | Stop, prompt, receipt, scoped session, and steering hooks are fail-closed and guide-backed. |
 | LG-04 | Goal parsing and scoped state stay stable across turns. | `node --test test/goals.test.js test/golden-matrix-gate.test.js` | `@goal` stories, scoped sessions, and matrix gate rows remain deterministic. |
 | LG-05 | Quality gates reject weak proof. | `node --test test/golden-review-gate.test.js test/golden-matrix-gate.test.js test/loop-gates.test.js` | Weak QA, not-applicable shortcuts, missing matrix rows, and inline-only proof fail. |
-| LG-06 | Public docs and packaging stay executable. | `node --test test/docs.test.js test/plugin.test.js test/doctor.test.js test/doctor-review-feedback.test.js` | Docs describe the real command surface, plugin hooks are valid, and doctor remains dependency-free. |
+| LG-06 | Public docs and packaging stay executable. | `node --test test/docs.test.js test/plugin.test.js test/doctor.test.js test/doctor-review-feedback.test.js test/wrapper-check.test.js` | Docs describe the real command surface, plugin hooks are valid, and doctor remains dependency-free. |
 | LG-07 | Whole-repo health stays strict. | `npm test` and `node src/cli.js doctor --json` | All tests pass, doctor reports `ok: true`, and no file exceeds the reviewability limit. |
 | LG-08 | The continuation engine drives bounded multi-iteration work to evidence-backed completion. | `node --test test/golden-continuation.test.js` | Blocks while incomplete and under budget, resets the stall counter only above a recorded-proof high-water mark, and stops blocked-not-complete on a cap or no-progress; aggregate completion clears loop-control state. |
 | LG-09 | Crew completion lines stay localized and presentation-only. | `node --test test/crew-lines.test.js test/fleet.test.js` | Terminal known crew handoffs may speak once in a supported catalog language, pending/unknown lanes stay quiet, and evidence/status fields remain authoritative. |
@@ -271,7 +271,7 @@ Total: 100 points.
 | `src/source-checkout.js` | `test/doctor-packed.test.js`, `test/file-audit.test.js`. | Must classify own-`.git` roots and tracked monorepo subdirectories as source checkouts and packed/ignored install roots as installs, so no enclosing repo answers for an install. |
 | `src/subagent-attempts.js` | `npm test`, doctor reviewability. | Must count the 3-attempt cap (with a session/cwd fallback key) and record the exhaustion ledger signal. |
 | `src/trace.js` | Loop-gate and CLI evidence tests. | Must show artifact-backed proof, warnings, missing proof, suggested paths, ledger timeline, and evidence summary counts. |
-| `src/wrapper-check.js` | `test/doctor.test.js`. | Must read the installed bin wrapper and advise (never fail) when it points at a stale or pruned versioned cache after an upgrade; informational, no-throw, and dependency-injectable. |
+| `src/wrapper-check.js` | `test/wrapper-check.test.js`, `test/doctor.test.js`. | Must read the installed bin wrapper and advise (never fail) when it points at a stale or pruned versioned cache after an upgrade; informational, no-throw, dependency-injectable, and aware of resilient sibling-fallback shims. |
 | `test/audit.test.js` | `npm test`. | Must fail if repo files are missing from audit or reviewability limits are exceeded. |
 | `test/auto-update.test.js` | `npm test`. | Must prove marketplace skip notices, checkout skip behavior, future npx-local snapshot behavior, semver planning, install-flow detection, and Windows npx shims. |
 | `test/subagent-receipt.test.js` | `npm test`. | Must prove the attempt cap counts without agent_id and records a ledger signal on exhaustion. |
@@ -283,6 +283,7 @@ Total: 100 points.
 | `test/doctor.test.js` | `npm test`. | Must cover doctor checks for package, audits, comparison, design decisions, model policy, generated install metadata, and reviewability. |
 | `test/doctor-packed.test.js` | `npm test`. | Must prove `doctor --json` reports ok against an npm-pack-shaped root (no `.git`, `.gitignore`, or `package-lock.json`) run from an arbitrary cwd, including a root nested in a parent Git repository that ignores it. |
 | `test/doctor-review-feedback.test.js` | `npm test`. | Must cover review-requested doctor hardening for broken checkout manifests and non-directory skills paths. |
+| `test/wrapper-check.test.js` | `npm test`. | Must cover generated wrapper parsing, stale/dangling/recovered wrapper advice, first-PATH precedence, and no-wrapper silence without touching real user wrappers. |
 | `test/file-audit.test.js` | `npm test`. | Must prove the file-audit verifier fails stale inventory rows. |
 | `test/humanize-korean.test.js` | `node --test test/humanize-korean.test.js`. | Must prove the Korean humanizer audit script accepts preserved Korean output and rejects non-Korean or token-dropping output. |
 | `test/fleet.test.js` | `npm test`. | Must prove verdict normalization, artifact-bound accept verdicts, handoff recording/update, fleet reconciliation, crew-line decoration, and the parallel-cap warning. |

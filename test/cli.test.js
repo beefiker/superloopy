@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { installBinShim, SUPERLOOPY_AGENT_NAMES } from "../src/agents.js";
+import { binShimSupportsSiblingFallback, installBinShim, SUPERLOOPY_AGENT_NAMES } from "../src/agents.js";
 import { createLoop } from "../src/loop.js";
 
 async function tempRepo() {
@@ -225,6 +225,24 @@ test("CLI bin install uses Windows-safe PATH detection and PowerShell hint", asy
   assert.match(result.pathHint, /\[Environment\]::SetEnvironmentVariable\('Path'/);
   assert.doesNotMatch(result.pathHint, /%PATH%/);
   assert.doesNotMatch(result.next, /Add .* to PATH/);
+});
+
+test("CLI bin install defaults to a Windows-native npm shim directory", async () => {
+  const repo = await tempRepo();
+  const appData = join(repo, "AppData", "Roaming");
+  const binDir = join(appData, "npm");
+  const result = await installBinShim(repo, [], {
+    env: { APPDATA: appData, Path: `"${binDir.toUpperCase()}";C:\\Windows\\System32` },
+    homeDir: join(repo, "home"),
+    platform: "win32"
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.onPath, true);
+  assert.equal(result.target, join(binDir, "superloopy.cmd"));
+  const shim = await readFile(result.target, "utf8");
+  assert.match(shim, /SUPERLOOPY_SHIM_CLI/);
+  assert.equal(binShimSupportsSiblingFallback(shim, "win32"), true);
 });
 
 test("CLI hook stop emits a continuation block for unresolved loop work", async () => {
