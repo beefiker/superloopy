@@ -103,13 +103,9 @@ function rejectSymlinkInExistingPath(root, target, artifactPath) {
   const rel = relative(root, target);
   const segments = rel.split(/[\\/]+/u).filter(Boolean);
   let cursor = resolve(root);
-  const candidates = [cursor];
   for (const segment of segments) {
     cursor = join(cursor, segment);
-    candidates.push(cursor);
-  }
-  for (const candidate of candidates) {
-    const stat = lstatNoFollow(candidate);
+    const stat = lstatNoFollow(cursor);
     if (!stat) continue;
     if (stat.isSymbolicLink()) {
       throw new Error(`Evidence artifact must not cross a symlink: ${artifactPath}`);

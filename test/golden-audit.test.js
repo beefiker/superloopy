@@ -203,3 +203,18 @@ test("SECURITY: evidence output path rejects a symlinked evidence root", async (
     /symlink/i
   );
 });
+
+test("evidence output path allows a symlinked checkout path", async () => {
+  const { symlink, mkdir: mkdirp } = await import("node:fs/promises");
+  const repo = await tempRepo();
+  await mkdirp(join(repo, ".superloopy", "evidence"), { recursive: true });
+  const link = `${repo}-link`;
+  try {
+    await symlink(repo, link, "dir");
+  } catch {
+    return; // symlink unsupported (e.g. unprivileged Windows) — skip
+  }
+
+  const output = resolveEvidenceOutputPath(link, ".superloopy/evidence/through-link.txt", undefined);
+  assert.equal(output.absolutePath, join(link, ".superloopy", "evidence", "through-link.txt"));
+});
