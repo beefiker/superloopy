@@ -1,6 +1,6 @@
 import { readFlag } from "./args.js";
 import { resolveEvidenceArtifact } from "./artifacts.js";
-import { buildGuide, formatGuideResult } from "./guide.js";
+import { buildGuide, captureCommand, evidenceCommand, formatGuideResult } from "./guide.js";
 import { traceLoop } from "./trace.js";
 import { readPlan, scopeFromSessionId } from "./store.js";
 
@@ -36,7 +36,7 @@ export function formatCheckResult(result) {
   const lines = ["superloopy check: blocked", evidenceSummaryLine(result)];
   lines.push(...warningLines(result.warnings));
   if (result.unresolvedCriteria.length > 0) {
-    lines.push("", "Unresolved criteria:", ...result.unresolvedCriteria.map((item) => `- ${item.ref} ${item.status} -> \`${item.suggestedArtifact}\` ${item.scenario}`));
+    lines.push("", "Unresolved criteria:", ...result.unresolvedCriteria.map((item) => `- ${item.ref} ${item.status} -> \`${item.suggestedArtifact}\` - ${item.scenario}`));
   }
   if (result.invalidArtifacts.length > 0) {
     lines.push("", "Invalid artifacts:", ...result.invalidArtifacts.map((item) => `- ${item.ref} ${item.artifact}: ${item.error}`));
@@ -130,23 +130,4 @@ function repairStepLines(item) {
     `   capture: \`${item.primaryCommand}\``,
     `   evidence: \`${item.alternativeCommand}\``
   ];
-}
-
-function command(subcommand, sessionId, args) {
-  const parts = ["superloopy", "loop", subcommand];
-  if (sessionId) parts.push("--session-id", sessionId);
-  return [...parts, ...args.map((arg) => quoteCommandArg(arg))].join(" ");
-}
-
-function captureCommand(sessionId, goalId, criterionId) {
-  return `${command("capture", sessionId, ["--goal-id", goalId, "--criterion-id", criterionId, "--notes", "<summary>"])} -- <validation-command>`;
-}
-
-function evidenceCommand(sessionId, goalId, criterionId, artifact) {
-  return command("evidence", sessionId, ["--goal-id", goalId, "--criterion-id", criterionId, "--status", "pass", "--artifact", artifact, "--notes", "<summary>", "--json"]);
-}
-
-function quoteCommandArg(value) {
-  if (/^[A-Za-z0-9._/@:=+-]+$/u.test(value)) return value;
-  return `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
 }

@@ -1,8 +1,8 @@
-export function readFlag(argv, name) {
+export function readFlag(argv, name, options = {}) {
   const index = argv.indexOf(name);
   if (index === -1) return undefined;
   const value = argv[index + 1];
-  if (value === undefined || value.startsWith("--")) {
+  if (value === undefined || (!options.allowLeadingDashValue && value.startsWith("--"))) {
     throw new Error(`Missing ${name}.`);
   }
   return value;

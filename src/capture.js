@@ -1,12 +1,14 @@
-import { spawnSync } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { readFlag } from "./args.js";
-import { resolveEvidenceOutputPath } from "./artifacts.js";
+import { resolveEvidenceOutputPath, writeEvidenceOutputFile } from "./artifacts.js";
 import { evidenceLoop } from "./loop.js";
 import { recordTrustedCommand } from "./plan-trust.js";
 import { resolveSpawnInvocation } from "./spawn-command.js";
 import { ensureSuperloopyDirs, evidenceRelativeDir, nowIso, scopeFromSessionId } from "./store.js";
+
+const MAX_CAPTURE_STREAM_BYTES = 10 * 1024 * 1024;
 
 // Shared deterministic re-run core: spawn a command, derive pass/fail from the
 // exit status exactly as capture does, and write a transcript artifact. Reused
@@ -19,11 +21,7 @@ export async function runCaptured(cwd, command, artifact) {
   // (CVE-2024-27980 hardening) -> ENOENT and every command-backed proof fails.
   // Route the known shim set through cmd.exe exactly like auto-update does.
   const invocation = resolveSpawnInvocation(command[0], command.slice(1));
-  const commandResult = spawnSync(invocation.command, invocation.args, {
-    cwd,
-    encoding: "utf8",
-    maxBuffer: 10 * 1024 * 1024
-  });
+  const commandResult = await runCommand(invocation, cwd);
   const finishedAt = nowIso();
   const status = commandResult.status === 0 && commandResult.signal === null && commandResult.error === undefined ? "pass" : "fail";
   const capture = {
@@ -36,7 +34,7 @@ export async function runCaptured(cwd, command, artifact) {
     finishedAt
   };
   if (commandResult.error) capture.error = commandResult.error.message;
-  await writeFile(artifact.absolutePath, renderCaptureTranscript(cwd, capture, commandResult), "utf8");
+  await writeEvidenceOutputFile(artifact, renderCaptureTranscript(cwd, capture, commandResult));
   return capture;
 }
 
@@ -100,9 +98,71 @@ function renderCaptureTranscript(cwd, capture, commandResult) {
     "",
     "[stdout]",
     commandResult.stdout ?? "",
+    truncatedLine("stdout", commandResult.stdoutTruncatedBytes),
     "[stderr]",
-    commandResult.stderr ?? ""
+    commandResult.stderr ?? "",
+    truncatedLine("stderr", commandResult.stderrTruncatedBytes)
   ].filter((line) => line !== "").join("\n");
+}
+
+function truncatedLine(stream, truncatedBytes) {
+  return truncatedBytes > 0
+    ? `[${stream} truncated after ${MAX_CAPTURE_STREAM_BYTES} bytes; ${truncatedBytes} additional bytes omitted]`
+    : "";
+}
+
+function runCommand(invocation, cwd) {
+  return new Promise((resolve) => {
+    const stdout = captureStreamBuffer();
+    const stderr = captureStreamBuffer();
+    let error;
+    const child = spawn(invocation.command, invocation.args, {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    child.stdout.on("data", (chunk) => stdout.push(chunk));
+    child.stderr.on("data", (chunk) => stderr.push(chunk));
+    child.on("error", (caught) => {
+      error = caught;
+    });
+    child.on("close", (status, signal) => {
+      resolve({
+        status,
+        signal,
+        error,
+        stdout: stdout.text(),
+        stderr: stderr.text(),
+        stdoutTruncatedBytes: stdout.truncatedBytes(),
+        stderrTruncatedBytes: stderr.truncatedBytes()
+      });
+    });
+  });
+}
+
+function captureStreamBuffer() {
+  const chunks = [];
+  let kept = 0;
+  let truncated = 0;
+  return {
+    push(chunk) {
+      const buffer = Buffer.from(chunk);
+      if (kept < MAX_CAPTURE_STREAM_BYTES) {
+        const available = MAX_CAPTURE_STREAM_BYTES - kept;
+        const take = Math.min(available, buffer.length);
+        if (take > 0) chunks.push(buffer.subarray(0, take));
+        kept += take;
+        truncated += buffer.length - take;
+      } else {
+        truncated += buffer.length;
+      }
+    },
+    text() {
+      return Buffer.concat(chunks).toString("utf8");
+    },
+    truncatedBytes() {
+      return truncated;
+    }
+  };
 }
 
 function readScope(argv) {

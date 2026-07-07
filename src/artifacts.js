@@ -1,4 +1,5 @@
 import { existsSync, lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { mkdir, open, rename, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { validateAuditSection } from "./audit-verdict.js";
 import { isMatrixQualityGate, validateMatrixQualityGate } from "./matrix-gate.js";
@@ -87,8 +88,44 @@ export function resolveEvidenceOutputPath(cwd, artifactPath, scope) {
   }
   return {
     absolutePath: resolved,
+    rootPath: root,
     relativePath: repoRelativePath(`${evidenceRelativeDir(scope)}/${rel}`)
   };
+}
+
+export async function writeEvidenceOutputFile(artifact, content, options = "utf8") {
+  const dir = dirname(artifact.absolutePath);
+  await mkdir(dir, { recursive: true });
+  rejectOutputTargetForWrite(artifact);
+  const tmpPath = join(dir, `.${basename(artifact.absolutePath)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`);
+  let handle;
+  try {
+    handle = await open(tmpPath, "wx", 0o666);
+    await handle.writeFile(content, options);
+    await handle.close();
+    handle = null;
+    rejectOutputTargetForWrite(artifact);
+    await rename(tmpPath, artifact.absolutePath);
+  } catch (error) {
+    await rm(tmpPath, { force: true }).catch(() => {});
+    throw error;
+  } finally {
+    if (handle) await handle.close();
+  }
+}
+
+function rejectOutputTargetForWrite(artifact) {
+  if (artifact.rootPath) {
+    rejectSymlinkInExistingPath(artifact.rootPath, artifact.absolutePath, artifact.relativePath);
+  }
+  const targetStat = lstatNoFollow(artifact.absolutePath);
+  if (!targetStat) return;
+  if (targetStat.isSymbolicLink()) {
+    throw new Error(`Evidence artifact write target must not be a symlink: ${artifact.relativePath}`);
+  }
+  if (!targetStat.isFile()) {
+    throw new Error(`Evidence artifact is not a file: ${artifact.relativePath}`);
+  }
 }
 
 function lstatNoFollow(path) {

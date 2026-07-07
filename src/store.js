@@ -225,14 +225,20 @@ function sleep(ms) {
 }
 
 export async function readPlan(cwd, scope) {
+  let parsed;
   try {
-    return JSON.parse(await readFile(goalsPath(cwd, scope), "utf8"));
+    parsed = JSON.parse(await readFile(goalsPath(cwd, scope), "utf8"));
   } catch (error) {
     if (error && error.code === "ENOENT") {
       throw new Error("No Superloopy plan found. Run `superloopy loop create --brief ...` first.");
     }
+    if (error instanceof SyntaxError) {
+      throw new Error(`Invalid Superloopy plan JSON in ${goalsRelativePath(scope)}: ${error.message}`);
+    }
     throw error;
   }
+  validatePlanShape(parsed, scope);
+  return parsed;
 }
 
 export async function readLedger(cwd, scope) {
@@ -272,5 +278,22 @@ function parseLedgerLine(line, index) {
     return JSON.parse(line);
   } catch (error) {
     throw new Error(`Invalid Superloopy ledger JSON on line ${index + 1}.`);
+  }
+}
+
+function validatePlanShape(plan, scope) {
+  if (plan === null || typeof plan !== "object" || Array.isArray(plan)) {
+    throw new Error(`Invalid Superloopy plan in ${goalsRelativePath(scope)}: plan must be an object.`);
+  }
+  if (!Array.isArray(plan.goals)) {
+    throw new Error(`Invalid Superloopy plan: goals must be an array in ${goalsRelativePath(scope)}.`);
+  }
+  for (const [goalIndex, goal] of plan.goals.entries()) {
+    if (goal === null || typeof goal !== "object" || Array.isArray(goal)) {
+      throw new Error(`Invalid Superloopy plan: goals[${goalIndex}] must be an object.`);
+    }
+    if (!Array.isArray(goal.criteria)) {
+      throw new Error(`Invalid Superloopy plan: goals[${goalIndex}].criteria must be an array.`);
+    }
   }
 }
