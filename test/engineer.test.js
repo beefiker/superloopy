@@ -153,8 +153,10 @@ test("runUserPromptSubmitHook uses plugin-root CLI fallback when available", asy
       prompt: "loopy add proof-backed login"
     });
     const context = JSON.parse(output).hookSpecificOutput.additionalContext;
-    assert.match(context, /node "\$\{PLUGIN_ROOT\}\/src\/cli\.js" loop begin --brief 'add proof-backed login'/);
-    assert.match(context, /node "\$\{PLUGIN_ROOT\}\/src\/cli\.js" loop prove -- <validation-command>/);
+    const expectedCli = 'node "C:\\Users\\me\\.codex\\plugins\\cache\\beefiker\\superloopy\\0.7.3\\src\\cli.js"';
+    assert.ok(context.includes(`${expectedCli} loop begin --brief 'add proof-backed login'`));
+    assert.ok(context.includes(`${expectedCli} loop prove -- <validation-command>`));
+    assert.doesNotMatch(context, /\$\{PLUGIN_ROOT\}/u);
   } finally {
     if (previousPluginRoot === undefined) delete process.env.PLUGIN_ROOT;
     else process.env.PLUGIN_ROOT = previousPluginRoot;
@@ -174,8 +176,10 @@ test("runUserPromptSubmitHook prefers Claude plugin root over bare command", asy
       prompt: "loopy migrate the auth module"
     });
     const context = JSON.parse(output).hookSpecificOutput.additionalContext;
-    assert.match(context, /node "\$\{CLAUDE_PLUGIN_ROOT\}\/src\/cli\.js" loop begin --brief 'migrate the auth module'/);
-    assert.match(context, /node "\$\{CLAUDE_PLUGIN_ROOT\}\/src\/cli\.js" loop prove -- <validation-command>/);
+    const expectedCli = 'node "C:\\Users\\me\\.claude\\plugins\\superloopy\\src\\cli.js"';
+    assert.ok(context.includes(`${expectedCli} loop begin --brief 'migrate the auth module'`));
+    assert.ok(context.includes(`${expectedCli} loop prove -- <validation-command>`));
+    assert.doesNotMatch(context, /\$\{CLAUDE_PLUGIN_ROOT\}/u);
   } finally {
     if (previous === undefined) delete process.env.CLAUDE_PLUGIN_ROOT;
     else process.env.CLAUDE_PLUGIN_ROOT = previous;

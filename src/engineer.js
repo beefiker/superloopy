@@ -345,11 +345,24 @@ function shellQuote(value) {
 }
 
 function superloopyCommand() {
-  if (typeof process.env.CLAUDE_PLUGIN_ROOT === "string" && process.env.CLAUDE_PLUGIN_ROOT.trim().length > 0) {
-    return 'node "${CLAUDE_PLUGIN_ROOT}/src/cli.js"';
-  }
-  if (typeof process.env.PLUGIN_ROOT === "string" && process.env.PLUGIN_ROOT.trim().length > 0) {
-    return 'node "${PLUGIN_ROOT}/src/cli.js"';
-  }
+  const pluginRoot = cleanPluginRoot(process.env.CLAUDE_PLUGIN_ROOT) ?? cleanPluginRoot(process.env.PLUGIN_ROOT);
+  if (pluginRoot !== null) return `node ${commandPathArg(pluginCliPath(pluginRoot))}`;
   return "superloopy";
+}
+
+function cleanPluginRoot(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && !/["\r\n]/u.test(trimmed) ? trimmed : null;
+}
+
+function pluginCliPath(pluginRoot) {
+  const root = pluginRoot.replace(/[\\/]+$/u, "");
+  const sep = root.includes("\\") ? "\\" : "/";
+  return `${root}${sep}src${sep}cli.js`;
+}
+
+function commandPathArg(value) {
+  if (/^[a-z]:[\\/]/iu.test(value) || value.includes("\\")) return `"${value}"`;
+  return shellQuote(value);
 }
