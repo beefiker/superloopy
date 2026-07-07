@@ -156,19 +156,21 @@ export async function checkpointLoop(cwd, argv) {
   const goalId = required(argv, "--goal-id");
   const status = readCheckpointStatus(required(argv, "--status"));
   const evidence = required(argv, "--evidence");
+  const preflight = status === "complete"
+    ? await preflightCheckpointCompletion(cwd, argv, scope, goalId)
+    : { qualityGate: null };
   return await withFileLock(goalsPath(cwd, scope), async () => {
     const plan = await readPlan(cwd, scope);
     const goal = findGoal(plan, goalId);
     const now = nowIso();
-    let qualityGate = null;
+    let qualityGate = preflight.qualityGate;
     if (status === "complete") {
       requireEssentialCriteriaPass(goal);
       if (isFinalGoal(plan, goal)) {
         requireAllPlanCriteriaPass(plan);
-        qualityGate = await readQualityGate(cwd, required(argv, "--quality-gate"), scope);
-        // The deterministic spine must actually gate completion: re-derive and verify
-        // every cited audit verdict before authorizing aggregate completion.
-        await enforceAuditProvenance(cwd, scope, qualityGate.audit);
+        if (qualityGate === null) {
+          throw new Error("Plan changed during checkpoint validation; retry the final checkpoint.");
+        }
         plan.aggregateCompletion = { status: "complete", completedAt: now, evidence, qualityGate };
       }
       goal.status = "complete";
@@ -191,6 +193,20 @@ export async function checkpointLoop(cwd, argv) {
     }, scope);
     return { ok: true, goal, plan, summary: summarizePlan(plan), guide: buildGuide(plan, { cwd, scope }) };
   });
+}
+
+async function preflightCheckpointCompletion(cwd, argv, scope, goalId) {
+  const plan = await readPlan(cwd, scope);
+  const goal = findGoal(plan, goalId);
+  requireEssentialCriteriaPass(goal);
+  if (!isFinalGoal(plan, goal)) return { qualityGate: null };
+  requireAllPlanCriteriaPass(plan);
+  const qualityGate = await readQualityGate(cwd, required(argv, "--quality-gate"), scope);
+  // Run audit re-derivation before taking the goals lock. The audit path takes
+  // audit-state first and may then record evidence, so holding goals here would
+  // invert that lock order and deadlock concurrent audit acceptance.
+  await enforceAuditProvenance(cwd, scope, qualityGate.audit);
+  return { qualityGate };
 }
 
 export async function reviewLoop(cwd, argv) {
