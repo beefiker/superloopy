@@ -33,6 +33,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `LICENSE` | MIT license for this repo. | Standard license text. |
 | `SECURITY.md` | Vulnerability disclosure policy required for plugin catalog submissions. | Process documentation only; avoids publishing exploit details or secrets. |
 | `README.md` | English public product overview, language switcher, marketplace install flow, bootstrap behavior, command flow, state model, hooks, gates, and doctor checks. | Uses Superloopy-native product terms and current install commands. |
+| `installation.md` | Agent-facing install contract for `install https://github.com/beefiker/superloopy` prompts, covering Codex, Claude Code, checkout fallback, update, and verification. | Documentation-only install guide; reuses current marketplace/plugin commands and adds no runtime logic or dependencies. |
 | `README.ko.md` | Korean public product overview translated from the root README. | Documentation-only locale surface; mirrors Superloopy behavior without adding runtime logic. |
 | `README.zh-CN.md` | Simplified Chinese public product overview translated from the root README. | Documentation-only locale surface; mirrors Superloopy behavior without adding runtime logic. |
 | `README.ja.md` | Japanese public product overview translated from the root README. | Documentation-only locale surface; mirrors Superloopy behavior without adding runtime logic. |

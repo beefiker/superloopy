@@ -75,6 +75,7 @@ Total: 100 points.
 | `LICENSE` | Audit coverage and reviewability check. | Must remain a source file with no runtime implementation content. |
 | `SECURITY.md` | Hashgraph catalog readiness. | Must document vulnerability reporting without publishing exploit details or secrets. |
 | `README.md` | `test/docs.test.js` public-doc assertions. | Must describe actual Superloopy install on both Codex and Claude Code, bootstrap, commands, evidence rules, hooks, gates, doctor checks, and locale links. |
+| `installation.md` | `test/docs.test.js`, audit coverage. | Must give agents a root-level install contract for Codex and Claude Code from the GitHub URL, including verification and no-dependency boundaries. |
 | `README.ko.md` | `test/docs.test.js`, audit coverage. | Must provide the Korean README locale and keep install commands aligned with the root README. |
 | `README.zh-CN.md` | `test/docs.test.js`, audit coverage. | Must provide the Simplified Chinese README locale and keep install commands aligned with the root README. |
 | `README.ja.md` | `test/docs.test.js`, audit coverage. | Must provide the Japanese README locale and keep install commands aligned with the root README. |
