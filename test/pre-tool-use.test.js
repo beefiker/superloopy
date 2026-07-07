@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./helpers/trust-isolate.js";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,6 +8,7 @@ import test from "node:test";
 import { runPreToolUseHook } from "../src/pre-tool-use.js";
 import { finishLoop } from "../src/finish.js";
 import { createLoop, evidenceLoop } from "../src/loop.js";
+
 
 async function tempRepo() {
   return mkdtemp(join(tmpdir(), "superloopy-pre-tool-"));

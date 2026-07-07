@@ -4,6 +4,8 @@ import { dirname } from "node:path";
 import { readFlag } from "./args.js";
 import { resolveEvidenceOutputPath } from "./artifacts.js";
 import { evidenceLoop } from "./loop.js";
+import { recordTrustedCommand } from "./plan-trust.js";
+import { resolveSpawnInvocation } from "./spawn-command.js";
 import { ensureSuperloopyDirs, evidenceRelativeDir, nowIso, scopeFromSessionId } from "./store.js";
 
 // Shared deterministic re-run core: spawn a command, derive pass/fail from the
@@ -13,7 +15,11 @@ import { ensureSuperloopyDirs, evidenceRelativeDir, nowIso, scopeFromSessionId }
 export async function runCaptured(cwd, command, artifact) {
   await mkdir(dirname(artifact.absolutePath), { recursive: true });
   const startedAt = nowIso();
-  const commandResult = spawnSync(command[0], command.slice(1), {
+  // Windows: `npm`/`npx` are .cmd shims that Node refuses to spawn directly
+  // (CVE-2024-27980 hardening) -> ENOENT and every command-backed proof fails.
+  // Route the known shim set through cmd.exe exactly like auto-update does.
+  const invocation = resolveSpawnInvocation(command[0], command.slice(1));
+  const commandResult = spawnSync(invocation.command, invocation.args, {
     cwd,
     encoding: "utf8",
     maxBuffer: 10 * 1024 * 1024
@@ -44,6 +50,10 @@ export async function captureLoop(cwd, argv) {
   const notes = readFlag(options, "--notes");
   await ensureSuperloopyDirs(cwd, scope);
 
+  // This command was typed locally (CLI argv of capture/prove), not read from a
+  // repo file — record it as trusted so the audit engine may re-run it later.
+  // Audit itself never records trust; it only consumes it (see plan-trust.js).
+  await recordTrustedCommand(cwd, command);
   const capture = await runCaptured(cwd, command, artifact);
   const evidenceArgs = [
     "--goal-id",

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./helpers/trust-isolate.js";
 import { mkdir, mkdtemp, readFile, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,6 +10,8 @@ import { finishLoop } from "../src/finish.js";
 import { reportLoop } from "../src/report.js";
 import { traceLoop } from "../src/trace.js";
 import { checkpointLoop, createLoop, evidenceLoop, reviewLoop, statusLoop } from "../src/loop.js";
+import { recordTrustedCommand } from "../src/plan-trust.js";
+
 
 async function tempRepo() {
   return mkdtemp(join(tmpdir(), "superloopy-loop-gates-"));
@@ -287,6 +290,8 @@ test("default gate completes when a command-backed criterion still reproduces (P
   const c2 = await writeEvidence(repo, "c2.txt");
   await evidenceLoop(repo, ["--goal-id", "G001", "--criterion-id", "C001", "--status", "pass", "--artifact", c1, "--command", '["node","-e","process.exit(0)"]']);
   await evidenceLoop(repo, ["--goal-id", "G001", "--criterion-id", "C002", "--status", "pass", "--artifact", c2]);
+  // The gate re-runs only trusted commands; this one stands in for a locally-captured command.
+  await recordTrustedCommand(repo, ["node", "-e", "process.exit(0)"]);
 
   const review = await reviewLoop(repo, ["--status", "passed", "--artifact", ".superloopy/evidence/gate.json", "--notes", "reviewed"]);
   assert.equal(review.gate.status, "passed");
