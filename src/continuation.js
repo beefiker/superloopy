@@ -30,6 +30,11 @@ export const QUOTA_LIMIT_MARKERS = [
   "session limit reached",
   "too many requests"
 ];
+export const CONTEXT_PRESSURE_MARKERS = [
+  "context compacted", "context_length_exceeded", "skill descriptions were shortened",
+  "context_too_large", "codex ran out of room in the model's context window",
+  "your input exceeds the context window", "long threads and multiple compactions"
+];
 
 export function quotaLimitMarkers(env = {}) {
   const extra = String(env.SUPERLOOPY_QUOTA_MARKERS ?? "")

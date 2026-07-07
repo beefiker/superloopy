@@ -7,7 +7,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { beginLoop } from "../src/begin.js";
-import { captureLoop } from "../src/capture.js";
+import { captureLoop, runCaptured } from "../src/capture.js";
 import { proveLoop } from "../src/prove.js";
 import {
 
@@ -42,6 +42,14 @@ test("createLoop creates light-mode goals with two strict evidence criteria", as
   assert.equal(result.summary.criteria.pending, 2);
   assert.equal(result.guide.state, "start_goal");
   assert.equal(result.guide.nextAction.command, "superloopy loop next --json");
+});
+
+test("createLoop accepts a brief value that starts with --", async () => {
+  const repo = await tempRepo();
+
+  const result = await createLoop(repo, ["--brief", "--fix the parser"]);
+
+  assert.equal(result.plan.goals[0].objective, "--fix the parser");
 });
 
 test("beginLoop creates a plan and starts the first goal in one command", async () => {
@@ -84,6 +92,14 @@ test("statusLoop returns the immediate guide", async () => {
   assert.equal(result.summary.goals.pending, 1);
   assert.equal(result.guide.state, "start_goal");
   assert.equal(result.guide.nextAction.command, "superloopy loop next --json");
+});
+
+test("statusLoop rejects malformed plan shape with a clear error", async () => {
+  const repo = await tempRepo();
+  await mkdir(join(repo, ".superloopy"), { recursive: true });
+  await writeFile(join(repo, ".superloopy", "goals.json"), "{\"version\":1}\n", "utf8");
+
+  await assert.rejects(statusLoop(repo), /Invalid Superloopy plan: goals must be an array/);
 });
 
 test("guideLoop points an idle plan at the exact next command", async () => {
@@ -284,6 +300,25 @@ test("captureLoop records pass evidence with a command transcript", async () => 
   assert.equal(result.guide.criterion.id, "C002");
   assert.match(transcript, /exitCode: 0/);
   assert.match(transcript, /\[stdout\]\ncaptured ok\n/);
+});
+
+test("runCaptured does not fail a successful command because stdout exceeds 10MB", async () => {
+  const repo = await tempRepo();
+  const artifact = {
+    absolutePath: join(repo, ".superloopy", "evidence", "large-output.txt"),
+    relativePath: ".superloopy/evidence/large-output.txt"
+  };
+
+  const capture = await runCaptured(repo, [
+    process.execPath,
+    "-e",
+    "process.stdout.write('x'.repeat(11 * 1024 * 1024))"
+  ], artifact);
+  const transcript = await readFile(artifact.absolutePath, "utf8");
+
+  assert.equal(capture.status, "pass");
+  assert.equal(capture.exitCode, 0);
+  assert.match(transcript, /stdout truncated after \d+ bytes/);
 });
 
 test("captureLoop records fail evidence when the command exits nonzero", async () => {

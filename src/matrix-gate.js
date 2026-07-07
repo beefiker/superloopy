@@ -1,4 +1,5 @@
 import { validateAuditSection } from "./audit-verdict.js";
+import { artifactPath, emptyBlockers, fail, isRecord, literal, passedVerdict, referencedArtifacts, section, stringArray, textField } from "./review-gate.js";
 
 const REQUIRED_SECTIONS = ["architectReview", "executorQa", "iteration"];
 const TERMINAL_MULTIPLEXER_SURFACE = ["t", "m", "u", "x"].join("");
@@ -155,50 +156,8 @@ function parseContractCoverage(value, surfaceById, adversarialById, artifactById
   });
 }
 
-function artifactPath(value, field, resolveArtifactPath) {
-  return resolveArtifactPath(textField(value, field));
-}
-
-function section(value, field) {
-  if (!isRecord(value)) fail(`${field} must be an object.`);
-  return value;
-}
-
-function textField(value, field) {
-  if (typeof value !== "string" || value.trim().length === 0) fail(`${field} must be a non-empty string.`);
-  const trimmed = value.trim();
-  if (/^(todo|tbd|placeholder)$/iu.test(trimmed)) fail(`${field} must not be placeholder text.`);
-  return trimmed;
-}
-
-function literal(value, expected, field) {
-  if (value !== expected) fail(`${field} must be ${expected}.`);
-  return expected;
-}
-
-function emptyBlockers(value, field) {
-  if (!Array.isArray(value)) fail(`${field} must be an array.`);
-  if (value.length !== 0) fail(`${field} must be empty.`);
-  return [];
-}
-
-function stringArray(value, field) {
-  if (!Array.isArray(value) || !value.every((item) => typeof item === "string" && item.trim().length > 0)) {
-    fail(`${field} must be a string array.`);
-  }
-  return value.map((item) => item.trim());
-}
-
 function optionalStringArray(value, field) {
   return value === undefined ? [] : stringArray(value, field);
-}
-
-function referencedArtifacts(value, field, byId) {
-  return stringArray(value, field).map((id) => {
-    const artifact = byId.get(id);
-    if (artifact === undefined) fail(`${field} references unknown artifact ${id}.`);
-    return artifact;
-  });
 }
 
 function optionalText(value) {
@@ -241,11 +200,6 @@ function artifactKind(value, field) {
   fail(`${field} must be a supported executor QA artifact kind.`);
 }
 
-function passedVerdict(value, field) {
-  if (value === "not_applicable") fail(`${field} must not be not_applicable.`);
-  return literal(value, "passed", field);
-}
-
 function coveredStatus(value, field) {
   const status = textField(value, field);
   if (["covered", "passed", "verified"].includes(status)) return status;
@@ -265,12 +219,4 @@ function requireSurfaceProof(family, artifacts, field) {
   if (family === "native" && !kinds.some((kind) => ["screenshot", "image", "pty-capture", "app-automation-transcript"].includes(kind))) {
     fail(`${field} for native surfaces must reference screenshot, PTY, or app automation artifacts.`);
   }
-}
-
-function isRecord(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function fail(message) {
-  throw new Error(message);
 }

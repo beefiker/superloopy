@@ -180,7 +180,7 @@ test("CLI loop trace text shows evidence trail and missing proof", async () => {
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Superloopy trace/);
   assert.match(result.stdout, /Evidence summary: 1 artifact-backed criteria, 1 missing proof, 2 timeline events/);
-  assert.match(result.stdout, /Evidence artifacts:\n- G001\/C001 pass at \d{4}-\d{2}-\d{2}T.* `.superloopy\/evidence\/g001-c001.txt` - notes: manual smoke covered\n\nMissing proof:/);
+  assert.match(result.stdout, /Evidence artifacts:\n- G001\/C001 pass at \d{4}-\d{2}-\d{2}T.* `.superloopy\/evidence\/g001-c001.txt` - Happy path works from the real user-facing surface\. - notes: manual smoke covered\n\nMissing proof:/);
   assert.match(result.stdout, /Missing proof:/);
   assert.match(result.stdout, /G001\/C002 pending -> `.superloopy\/evidence\/G001-C002.txt`/);
   assert.match(result.stdout, /Timeline:/);

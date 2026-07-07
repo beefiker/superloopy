@@ -23,12 +23,13 @@ export function resolveLockPath(env, statePath) {
 
 export async function acquireLock(lockPath, now, staleMs = DEFAULT_LOCK_STALE_MS) {
   await mkdir(dirname(lockPath), { recursive: true });
+  const token = `${process.pid} ${now}`;
   try {
     const handle = await open(lockPath, "wx");
-    await handle.writeFile(`${now}\n`);
+    await handle.writeFile(`${token}\n`);
     await handle.close();
     return {
-      release: () => rm(lockPath, { force: true })
+      release: () => releaseIfOwned(lockPath, token)
     };
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
@@ -43,7 +44,10 @@ export async function readState(statePath) {
     const parsed = JSON.parse(raw);
     return typeof parsed === "object" && parsed !== null ? parsed : {};
   } catch (error) {
-    if (error instanceof Error) return {};
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return {};
+    if (error instanceof SyntaxError) {
+      throw new Error(`Invalid Superloopy auto-update state JSON: ${statePath}`);
+    }
     throw error;
   }
 }
@@ -66,13 +70,59 @@ export async function appendUpdateLog(env, now, event, details = {}) {
 
 async function removeStaleLock(lockPath, now, staleMs) {
   if (staleMs <= 0) return false;
+  let content;
+  try {
+    content = await readFile(lockPath, "utf8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return true;
+    throw error;
+  }
+  const token = parseLockToken(content);
+  if (token !== null) {
+    try {
+      process.kill(token.pid, 0);
+      return false;
+    } catch (error) {
+      if (!(error instanceof Error) || !("code" in error) || error.code !== "ESRCH") return false;
+      return await removeIfContentMatches(lockPath, content);
+    }
+  }
   try {
     const lockStat = await stat(lockPath);
     if (now - lockStat.mtimeMs < staleMs) return false;
+    return await removeIfContentMatches(lockPath, content);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return true;
+    throw error;
+  }
+}
+
+function parseLockToken(content) {
+  const parts = content.trim().split(/\s+/u);
+  if (parts.length < 2) return null;
+  const pid = Number.parseInt(parts[0], 10);
+  const createdAt = Number.parseInt(parts[1], 10);
+  if (!Number.isInteger(pid) || pid <= 0 || !Number.isInteger(createdAt)) return null;
+  return { pid, createdAt };
+}
+
+async function removeIfContentMatches(lockPath, content) {
+  try {
+    if (await readFile(lockPath, "utf8") !== content) return false;
     await rm(lockPath, { force: true });
     return true;
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") return true;
     throw error;
+  }
+}
+
+async function releaseIfOwned(lockPath, token) {
+  try {
+    if ((await readFile(lockPath, "utf8")).trim() === token) {
+      await rm(lockPath, { force: true });
+    }
+  } catch {
+    // best-effort release
   }
 }

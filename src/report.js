@@ -1,9 +1,9 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { readFlag } from "./args.js";
-import { resolveEvidenceOutputPath } from "./artifacts.js";
-import { buildGuide } from "./guide.js";
-import { traceLoop } from "./trace.js";
+import { resolveEvidenceOutputPath, writeEvidenceOutputFile } from "./artifacts.js";
+import { buildGuide, proofPlanLine, recordedEvidenceLine, unresolvedCriterionLine } from "./guide.js";
+import { evidenceArtifactLine, timelineLine, traceLoop, warningLine } from "./trace.js";
 import { appendLedger, ensureSuperloopyDirs, evidenceRelativeDir, nowIso, readPlan, scopeFromSessionId } from "./store.js";
 
 const DEFAULT_REPORT_NAME = "report.md";
@@ -15,7 +15,7 @@ export async function reportLoop(cwd, argv = []) {
   const trace = await traceLoop(cwd, argv);
   await ensureSuperloopyDirs(cwd, scope);
   await mkdir(dirname(artifact.absolutePath), { recursive: true });
-  await writeFile(artifact.absolutePath, renderEvidenceReport(trace), "utf8");
+  await writeEvidenceOutputFile(artifact, renderEvidenceReport(trace));
   const now = nowIso();
   await appendLedger(cwd, {
     at: now,
@@ -65,7 +65,7 @@ export function renderEvidenceReport(trace) {
 
 function renderWarnings(warnings) {
   if (!Array.isArray(warnings) || warnings.length === 0) return ["- none"];
-  return warnings.map((item) => `- ${item.kind}: ${item.message}`);
+  return warnings.map(warningLine);
 }
 
 function renderEvidenceSummary(summary) {
@@ -91,43 +91,25 @@ function renderNextAction(guide) {
 
 function renderProofPlan(proofPlan) {
   if (proofPlan.length === 0) return ["- none"];
-  return proofPlan.map((item) => `- ${item.ref} ${item.status} capture \`${item.captureCommand}\` or evidence \`${item.evidenceCommand}\``);
+  return proofPlan.map(proofPlanLine);
 }
 
 function renderRecordedEvidence(recordedEvidence) {
   if (recordedEvidence.length === 0) return ["- none"];
-  return recordedEvidence.map((item) => {
-    const artifact = item.artifact === null ? "no artifact" : `\`${item.artifact}\``;
-    const capturedAt = item.capturedAt === null ? "" : ` at ${item.capturedAt}`;
-    const notes = item.notes === undefined ? "" : ` - notes: ${item.notes}`;
-    return `- ${item.ref} ${item.status}${capturedAt} -> ${artifact} - ${item.scenario}${notes}`;
-  });
+  return recordedEvidence.map(recordedEvidenceLine);
 }
 
 function renderArtifacts(artifacts) {
   if (artifacts.length === 0) return ["- none"];
-  return artifacts.map((item) => {
-    const capturedAt = item.capturedAt === null ? "" : ` at ${item.capturedAt}`;
-    const notes = item.notes === undefined ? "" : ` - notes: ${item.notes}`;
-    return `- ${item.ref} ${item.status}${capturedAt} \`${item.artifact}\` - ${item.scenario}${notes}`;
-  });
+  return artifacts.map(evidenceArtifactLine);
 }
 
 function renderMissingCriteria(criteria) {
   if (criteria.length === 0) return ["- none"];
-  return criteria.map((item) => `- ${item.ref} ${item.status} -> \`${item.suggestedArtifact}\` - ${item.scenario}`);
+  return criteria.map(unresolvedCriterionLine);
 }
 
 function renderTimeline(timeline) {
   if (timeline.length === 0) return ["- none"];
-  return timeline.map((item) => {
-    const parts = [`${item.index}.`];
-    if (item.at) parts.push(item.at);
-    parts.push(item.kind);
-    if (item.ref) parts.push(item.ref);
-    if (item.status) parts.push(item.status);
-    if (item.artifact) parts.push(`\`${item.artifact}\``);
-    if (item.notes !== null && item.notes !== undefined) parts.push(`notes: ${item.notes}`);
-    return `- ${parts.join(" ")}`;
-  });
+  return timeline.map(timelineLine);
 }

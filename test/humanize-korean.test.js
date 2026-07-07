@@ -44,6 +44,26 @@ test("humanize audit rejects non-Korean source text", async () => {
   assert.match(result.stderr, /Korean source text required/);
 });
 
+test("humanize audit writes a report when input files cannot be read", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "superloopy-humanize-missing-"));
+  const reportPath = join(dir, "audit.json");
+  const result = spawnSync(process.execPath, [
+    script,
+    "--source",
+    join(dir, "missing-source.md"),
+    "--final",
+    join(dir, "missing-final.md"),
+    "--report",
+    reportPath
+  ], { encoding: "utf8" });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Unable to read source file/);
+  const report = JSON.parse(await readFile(reportPath, "utf8"));
+  assert.equal(report.ok, false);
+  assert.match(report.problems[0], /Unable to read source file/);
+});
+
 test("humanize audit rejects missing protected tokens", async () => {
   const files = await writeCase(
     "Transferloom 1.4.0은 2026년 7월 1일에 배포됐다.",

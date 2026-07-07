@@ -1,5 +1,5 @@
 import { readFlag } from "./args.js";
-import { buildGuide, formatGuideResult } from "./guide.js";
+import { buildGuide, formatGuideResult, unresolvedCriterionLine } from "./guide.js";
 import { summarizePlan } from "./plan-summary.js";
 import { evidenceRelativeDir, ledgerRelativePath, readLedger, readPlan, scopeFromSessionId } from "./store.js";
 
@@ -148,33 +148,41 @@ function attemptExhaustionWarnings(timeline) {
 
 function renderArtifacts(artifacts) {
   if (artifacts.length === 0) return ["- none"];
-  return artifacts.map((item) => {
-    const capturedAt = item.capturedAt === null ? "" : ` at ${item.capturedAt}`;
-    const notes = item.notes === undefined ? "" : ` - notes: ${item.notes}`;
-    return `- ${item.ref} ${item.status}${capturedAt} \`${item.artifact}\`${notes}`;
-  });
+  return artifacts.map(evidenceArtifactLine);
 }
 
 function renderMissingCriteria(criteria) {
   if (criteria.length === 0) return ["- none"];
-  return criteria.map((item) => `- ${item.ref} ${item.status} -> \`${item.suggestedArtifact}\` ${item.scenario}`);
+  return criteria.map(unresolvedCriterionLine);
 }
 
 function renderWarnings(warnings) {
   if (!Array.isArray(warnings) || warnings.length === 0) return ["- none"];
-  return warnings.map((item) => `- ${item.kind}: ${item.message}`);
+  return warnings.map(warningLine);
 }
 
 function renderTimeline(timeline) {
   if (timeline.length === 0) return ["- none"];
-  return timeline.map((item) => {
-    const parts = [`${item.index}.`];
-    if (item.at) parts.push(item.at);
-    parts.push(item.kind);
-    if (item.ref) parts.push(item.ref);
-    if (item.status) parts.push(item.status);
-    if (item.artifact) parts.push(`\`${item.artifact}\``);
-    if (item.notes !== null && item.notes !== undefined) parts.push(`notes: ${item.notes}`);
-    return `- ${parts.join(" ")}`;
-  });
+  return timeline.map(timelineLine);
+}
+
+export function evidenceArtifactLine(item) {
+  const capturedAt = item.capturedAt === null ? "" : ` at ${item.capturedAt}`;
+  const notes = item.notes === undefined ? "" : ` - notes: ${item.notes}`;
+  return `- ${item.ref} ${item.status}${capturedAt} \`${item.artifact}\` - ${item.scenario}${notes}`;
+}
+
+export function warningLine(item) {
+  return `- ${item.kind}: ${item.message}`;
+}
+
+export function timelineLine(item) {
+  const parts = [`${item.index}.`];
+  if (item.at) parts.push(item.at);
+  parts.push(item.kind);
+  if (item.ref) parts.push(item.ref);
+  if (item.status) parts.push(item.status);
+  if (item.artifact) parts.push(`\`${item.artifact}\``);
+  if (item.notes !== null && item.notes !== undefined) parts.push(`notes: ${item.notes}`);
+  return `- ${parts.join(" ")}`;
 }

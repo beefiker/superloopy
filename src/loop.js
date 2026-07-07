@@ -40,7 +40,7 @@ export { guideLoop, helpText };
 
 export async function createLoop(cwd, argv) {
   const scope = readScope(argv);
-  const brief = readFlag(argv, "--brief")?.trim();
+  const brief = readFlag(argv, "--brief", { allowLeadingDashValue: true })?.trim();
   if (!brief) throw new Error("Missing --brief.");
   const mode = readMode(readFlag(argv, "--mode") ?? "light");
   const force = argv.includes("--force");
@@ -79,30 +79,32 @@ export async function statusLoop(cwd, argv = []) {
 
 export async function nextLoop(cwd, argv = []) {
   const scope = readScope(argv);
-  const plan = await readPlan(cwd, scope);
-  const result = (fields) => ({
-    ok: true,
-    plan,
-    summary: summarizePlan(plan),
-    guide: buildGuide(plan, { cwd, scope }),
-    ...fields
+  return await withFileLock(goalsPath(cwd, scope), async () => {
+    const plan = await readPlan(cwd, scope);
+    const result = (fields) => ({
+      ok: true,
+      plan,
+      summary: summarizePlan(plan),
+      guide: buildGuide(plan, { cwd, scope }),
+      ...fields
+    });
+    if (plan.aggregateCompletion?.status === "complete") {
+      return result({ done: true });
+    }
+    const existing = plan.goals.find((goal) => goal.status === "in_progress");
+    if (existing) return result({ resumed: true, goal: existing });
+    const next = plan.goals.find((goal) => goal.status === "pending");
+    if (!next) return result({ done: true });
+    const now = nowIso();
+    next.status = "in_progress";
+    next.startedAt = now;
+    next.updatedAt = now;
+    next.attempt += 1;
+    plan.updatedAt = now;
+    await writePlan(cwd, plan, scope);
+    await appendLedger(cwd, { at: now, kind: "goal_started", goalId: next.id, attempt: next.attempt }, scope);
+    return result({ resumed: false, goal: next });
   });
-  if (plan.aggregateCompletion?.status === "complete") {
-    return result({ done: true });
-  }
-  const existing = plan.goals.find((goal) => goal.status === "in_progress");
-  if (existing) return result({ resumed: true, goal: existing });
-  const next = plan.goals.find((goal) => goal.status === "pending");
-  if (!next) return result({ done: true });
-  const now = nowIso();
-  next.status = "in_progress";
-  next.startedAt = now;
-  next.updatedAt = now;
-  next.attempt += 1;
-  plan.updatedAt = now;
-  await writePlan(cwd, plan, scope);
-  await appendLedger(cwd, { at: now, kind: "goal_started", goalId: next.id, attempt: next.attempt }, scope);
-  return result({ resumed: false, goal: next });
 }
 
 export async function evidenceLoop(cwd, argv) {
@@ -154,39 +156,41 @@ export async function checkpointLoop(cwd, argv) {
   const goalId = required(argv, "--goal-id");
   const status = readCheckpointStatus(required(argv, "--status"));
   const evidence = required(argv, "--evidence");
-  const plan = await readPlan(cwd, scope);
-  const goal = findGoal(plan, goalId);
-  const now = nowIso();
-  let qualityGate = null;
-  if (status === "complete") {
-    requireEssentialCriteriaPass(goal);
-    if (isFinalGoal(plan, goal)) {
-      requireAllPlanCriteriaPass(plan);
-      qualityGate = await readQualityGate(cwd, required(argv, "--quality-gate"), scope);
-      // The deterministic spine must actually gate completion: re-derive and verify
-      // every cited audit verdict before authorizing aggregate completion.
-      await enforceAuditProvenance(cwd, scope, qualityGate.audit);
-      plan.aggregateCompletion = { status: "complete", completedAt: now, evidence, qualityGate };
+  return await withFileLock(goalsPath(cwd, scope), async () => {
+    const plan = await readPlan(cwd, scope);
+    const goal = findGoal(plan, goalId);
+    const now = nowIso();
+    let qualityGate = null;
+    if (status === "complete") {
+      requireEssentialCriteriaPass(goal);
+      if (isFinalGoal(plan, goal)) {
+        requireAllPlanCriteriaPass(plan);
+        qualityGate = await readQualityGate(cwd, required(argv, "--quality-gate"), scope);
+        // The deterministic spine must actually gate completion: re-derive and verify
+        // every cited audit verdict before authorizing aggregate completion.
+        await enforceAuditProvenance(cwd, scope, qualityGate.audit);
+        plan.aggregateCompletion = { status: "complete", completedAt: now, evidence, qualityGate };
+      }
+      goal.status = "complete";
+      goal.completedAt = now;
+    } else {
+      goal.status = status === "failed" ? "failed" : "blocked";
+      goal.failureReason = evidence;
     }
-    goal.status = "complete";
-    goal.completedAt = now;
-  } else {
-    goal.status = status === "failed" ? "failed" : "blocked";
-    goal.failureReason = evidence;
-  }
-  goal.evidence = evidence;
-  goal.updatedAt = now;
-  plan.updatedAt = now;
-  await writePlan(cwd, plan, scope);
-  await appendLedger(cwd, {
-    at: now,
-    kind: plan.aggregateCompletion?.completedAt === now ? "aggregate_completed" : `goal_${goal.status}`,
-    goalId,
-    status: goal.status,
-    evidence,
-    qualityGate
-  }, scope);
-  return { ok: true, goal, plan, summary: summarizePlan(plan), guide: buildGuide(plan, { cwd, scope }) };
+    goal.evidence = evidence;
+    goal.updatedAt = now;
+    plan.updatedAt = now;
+    await writePlan(cwd, plan, scope);
+    await appendLedger(cwd, {
+      at: now,
+      kind: plan.aggregateCompletion?.completedAt === now ? "aggregate_completed" : `goal_${goal.status}`,
+      goalId,
+      status: goal.status,
+      evidence,
+      qualityGate
+    }, scope);
+    return { ok: true, goal, plan, summary: summarizePlan(plan), guide: buildGuide(plan, { cwd, scope }) };
+  });
 }
 
 export async function reviewLoop(cwd, argv) {
@@ -245,90 +249,96 @@ async function annotateOnly(cwd, directive, scope) {
 }
 
 async function addGoalFromSteering(cwd, directive, scope) {
-  const plan = await readPlan(cwd, scope);
-  if (plan.aggregateCompletion?.status === "complete") {
-    throw new Error("Cannot add a goal after aggregate completion.");
-  }
-  const now = nowIso();
-  const goal = makeGoal({
-    title: directive.title.length > 72 ? `${directive.title.slice(0, 69).trimEnd()}...` : directive.title,
-    objective: directive.objective
-  }, nextGoalIndex(plan), plan.mode, now);
-  plan.goals.push(goal);
-  plan.updatedAt = now;
-  await writePlan(cwd, plan, scope);
-  await appendLedger(cwd, {
-    at: now,
-    kind: "goal_added",
-    goalId: goal.id,
-    title: goal.title,
-    rationale: directive.rationale
-  }, scope);
-  return { ok: true, kind: "goal_added", goal, plan, summary: summarizePlan(plan) };
+  return await withFileLock(goalsPath(cwd, scope), async () => {
+    const plan = await readPlan(cwd, scope);
+    if (plan.aggregateCompletion?.status === "complete") {
+      throw new Error("Cannot add a goal after aggregate completion.");
+    }
+    const now = nowIso();
+    const goal = makeGoal({
+      title: directive.title.length > 72 ? `${directive.title.slice(0, 69).trimEnd()}...` : directive.title,
+      objective: directive.objective
+    }, nextGoalIndex(plan), plan.mode, now);
+    plan.goals.push(goal);
+    plan.updatedAt = now;
+    await writePlan(cwd, plan, scope);
+    await appendLedger(cwd, {
+      at: now,
+      kind: "goal_added",
+      goalId: goal.id,
+      title: goal.title,
+      rationale: directive.rationale
+    }, scope);
+    return { ok: true, kind: "goal_added", goal, plan, summary: summarizePlan(plan) };
+  });
 }
 
 async function reviseCriterionFromSteering(cwd, directive, scope) {
-  const plan = await readPlan(cwd, scope);
-  if (plan.aggregateCompletion?.status === "complete") {
-    throw new Error("Cannot revise criteria after aggregate completion.");
-  }
-  const goal = findGoal(plan, directive.goalId);
-  const criterion = findCriterion(goal, directive.criterionId);
-  if (goal.status === "complete") throw new Error(`Cannot revise completed goal: ${goal.id}`);
-  if (criterion.status === "pass") throw new Error(`Cannot revise passed criterion: ${goal.id}/${criterion.id}`);
-  const now = nowIso();
-  const before = {
-    scenario: criterion.scenario,
-    status: criterion.status,
-    artifact: criterion.artifact
-  };
-  criterion.scenario = directive.scenario;
-  criterion.status = "pending";
-  criterion.artifact = null;
-  criterion.capturedAt = null;
-  delete criterion.notes;
-  goal.updatedAt = now;
-  plan.updatedAt = now;
-  await writePlan(cwd, plan, scope);
-  await appendLedger(cwd, {
-    at: now,
-    kind: "criterion_revised",
-    goalId: goal.id,
-    criterionId: criterion.id,
-    before,
-    after: { scenario: criterion.scenario },
-    rationale: directive.rationale
-  }, scope);
-  return { ok: true, kind: "criterion_revised", goal, criterion, plan, summary: summarizePlan(plan) };
+  return await withFileLock(goalsPath(cwd, scope), async () => {
+    const plan = await readPlan(cwd, scope);
+    if (plan.aggregateCompletion?.status === "complete") {
+      throw new Error("Cannot revise criteria after aggregate completion.");
+    }
+    const goal = findGoal(plan, directive.goalId);
+    const criterion = findCriterion(goal, directive.criterionId);
+    if (goal.status === "complete") throw new Error(`Cannot revise completed goal: ${goal.id}`);
+    if (criterion.status === "pass") throw new Error(`Cannot revise passed criterion: ${goal.id}/${criterion.id}`);
+    const now = nowIso();
+    const before = {
+      scenario: criterion.scenario,
+      status: criterion.status,
+      artifact: criterion.artifact
+    };
+    criterion.scenario = directive.scenario;
+    criterion.status = "pending";
+    criterion.artifact = null;
+    criterion.capturedAt = null;
+    delete criterion.notes;
+    goal.updatedAt = now;
+    plan.updatedAt = now;
+    await writePlan(cwd, plan, scope);
+    await appendLedger(cwd, {
+      at: now,
+      kind: "criterion_revised",
+      goalId: goal.id,
+      criterionId: criterion.id,
+      before,
+      after: { scenario: criterion.scenario },
+      rationale: directive.rationale
+    }, scope);
+    return { ok: true, kind: "criterion_revised", goal, criterion, plan, summary: summarizePlan(plan) };
+  });
 }
 
 async function reorderPendingFromSteering(cwd, directive, scope) {
-  const plan = await readPlan(cwd, scope);
-  if (plan.aggregateCompletion?.status === "complete") {
-    throw new Error("Cannot reorder goals after aggregate completion.");
-  }
-  const requested = directive.goalIds.map((goalId) => findGoal(plan, goalId));
-  const nonPending = requested.filter((goal) => goal.status !== "pending");
-  if (nonPending.length > 0) {
-    throw new Error(`Cannot reorder non-pending goals: ${nonPending.map((goal) => goal.id).join(", ")}`);
-  }
-  const now = nowIso();
-  const requestedIds = new Set(directive.goalIds);
-  const locked = plan.goals.filter((goal) => goal.status !== "pending");
-  const remainingPending = plan.goals.filter((goal) => goal.status === "pending" && !requestedIds.has(goal.id));
-  const orderedPending = directive.goalIds.map((goalId) => findGoal(plan, goalId));
-  const before = plan.goals.map((goal) => goal.id);
-  plan.goals = [...locked, ...remainingPending, ...orderedPending];
-  plan.updatedAt = now;
-  await writePlan(cwd, plan, scope);
-  await appendLedger(cwd, {
-    at: now,
-    kind: "goals_reordered",
-    before,
-    after: plan.goals.map((goal) => goal.id),
-    rationale: directive.rationale
-  }, scope);
-  return { ok: true, kind: "goals_reordered", plan, summary: summarizePlan(plan) };
+  return await withFileLock(goalsPath(cwd, scope), async () => {
+    const plan = await readPlan(cwd, scope);
+    if (plan.aggregateCompletion?.status === "complete") {
+      throw new Error("Cannot reorder goals after aggregate completion.");
+    }
+    const requested = directive.goalIds.map((goalId) => findGoal(plan, goalId));
+    const nonPending = requested.filter((goal) => goal.status !== "pending");
+    if (nonPending.length > 0) {
+      throw new Error(`Cannot reorder non-pending goals: ${nonPending.map((goal) => goal.id).join(", ")}`);
+    }
+    const now = nowIso();
+    const requestedIds = new Set(directive.goalIds);
+    const locked = plan.goals.filter((goal) => goal.status !== "pending");
+    const remainingPending = plan.goals.filter((goal) => goal.status === "pending" && !requestedIds.has(goal.id));
+    const orderedPending = directive.goalIds.map((goalId) => findGoal(plan, goalId));
+    const before = plan.goals.map((goal) => goal.id);
+    plan.goals = [...locked, ...remainingPending, ...orderedPending];
+    plan.updatedAt = now;
+    await writePlan(cwd, plan, scope);
+    await appendLedger(cwd, {
+      at: now,
+      kind: "goals_reordered",
+      before,
+      after: plan.goals.map((goal) => goal.id),
+      rationale: directive.rationale
+    }, scope);
+    return { ok: true, kind: "goals_reordered", plan, summary: summarizePlan(plan) };
+  });
 }
 
 function readMode(value) {

@@ -13,10 +13,10 @@
 // is skipped: no re-run, no LLM.
 
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { readFlag } from "./args.js";
-import { resolveEvidenceArtifact, resolveEvidenceOutputPath } from "./artifacts.js";
+import { resolveEvidenceArtifact, resolveEvidenceOutputPath, writeEvidenceOutputFile } from "./artifacts.js";
 import { runCaptured } from "./capture.js";
 import { evidenceLoop } from "./loop.js";
 import { isTrustedCommand } from "./plan-trust.js";
@@ -70,7 +70,7 @@ export async function auditLoop(cwd, argv) {
     const gap = entry.rerunStatus === "untrusted-command"
       ? `Audit refused to re-run ${entry.criterion}: its plan command was never executed on this machine (goals.json may have arrived with the repo). Re-prove it with \`superloopy loop prove\`, or approve the plan's commands once with \`superloopy loop trust\`.`
       : `Audit could not re-validate the recorded proof for ${entry.criterion}; re-prove it.`;
-    await writeFile(note.absolutePath, `${gap}\n`, "utf8");
+    await writeEvidenceOutputFile(note, `${gap}\n`);
     await recordAuditFailure(cwd, scope, entry.criterion, gap, note.relativePath, entry.failCount, maxFails);
   }
 
