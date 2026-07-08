@@ -34,11 +34,13 @@ a worker actually produced, never which role label was asked for.
 
 ## Model policy
 
-Bundled agent TOML files carry explicit `model`, `model_reasoning_effort`, and `service_tier`
-defaults. `docs/superloopy-model-policy.md` records the allowed values and role defaults, and
-`superloopy doctor` fails if those TOML fields drift. These fields are advisory because the host
-may ignore or override them. They improve crew routing efficiency, but they are never proof:
-Superloopy accepts only artifacts, command transcripts, audit verdicts, and gate reports.
+`model-policy.json` records the allowed model values and profile assignments, and bundled agent
+TOML files carry explicit resolved `model`, `model_reasoning_effort`, and `service_tier` pins.
+`docs/superloopy-model-policy.md` explains that contract, and `superloopy doctor` fails if the
+catalog, docs, or TOML fields drift. These fields are advisory because the host may ignore or
+override them, but Superloopy does not omit them just to inherit a parent/default model. They
+improve crew routing efficiency, but they are never proof: Superloopy accepts only artifacts,
+command transcripts, audit verdicts, and gate reports.
 
 ## SubagentStop hook payload
 

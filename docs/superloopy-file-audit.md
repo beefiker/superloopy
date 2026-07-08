@@ -65,6 +65,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `hooks/subagent-stop.json` | Registers evidence receipt verification for Superloopy executor, review, QA, and gate subagents. | Receipts use Superloopy evidence roots. |
 | `hooks/user-prompt-submit.json` | Registers steering, the frontend-skill steer, and trigger-scoped context injection. | Structured `SUPERLOOPY_STEER` and explicit Superloopy prompt triggers only. |
 | `installation.md` | Agent-facing install contract for `install https://github.com/beefiker/superloopy` prompts, covering Codex, Claude Code, checkout fallback, update, and verification. | Documentation-only install guide; reuses current marketplace/plugin commands and adds no runtime logic or dependencies. |
+| `model-policy.json` | Central advisory model policy data for Codex and Claude profiles, allowed values, and per-agent profile assignments. | Superloopy-native policy data only; keeps resolved pins explicit without adding runtime model fallback or external dependencies. |
 | `package-lock.json` | npm lockfile required by plugin catalog readiness checks. | Lockfile records the dependency-free package root only; no runtime dependencies are introduced. |
 | `package.json` | Dependency-free Node package metadata, bin, and scripts including manifest version sync. | Keeps Superloopy small and dependency-free. |
 | `scripts/serve-web.mjs` | Local HTTP preview server for the static web payload, including image URL mapping and WebGL MIME types. | Development preview utility only; dependency-free and no plugin runtime side effects. |
@@ -384,7 +385,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/loop.js` | Core plan lifecycle: create, status, next, evidence, review, checkpoint, and steering. | Original `.superloopy` state machine. |
 | `src/plan-trust.js` | Trust boundary for plan-recorded commands: audit re-runs execute only commands captured locally or approved via `loop trust`; the approval ledger lives in the user home so repo contents cannot forge trust. | Superloopy-native repo-poisoning defense. |
 | `src/matrix-gate.js` | Validator for strict matrix quality gates. | Keeps compatible shape under Superloopy-native module name. |
-| `src/model-policy.js` | Doctor helper that checks the Codex model-policy doc + agent TOML defaults and the Claude model-policy doc + `agents/*.md` model frontmatter. | Advisory policy only; never treats model choice as proof. |
+| `src/model-policy.js` | Doctor helper that reads `model-policy.json`, checks the Codex model-policy doc + agent TOML defaults, and checks the Claude model-policy doc + `agents/*.md` model frontmatter. | Advisory policy only; never treats model choice as proof or relies on host parent/default inheritance. |
 | `src/plan-summary.js` | Compact derived progress summary. | Superloopy-only helper. |
 | `src/pre-tool-use.js` | PreToolUse guard for malformed `create_goal` calls and premature native `update_goal` completion. | Uses Superloopy plan completion as the authority before native goal completion. |
 | `src/prove.js` | ID-free proof shortcut for the active next unresolved criterion. | Superloopy-specific proof path. |
