@@ -5,3 +5,7 @@ node_modules/
 coverage/
 *.log
 .codex-marketplace-install.json
+site/.astro/
+site/dist/
+web-superloopy/.astro/
+web-superloopy/dist/

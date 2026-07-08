@@ -1,0 +1,807 @@
+---
+import "../styles/global.css";
+import { Image } from "astro:assets";
+
+import proofEvidence from "../assets/generated/proof-evidence.webp";
+import skillLanes from "../assets/generated/skill-lanes.webp";
+import visibleProgress from "../assets/generated/visible-progress.webp";
+import finalGate from "../assets/generated/final-gate.webp";
+
+import paneCrew01 from "../assets/panes/crew-01.webp";
+import paneCrew04 from "../assets/panes/crew-04.webp";
+import paneCrew03 from "../assets/panes/crew-03.webp";
+import paneCrew05 from "../assets/panes/crew-05.webp";
+import paneCrew06 from "../assets/panes/crew-06.webp";
+import paneCrew02 from "../assets/panes/crew-02.webp";
+
+const year = new Date().getFullYear();
+
+const stackedCards = [
+  {
+    num: "01",
+    title: "Evidence",
+    copy: "Every run writes artifacts under .superloopy/evidence, so results can be checked after the chat.",
+    image: proofEvidence,
+    alt: "Evidence artifacts",
+  },
+  {
+    num: "02",
+    title: "Skill lanes",
+    copy: "Use loopy for focused work, research, frontend, and clone flows without changing the proof rule.",
+    image: skillLanes,
+    alt: "Skill lanes",
+  },
+  {
+    num: "03",
+    title: "Visible progress",
+    copy: "Plans, commands, screenshots, and reports stay linked to the goal instead of disappearing into chat.",
+    image: visibleProgress,
+    alt: "Visible progress",
+  },
+  {
+    num: "04",
+    title: "Final gate",
+    copy: "Completion requires a named artifact and a clear pass, blocker, or next action.",
+    image: finalGate,
+    alt: "Final gate",
+  },
+];
+
+const loopsCallouts = [
+  {
+    title: "Bounded task loops",
+    detail:
+      "Superloopy keeps the loop tied to the task: goal, command, artifact, and final report all point to the same proof.",
+  },
+  {
+    title: "Evidence that survives the chat",
+    detail:
+      "Each pass records what changed, what command proved it, and where the receipt lives inside the project.",
+  },
+  {
+    title: "A final report with blockers named",
+    detail:
+      "When the gate cannot pass, the report says why, names the blocker, and leaves the evidence already found.",
+  },
+];
+
+const proofSlides = [
+  {
+    stat: "1 loop",
+    caption: "One prompt becomes a bounded loop",
+    image: proofEvidence,
+    detail:
+      "Superloopy keeps the loop tied to the task: goal, command, artifact, and final report all point to the same proof.",
+  },
+  {
+    stat: "4 steps",
+    caption: "Running agent work has never been clearer",
+    image: visibleProgress,
+    detail:
+      "Each pass records what changed, what command proved it, and where the receipt lives inside the project.",
+  },
+  {
+    stat: "Proof",
+    caption: "Done means proven.",
+    image: finalGate,
+    detail:
+      "When the gate cannot pass, the report says why, names the blocker, and leaves the evidence already found.",
+  },
+];
+
+const steps = [
+  {
+    num: "01",
+    title: "Set the goal",
+    copy: "Define the objective, success criteria, and evidence folder before the agent starts moving.",
+  },
+  {
+    num: "02",
+    title: "Act in loops",
+    copy: "The agent keeps taking the next visible action, with each pass tied back to the goal.",
+  },
+  {
+    num: "03",
+    title: "Capture evidence",
+    copy: "Commands, screenshots, reports, and audit files land where they can be opened and rerun.",
+  },
+  {
+    num: "04",
+    title: "Pass the gate",
+    copy: "The final report separates finished work from blockers, with artifacts named in the open.",
+  },
+];
+
+const faqs = [
+  {
+    q: "What makes Superloopy different from a prompt?",
+    a: "Superloopy keeps quality tied to evidence. Goal criteria: the loop starts with a concrete objective and the artifacts needed to prove it. Evidence capture: commands, screenshots, reports, and changed files are written where they can be opened later. Gate check: Superloopy does not call work done unless the proof is named or the blocker is explicit.",
+  },
+  {
+    q: "Where does the evidence live?",
+    a: "Artifacts live in the project under .superloopy/evidence. That keeps the proof beside the work, not buried in chat history. The final report points back to the files, commands, screenshots, and notes that matter.",
+  },
+  {
+    q: "Does it work with Codex and Claude Code?",
+    a: "Yes. Superloopy is a command layer for Codex work and supports Claude Code workflows too. The same evidence rule applies across lanes.",
+  },
+  {
+    q: "What happens when the loop cannot finish?",
+    a: "Then the report says so. A loop can finish as passed, blocked, or incomplete, but it must leave a reason and the evidence it found. That is the point: no confident ending without proof. You get the next action instead of a tidy guess.",
+  },
+];
+
+const codexCommands = [
+  "codex plugin marketplace add https://github.com/beefiker/superloopy",
+  "codex plugin add superloopy@beefiker",
+];
+const claudeCommands = [
+  "/plugin marketplace add beefiker/superloopy",
+  "/plugin install superloopy@beefiker",
+  "/reload-plugins",
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Superloopy | Evidence-first loops</title>
+    <meta
+      name="description"
+      content="Superloopy runs agent work in a loop until proof exists: plan, act, evidence, gate."
+    />
+    <link rel="canonical" href="https://superloopy.dev/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Superloopy" />
+    <meta property="og:title" content="Superloopy | Evidence-first loops" />
+    <meta
+      property="og:description"
+      content="Superloopy runs agent work in a loop until proof exists: plan, act, evidence, gate."
+    />
+    <meta property="og:url" content="https://superloopy.dev/" />
+    <meta property="og:image" content="https://superloopy.dev/og.jpg?v=2" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Superloopy — Take control of agent work" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Superloopy | Evidence-first loops" />
+    <meta
+      name="twitter:description"
+      content="Superloopy runs agent work in a loop until proof exists: plan, act, evidence, gate."
+    />
+    <meta name="twitter:image" content="https://superloopy.dev/og.jpg?v=2" />
+    <link rel="icon" href="/favicon/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
+    <link
+      rel="preload"
+      href="/fonts/c610bdeb33344a72-s.p.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/edfa245493c4c854-s.p.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+  </head>
+  <body>
+    <!-- Preloader -->
+    <div class="preloader" data-preloader>
+      <span class="preloader__count" data-preloader-count>0</span>
+    </div>
+
+    <!-- Fixed shared WebGL canvas (dot grid + models), source z-index:-1 -->
+    <div class="webgl" data-webgl-root aria-hidden="true"></div>
+
+    <!-- Header -->
+    <header class="header" data-header data-theme="light">
+      <a class="header__logo" href="/" aria-label="Superloopy home">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <g data-logo-rotate>
+            <path
+              d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5"
+              stroke="currentColor"
+              stroke-width="3"
+              stroke-linecap="round"></path>
+            <circle cx="20.5" cy="12" r="2.1" fill="currentColor"></circle>
+          </g>
+        </svg>
+        <span>Superloopy</span>
+      </a>
+      <div class="header__right">
+        <div class="lang-switch" data-lang-switch role="group" aria-label="Language">
+          <button type="button" class="is-active" data-lang="en">EN</button>
+          <button type="button" data-lang="de">DE</button>
+          <button type="button" data-lang="kr">KR</button>
+          <button type="button" data-lang="es">ES</button>
+        </div>
+        <a
+          class="github-pill"
+          href="https://github.com/beefiker/superloopy"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Star Superloopy on GitHub"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path
+              d="M12 1.75l3.09 6.26 6.91 1-5 4.87 1.18 6.88L12 17.51l-6.18 3.25L7 13.88l-5-4.87 6.91-1L12 1.75z"
+            ></path>
+          </svg>
+          <span>GitHub</span>
+          <span class="github-pill__count" data-star-count hidden></span>
+        </a>
+        <button
+          class="hamburger"
+          type="button"
+          data-menu-toggle
+          aria-label="Open menu"
+          aria-expanded="false"
+        >
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Menu overlay -->
+    <nav class="menu" data-menu aria-hidden="true">
+      <ul class="menu__list">
+        <li class="menu__item">
+          <span class="stagger-item">
+            <a class="menu__link custom-link" href="#crew" data-menu-link>
+              <span class="custom-link__text"><span class="roll" data-text="Crew">Crew</span></span>
+            </a>
+          </span>
+        </li>
+        <li class="menu__item">
+          <span class="stagger-item">
+            <a class="menu__link custom-link" href="#proof" data-menu-link>
+              <span class="custom-link__text"
+                ><span class="roll" data-text="Evidence">Evidence</span></span
+              >
+            </a>
+          </span>
+        </li>
+        <li class="menu__item">
+          <span class="stagger-item">
+            <a class="menu__link custom-link" href="#install" data-menu-link>
+              <span class="custom-link__text"
+                ><span class="roll" data-text="Install">Install</span></span
+              >
+            </a>
+          </span>
+        </li>
+        <li class="menu__item">
+          <span class="stagger-item">
+            <a
+              class="menu__link custom-link"
+              href="https://github.com/beefiker/superloopy"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span class="custom-link__text"
+                ><span class="roll" data-text="GitHub">GitHub</span></span
+              >
+            </a>
+          </span>
+        </li>
+      </ul>
+      <div class="menu__meta">
+        <div class="lang-switch" data-lang-switch role="group" aria-label="Language">
+          <button type="button" class="is-active" data-lang="en">EN</button>
+          <button type="button" data-lang="de">DE</button>
+          <button type="button" data-lang="kr">KR</button>
+          <button type="button" data-lang="es">ES</button>
+        </div>
+        <a
+          class="link--underline"
+          href="https://github.com/beefiker/superloopy"
+          target="_blank"
+          rel="noreferrer">github.com/beefiker/superloopy</a
+        >
+      </div>
+    </nav>
+
+    <main class="relative">
+      <!-- 1. Hero -->
+      <section class="hero" data-header-theme="light">
+        <div class="hero__bg" aria-hidden="true"></div>
+        <div
+          class="hero__orbit"
+          data-orbit
+          data-orbit-src="/orbit.html?devmode=webgl&scene=landing-orb"
+          aria-hidden="true"
+        >
+        </div>
+        <div class="container hero__inner">
+          <h1 class="h2 hero__title title--has-whirl split-text" data-split>
+            Take control of
+            <svg class="whirl" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path
+                d="M23 12l-6.84 1.72 3.62 6.06-6.06-3.62L12 23l-1.72-6.84-6.06 3.62 3.62-6.06L1 12l6.84-1.72-3.62-6.06 6.06 3.62L12 1l1.72 6.84 6.06-3.62-3.62 6.06L23 12z"
+              ></path>
+            </svg>
+            agent work
+          </h1>
+          <div class="divider" aria-hidden="true">
+            <span class="divider__line"></span>
+            <svg class="divider__star" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M23 12l-6.84 1.72 3.62 6.06-6.06-3.62L12 23l-1.72-6.84-6.06 3.62 3.62-6.06L1 12l6.84-1.72-3.62-6.06 6.06 3.62L12 1l1.72 6.84 6.06-3.62-3.62 6.06L23 12z"
+              ></path>
+            </svg>
+          </div>
+          <div class="hero__bottom">
+            <p class="hero__intro">
+              Superloopy runs agent work in a loop until proof exists: plan, act, evidence, gate.
+            </p>
+            <div class="hero__actions">
+              <a class="btn" href="#install" data-btn-chars>
+                <span class="btn__chars" data-label="Start loop">Start loop</span>
+                <span class="btn__icon" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" fill="none">
+                    <path d="M3 13L13 3M13 3H5M13 3v8" stroke="currentColor" stroke-width="1.6"
+                    ></path>
+                  </svg>
+                </span>
+              </a>
+              <span class="scroll-down">
+                <span class="scroll-down__icon" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" fill="none">
+                    <path d="M8 2v12M3 9l5 5 5-5" stroke="currentColor" stroke-width="1.6"></path>
+                  </svg>
+                </span>
+                Scroll down
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Crew / intro -->
+      <section class="intro container" id="crew" data-header-theme="dark">
+        <div class="text--dot" data-reveal>Evidence-first loops for Codex and Claude Code</div>
+        <h2 class="big-body font-secondary intro__title split-text" data-split>
+          Superloopy keeps agents moving inside a bounded loop, then lets evidence decide when the
+          work is done.
+        </h2>
+        <div class="divider" aria-hidden="true">
+          <span class="divider__line" style="background:#000"></span>
+        </div>
+        <div class="intro__grid">
+          <div data-reveal>
+            <p class="intro__copy">
+              Agents move fast. Superloopy makes done mean proven. Plans, commands, screenshots,
+              and reports stay linked to the goal instead of disappearing into chat.
+            </p>
+            <ul class="intro__list">
+              <li><span>01</span><span>Looped work</span></li>
+              <li><span>02</span><span>Agent rhythm</span></li>
+              <li><span>03</span><span>Proof gate</span></li>
+            </ul>
+          </div>
+          <div class="glass-stage" data-glass-scene role="img" aria-label="Superloopy crew panes">
+            <div class="pane-stack glass-stage__fallback" aria-hidden="true">
+              {
+                [
+                  { image: paneCrew01, alt: "Superloopy crew 01" },
+                  { image: paneCrew04, alt: "Superloopy crew 04" },
+                  { image: paneCrew05, alt: "Superloopy crew 05" },
+                  { image: paneCrew03, alt: "Superloopy crew 03" },
+                  { image: paneCrew06, alt: "Superloopy crew 06" },
+                  { image: paneCrew02, alt: "Superloopy crew 02" },
+                ].map((pane) => (
+                  <figure class="pane">
+                    <Image
+                      src={pane.image}
+                      alt={pane.alt}
+                      format="webp"
+                      widths={[320, 480, 640]}
+                      sizes="(max-width: 760px) 100vw, 46vw"
+                      loading="lazy"
+                    />
+                  </figure>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Stacked feature cards -->
+      <section class="stack-section container" data-header-theme="dark" style="--pt:9rem">
+        {
+          stackedCards.map((card) => (
+            <div class="stack-holder" data-stack-holder>
+              <div class="stack-block" data-stack-block>
+                <article class="stacked-card">
+                  <div class="stacked-card__media">
+                    <Image src={card.image} alt={card.alt} widths={[640, 1280]} />
+                  </div>
+                  <div class="stacked-card__body">
+                    <div>
+                      <h3 class="h4">{card.title}</h3>
+                      <p style="margin-top:1.6rem;max-width:40ch;opacity:.85">{card.copy}</p>
+                    </div>
+                    <div class="stacked-card__num">
+                      {card.num} / {card.title}
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          ))
+        }
+      </section>
+
+      <!-- 4. Loops band (pinned WebGL circles) -->
+      <section class="loops" data-header-theme="light">
+        <div class="container">
+          <div class="loops__eyebrow" data-reveal>Superloopy&reg;</div>
+          <h2 class="integrations-title loops__title split-text" data-split>
+            Agent work &#10034; Loops &#10034;
+          </h2>
+          <p class="big-body loops__sub split-text" data-split>Are all about proof</p>
+        </div>
+        <div class="loops__track container" data-loops-track>
+          <div class="loops__sticky">
+            <div class="loops__webgl" data-webgl="circles" aria-hidden="true"></div>
+            <div class="loops__callouts">
+              {
+                loopsCallouts.map((callout, i) => (
+                  <div class="loops__block" data-loops-block={i}>
+                    <h3>{callout.title}</h3>
+                    <div class="proof-detail" data-proof-detail>
+                      <p>{callout.detail}</p>
+                    </div>
+                    <button class="custom-link accordion-opener" type="button" data-proof-toggle>
+                      <span class="custom-link__text">
+                        <span class="roll" data-text="Read proof ⊕">
+                          Read proof ⊕
+                        </span>
+                      </span>
+                    </button>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+        <div class="loops__cta container">
+          <a class="btn btn--secondary" href="#install" data-btn-chars>
+            <span class="btn__chars" data-label="Start loop">Start loop</span>
+            <span class="btn__icon" aria-hidden="true">
+              <svg viewBox="0 0 16 16" fill="none">
+                <path d="M3 13L13 3M13 3H5M13 3v8" stroke="currentColor" stroke-width="1.6"></path>
+              </svg>
+            </span>
+          </a>
+        </div>
+      </section>
+
+      <!-- 5. Proof carousel -->
+      <section class="proof container" id="proof" data-header-theme="dark">
+        <h2 class="cases-title proof__title split-text" data-split>Proof</h2>
+        <div class="carousel" data-carousel>
+          <div class="carousel__stage">
+            {
+              proofSlides.map((slide, i) => (
+                <article class="case-card" data-case-card={i}>
+                  <div class="case-card__overlay" aria-hidden="true" />
+                  <div class="case-card__image">
+                    <Image src={slide.image} alt="" widths={[720, 1440]} />
+                    <svg
+                      class="case-card__decoration"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path d="M23 12l-6.84 1.72 3.62 6.06-6.06-3.62L12 23l-1.72-6.84-6.06 3.62 3.62-6.06L1 12l6.84-1.72-3.62-6.06 6.06 3.62L12 1l1.72 6.84 6.06-3.62-3.62 6.06L23 12z" />
+                    </svg>
+                  </div>
+                  <div class="case-card__results">
+                    <div class="case-card__stat">{slide.stat}</div>
+                    <div>
+                      <p style="font-size:1.8rem">{slide.caption}</p>
+                      <div class="proof-detail" data-proof-detail>
+                        <p>{slide.detail}</p>
+                      </div>
+                      <button
+                        class="custom-link accordion-opener"
+                        type="button"
+                        data-proof-toggle
+                        style="margin-top:1.6rem"
+                      >
+                        <span class="custom-link__text">
+                          <span class="roll" data-text="Read proof ⊕">
+                            Read proof ⊕
+                          </span>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))
+            }
+          </div>
+          <div class="carousel__controls">
+            <button
+              class="btn-rounded btn-rounded--left"
+              type="button"
+              data-carousel-prev
+              aria-label="Previous"
+            >
+              <svg viewBox="0 0 16 16" fill="none">
+                <path d="M2 8h12M9 3l5 5-5 5" stroke="currentColor" stroke-width="1.6"></path>
+              </svg>
+            </button>
+            <button
+              class="btn-rounded btn-rounded--right"
+              type="button"
+              data-carousel-next
+              aria-label="Next"
+            >
+              <svg viewBox="0 0 16 16" fill="none">
+                <path d="M2 8h12M9 3l5 5-5 5" stroke="currentColor" stroke-width="1.6"></path>
+              </svg>
+            </button>
+            <span class="carousel__counter" data-carousel-counter>01 / 03</span>
+          </div>
+        </div>
+        <div class="proof__notes">
+          <p class="text--slash" data-reveal>
+            Built for Codex and Claude Code workflows that need receipts
+          </p>
+          <p class="text--slash" data-reveal>Focus on the task. Let the loop demand proof.</p>
+        </div>
+        <div class="proof__actions">
+          <a class="btn btn--large" href="#install" data-btn-chars>
+            <span class="btn__chars" data-label="Install loop">Install loop</span>
+            <span class="btn__icon" aria-hidden="true">
+              <svg viewBox="0 0 16 16" fill="none">
+                <path d="M3 13L13 3M13 3H5M13 3v8" stroke="currentColor" stroke-width="1.6"></path>
+              </svg>
+            </span>
+          </a>
+        </div>
+      </section>
+
+      <!-- 6. Steps (pinned WebGL saw + progress rail) -->
+      <section class="steps container" data-header-theme="dark">
+        <div class="steps__head">
+          <div class="text--dot" style="justify-content:center" data-reveal>4 steps</div>
+          <h2 class="h2 split-text" data-split style="margin-top:2.4rem">Running agent work</h2>
+          <p class="big-body split-text" data-split>Has never been clearer</p>
+        </div>
+        <div class="steps__grid">
+          <div class="steps__webgl-holder">
+            <div class="steps__webgl" data-webgl="eye" aria-hidden="true"></div>
+          </div>
+          <div class="steps__rail" data-steps>
+            <div class="steps__progress" aria-hidden="true">
+              <span class="steps__filler" data-steps-filler></span>
+            </div>
+            {
+              steps.map((step, i) => (
+                <div class="steps__block" data-steps-block={i}>
+                  <span class="steps__point" aria-hidden="true" />
+                  <span class="steps__num">{step.num}</span>
+                  <h3>{step.title}</h3>
+                  <p>{step.copy}</p>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. CTA -->
+      <section class="cta" data-header-theme="dark">
+        <div class="cta__grid">
+          <div class="cta__visual">
+            <Image src={paneCrew02} alt="" widths={[720, 1440]} />
+          </div>
+          <div class="cta__panel">
+            <div class="text--dot" data-reveal>Superloopy&reg;</div>
+            <h3 class="h3 split-text" data-split>
+              Agents move fast. Superloopy makes done mean proven.
+            </h3>
+            <div>
+              <a class="btn btn--secondary" href="#install" data-btn-chars>
+                <span class="btn__chars" data-label="Start loop">Start loop</span>
+                <span class="btn__icon" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" fill="none">
+                    <path d="M3 13L13 3M13 3H5M13 3v8" stroke="currentColor" stroke-width="1.6"
+                    ></path>
+                  </svg>
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. Install -->
+      <section class="install" id="install" data-header-theme="dark">
+        <div class="container">
+          <div class="install__head">
+            <div class="text--dot" data-reveal>Install</div>
+            <h2 class="h3 split-text" data-split style="margin-top:2.4rem">
+              Install once. Then type loopy.
+            </h2>
+            <p style="margin-top:2rem;max-width:52ch;font-size:1.8rem" data-reveal>
+              Use the same evidence loop from Codex or Claude Code. The commands stay copyable
+              without loading an app runtime.
+            </p>
+          </div>
+          <div class="install__card">
+            <div class="forms-switcher-row" role="tablist">
+              <button
+                class="forms-switcher is-active"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                data-install-tab="codex">Codex</button
+              >
+              <button
+                class="forms-switcher"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                data-install-tab="claude">Claude Code</button
+              >
+            </div>
+            <div class="install__pane is-active" data-install-pane="codex">
+              <p class="install__detail">
+                Run in a terminal, then restart Codex and approve the hooks.
+              </p>
+              {
+                codexCommands.map((cmd) => (
+                  <div class="command">
+                    <code class="command__text">{cmd}</code>
+                    <button class="command__copy" type="button" data-copy={cmd}>
+                      Copy
+                    </button>
+                  </div>
+                ))
+              }
+            </div>
+            <div class="install__pane" data-install-pane="claude">
+              <p class="install__detail">
+                Run inside Claude Code, then approve the plugin hooks.
+              </p>
+              {
+                claudeCommands.map((cmd) => (
+                  <div class="command">
+                    <code class="command__text">{cmd}</code>
+                    <button class="command__copy" type="button" data-copy={cmd}>
+                      Copy
+                    </button>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. FAQ -->
+      <section class="faq container" data-header-theme="dark">
+        <h2 class="faqs-title faq__title split-text" data-split>FAQ</h2>
+        <div class="faq__list">
+          {
+            faqs.map((item, i) => (
+              <div class="faq__row group" data-faq-row>
+                <span class="faq__num">0{i + 1}</span>
+                <h4 class="faq__q">{item.q}</h4>
+                <button class="btn-circle faq__icon" type="button" aria-label="Toggle answer">
+                  <svg class="icon-plus" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.6" />
+                  </svg>
+                  <span class="icon-minus">
+                    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path d="M2 8h12" stroke="currentColor" stroke-width="1.6" />
+                    </svg>
+                  </span>
+                </button>
+                <div class="faq__a" data-faq-answer>
+                  <p>{item.a}</p>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer" id="contacts" data-header-theme="light">
+      <div class="container footer__inner">
+        <div>
+          <h3 class="footer-title split-text" data-split>Get Superloopy</h3>
+          <a
+            class="footer__email link--underline"
+            href="https://github.com/beefiker/superloopy"
+            target="_blank"
+            rel="noreferrer">github.com/beefiker/superloopy &nearr;</a
+          >
+          <div class="divider" style="margin-top:4rem" aria-hidden="true">
+            <span class="divider__line"></span>
+            <svg
+              class="divider__star"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              style="color:var(--white)"
+            >
+              <path d="M23 12l-6.84 1.72 3.62 6.06-6.06-3.62L12 23l-1.72-6.84-6.06 3.62 3.62-6.06L1 12l6.84-1.72-3.62-6.06 6.06 3.62L12 1l1.72 6.84 6.06-3.62-3.62 6.06L23 12z"
+              ></path>
+            </svg>
+          </div>
+        </div>
+        <div class="footer__grid">
+          <div class="footer__webgl" data-webgl="star" aria-hidden="true"></div>
+          <div class="footer__links">
+            <p class="text--slash">Codex and Claude Code workflows</p>
+            <p class="text--slash">Done means proven.</p>
+            <a
+              class="btn-circle"
+              href="https://github.com/beefiker/superloopy"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="GitHub"
+            >
+              <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path
+                  d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+                ></path>
+              </svg>
+            </a>
+            <nav class="footer__nav">
+              <a class="custom-link" href="#crew">
+                <span class="custom-link__text"
+                  ><span class="roll" data-text="Overview">Overview</span></span
+                >
+              </a>
+              <a class="custom-link" href="#proof">
+                <span class="custom-link__text"
+                  ><span class="roll" data-text="Evidence">Evidence</span></span
+                >
+              </a>
+              <a class="custom-link" href="#install">
+                <span class="custom-link__text"
+                  ><span class="roll" data-text="Install">Install</span></span
+                >
+              </a>
+            </nav>
+          </div>
+        </div>
+        <div class="footer__bottom">
+          <a class="header__logo" href="/" aria-label="Superloopy home" style="font-size:1.6rem">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="width:2.2em;height:2.2em">
+              <g data-logo-rotate>
+                <path
+                  d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"></path>
+                <circle cx="20.5" cy="12" r="2.1" fill="currentColor"></circle>
+              </g>
+            </svg>
+            <span>Superloopy</span>
+          </a>
+          <span>&copy; {year} Superloopy. MIT License.</span>
+          <span class="text--slash">Done means proven.</span>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      import "../scripts/app.js";
+      import "../scripts/webgl.js";
+    </script>
+  </body>
+</html>
