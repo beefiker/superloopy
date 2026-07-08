@@ -1,0 +1,26 @@
+# Hashed build outputs are safe to cache forever.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/_nuxt/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Stable but unhashed runtime assets revalidate daily.
+/fonts/*
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/favicon/*
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/webgl/*
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/basis/*
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/draco/*
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
