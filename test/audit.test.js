@@ -59,5 +59,5 @@ function listRepoFiles() {
 }
 
 function isReviewableTextFile(file) {
-  return /\.(js|md|json|yaml)$/u.test(file) && !file.endsWith("package-lock.json") && !file.startsWith("web-superloopy/public/_nuxt/") && !file.startsWith("web-superloopy/public/_payload.json");
+  return /\.(js|md|json|yaml)$/u.test(file) && !file.endsWith("package-lock.json") && !file.startsWith("web-superloopy/public/_nuxt/") && !file.startsWith("web-superloopy/public/_payload.json") && !file.startsWith("skills/superloopy-slides/bold-template-pack/");
 }

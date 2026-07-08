@@ -214,7 +214,8 @@ async function checkReviewability(cwd) {
 
 function isReviewableTextFile(file) {
   // web-superloopy/public/_nuxt holds vendored minified orbit-runtime bundles audited by provenance, not line count.
-  return /\.(js|md|json|yaml)$/u.test(file) && !file.endsWith("package-lock.json") && !file.startsWith("web-superloopy/public/_nuxt/") && !file.startsWith("web-superloopy/public/_payload.json");
+  // skills/superloopy-slides/bold-template-pack holds the vendored frontend-slides template pack audited by provenance, not line count.
+  return /\.(js|md|json|yaml)$/u.test(file) && !file.endsWith("package-lock.json") && !file.startsWith("web-superloopy/public/_nuxt/") && !file.startsWith("web-superloopy/public/_payload.json") && !file.startsWith("skills/superloopy-slides/bold-template-pack/");
 }
 
 function countLines(content) {
