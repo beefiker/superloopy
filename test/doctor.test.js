@@ -9,7 +9,7 @@ import test from "node:test";
 import { checkComparisonSimilarity, normalizeComparisonPath } from "../src/comparison-similarity.js";
 import { formatDoctor, runDoctor } from "../src/doctor.js";
 
-const EXPECTED_SKILLS = ["humanize-korean", "superloopy-clone", "superloopy-doctor", "superloopy-frontend", "superloopy-loop", "superloopy-research"];
+const EXPECTED_SKILLS = ["humanize-korean", "superloopy-clone", "superloopy-doctor", "superloopy-frontend", "superloopy-loop", "superloopy-research", "superloopy-slides"];
 
 function runCli(args, options = {}) {
   return spawnSync(process.execPath, [join(process.cwd(), "src/cli.js"), ...args], {
