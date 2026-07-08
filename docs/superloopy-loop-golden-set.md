@@ -94,6 +94,7 @@ Total: 100 points.
 | `hooks/subagent-stop.json` | `test/plugin.test.js`, doctor hook check. | Must route executor, review, QA, and gate SubagentStop receipt validation through the Superloopy CLI. |
 | `hooks/user-prompt-submit.json` | `test/plugin.test.js`, doctor hook check. | Must route prompt steering, the frontend-skill steer, and trigger-scoped context injection through the Superloopy CLI. |
 | `installation.md` | `test/docs.test.js`, audit coverage. | Must give agents a root-level install contract for Codex and Claude Code from the GitHub URL, including verification and no-dependency boundaries. |
+| `model-policy.json` | `test/doctor.test.js`, audit coverage. | Must centralize allowed Codex/Claude model values, reusable profiles, and per-agent profile assignments while keeping resolved pins explicit. |
 | `package-lock.json` | Hashgraph catalog readiness and npm audit surface. | Must lock only the dependency-free package root unless real dependencies are intentionally added. |
 | `package.json` | `npm test`, doctor dependency check. | Must stay dependency-free and expose `superloopy`, `test`, `check`, and `sync-version` scripts. |
 | `scripts/serve-web.mjs` | Browser QA preview server. | Must serve `web-superloopy/dist/` without dependencies and expose MIME types for landing WebGL assets. |
@@ -413,7 +414,7 @@ Total: 100 points.
 | `src/loop.js` | Core loop and CLI tests. | Must preserve lifecycle state, ledger appends, evidence recording, review, checkpoint, status, and steering. |
 | `src/plan-trust.js` | Audit trust-gate tests. | Must fail closed: an audit re-run of a command never executed or approved on this machine must refuse without executing. |
 | `src/matrix-gate.js` | Matrix gate golden tests. | Must validate compatible matrix gate shape through Superloopy artifacts only. |
-| `src/model-policy.js` | `test/doctor.test.js`. | Must fail doctor when the Codex model-policy doc/TOML defaults or the Claude model-policy doc/`agents/*.md` model frontmatter drift. |
+| `src/model-policy.js` | `test/doctor.test.js`. | Must fail doctor when `model-policy.json`, the Codex model-policy doc/TOML defaults, or the Claude model-policy doc/`agents/*.md` model frontmatter drift. |
 | `src/plan-summary.js` | Guide and status tests through loop outputs. | Must summarize progress without mutating state. |
 | `src/pre-tool-use.js` | `test/pre-tool-use.test.js`, `test/golden-hooks.test.js`. | Must block malformed `create_goal` payloads and premature native `update_goal` completion. |
 | `src/prove.js` | CLI evidence tests. | Must record command evidence against the active unresolved criterion and return the next guide. |

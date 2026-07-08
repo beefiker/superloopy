@@ -1,0 +1,114 @@
+{
+  "version": "2026-07-08",
+  "policy": "advisory-model-defaults-are-explicit",
+  "codex": {
+    "allowed": {
+      "models": [
+        "gpt-5.5",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.3-codex-spark"
+      ],
+      "reasoningEfforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "serviceTiers": [
+        "priority",
+        "fast",
+        "efficient"
+      ]
+    },
+    "profiles": {
+      "standard": {
+        "model": "gpt-5.5",
+        "model_reasoning_effort": "high",
+        "service_tier": "priority"
+      },
+      "deep": {
+        "model": "gpt-5.5",
+        "model_reasoning_effort": "xhigh",
+        "service_tier": "priority"
+      },
+      "fast": {
+        "model": "gpt-5.4-mini",
+        "model_reasoning_effort": "low",
+        "service_tier": "fast"
+      }
+    },
+    "agents": {
+      "franky": {
+        "profile": "standard",
+        "purpose": "Bounded implementation lane."
+      },
+      "zoro": {
+        "profile": "deep",
+        "purpose": "Skeptical code review lane."
+      },
+      "usopp": {
+        "profile": "standard",
+        "purpose": "QA and regression lane."
+      },
+      "jinbe": {
+        "profile": "deep",
+        "purpose": "Final gate integration lane."
+      },
+      "robin": {
+        "profile": "standard",
+        "purpose": "Evidence auditor lane."
+      },
+      "nami": {
+        "profile": "fast",
+        "purpose": "Read-only navigation lane."
+      }
+    }
+  },
+  "claude": {
+    "allowed": {
+      "models": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ]
+    },
+    "profiles": {
+      "standard": {
+        "model": "sonnet"
+      },
+      "deep": {
+        "model": "opus"
+      },
+      "fast": {
+        "model": "haiku"
+      }
+    },
+    "agents": {
+      "franky": {
+        "profile": "standard",
+        "purpose": "Bounded implementation lane."
+      },
+      "zoro": {
+        "profile": "deep",
+        "purpose": "Skeptical code review lane."
+      },
+      "usopp": {
+        "profile": "standard",
+        "purpose": "QA and regression lane."
+      },
+      "jinbe": {
+        "profile": "deep",
+        "purpose": "Final gate integration lane."
+      },
+      "robin": {
+        "profile": "standard",
+        "purpose": "Evidence auditor lane."
+      },
+      "nami": {
+        "profile": "fast",
+        "purpose": "Read-only navigation lane."
+      }
+    }
+  }
+}

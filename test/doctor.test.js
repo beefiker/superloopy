@@ -109,6 +109,9 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.ok(parsed.checks.dispatchCoherence.dispatched.includes("robin"));
   assert.equal(parsed.checks.modelPolicy.ok, true);
   assert.equal(parsed.checks.modelPolicy.policyPath, "docs/superloopy-model-policy.md");
+  assert.equal(parsed.checks.modelPolicy.policyDataPath, "model-policy.json");
+  assert.equal(parsed.checks.modelPolicy.policyDataVersion, "2026-07-08");
+  assert.equal(parsed.checks.modelPolicy.agents.nami.profile, "fast");
   assert.equal(parsed.checks.modelPolicy.agents.nami.model, "gpt-5.4-mini");
   assert.equal(parsed.checks.modelPolicy.agents.zoro.model_reasoning_effort, "xhigh");
   assert.equal(parsed.checks.hostContract.ok, true);
@@ -118,6 +121,8 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.ok(parsed.checks.claudeHostWiring.matchers.length >= 1);
   assert.equal(parsed.checks.claudeModelPolicy.ok, true);
   assert.equal(parsed.checks.claudeModelPolicy.policyPath, "docs/superloopy-model-policy-claude.md");
+  assert.equal(parsed.checks.claudeModelPolicy.policyDataPath, "model-policy.json");
+  assert.equal(parsed.checks.claudeModelPolicy.policyDataVersion, "2026-07-08");
   assert.equal(parsed.checks.claudeModelPolicy.agents.nami, "haiku");
   assert.equal(parsed.checks.claudeModelPolicy.agents.zoro, "opus");
   // Interop is informational: it never fails and does not gate overall health.
@@ -162,6 +167,34 @@ test("doctor model policy fails when bundled agent defaults drift", async () => 
   assert.equal(result.ok, false);
   assert.equal(result.checks.modelPolicy.ok, false);
   assert.match(result.checks.modelPolicy.message, /nami\.toml model/);
+});
+
+test("doctor model policy resolves bundled defaults from the model policy data", async () => {
+  const repo = await tempRepoCopy();
+  const policyDataPath = join(repo, "model-policy.json");
+  const policyData = JSON.parse(await readFile(policyDataPath, "utf8"));
+  policyData.codex.profiles.fast.model = "gpt-5.5";
+  await writeFile(policyDataPath, `${JSON.stringify(policyData, null, 2)}\n`, "utf8");
+
+  const result = await runDoctor(repo);
+
+  assert.equal(result.ok, false);
+  assert.equal(result.checks.modelPolicy.ok, false);
+  assert.match(result.checks.modelPolicy.message, /nami\.toml model must be gpt-5\.5/);
+});
+
+test("doctor model policy reports invalid model policy data entries", async () => {
+  const repo = await tempRepoCopy();
+  const policyDataPath = join(repo, "model-policy.json");
+  const policyData = JSON.parse(await readFile(policyDataPath, "utf8"));
+  delete policyData.codex.agents.nami;
+  await writeFile(policyDataPath, `${JSON.stringify(policyData, null, 2)}\n`, "utf8");
+
+  const result = await runDoctor(repo);
+
+  assert.equal(result.ok, false);
+  assert.equal(result.checks.modelPolicy.ok, false);
+  assert.match(result.checks.modelPolicy.message, /model policy data\.codex\.agents\.nami/);
 });
 
 test("doctor dispatch coherence fails when a dispatched agent is not installed", async () => {
