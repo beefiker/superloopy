@@ -58,7 +58,6 @@ Total: 100 points.
 | `.github/assets/transferloom-clone-reference.png` | Audit coverage and README clone-demo reference. | Must remain a documentation screenshot for the validated Transferloom.com clone, not runtime plugin logic. |
 | `.github/assets/usopp.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
 | `.github/assets/zoro.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
-| `.github/workflows/hol-plugin-scanner.yml` | Hashgraph catalog readiness and GitHub Actions. | Must run the HOL scanner against the plugin root with SHA-pinned actions and no runtime side effects. |
 | `.github/workflows/test.yml` | Cross-platform test CI and GitHub Actions. | Must run `node --test` (no shell glob) across the ubuntu/windows/macos × Node 20/22 matrix with SHA-pinned actions and no runtime side effects. |
 | `.gitignore` | Doctor runtime-boundary ignored samples and installed-cache docs coverage. | `.superloopy/`, logs, coverage, dependencies, OS noise, Codex marketplace metadata, and generated Astro output must stay out of source control. |
 | `DESIGN.md` | Static landing-page design token contract. | Must keep the web preview's reference-inspired colors, typography, spacing, component states, motion, and depth explicit before UI edits. |
