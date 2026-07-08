@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en" data-superloopy-orbit-page>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Superloopy Orbit</title>
+  <style>
+    html,
+    body,
+    #__nuxt {
+      width: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    html,
+    #__nuxt {
+      height: 100%;
+    }
+
+    body {
+      min-height: 260vh;
+    }
+
+    #__nuxt {
+      position: fixed;
+      inset: 0;
+    }
+
+    #__nuxt > :not(canvas),
+    #teleports,
+    .lenis,
+    .js-header {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    canvas {
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 1 !important;
+      display: block !important;
+      width: 100% !important;
+      height: 100% !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: none !important;
+      background: transparent !important;
+    }
+
+    html[data-superloopy-orbit-interactive="true"] canvas {
+      pointer-events: auto !important;
+    }
+
+    .superloopy-orbit-scroll-scaffold {
+      height: 260vh;
+      opacity: 0;
+      pointer-events: none;
+      position: relative;
+      z-index: 0;
+    }
+
+    .superloopy-orbit-scroll-scaffold .js-section-copy {
+      position: absolute;
+      top: 35vh;
+    }
+
+    .superloopy-orbit-scroll-scaffold .js-logo-grid {
+      position: absolute;
+      top: 150vh;
+    }
+  </style>
+  <script
+    id="__NUXT_DATA__"
+    type="application/json"
+    data-nuxt-data="nuxt-app"
+    data-ssr="false"
+    data-src="./_payload.json?587bbe40-e7b6-4f66-ab17-632623d299f6"
+  >[{"state":1,"once":10,"_errors":11,"serverRendered":14,"path":15,"prerenderedAt":16},["Reactive",2],{"$ssite-config":3},{"_priority":4,"env":7,"name":8,"url":9},{"name":5,"env":6,"url":6},-5,0,"production","orbit-scene-2025-site","https://orbit-scene.com",["Set"],["ShallowReactive",12],{"sanity-MgrfDTauc1":13,"sanity-c2Rtjvjm0B":13,"sanity-oteEkXSewm":13},null,false,"/",1780609503802]</script>
+</head>
+<body>
+  <div id="__nuxt"></div>
+  <section class="superloopy-orbit-scroll-scaffold" data-webgl-section="biology" aria-hidden="true">
+    <div class="js-section-copy"></div>
+    <div class="js-logo-grid"></div>
+  </section>
+  <script>
+    const superloopyOrbitRoot = new URL("./", window.location.href);
+
+    function rewriteOrbitAssetUrl(value) {
+      if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) return value;
+      window.__superloopyOrbitStatus.pathRewriteCount += 1;
+      return new URL(value.slice(1), superloopyOrbitRoot).href;
+    }
+
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      if (input instanceof Request) {
+        const nextUrl = rewriteOrbitAssetUrl(input.url);
+        input = nextUrl === input.url ? input : new Request(nextUrl, input);
+      } else {
+        input = rewriteOrbitAssetUrl(input);
+      }
+      return nativeFetch(input, init);
+    };
+
+    const nativeXhrOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function open(method, url, ...rest) {
+      return nativeXhrOpen.call(this, method, rewriteOrbitAssetUrl(url), ...rest);
+    };
+
+    const imageSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "src");
+    if (imageSrcDescriptor && imageSrcDescriptor.set && imageSrcDescriptor.get) {
+      Object.defineProperty(HTMLImageElement.prototype, "src", {
+        configurable: true,
+        enumerable: imageSrcDescriptor.enumerable,
+        get() {
+          return imageSrcDescriptor.get.call(this);
+        },
+        set(value) {
+          return imageSrcDescriptor.set.call(this, rewriteOrbitAssetUrl(value));
+        }
+      });
+    }
+
+    window.__NUXT__ = {
+      serverRendered: false,
+      config: {
+        public: {
+          THEATRE_STATE: 1,
+          sanity: {
+            additionalClients: {},
+            apiVersion: "1",
+            dataset: "production",
+            disableSmartCdn: false,
+            perspective: "raw",
+            projectId: "8kyruyal",
+            stega: {},
+            token: "",
+            useCdn: false,
+            visualEditing: "",
+            withCredentials: false
+          }
+        },
+        app: {
+          baseURL: "./",
+          buildId: "587bbe40-e7b6-4f66-ab17-632623d299f6",
+          buildAssetsDir: "./_nuxt/",
+          cdnURL: ""
+        }
+      }
+    };
+
+    window.__superloopyOrbitStatus = {
+      ready: false,
+      frames: 0,
+      canvasWidth: 0,
+      canvasHeight: 0,
+      scene: new URLSearchParams(window.location.search).get("scene") || "landing-orb",
+      scrollProgress: 0,
+      pathRewriteCount: 0,
+      errors: []
+    };
+
+    const superloopyOrbitParams = new URLSearchParams(window.location.search);
+    if (superloopyOrbitParams.get("interactive") === "1") {
+      document.documentElement.dataset.superloopyOrbitInteractive = "true";
+    }
+
+    window.addEventListener("error", (event) => {
+      window.__superloopyOrbitStatus.errors.push(event.message || "window error");
+    });
+
+    window.addEventListener("unhandledrejection", (event) => {
+      const reason = event.reason && event.reason.message ? event.reason.message : event.reason;
+      window.__superloopyOrbitStatus.errors.push(String(reason || "unhandled rejection"));
+    });
+
+    function applyScenePointer(pointer) {
+      window.__superloopyOrbitStatus.pointerEvents = (window.__superloopyOrbitStatus.pointerEvents || 0) + 1;
+      window.__superloopyOrbitStatus.sceneStorePresent = Boolean(window.store?.pointer && window.store?.window);
+      if (!window.store?.pointer || !window.store?.window || !pointer) return;
+      const x = ((Number(pointer.x) || 0) + 1) * 0.5 * window.store.window.w;
+      const y = ((Number(pointer.y) || 0) + 1) * 0.5 * window.store.window.h;
+      window.store.pointer.x = x;
+      window.store.pointer.y = y;
+      window.store.pointer.gl?.set?.(x - window.store.window.w / 2, -y + window.store.window.h / 2);
+      window.store.pointer.glNormalized?.set?.(x / window.store.window.w * 2 - 1, -(y / window.store.window.h) * 2 + 1);
+      window.store.pointer.glScreenSpace?.set?.(x / window.store.window.w, 1 - y / window.store.window.h);
+    }
+
+    window.addEventListener("message", (event) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === "superloopy-orbit-pointer") {
+        applyScenePointer(event.data.pointer);
+        return;
+      }
+      if (event.data?.type !== "superloopy-eye-motion") return;
+
+      window.__superloopyOrbitStatus.scrollProgress = Number(event.data.progress) || 0;
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      window.scrollTo(0, window.__superloopyOrbitStatus.scrollProgress * maxScroll);
+      window.dispatchEvent(new Event("scroll"));
+      applyScenePointer(event.data.pointer);
+    });
+
+    function watchOrbitCanvas() {
+      const canvas = document.querySelector("canvas");
+      if (canvas) {
+        window.__superloopyOrbitStatus.ready = true;
+        window.__superloopyOrbitStatus.frames += 1;
+        window.__superloopyOrbitStatus.canvasWidth = canvas.width;
+        window.__superloopyOrbitStatus.canvasHeight = canvas.height;
+      }
+      window.requestAnimationFrame(watchOrbitCanvas);
+    }
+
+    window.requestAnimationFrame(watchOrbitCanvas);
+  </script>
+  <script type="module" src="./_nuxt/ty4JC5yh.js" crossorigin></script>
+</body>
+</html>

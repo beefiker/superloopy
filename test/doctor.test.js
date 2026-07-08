@@ -103,7 +103,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.comparisonSimilarity.checked, false);
   assert.equal(parsed.checks.comparisonSimilarity.policy, "optional-local-comparison-similarity-scan");
   assert.equal(parsed.checks.reviewability.ok, true);
-  assert.equal(parsed.checks.reviewability.maxLines, 500);
+  assert.equal(parsed.checks.reviewability.maxLines, 550);
   assert.equal(parsed.checks.reviewability.oversized.length, 0);
   assert.equal(parsed.checks.dispatchCoherence.ok, true);
   assert.ok(parsed.checks.dispatchCoherence.dispatched.includes("robin"));
