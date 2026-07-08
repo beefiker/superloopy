@@ -82,9 +82,11 @@ else
     OUTPUT_PDF="$(dirname "$INPUT_HTML")/$(basename "$INPUT_HTML" .html).pdf"
 fi
 
-# Resolve output to absolute path
+# Resolve output to an ABSOLUTE path before any cd: the exporter runs from
+# a temp dir, so a relative output would be written there and deleted with it.
 OUTPUT_DIR=$(dirname "$OUTPUT_PDF")
 mkdir -p "$OUTPUT_DIR"
+OUTPUT_DIR=$(cd "$OUTPUT_DIR" && pwd)
 OUTPUT_PDF="$OUTPUT_DIR/$(basename "$OUTPUT_PDF")"
 
 echo ""
@@ -349,6 +351,7 @@ info "Setting up Playwright (headless browser for screenshots)..."
 info "This may take a moment on first run..."
 echo ""
 
+ORIG_DIR=$(pwd)
 cd "$TEMP_DIR"
 
 # Create a minimal package.json so npm install works
@@ -360,6 +363,7 @@ PKG
 npm install playwright &>/dev/null || {
     err "Failed to install Playwright."
     err "Try running: npm install playwright"
+    cd "$ORIG_DIR"
     rm -rf "$TEMP_DIR"
     exit 1
 }
@@ -368,6 +372,7 @@ npm install playwright &>/dev/null || {
 npx playwright install chromium 2>/dev/null || {
     err "Failed to install Chromium browser for Playwright."
     err "Try running manually: npx playwright install chromium"
+    cd "$ORIG_DIR"
     rm -rf "$TEMP_DIR"
     exit 1
 }
@@ -388,12 +393,15 @@ fi
 
 node "$TEMP_SCRIPT" "$SERVE_DIR" "$HTML_FILENAME" "$OUTPUT_PDF" "$SCREENSHOT_DIR" "$VIEWPORT_W" "$VIEWPORT_H" || {
     err "PDF export failed."
+    cd "$ORIG_DIR"
     rm -rf "$TEMP_DIR"
     exit 1
 }
 
 # ─── Step 5: Cleanup and success ──────────────────────────
 
+# Leave the temp dir before deleting it so later commands don't run from a removed cwd
+cd "$ORIG_DIR"
 rm -rf "$TEMP_DIR"
 
 echo ""
