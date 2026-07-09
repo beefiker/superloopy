@@ -173,10 +173,14 @@ test("parseSteeringDirective accepts annotate-only directives", () => {
   });
 });
 
-test("hasLoosePromptTrigger recognizes Superloopy-native prompt aliases only at token boundaries", () => {
+test("hasLoosePromptTrigger recognizes only leading complete Superloopy aliases", () => {
   assert.equal(hasLoosePromptTrigger("loopywork ship the feature"), true);
   assert.equal(hasLoosePromptTrigger("$lpy ship the feature"), true);
-  assert.equal(hasLoosePromptTrigger("please lpy ship the feature"), true);
+  assert.equal(hasLoosePromptTrigger("lpy ship the feature"), true);
+  assert.equal(hasLoosePromptTrigger("$loopywork ship the feature"), false);
+  assert.equal(hasLoosePromptTrigger("please lpy ship the feature"), false);
+  assert.equal(hasLoosePromptTrigger("lpy가 왜 켜졌지?"), false);
+  assert.equal(hasLoosePromptTrigger("loopywork처럼 실행해"), false);
   assert.equal(hasLoosePromptTrigger("edit loopywork_helper.ts"), false);
   assert.equal(hasLoosePromptTrigger("deploy_lpy_module"), false);
 });
@@ -187,7 +191,11 @@ test("hasEngineerTrigger fires only on a leading loopy keyword", () => {
   assert.equal(hasEngineerTrigger("@loopy: ship it"), true);
   assert.equal(hasEngineerTrigger("loopywork ship it"), false);
   assert.equal(hasEngineerTrigger("please loopy this"), false);
+  assert.equal(hasEngineerTrigger("loopy가 왜 켜졌지?"), false);
+  assert.equal(hasEngineerTrigger("루피는 뭐야?"), false);
   assert.equal(hasEngineerTrigger("loopy loop begin --brief x"), false);
+  assert.equal(hasEngineerTrigger("loopy loop begin: explain the command"), false);
+  assert.equal(hasEngineerTrigger("loopy loop begin, explain the command"), false);
   // A real task whose first word is "loop" must still wake the engineer — only an actual
   // `loopy loop <subcommand>` prompt-shaped command references are suppressed.
   assert.equal(hasEngineerTrigger("loopy loop over the array and sum it"), true);

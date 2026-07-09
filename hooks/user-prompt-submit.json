@@ -6,8 +6,7 @@
           {
             "type": "command",
             "command": "node \"${PLUGIN_ROOT}/src/cli.js\" hook user-prompt-submit",
-            "timeout": 5,
-            "statusMessage": "(Superloopy) Checking Steering Directive"
+            "timeout": 5
           }
         ]
       }

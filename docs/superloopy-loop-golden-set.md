@@ -86,7 +86,9 @@ Total: 100 points.
 | `docs/superloopy-model-policy-claude.md` | `test/docs.test.js` model-policy assertions, audit coverage. | Must record the Claude model aliases and the advisory steering-not-proof rule mapped from the Codex policy. |
 | `docs/superloopy-model-policy.md` | `test/docs.test.js`, `test/doctor.test.js`. | Must record allowed model values and state that model choice is steering, not proof. |
 | `docs/superpowers/plans/2026-07-07-astro-landing.md` | Astro migration implementation plan. | Must record the migration steps, proof gates, and deployment path without adding plugin runtime behavior. |
+| `docs/superpowers/plans/2026-07-10-explicit-frontend-activation.md` | Explicit activation implementation plan. | Must record the exact-token, semantic-steer removal, metadata, documentation, and validation steps. |
 | `docs/superpowers/specs/2026-07-07-astro-landing-design.md` | Astro landing design brief. | Must record the mobile, performance, image, and Cloudflare constraints for the website rewrite. |
+| `docs/superpowers/specs/2026-07-10-explicit-frontend-activation-design.md` | Explicit activation design brief. | Must keep prompt-hook activation lexical and specialist routing explicit. |
 | `docs/superpowers/specs/2026-07-10-gpt-5-6-model-policy-design.md` | GPT-5.6 model-policy design brief. | Must map standard/deep/fast to Terra/Sol/Luna while retaining explicit resolved pins and no silent fallback. |
 | `hooks/hooks.json` | Audit coverage; Claude hook load. | Must route SessionStart/UserPromptSubmit/Stop/SubagentStop to the CLI via ${CLAUDE_PLUGIN_ROOT}, matching worker/navigator and auditor agent types. |
 | `hooks/pre-tool-use.json` | `test/plugin.test.js`, doctor hook check. | Must route to `node "${PLUGIN_ROOT}/src/cli.js" hook pre-tool-use`. |
@@ -94,7 +96,7 @@ Total: 100 points.
 | `hooks/stop.json` | Optional runtime hook file, direct hook tests. | Must route Stop continuation through the Superloopy CLI and stay inert unless `SUPERLOOPY_STOP_HOOK=on`. |
 | `hooks/subagent-stop-audit.json` | `test/plugin.test.js`, doctor hook check. | Must route robin verdict validation through the Superloopy CLI. |
 | `hooks/subagent-stop.json` | `test/plugin.test.js`, doctor hook check. | Must route executor, review, QA, and gate SubagentStop receipt validation through the Superloopy CLI. |
-| `hooks/user-prompt-submit.json` | `test/plugin.test.js`, doctor hook check. | Must route prompt steering, the frontend-skill steer, and trigger-scoped context injection through the Superloopy CLI. |
+| `hooks/user-prompt-submit.json` | `test/plugin.test.js`, doctor hook check. | Must route structured steering and exact trigger-scoped context through the Superloopy CLI without an always-visible status message. |
 | `installation.md` | `test/docs.test.js`, audit coverage. | Must give agents a root-level install contract for Codex and Claude Code from the GitHub URL, including verification and no-dependency boundaries. |
 | `model-policy.json` | `test/doctor.test.js`, audit coverage. | Must centralize allowed Codex/Claude model values, reusable profiles, and per-agent profile assignments while keeping resolved pins explicit. |
 | `package-lock.json` | Hashgraph catalog readiness and npm audit surface. | Must lock only the dependency-free package root unless real dependencies are intentionally added. |
@@ -197,7 +199,7 @@ Total: 100 points.
 | `skills/superloopy-clone/agents/openai.yaml` | Audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for website cloning. |
 | `skills/superloopy-doctor/SKILL.md` | `test/plugin.test.js`, doctor skill check, audit coverage. | Must diagnose Superloopy install health with `superloopy doctor --json`, plugin cache, wrapper, agents, hook/bootstrap, and no mutation before approval. |
 | `skills/superloopy-doctor/agents/openai.yaml` | `test/plugin.test.js`, audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for install diagnostics. |
-| `skills/superloopy-frontend/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must auto-activate on UI/visual work and enforce a DESIGN.md token gate, anti-slop rules, real-browser visual QA, and Superloopy evidence receipts. |
+| `skills/superloopy-frontend/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must require explicit invocation or active-loop routing and enforce a DESIGN.md token gate, anti-slop rules, real-browser visual QA, and Superloopy evidence receipts. |
 | `skills/superloopy-frontend/agents/openai.yaml` | `test/plugin.test.js`, audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for frontend work. |
 | `skills/superloopy-frontend/references/anti-slop.md` | Audit coverage and reviewability check. | Must keep the named-default bans, countable rules, consistency locks, real-asset mandate, and pre-flight checklist. |
 | `skills/superloopy-frontend/references/design-system.md` | Audit coverage and reviewability check. | Must keep the 7-section DESIGN.md schema and loopy-native token-authoring guidance. |
@@ -403,7 +405,7 @@ Total: 100 points.
 | `src/design-audit.js` | Doctor design-audit tests. | Must fail missing sections, decisions, or incomplete guards. |
 | `src/doctor-skills.js` | `test/doctor.test.js`, `test/doctor-review-feedback.test.js`, `node src/cli.js doctor --json`. | Must require every shipped skill directory, validate each `SKILL.md` frontmatter name, and return structured failures for unreadable skill paths. |
 | `src/doctor.js` | `test/doctor.test.js`, `test/claude-host-wiring.test.js`, `node src/cli.js doctor --json`. | Must verify package, hooks, Claude host wiring, bundled skills, audits, comparison status, Codex + Claude model policy, and hand-reviewable file sizes while ignoring generated Codex marketplace install metadata and copied `web/_nuxt/` payloads; must list a non-git root's own filesystem instead of consulting an enclosing Git repository. |
-| `src/engineer.js` | `test/engineer.test.js`, `test/hooks.test.js` engineer-trigger tests. | Must wake the loop engineer on a leading `loopy` keyword or its Korean alias `루피` without mutating state itself, escalate to crew fan-out only on `team`/`crew`/`팀`/`크루`, and detect frontend/visual or Korean-writing intent for guidance-only skill steers. |
+| `src/engineer.js` | `test/engineer.test.js`, `test/hooks.test.js` engineer-trigger tests. | Must wake the loop engineer only on complete leading invocation tokens, reject Korean-particle suffixes, and escalate to crew fan-out only on explicit `team`/`crew`/`팀`/`크루`, `loopycrew`, or `ultrawork` syntax. |
 | `src/file-audit.js` | `test/file-audit.test.js`, doctor file-audit check. | Must fail missing, stale, or incomplete inventory rows in source checkouts while exempting packaging-stripped repo-only rows in packed (non-git) roots. |
 | `src/finish.js` | CLI evidence and loop-gate tests. | Must only finalize after all criteria have valid pass artifacts, then write gate and report artifacts. |
 | `src/fleet.js` | `test/fleet.test.js`, `test/crew-lines.test.js`. | Must record handoffs under a lock, require evidence for accepted verdicts, reconcile dispatched-vs-outstanding, normalize APPROVE/PASS/REJECT-style verdicts, and decorate terminal known crew lanes for output only. |

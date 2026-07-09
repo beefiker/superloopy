@@ -9,30 +9,30 @@
 
 import { detectSuperpowers } from "./interop.js";
 
-// Leading invocation keyword: ASCII `loopy` (with a word boundary so `loopyfoo`/`loopycrew`
-// stay out) or its Korean alias `루피`. Hangul has no `\b`, so `루피` matches as a leading
-// token and the optional separators are consumed the same way.
-const ENGINEER_TRIGGER_PATTERN = /^\s*@?(?:loopy\b|루피)[ \t:,]*/iu;
+// Invocation syntax is intentionally lexical, not semantic: an alias must be the first
+// complete token and end or be followed by whitespace, `:`, or `,`. Do not use `\b` here:
+// JavaScript treats the boundary before a Korean particle as a word boundary (`loopy가`),
+// while a bare Hangul prefix (`루피가`) has no useful `\b` boundary at all.
+const ENGINEER_TRIGGER_PATTERN = /^\s*@?(?:loopy|루피)(?=$|[\s:,])[\s:,]*/iu;
 // Suppress only a prompt-shaped `loopy loop <subcommand>` command reference (or a bare `loopy loop`),
 // NOT any task that merely starts with the word "loop" — e.g. "loopy loop over the array"
 // is a real task and must still wake the engineer.
-const CLI_REFERENCE_PATTERN = /^loop(\s+(begin|create|next|guide|trace|report|check|evidence|capture|prove|review|checkpoint|finish|status|audit|fleet|handoff)\b|\s*$)/iu;
+const CLI_REFERENCE_PATTERN = /^loop(?:\s+(?:begin|create|next|guide|trace|report|check|evidence|capture|prove|review|checkpoint|finish|status|audit|fleet|handoff)(?=$|[\s:,])|\s*$)/iu;
 // Escalation keyword right after the leading keyword: `team`/`crew` (English) or
-// `팀`/`크루` (Korean). English forms require a word boundary so "teamwork"/"crews" stay
-// ordinary briefs; the Korean forms require a following separator/end so "팀워크" stays a brief.
-const TEAM_TRIGGER_PATTERN = /^(?:team\b|crew\b|팀(?=$|[\s:,])|크루(?=$|[\s:,]))[ \t:,]*/iu;
+// `팀`/`크루` (Korean). Every form uses the same explicit-token separator contract.
+const TEAM_TRIGGER_PATTERN = /^(?:team|crew|팀|크루)(?=$|[\s:,])[\s:,]*/iu;
 // Connected one-word escalation: `loopycrew <task>`. Leading-only (like the `loopy`
 // keyword) and boundary-guarded so "loopycrewmate" stays inert.
-const CONNECTED_CREW_TRIGGER_PATTERN = /^\s*@?loopycrew\b[ \t:,]*/iu;
+const CONNECTED_CREW_TRIGGER_PATTERN = /^\s*@?loopycrew(?=$|[\s:,])[\s:,]*/iu;
 // Standalone escalation keyword: `ultrawork <task>` wakes the engineer straight into
 // crew fan-out, with no `loopy` prefix. Leading-only and boundary-guarded.
-const ULTRAWORK_TRIGGER_PATTERN = /^\s*@?ultrawork\b[ \t:,]*/iu;
+const ULTRAWORK_TRIGGER_PATTERN = /^\s*@?ultrawork(?=$|[\s:,])[\s:,]*/iu;
 const HEADER = "Superloopy loop engineer";
 
 export function hasEngineerTrigger(prompt) {
   if (typeof prompt !== "string") return false;
   // Connected (`loopycrew`) and standalone (`ultrawork`) escalations wake the engineer too —
-  // the plain `loopy\b` pattern misses the connected form, and `ultrawork` has no `loopy` prefix.
+  // the plain `loopy` token excludes the connected form, and `ultrawork` has no `loopy` prefix.
   if (CONNECTED_CREW_TRIGGER_PATTERN.test(prompt) || ULTRAWORK_TRIGGER_PATTERN.test(prompt)) return true;
   if (!ENGINEER_TRIGGER_PATTERN.test(prompt)) return false;
   return !CLI_REFERENCE_PATTERN.test(prompt.replace(ENGINEER_TRIGGER_PATTERN, ""));
@@ -45,143 +45,6 @@ export function hasTeamTrigger(prompt) {
   if (CONNECTED_CREW_TRIGGER_PATTERN.test(prompt) || ULTRAWORK_TRIGGER_PATTERN.test(prompt)) return true;
   if (!hasEngineerTrigger(prompt)) return false;
   return TEAM_TRIGGER_PATTERN.test(prompt.replace(ENGINEER_TRIGGER_PATTERN, ""));
-}
-
-// Unambiguous frontend intent: keyword/phrase patterns that mark UI/visual work and
-// NEVER collide with backend/systems talk, so the prompt hook can steer toward the
-// superloopy-frontend skill even without `loopy`. These always fire — a systems phrase
-// elsewhere in the prompt must never veto them (bare "design"/"layout"/"component" are
-// excluded because they DO collide with API/data work). The steer is guidance-only.
-const FRONTEND_TRIGGER_PATTERNS = [
-  /\bfront[\s-]?end\b/iu,
-  /\bui\/ux\b|\bux\/ui\b/iu,
-  /\buser interface\b/iu,
-  /\b(css|scss|tailwind|tailwindcss)\b/iu,
-  /\b(landing|pricing|marketing|signup|sign-up) page\b/iu,
-  /\bhero section\b/iu,
-  /\bnav ?bar\b/iu,
-  /\bdesign system\b/iu,
-  /\bdesign\.md\b/iu,
-  /\bdesign tokens?\b/iu,
-  /\bcolor (palette|scheme)\b/iu,
-  /\bfont (pairing|stack)\b/iu,
-  /\bdark mode\b/iu,
-  /\bredesign\b|\brestyle\b|\bre-?skin\b/iu,
-  /\bmock-?up\b|\bwireframe\b/iu,
-  /\bmake (?:it|this|the [\w-]+) (?:look|feel) (?:better|good|nicer|prettier|premium|professional|polished|designed|modern|clean)\b/iu,
-  /\bmake (?:it|this) pretty\b/iu,
-  /\blooks? (?:generic|bland|boring|cheap|unfinished|like ai|ai[\s-]?generated|like a template|templated)\b/iu,
-  /\banti[\s-]?slop\b|\bawwwards\b|\bpolish the (?:ui|design|page|frontend|landing)\b/iu
-];
-
-// Ambiguous shared tokens: bare "ui"/"ux" and "responsive" mean UI work in a visual prompt
-// but systems work in a backend one. Each is judged per clause against ONLY its own systems
-// collision (see clauseHasAmbiguousUiIntent); they never override an unambiguous trigger above.
-const AMBIGUOUS_UI_PATTERN = /\bu[ix]\b/iu;
-const AMBIGUOUS_RESPONSIVE_PATTERN = /\bresponsive\b/iu;
-
-// The only systems collision for a bare "ui"/"ux" token is the concurrency "UI thread".
-const UI_SYSTEMS_PATTERN = /\bui\s+thread\b/iu;
-// "responsive" is systems talk only when a backend/systems noun sits right next to it —
-// there is deliberately NO blanket "responsive to", because "responsive to touch input" /
-// "responsive to dark mode changes" are UI. Kept as a shared alternation for both sides.
-const SYSTEMS_NOUN = "server|service|api|endpoint|backend|database|thread|process|socket|node|cluster|daemon|requests?|workers?|queue|signals?|handler|listener|webhook|rpc|grpc|stream|packets?|event loop";
-const RESPONSIVE_SYSTEMS_PATTERNS = [
-  new RegExp(`\\b(?:un)?responsive\\b[^.\\n]{0,24}\\b(?:${SYSTEMS_NOUN})\\b`, "iu"),
-  new RegExp(`\\b(?:${SYSTEMS_NOUN})\\b[^.\\n]{0,24}\\b(?:un)?responsive\\b`, "iu")
-];
-
-// Split a prompt into rough clauses (sentence punctuation, commas, coordinating words) so a
-// systems clause ("fix the unresponsive API") can't veto a separate UI clause elsewhere.
-function splitClauses(prompt) {
-  return prompt.split(/[.;\n]+|,|\s+(?:and|but|then|also|plus)\s+/iu);
-}
-
-// Does this single clause carry ambiguous-token UI intent? Each token is judged against ONLY
-// its own systems collision — a "ui" token fires unless it is "ui thread"; a "responsive"
-// token fires unless a systems noun is adjacent — so a systems phrase never disqualifies a
-// separate UI token in the same clause ("make the API dashboard ui responsive" still fires).
-function clauseHasAmbiguousUiIntent(clause) {
-  if (AMBIGUOUS_UI_PATTERN.test(clause) && !UI_SYSTEMS_PATTERN.test(clause)) return true;
-  if (AMBIGUOUS_RESPONSIVE_PATTERN.test(clause)
-      && !RESPONSIVE_SYSTEMS_PATTERNS.some((pattern) => pattern.test(clause))) return true;
-  return false;
-}
-
-// True when the prompt reads as frontend/visual work. Used by the prompt hook to inject a
-// steer toward the superloopy-frontend skill (no state mutation). Precedence matters: an
-// unambiguous visual trigger always wins on the whole prompt; the ambiguous shared tokens
-// (bare ui/ux, responsive) are then judged per clause and per token, so no systems phrase
-// can veto a real UI ask. The steer is a light pointer; the skill carries the rules.
-export function hasFrontendTrigger(prompt) {
-  if (typeof prompt !== "string") return false;
-  if (FRONTEND_TRIGGER_PATTERNS.some((pattern) => pattern.test(prompt))) return true;
-  return splitClauses(prompt).some((clause) => clauseHasAmbiguousUiIntent(clause));
-}
-
-// Guidance-only steer: a light pointer to the frontend skill, which carries the actual
-// rules (DESIGN.md gate, anti-slop pre-flight, visual-QA evidence) and loads them on
-// demand. Kept compact on purpose so an over-fire is cheap — the skill is the rulebook.
-// Interop-aware to match the engineer trigger's `interopBlock`: this is a separate
-// (non-`loopy`) guidance path, so it carries the same coexistence routing rather than
-// double-driving design when Superpowers is installed. `interop` is injectable for tests.
-export function renderFrontendTriggerContext(interop = detectSuperpowers()) {
-  const lines = [
-    "Superloopy frontend trigger",
-    "",
-    "This looks like UI/visual work — engage the `superloopy-frontend` skill (guidance only; no state change). It is a router that loads only the rules a request needs: a mandatory DESIGN.md token gate, the anti-slop pre-flight, and a real-browser visual-QA artifact under `.superloopy/evidence/frontend/` before done. Follow the skill; do not expand these rules here."
-  ];
-  if (interop && interop.installed === true) {
-    lines.push(
-      "",
-      "Superpowers coexistence (detected): let Superpowers drive brainstorming, planning, and TDD; superloopy-frontend still owns the visual layer — the DESIGN.md token gate, the anti-slop pre-flight, and the visual-QA evidence. Keep one orchestrator: do not open a second design/plan pass here."
-    );
-  }
-  return lines.join("\n");
-}
-
-const KOREAN_WRITING_EXCLUSION_PATTERNS = [
-  /번역\s*(?:해|해줘|해주세요|해라)/u,
-  /요약\s*(?:해|해줘|해주세요|해라)?/u,
-  /정리\s*(?:해|해줘|해주세요|해라)/u,
-  /(?:영어|영문|일본어|일문|중국어|중문|프랑스어|독일어|스페인어|포르투갈어|이탈리아어|베트남어|태국어|러시아어|아랍어|인도네시아어|힌디어|터키어|english|japanese|chinese|french|german|spanish|portuguese|italian|vietnamese|thai|russian|arabic|indonesian|hindi|turkish)[^\n]{0,20}(?:글|소개글|소개문|메일|이메일|공지|안내문|답변|댓글|후기\s*답변|문구)?\s*(?:써|작성|draft|write|다듬어|윤문|고쳐)/iu,
-  /(?:코드|테스트|README|readme|리드미|릴리즈\s*노트|문서|docs?)[^\n]{0,20}(?:작성|생성|써|써줘|고쳐|수정|다듬어|정리)/iu,
-  /(?:법률|계약서|약관)/u,
-  /(?:뭐야|알려줘|설명\s*(?:해|해줘|해주세요)?)/u
-];
-
-const KOREAN_WRITING_TRIGGER_PATTERNS = [
-  /AI\s*티\s*(?:안\s*나게|없게|없애|제거)/iu,
-  /(?:사람|인간)(?:이)?\s*쓴\s*것처럼/u,
-  /번역투\s*(?:없이|고쳐|줄여|없애|안\s*나게)/u,
-  /(?:글|문장|문구|카피|공지|안내문|메일|이메일|소개글|소개문|답변|댓글|후기\s*답변)\s*(?:자연스럽게|어색하지\s*않게|다듬어|윤문|고쳐)/u,
-  /윤문/u,
-  /한국어로\s*글\s*(?:써|작성)/u,
-  /글\s*(?:써줘|써\s*줘|작성해줘|작성\s*해줘)/u,
-  /글써줘/u,
-  /(?:공지|안내문|메일|이메일|소개글|소개문|답변|댓글|후기\s*답변|문구)\s*(?:써줘|써\s*줘|작성해줘|작성\s*해줘|작성)/u
-];
-
-// True when the prompt asks for Korean prose generation or human-sounding Korean copy.
-// The exclusions keep broad Korean requests like translation, summary, code, legal text,
-// and factual Q&A from getting an unnecessary post-generation humanization steer.
-export function hasKoreanWritingTrigger(prompt) {
-  if (typeof prompt !== "string") return false;
-  if (KOREAN_WRITING_EXCLUSION_PATTERNS.some((pattern) => pattern.test(prompt))) return false;
-  return KOREAN_WRITING_TRIGGER_PATTERNS.some((pattern) => pattern.test(prompt));
-}
-
-export function renderKoreanWritingTriggerContext() {
-  return [
-    "Superloopy Korean writing trigger",
-    "",
-    "This request appears to ask for Korean prose generation or human-sounding Korean copy. Draft the Korean text normally, then apply the humanize-korean skill as a light post-generation polish pass. This is guidance only; it does not mutate Superloopy state.",
-    "",
-    "- Use `humanize-korean` after drafting, not before: remove AI tells, translationese, formulaic transitions, repeated endings, and over-smoothed phrasing.",
-    "- Preserve facts, claims, register, numbers, dates, URLs, product names, model names, acronyms, quoted spans, and user-provided constraints.",
-    "- Keep the pass light unless the user explicitly asks for strong rewriting; avoid adding examples, metaphors, citations, or marketing claims.",
-    "- Do not apply this steer to translation, exact summaries, code/test/docs generation, legal/contract text, or factual Q&A unless the user explicitly asks for Korean humanization."
-  ].join("\n");
 }
 
 // Strip the leading trigger keyword and report whether crew fan-out was requested,

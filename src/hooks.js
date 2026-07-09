@@ -6,7 +6,7 @@ import { resolveEvidenceArtifact } from "./artifacts.js";
 import { buildGuide, flowStepLine, proofPlanLine, recordedEvidenceLine } from "./guide.js";
 import { CONTEXT_PRESSURE_MARKERS, decideContinuation, transcriptTailHasMarker } from "./continuation.js";
 import { normalizeAgentType, receiptFromPayload, subagentTranscriptPath } from "./receipt.js";
-import { hasEngineerTrigger, hasFrontendTrigger, hasKoreanWritingTrigger, renderFrontendTriggerContext, renderKoreanWritingTriggerContext, runEngineerTriggerHook } from "./engineer.js";
+import { hasEngineerTrigger, runEngineerTriggerHook } from "./engineer.js";
 import { applySteering, statusLoop } from "./loop.js";
 import { appendLedger, evidenceRelativeDir, goalsPath, scopeFromSessionId } from "./store.js";
 import { MAX_SUBAGENT_ATTEMPTS, clearAttemptState, nextAttemptState, recordSubagentLedger } from "./subagent-attempts.js";
@@ -17,8 +17,7 @@ const EVIDENCE_RECEIPT_AGENT_TYPES = new Set(["franky", "zoro", "usopp", "jinbe"
 // An artifact up to this size must carry non-whitespace content to satisfy the receipt gate;
 // only larger artifacts (assumed non-trivial) skip the read. Closes the blank-placeholder hole.
 const MAX_BLANK_CHECK_BYTES = 1_000_000;
-const LOOSE_TRIGGER_PATTERN = /(^|[^A-Za-z0-9_-])(\$?(?:loopywork|lpy))(?=$|[^A-Za-z0-9_-])/iu;
-const LOOSE_TRIGGER_GLOBAL_PATTERN = /(^|[^A-Za-z0-9_-])(\$?(?:loopywork|lpy))(?=$|[^A-Za-z0-9_-])/giu;
+const LOOSE_TRIGGER_PATTERN = /^\s*(?:loopywork|\$?lpy)(?=$|[\s:,])[\s:,]*/iu;
 const PROTECTED_STEERING_KEYS = new Set([
   "aggregateCompletion",
   "qualityGate",
@@ -77,15 +76,6 @@ export async function runUserPromptSubmitHook(payload) {
     if (hasSteeringMarker(payload.prompt)) return "";
     if (hasEngineerTrigger(payload.prompt)) return await runEngineerTriggerHook(payload, { statusForPayload, guideForPayload, renderSuperloopyContext, formatAdditionalContext });
     if (hasLoosePromptTrigger(payload.prompt)) return await runLoosePromptTriggerHook(payload);
-    // Auto-steer UI/visual prompts to the frontend skill even without a `loopy` keyword. Guidance
-    // only (no state mutation), so it fires regardless of SUPERLOOPY_AUTO_CONTEXT. Default-on;
-    // set SUPERLOOPY_FRONTEND_STEER=off to silence it without uninstalling.
-    if (!envOff(process.env, "SUPERLOOPY_FRONTEND_STEER") && hasFrontendTrigger(payload.prompt)) {
-      return formatAdditionalContext("UserPromptSubmit", renderFrontendTriggerContext());
-    }
-    // Auto-steer Korean prose generation toward a light post-generation humanize-korean pass.
-    // Kept after frontend so UI/page requests get the stronger visual-work steer.
-    if (hasKoreanWritingTrigger(payload.prompt)) return formatAdditionalContext("UserPromptSubmit", renderKoreanWritingTriggerContext());
     if (!envOn(process.env, "SUPERLOOPY_AUTO_CONTEXT")) return "";
     return await runContextInjectionHook(payload, "UserPromptSubmit");
   }
@@ -276,12 +266,6 @@ function envOn(env, key) {
   return String(env[key] ?? "off").toLowerCase() === "on";
 }
 
-// Default-on gate: true only when the key is explicitly set to "off". For steers that
-// fire by default (e.g. the frontend visual-work steer) but need an opt-out switch.
-function envOff(env, key) {
-  return String(env[key] ?? "on").toLowerCase() === "off";
-}
-
 function renderLoosePromptStarter(payload) {
   const brief = stripLoosePromptTrigger(payload.prompt);
   const briefArg = brief.length === 0 ? '"<task>"' : shellQuote(brief);
@@ -310,7 +294,7 @@ function renderLoosePromptCompleted(status) {
 }
 
 function stripLoosePromptTrigger(prompt) {
-  return prompt.replace(LOOSE_TRIGGER_GLOBAL_PATTERN, "$1").replace(/[ \t]+/g, " ").replace(/\s+\n/g, "\n").replace(/\n\s+/g, "\n").trim();
+  return prompt.replace(LOOSE_TRIGGER_PATTERN, "").replace(/[ \t]+/g, " ").replace(/\s+\n/g, "\n").replace(/\n\s+/g, "\n").trim();
 }
 
 function shellQuote(value) {
