@@ -26,6 +26,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `.github/assets/jinbe.png` | README crew-card image for the jinbe gate-reviewer agent. | Documentation image only; no executable plugin logic. |
 | `.github/assets/nami.png` | README crew-card image for the nami navigator agent. | Documentation image only; no executable plugin logic. |
 | `.github/assets/robin.png` | README crew-card image for the robin auditor agent. | Documentation image only; no executable plugin logic. |
+| `.github/assets/slides-demo-reference.png` | README slides-demo screenshot showing the superloopy-slides live example deck. | Documentation image only; generated from the deck's visual-QA output and contains no executable plugin logic. |
 | `.github/assets/transferloom-clone-reference.png` | README clone-demo screenshot showing the validated Transferloom.com Superloopy clone reference. | Documentation image only; generated from the local clone output and contains no executable plugin logic. |
 | `.github/assets/usopp.png` | README crew-card image for the usopp QA agent. | Documentation image only; no executable plugin logic. |
 | `.github/assets/zoro.png` | README crew-card image for the zoro reviewer agent. | Documentation image only; no executable plugin logic. |
