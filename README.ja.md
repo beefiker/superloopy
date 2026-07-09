@@ -48,11 +48,11 @@ Superloopy はコマンド層を小さく保ちます。専門的な進め方は
 | `superloopy-doctor` | install、wrapper、plugin cache、hook/bootstrap、agent、Codex/Claude Code host wiring、stale version の問題を診断するとき。 | 読み取り専用の health report: wrapper/cache/version の証拠、失敗した check、承認後にだけ実行する正確な修復コマンド。 |
 | `superloopy-research` | `loopy research`、deep research、exhaustive investigation、または引用付きレポートを求めるとき。 | 調査軸、拡張 wave、claim ledger、検証メモ、引用付き synthesis artifact。 |
 | `superloopy-clone` | `loopy clone`、許可された Web サイトのクローン、再構築、移行、ピクセル単位の復元を求めるとき。 | ブラウザ取得、ページ構造、デザイントークン、アセット一覧、実装メモ、build 出力、visual QA 証拠。 |
-| `superloopy-frontend` | UI/ページ/コンポーネントを構築・スタイリング・再設計するとき、または「デザインされた見た目」にしたいとき（視覚的な作業で自動起動）。 | DESIGN.md のトークン契約、anti-slop の事前チェック結果、実ブラウザでの visual QA 証拠 artifact。 |
+| `superloopy-frontend` | `$superloopy-frontend` を明示的に呼び出すか、先頭の `loopy`/`루피` で視覚タスクを始めるとき。UI への単なる言及では起動しません。 | DESIGN.md のトークン契約、anti-slop の事前チェック結果、実ブラウザでの visual QA 証拠 artifact。 |
 | `humanize-korean` | 韓国語テキストの AI っぽさや翻訳調を抑え、事実を変えずに人が書いたように整えるとき。 | `final.md`、`summary.md`、`audit.json` を書き、Superloopy loop では `.superloopy/evidence/humanize-korean/` に証拠を残します。 |
 | `superloopy-slides` | スライド・プレゼン・デッキを頼むとき、または PPT/PPTX を Web に変換するとき。 | 固定 16:9 ステージの依存ゼロ単一 HTML デッキ、選べる 3 種のスタイルプレビュー、`.superloopy/evidence/slides/` 配下のレンダリングスクリーンショット visual-QA artifact。 |
 
-Loop skill が標準のガードレールです。`loopy` は evidence loop を開始または再開し、`loopy team` は crew mode に上げます。`loopywork`、`lpy`、`$lpy` は最初の guidance だけを注入します。Research と clone は明示的に使う専門モードで、どちらも完了文だけを信用せず Superloopy evidence を残して終わります。Frontend skill は視覚的な作業で自動起動し、guidance のみの短い誘導を注入します。`SUPERLOOPY_FRONTEND_STEER=off` で無効化できます。
+Loop skill が標準のガードレールです。先頭の完全な `loopy` トークンは evidence loop を開始または再開し、`loopy team` は crew mode に上げます。先頭の `loopywork`、`lpy`、`$lpy` は最初の guidance だけを注入し、構造化された `SUPERLOOPY_STEER` は進行中の loop を調整します。Prompt hook は通常の文章から frontend や韓国語ライティングの mode を推測しません。専門 skill は明示的に呼び出すか、すでに有効な loop が実際の専門 subtask を割り当てたときだけ使います。
 
 ## クローンデモ
 

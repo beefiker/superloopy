@@ -145,12 +145,15 @@ test("doctor skill stays Superloopy-native instead of LazyCodex-style source dri
   assert.doesNotMatch(doctor.content, /LazyCodex|lcx|omo|ulw-loop|\.omo|oh-my-openagent|latest sources|\/tmp\/lazycodex-source|gh issue list/i);
 });
 
-test("plugin packages the Superloopy frontend skill with auto-activation and gates", async () => {
+test("plugin packages the Superloopy frontend skill with explicit activation and gates", async () => {
   const frontend = await readSkill("superloopy-frontend");
 
   assert.match(frontend.frontmatter, /^name: superloopy-frontend$/m);
-  assert.match(frontend.frontmatter, /MUST USE for ANY frontend/i);
-  assert.match(frontend.frontmatter, /Auto-activates/i);
+  assert.match(frontend.frontmatter, /^description: Use only after explicit/m);
+  assert.match(frontend.frontmatter, /\$superloopy-frontend/);
+  assert.match(frontend.frontmatter, /leading `loopy` or `루피`/u);
+  assert.doesNotMatch(frontend.frontmatter, /MUST USE|Auto-activates|do not wait/i);
+  assert.doesNotMatch(frontend.content, /Auto-activate|When in doubt/i);
   assert.match(frontend.content, /SUPERLOOPY FRONTEND ENABLED/);
   assert.match(frontend.content, /DESIGN\.md/);
   assert.match(frontend.content, /anti-slop/i);
@@ -163,6 +166,13 @@ test("plugin packages the Superloopy frontend skill with auto-activation and gat
 
   const designSystem = await readFile("skills/superloopy-frontend/references/design-system.md", "utf8");
   assert.match(designSystem, /7 sections|7-section/i);
+
+  const metadata = await readFile("skills/superloopy-frontend/agents/openai.yaml", "utf8");
+  assert.match(metadata, /\$superloopy-frontend/);
+  assert.doesNotMatch(metadata, /any UI\/visual work/i);
+
+  const promptHook = await readFile("hooks/user-prompt-submit.json", "utf8");
+  assert.doesNotMatch(promptHook, /statusMessage/);
 });
 
 test("clone skill preserves exact extraction pipeline and crew dispatch guardrails", async () => {
