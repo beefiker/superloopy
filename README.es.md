@@ -60,6 +60,12 @@ La skill de loop es la barandilla por defecto. `loopy` inicia o reanuda el evide
 
 `superloopy-clone` reprodujo Transferloom.com en local y pasó validación de navegador desktop/mobile. La ejecución de referencia conservó el sticky nav, el animated hero, las app preview sections, la comparison table, el security panel, el sister app banner, el footer, los local assets y el Superloopy evidence trail.
 
+## Demo de diapositivas
+
+[![Deck de presentación de Fileloom creado con superloopy-slides](.github/assets/slides-demo-reference.png)](https://fileloom-slides.pages.dev)
+
+`superloopy-slides` generó este **[deck multilingüe en vivo →](https://fileloom-slides.pages.dev)** — una presentación HTML de un solo archivo y sin dependencias sobre un escenario fijo 16:9, con English · 한국어 · 中文 · 日本語 · Español. Superó la QA visual en navegador real (independiente, letterbox en móvil e incrustado en iframe) registrada en `.superloopy/evidence/slides/`.
+
 ## Crew
 
 Para trabajos grandes, Superloopy incluye seis subagentes opcionales, cada uno con una única línea de trabajo (`.codex/agents/*.toml` en Codex, `agents/*.md` incluidos en Claude Code). Vienen con el plugin (no hace falta ningún comando); en Codex, `superloopy agents install` solo vuelve a copiarlos si alguna vez lo necesitas. Sus valores de modelo recomendados están documentados en `docs/superloopy-model-policy.md` (Codex) y `docs/superloopy-model-policy-claude.md` (Claude Code), y los verifica `superloopy doctor`.

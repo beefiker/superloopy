@@ -60,6 +60,12 @@ Loop skill 是默认护栏。`loopy` 会启动或继续 evidence loop；`loopy t
 
 `superloopy-clone` 在本地复现了 Transferloom.com，并通过 desktop/mobile 浏览器验证。这个参考运行保留了 sticky nav、animated hero、app preview sections、comparison table、security panel、sister app banner、footer、local assets 和 Superloopy evidence trail。
 
+## 幻灯片演示
+
+[![用 superloopy-slides 生成的 Fileloom 介绍演示](.github/assets/slides-demo-reference.png)](https://fileloom-slides.pages.dev)
+
+`superloopy-slides` 生成了这个 **[在线多语言演示 →](https://fileloom-slides.pages.dev)** —— 固定 16:9 舞台的零依赖单文件 HTML 演示，支持 English · 한국어 · 中文 · 日本語 · Español。它通过了真实浏览器的可视化 QA（独立打开、手机 letterbox、iframe 嵌入），证据记录在 `.superloopy/evidence/slides/`。
+
 ## Crew
 
 对于更大的任务，Superloopy 提供六个可选子代理，每个代理负责一条工作线（在 Codex 上是 `.codex/agents/*.toml`，在 Claude Code 上是随包提供的 `agents/*.md`）。它们随插件一起提供（无需额外命令）；在 Codex 上，如果需要重新复制，运行 `superloopy agents install` 即可。它们的建议模型默认值记录在 `docs/superloopy-model-policy.md`（Codex）和 `docs/superloopy-model-policy-claude.md`（Claude Code）中，并由 `superloopy doctor` 检查。
