@@ -87,6 +87,7 @@ Total: 100 points.
 | `docs/superloopy-model-policy.md` | `test/docs.test.js`, `test/doctor.test.js`. | Must record allowed model values and state that model choice is steering, not proof. |
 | `docs/superpowers/plans/2026-07-07-astro-landing.md` | Astro migration implementation plan. | Must record the migration steps, proof gates, and deployment path without adding plugin runtime behavior. |
 | `docs/superpowers/specs/2026-07-07-astro-landing-design.md` | Astro landing design brief. | Must record the mobile, performance, image, and Cloudflare constraints for the website rewrite. |
+| `docs/superpowers/specs/2026-07-10-gpt-5-6-model-policy-design.md` | GPT-5.6 model-policy design brief. | Must map standard/deep/fast to Terra/Sol/Luna while retaining explicit resolved pins and no silent fallback. |
 | `hooks/hooks.json` | Audit coverage; Claude hook load. | Must route SessionStart/UserPromptSubmit/Stop/SubagentStop to the CLI via ${CLAUDE_PLUGIN_ROOT}, matching worker/navigator and auditor agent types. |
 | `hooks/pre-tool-use.json` | `test/plugin.test.js`, doctor hook check. | Must route to `node "${PLUGIN_ROOT}/src/cli.js" hook pre-tool-use`. |
 | `hooks/session-start.json` | `test/golden-hooks.test.js`, doctor hook check. | Must route first-launch bootstrap, marketplace update notices, and optional SessionStart context through the Superloopy CLI. |
