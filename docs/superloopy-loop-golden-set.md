@@ -55,6 +55,7 @@ Total: 100 points.
 | `.github/assets/jinbe.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
 | `.github/assets/nami.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
 | `.github/assets/robin.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
+| `.github/assets/slides-demo-reference.png` | Audit coverage and README slides-demo reference. | Must remain a documentation screenshot for the superloopy-slides live example deck, not runtime plugin logic. |
 | `.github/assets/transferloom-clone-reference.png` | Audit coverage and README clone-demo reference. | Must remain a documentation screenshot for the validated Transferloom.com clone, not runtime plugin logic. |
 | `.github/assets/usopp.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
 | `.github/assets/zoro.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
