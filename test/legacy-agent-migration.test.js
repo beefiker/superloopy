@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, lstat, mkdir, mkdtemp, readFile, rm, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -124,3 +124,64 @@ test("legacy adoption preserves unrelated personal agents outside the six owned 
   assert.deepEqual(result.agents.map(({ status }) => status), SUPERLOOPY_AGENT_NAMES.map(() => "updated"));
   assert.equal(await readFile(personalPath, "utf8"), personal);
 });
+
+test("unsafe partial, mixed, and symlinked legacy fleets fail closed", async (t) => {
+  await t.test("partial fleet", async (t) => {
+    const setup = await fixture(t);
+    const missingPath = join(setup.targetDir, "nami.toml");
+    await unlink(missingPath);
+    const before = await snapshotRegularFiles(setup.targetDir, ["nami"]);
+
+    const result = await installAgents(setup.root, ["--target", setup.targetDir], setup.options);
+
+    assertUnsafeFleetResult(result);
+    assert.equal(await exists(setup.statePath), false);
+    assert.equal(await exists(missingPath), false);
+    await assertRegularFilesUnchanged(setup.targetDir, before);
+  });
+
+  await t.test("mixed fleet", async (t) => {
+    const setup = await fixture(t);
+    const mixedPath = join(setup.targetDir, "zoro.toml");
+    await writeFile(mixedPath, `${await readFile(mixedPath, "utf8")}# unknown release\n`, "utf8");
+    const before = await snapshotRegularFiles(setup.targetDir);
+
+    const result = await installAgents(setup.root, ["--target", setup.targetDir], setup.options);
+
+    assertUnsafeFleetResult(result);
+    assert.equal(await exists(setup.statePath), false);
+    await assertRegularFilesUnchanged(setup.targetDir, before);
+  });
+
+  await t.test("symlinked fleet", async (t) => {
+    const setup = await fixture(t);
+    const linkedPath = join(setup.targetDir, "usopp.toml");
+    await unlink(linkedPath);
+    await symlink("franky.toml", linkedPath);
+    const before = await snapshotRegularFiles(setup.targetDir, ["usopp"]);
+
+    const result = await installAgents(setup.root, ["--target", setup.targetDir], setup.options);
+
+    assertUnsafeFleetResult(result);
+    assert.equal(await exists(setup.statePath), false);
+    assert.equal((await lstat(linkedPath)).isSymbolicLink(), true);
+    await assertRegularFilesUnchanged(setup.targetDir, before);
+  });
+});
+
+function assertUnsafeFleetResult(result) {
+  assert.equal(result.ok, false);
+  assert.ok(result.agents.every(({ status }) => status === "conflict" || status === "blocked"));
+}
+
+async function snapshotRegularFiles(targetDir, excluded = []) {
+  return Promise.all(SUPERLOOPY_AGENT_NAMES
+    .filter((name) => !excluded.includes(name))
+    .map(async (name) => ({ name, content: await readFile(join(targetDir, `${name}.toml`), "utf8") })));
+}
+
+async function assertRegularFilesUnchanged(targetDir, snapshot) {
+  for (const { name, content } of snapshot) {
+    assert.equal(await readFile(join(targetDir, `${name}.toml`), "utf8"), content);
+  }
+}
