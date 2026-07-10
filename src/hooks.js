@@ -117,10 +117,10 @@ export async function runSessionStartHook(payload, options = {}) {
     }
   } catch (error) {
     contexts.push([
-      "Superloopy bootstrap",
+      "Superloopy automatic migration",
       "",
       `- setup failed: ${error instanceof Error ? error.message : String(error)}`,
-      "- Run `superloopy install --json` or `node <plugin-root>/src/cli.js install --json` to retry."
+      "- Automatic migration stopped safely; no forced replacement was attempted. Review the setup error after this session."
     ].join("\n"));
   }
   if (envOn(env, "SUPERLOOPY_AUTO_CONTEXT")) {

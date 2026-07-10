@@ -282,7 +282,7 @@ export async function bootstrapSuperloopy(cwd, argv = [], options = {}) {
     next: !ok
       ? agents.restartRequired
         ? "Resolve remaining conflicts, then restart Codex so changed custom agents are loaded."
-        : "Resolve setup conflicts, or re-run with --force if replacing local Superloopy files is intended."
+        : "Superloopy preserved conflicting custom-agent files. Review the reported conflicts before choosing whether to replace your customizations."
       : agents.restartRequired
         ? "Restart Codex so the changed custom agent definitions are loaded."
         : agents.degraded
@@ -317,7 +317,7 @@ export function bootstrapHasUserSignal(result) {
 
 export function formatBootstrapHookContext(result) {
   return [
-    "Superloopy bootstrap",
+    "Superloopy automatic migration",
     "",
     `- CLI wrapper: ${result.bin.status} at ${result.bin.target}`,
     `- Agents: ${formatAgentCounts(countAgentStatuses(result.agents.agents))}`,
