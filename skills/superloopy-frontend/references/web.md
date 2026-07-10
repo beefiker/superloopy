@@ -63,6 +63,8 @@ Role routing is not guaranteed, so judge each lane by delivered evidence, not th
 
 ## Phase 3 — Visual-QA evidence gate
 
+For any served web-app implementation or validation plan, explicitly name the production build, design compliance, real-browser state capture at 390 / 768 / 1280 px, and Lighthouse gates; include React Doctor only when the repository uses React.
+
 A build that compiles is not verified. Before declaring done, capture real-browser evidence and write `VISUAL_QA.md` under the evidence root:
 
 1. Screenshot at 390 / 768 / 1280 px (set the viewport before capturing).
