@@ -302,7 +302,10 @@ function walkVisibleFiles(cwd, prefix, files) {
   }
 }
 
-const SKIP_FILESYSTEM_DIRS = new Set([".git", ".superloopy", "coverage", "dist", "node_modules", "vendor"]);
+// `.in_use` holds host-written `<pid>` heartbeat files that mark a cached plugin
+// version as active so it is not garbage-collected; they are runtime state, not
+// shipped files, so the audit walk must never see them.
+const SKIP_FILESYSTEM_DIRS = new Set([".git", ".in_use", ".superloopy", "coverage", "dist", "node_modules", "vendor"]);
 
 function isNotGitRepository(result) {
   // The `git` binary itself is missing (spawn failed: error set / status null / no stderr) OR the cwd
@@ -315,6 +318,7 @@ function isNotGitRepository(result) {
 function isRuntimeFile(file) {
   return file === ".DS_Store"
     || file.endsWith("/.DS_Store")
+    || file.startsWith(".in_use/")
     || file.startsWith(".superloopy/")
     || file.startsWith("node_modules/")
     || file.startsWith("coverage/")
