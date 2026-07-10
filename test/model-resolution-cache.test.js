@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import test from "node:test";
 
 import {
@@ -156,11 +156,11 @@ test("resolution constants and state path follow the Codex home contract", () =>
   assert.equal(MODEL_RESOLUTION_TTL_MS, 86_400_000);
   assert.equal(
     resolveModelResolutionStatePath({ CODEX_HOME: "/opt/codex-home" }, "/home/tester"),
-    "/opt/codex-home/superloopy/model-resolution.json"
+    join(resolve("/opt/codex-home"), "superloopy", "model-resolution.json")
   );
   assert.equal(
     resolveModelResolutionStatePath({ CODEX_HOME: "" }, "/home/tester"),
-    "/home/tester/.codex/superloopy/model-resolution.json"
+    join(resolve("/home/tester"), ".codex", "superloopy", "model-resolution.json")
   );
 });
 
