@@ -26,6 +26,7 @@ test("web route preserves browser-only gates", async () => {
   for (const pattern of [/anti-slop/i, /390.*768.*1280/s, /ds-compliance\.mjs/, /Lighthouse/, /real browser/i]) {
     assert.match(web, pattern);
   }
+  assert.match(web, /for any served web-app implementation or validation plan.*production build.*design compliance.*real-browser state capture.*390.*768.*1280.*Lighthouse.*React Doctor only when.*React/is);
 });
 
 test("Qt common and Widgets references preserve native ownership", async () => {
@@ -44,12 +45,22 @@ test("Qt Quick and QA references enforce native validation", async () => {
   const qa = await read(reference("qt-qa"));
   assert.match(quick, /style.*before.*Qt Quick Controls/is);
   assert.match(quick, /runtime.*compile-time/is);
-  assert.match(quick, /within the runtime route.*exactly one.*selection channel/is);
-  assert.match(quick, /inspection is unavailable.*one provisional channel.*do not name any alternative/is);
+  assert.match(quick, /ownership.*static-build.*unknown.*remain unresolved.*without listing alternatives/is);
+  assert.match(quick, /once.*known.*exactly one repository-owned runtime channel.*compile-time route.*required/is);
+  assert.match(quick, /before returning a custom-style plan.*style-selection channel: unresolved pending repository ownership and static-build inspection.*do not name, recommend, or exemplify/is);
+  assert.doesNotMatch(quick, /provisional channel by name/i);
   assert.match(quick, /QtQuick\.Templates.*fallback/is);
+  assert.match(quick, /exactly one fallback mechanism.*style route/is);
+  assert.match(quick, /compile-time.*static fallback.*qmldir import/is);
+  assert.match(quick, /dynamic runtime fallback.*only when no static.*qmldir fallback exists/is);
+  assert.match(quick, /never configure both/is);
   assert.match(quick, /QQuickWidget.*threaded render loop/is);
   assert.match(qa, /every implementation or release-proof plan.*configure\/build.*Qt Test\/ctest.*repository lint\/static gates/is);
-  assert.match(qa, /before returning a plan.*required release-gate.*run and pass all three/is);
+  assert.match(qa, /applicable commands.*run and pass/is);
+  assert.match(qa, /no relevant repository lint\/static check exists.*N\/A.*evidence/is);
+  assert.match(qa, /missing.*build.*test infrastructure.*disclosed blocker/is);
+  assert.match(qa, /before returning.*repository gates.*configure\/build.*BLOCKED.*Qt Test\/ctest.*BLOCKED.*lint\/static.*N\/A with evidence/is);
+  assert.doesNotMatch(qa, /run and pass all three/i);
   assert.match(qa, /VISUAL_QA\.md/);
   assert.match(qa, /offscreen.*not.*native/is);
   assert.match(qa, /Lighthouse.*not.*Qt.*proof/is);

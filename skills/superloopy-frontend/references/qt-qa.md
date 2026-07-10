@@ -6,13 +6,19 @@ Apply this evidence gate to Qt Widgets, Qt Quick/QML, and mixed work. A successf
 
 Record and run the repository's exact commands, with the candidate revision and build directory identifiable:
 
-Every implementation or release-proof plan must explicitly name the configure/build, Qt Test/ctest, and repository lint/static gates. When an exact command is not yet known, record it as unresolved; when no relevant repository check exists, record that fact instead of omitting the gate.
+Every implementation or release-proof plan must explicitly name the configure/build, Qt Test/ctest, and repository lint/static gates. All applicable commands must run and pass. When no relevant repository lint/static check exists, mark that gate `N/A` with evidence instead of omitting it or claiming a pass. Missing required build or test infrastructure is a disclosed blocker, not `N/A` or a pass.
 
-Before returning a plan, include a required release-gate step that says to run and pass all three. Merely inventorying the gates or marking their exact commands unresolved does not satisfy this plan requirement.
+Before returning a plan, include a **Repository gates** block:
+
+- **Configure/build:** the applicable command that must run and pass, or `BLOCKED` when required infrastructure is missing.
+- **Qt Test/ctest:** the applicable command that must run and pass, or `BLOCKED` when required infrastructure is missing.
+- **Lint/static:** the applicable command that must run and pass, or `N/A with evidence` that no relevant repository check exists.
+
+Never use `N/A` for a required build or test gate.
 
 - **Project configure/build:** the existing CMake, qmake, preset, or wrapper command for the real UI target.
 - **Qt Test/ctest:** the affected Qt Test executable or focused `ctest` invocation, followed by the project's required suite.
-- **Repository lint/static checks:** the existing formatter, compiler-warning, static-analysis, or other repository-defined command for the changed C++/UI scope. Add module-aware `qmllint` when QML is present; when no relevant check exists, record that fact instead of silently omitting the gate.
+- **Repository lint/static checks:** the existing formatter, compiler-warning, static-analysis, or other repository-defined command for the changed C++/UI scope. Add module-aware `qmllint` when QML is present; when no relevant check exists, record the evidenced `N/A` instead of silently omitting the gate.
 - **Module-aware qmllint:** the QML module's generated lint target or `qmllint` with its real import paths and type information; an isolated file with unresolved imports is not a valid pass.
 - **Quick Test:** the project's Qt Quick Test executable or its registered test invocation, using the same QML modules and target configuration as the application.
 
