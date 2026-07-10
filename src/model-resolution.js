@@ -59,7 +59,8 @@ export async function prepareCodexModelResolution(options = {}) {
   if (typeof targetDir !== "string" || !isAbsolute(targetDir)) return fail("Codex agent target directory must be absolute.");
   if (typeof statePath !== "string" || statePath.length === 0) return fail("Model resolution state path must be provided.");
 
-  const nowMs = readClock(options.clock ?? (() => new Date()));
+  const clock = options.clock ?? (() => new Date());
+  const nowMs = readClock(clock);
   if (nowMs === null) return fail("Model resolution clock returned an invalid time.");
   const checkedAt = new Date(nowMs).toISOString();
   const policyResult = await loadModelPolicyData(policyRoot);
@@ -92,7 +93,12 @@ export async function prepareCodexModelResolution(options = {}) {
   } catch {
     catalogResult = { ok: false, source: "model_list", reason: "protocol_error" };
   }
-  const attemptCheckedAt = sanitizeCheckedAt(catalogResult?.checkedAt, checkedAt);
+  const completionMs = readClock(clock);
+  const priorCheckedAtMs = previousState === null ? nowMs : Date.parse(previousState.checkedAt);
+  const completionFloorMs = Math.max(nowMs, priorCheckedAtMs);
+  const attemptCheckedAt = new Date(
+    completionMs === null || completionMs < completionFloorMs ? completionFloorMs : completionMs
+  ).toISOString();
 
   if (catalogResult?.ok === true) {
     const resolution = resolveCodexModelPolicy(policy.codex, catalogResult.models);
@@ -265,16 +271,13 @@ function sanitizeCatalogReason(reason) {
   return SAFE_CATALOG_REASONS.has(reason) ? reason : "unknown";
 }
 
-function sanitizeCheckedAt(value, fallback) {
-  const milliseconds = typeof value === "string" ? Date.parse(value) : Number.NaN;
-  return Number.isFinite(milliseconds) ? new Date(milliseconds).toISOString() : fallback;
-}
-
 function readClock(clock) {
   try {
     const value = clock();
     const milliseconds = value instanceof Date ? value.getTime() : new Date(value).getTime();
-    return Number.isFinite(milliseconds) ? milliseconds : null;
+    if (!Number.isFinite(milliseconds)) return null;
+    new Date(milliseconds).toISOString();
+    return milliseconds;
   } catch {
     return null;
   }
