@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -177,6 +177,8 @@ test("CLI install help variants exit before wrapper, agent, state, or catalog-de
   const cases = [
     ["install --help", ["install", "--help"], /Installs the Superloopy command wrapper and managed Codex agents/u],
     ["install -h", ["install", "-h"], /Installs the Superloopy command wrapper and managed Codex agents/u],
+    ["bin install --help", ["bin", "install", "--help"], /Installs a small superloopy command wrapper/u],
+    ["bin install -h", ["bin", "install", "-h"], /Installs a small superloopy command wrapper/u],
     ["agents install --help", ["agents", "install", "--help"], /Installs bundled Superloopy custom agents/u],
     ["agents install -h", ["agents", "install", "-h"], /Installs bundled Superloopy custom agents/u]
   ];
@@ -261,6 +263,56 @@ test("CLI bin install refuses to overwrite a foreign (unmarked) shim without --f
   assert.equal(result.ok, false);
   assert.equal(result.status, "conflict");
   assert.equal(await readFile(binPath, "utf8"), foreignShim); // left untouched
+});
+
+test("CLI bin install preserves a dangling wrapper symlink without force", {
+  skip: process.platform === "win32" ? "file symlink creation is not reliably available on Windows CI" : false
+}, async () => {
+  const repo = await tempRepo();
+  const binDir = join(repo, "bin");
+  const outsideDir = join(repo, "outside");
+  await mkdir(binDir, { recursive: true });
+  await mkdir(outsideDir, { recursive: true });
+  const binPath = join(binDir, "superloopy");
+  const outsideTarget = join(outsideDir, "created-by-install");
+  await symlink(outsideTarget, binPath);
+
+  const result = await installBinShim(repo, ["--bin-dir", binDir], {
+    env: { PATH: `${binDir}:${process.env.PATH ?? ""}` },
+    homeDir: join(repo, "home"),
+    platform: "linux"
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "conflict");
+  assert.equal((await lstat(binPath)).isSymbolicLink(), true);
+  assert.equal(existsSync(outsideTarget), false);
+});
+
+test("CLI bin install never follows the wrapper symlink, even with force", {
+  skip: process.platform === "win32" ? "file symlink creation is not reliably available on Windows CI" : false
+}, async () => {
+  const repo = await tempRepo();
+  const binDir = join(repo, "bin");
+  const outsideDir = join(repo, "outside");
+  await mkdir(binDir, { recursive: true });
+  await mkdir(outsideDir, { recursive: true });
+  const binPath = join(binDir, "superloopy");
+  const outsideTarget = join(outsideDir, "personal-wrapper");
+  const personalWrapper = "personal wrapper\n";
+  await writeFile(outsideTarget, personalWrapper, "utf8");
+  await symlink(outsideTarget, binPath);
+
+  const result = await installBinShim(repo, ["--bin-dir", binDir, "--force"], {
+    env: { PATH: `${binDir}:${process.env.PATH ?? ""}` },
+    homeDir: join(repo, "home"),
+    platform: "linux"
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "conflict");
+  assert.equal((await lstat(binPath)).isSymbolicLink(), true);
+  assert.equal(await readFile(outsideTarget, "utf8"), personalWrapper);
 });
 
 test("CLI bin install uses Windows-safe PATH detection and PowerShell hint", async () => {

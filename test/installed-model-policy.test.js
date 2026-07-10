@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, stat, symlink, unlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -31,17 +31,17 @@ function compatibilityCatalog() {
   }];
 }
 
-async function fixture(t, { compatibility = false, clock = () => NOW, customTarget = false } = {}) {
+async function fixture(t, { compatibility = false, clock = () => NOW, customTarget = false, customTargetName = "custom-agents" } = {}) {
   const root = await mkdtemp(join(tmpdir(), "superloopy-installed-doctor-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const codexHome = join(root, "codex-home");
   const homeDir = join(root, "home");
   const env = { CODEX_HOME: codexHome };
-  const targetDir = customTarget ? join(root, "custom-agents") : join(codexHome, "agents");
+  const requestedTargetDir = customTarget ? join(root, customTargetName) : join(codexHome, "agents");
   const statePath = resolveModelResolutionStatePath(env, homeDir);
   const argv = [
     ...(compatibility ? ["--compat"] : []),
-    ...(customTarget ? ["--target", targetDir] : [])
+    ...(customTarget ? ["--target", requestedTargetDir] : [])
   ];
   const result = await installAgents(REPO_ROOT, argv, {
     env,
@@ -53,6 +53,7 @@ async function fixture(t, { compatibility = false, clock = () => NOW, customTarg
     queryModelCatalog: async () => ({ ok: true, source: "model_list", models: fullCatalog() })
   });
   assert.equal(result.ok, true);
+  const targetDir = await realpath(requestedTargetDir);
   return { root, codexHome, homeDir, env, targetDir, statePath };
 }
 
@@ -304,6 +305,50 @@ test("installed doctor preserves a custom target in its repair command", async (
   const check = installedCheck(await runDoctor(REPO_ROOT, options(setup)));
 
   assert.equal(check.next, refreshAction(setup));
+});
+
+test("installed doctor preserves an owned custom target across policy-version repair", async (t) => {
+  const setup = await fixture(t, { customTarget: true });
+  const state = await readState(setup);
+  state.policyVersion = "old-policy";
+  await writeState(setup, state);
+
+  const check = installedCheck(await runDoctor(REPO_ROOT, options(setup)));
+
+  assert.equal(check.ok, false);
+  assert.equal(check.targetDir, setup.targetDir);
+  assert.equal(check.next, refreshAction(setup));
+});
+
+test("installed doctor does not promise a non-force repair when ownership hashes are invalid", async (t) => {
+  const setup = await fixture(t, { customTarget: true });
+  const state = await readState(setup);
+  state.files.nami.sha256 = "A".repeat(64);
+  await writeState(setup, state);
+
+  const check = installedCheck(await runDoctor(REPO_ROOT, options(setup)));
+
+  assert.equal(check.ok, false);
+  assert.equal(check.targetDir, setup.targetDir);
+  assert.match(check.next, /Review the managed agent files/iu);
+  assert.match(check.next, /--force only if replacement is intended/iu);
+  assert.doesNotMatch(check.next, /--refresh-models/iu);
+});
+
+test("installed doctor emits literal argv instead of an executable repair command for shell-sensitive targets", async (t) => {
+  const setup = await fixture(t, {
+    customTarget: true,
+    customTargetName: "agents-$(printf injected)-`whoami`"
+  });
+  const state = await readState(setup);
+  state.checkedAt = new Date(NOW.getTime() - MODEL_RESOLUTION_TTL_MS).toISOString();
+  await writeState(setup, state);
+
+  const check = installedCheck(await runDoctor(REPO_ROOT, options(setup)));
+
+  assert.match(check.next, /literal arguments/iu);
+  assert.match(check.next, /\["agents","install","--target"/u);
+  assert.doesNotMatch(check.next, /`superloopy agents install/iu);
 });
 
 test("installed doctor distinguishes mixed-profile and unsupported routing without leaking values", async (t) => {

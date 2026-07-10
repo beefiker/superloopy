@@ -9,7 +9,7 @@ Stop Superloopy from taking over ordinary prompts merely because they mention fr
 - A plain UI, CSS, landing-page, mixed backend/UI, or Korean-writing prompt does not receive semantic Superloopy hook context.
 - A leading `loopy` or `루피` token explicitly starts the general Superloopy loop. The loop may route a genuinely visual deliverable to the frontend skill after it owns the task.
 - The documented `loopycrew`, `ultrawork`, `loopywork`, `lpy`, and `$lpy` aliases remain available only as complete leading invocation tokens.
-- `$superloopy-frontend` remains the direct explicit skill invocation.
+- `$superloopy:superloopy-frontend` in Codex and `/superloopy:superloopy-frontend` in Claude Code remain the direct explicit skill invocations.
 - Existing `SUPERLOOPY_STEER: {...}` directives remain the structured steering path for an active loop.
 - Invocation tokens must be complete tokens followed by end-of-input, Unicode whitespace, `:`, or `,`. Korean-particle forms such as `loopy가`, `루피는`, `loopycrew를`, and `ultrawork처럼` are ordinary prose, not invocations. The undocumented connected `루피팀` form is replaced by explicit `루피 팀`.
 

@@ -273,6 +273,13 @@ test("policy loader requires the declared model in the second compatibility posi
     ["missing candidate", (data) => {
       data.codex.profiles.standard.candidates = data.codex.profiles.standard.candidates.slice(0, 1);
     }, /Missing compatibility candidate for Codex profile standard/u],
+    ["extra candidate", (data) => {
+      data.codex.profiles.standard.candidates.push({
+        model: "gpt-5.4",
+        model_reasoning_effort: "high",
+        service_tier: "priority"
+      });
+    }, /must define exactly one preferred and one compatibility candidate/u],
     ["wrong model", (data) => {
       data.codex.profiles.standard.candidates[1].model = "gpt-5.4";
     }, /profiles\.standard\.candidates\.1\.model must match compatibilityModel gpt-5\.5/u]

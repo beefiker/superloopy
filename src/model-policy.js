@@ -163,6 +163,9 @@ function validateCodexPolicyData(codex) {
     if (profile.candidates.length < 2) {
       throw new Error(`Missing compatibility candidate for Codex profile ${profileName}`);
     }
+    if (profile.candidates.length !== 2) {
+      throw new Error(`Codex profile ${profileName} must define exactly one preferred and one compatibility candidate`);
+    }
     if (profile.candidates[1].model !== codex.compatibilityModel) {
       throw new Error(`model policy data.codex.profiles.${profileName}.candidates.1.model must match compatibilityModel ${codex.compatibilityModel}`);
     }

@@ -1,6 +1,7 @@
 .DS_Store
 node_modules/
 .superloopy/
+.claude/scheduled_tasks.lock
 .wrangler/
 coverage/
 *.log

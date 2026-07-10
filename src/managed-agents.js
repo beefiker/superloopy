@@ -20,7 +20,17 @@ export async function withManagedAgentInstallLocks(targetDir, statePath, operati
   const targetLockPath = join(dirname(targetIdentity), `.${basename(targetIdentity)}.superloopy-managed-fleet`);
   const paths = [...new Set([stateIdentity, targetLockPath])].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
   const withFileLockImpl = options.withFileLock ?? withFileLock;
-  return withLocalLocks(paths, () => withCrossProcessLocks(paths, withFileLockImpl, operation));
+  const verifiedOperation = async () => {
+    const [currentTargetIdentity, currentStateIdentity] = await Promise.all([
+      canonicalizeLockIdentity(targetDir, realpathImpl),
+      canonicalizeLockIdentity(statePath, realpathImpl)
+    ]);
+    if (currentTargetIdentity !== targetIdentity || currentStateIdentity !== stateIdentity) {
+      throw new Error("Target or state path changed while acquiring managed-agent locks.");
+    }
+    return operation({ targetDir: targetIdentity, statePath: stateIdentity });
+  };
+  return withLocalLocks(paths, () => withCrossProcessLocks(paths, withFileLockImpl, verifiedOperation));
 }
 
 async function canonicalizeLockIdentity(path, realpathImpl) {
@@ -167,7 +177,7 @@ export async function commitManagedAgentFiles(files, statePath, state, writeStat
     if (writeState) await writeStateImpl(statePath, state);
     committed = true;
   } catch (error) {
-    const rollbackErrors = await rollbackOperations(staged, { renameImpl, unlinkImpl, inspectOptions: options });
+    const rollbackErrors = await rollbackOperations(staged, { linkImpl, renameImpl, unlinkImpl, inspectOptions: options });
     if (rollbackErrors.length > 0) {
       throw new AggregateError([error, ...rollbackErrors], "Managed agent rollback failed after a commit error.");
     }
@@ -175,10 +185,7 @@ export async function commitManagedAgentFiles(files, statePath, state, writeStat
   } finally {
     await Promise.all(staged.map(({ path }) => unlinkImpl(path).catch(() => {})));
     if (committed) {
-      const cleanup = await Promise.allSettled(staged
-        .filter(({ backup }) => backup !== null)
-        .map(({ backup }) => unlinkImpl(backup)));
-      const failures = cleanup.filter(({ status }) => status === "rejected").map(({ reason }) => reason);
+      const failures = await cleanupCommittedBackups(staged, { linkImpl, renameImpl, unlinkImpl, inspectOptions: options });
       if (failures.length > 0) throw new AggregateError(failures, "Managed agent backup cleanup failed.");
     }
   }
@@ -276,27 +283,62 @@ async function rollbackOperations(operations, options) {
   const errors = [];
   for (const operation of [...operations].reverse()) {
     try {
+      let managedQuarantine = null;
       if (operation.targetCreated) {
-        const actual = await inspectTarget(operation.target, options.inspectOptions);
-        if (actual.existingKind !== "file" || !sameIdentity(actual.existingIdentity, operation.stagedIdentity)) {
-          throw new Error(`Managed agent ${operation.file.name} changed before rollback.`);
-        }
-        await options.unlinkImpl(operation.target);
+        managedQuarantine = await quarantineVerifiedPath(operation.target, {
+          existingKind: "file",
+          existing: operation.file.content,
+          existingIdentity: operation.stagedIdentity
+        }, options, `Managed agent ${operation.file.name} changed before rollback.`);
         operation.targetCreated = false;
       }
       if (operation.originalMoved) {
-        const target = await inspectTarget(operation.target, options.inspectOptions);
-        if (target.existingKind !== "absent") {
-          throw new Error(`Managed agent ${operation.file.name} original remains at ${operation.backup}.`);
-        }
-        await options.renameImpl(operation.backup, operation.target);
+        const originalQuarantine = temporarySibling(operation.backup);
+        await options.renameImpl(operation.backup, originalQuarantine);
+        await restoreQuarantinedPath(originalQuarantine, operation.target, options);
         operation.originalMoved = false;
       }
+      if (managedQuarantine !== null) await options.unlinkImpl(managedQuarantine);
     } catch (error) {
       errors.push(error);
     }
   }
   return errors;
+}
+
+async function cleanupCommittedBackups(operations, options) {
+  const errors = [];
+  for (const operation of operations) {
+    if (operation.backup === null) continue;
+    try {
+      const quarantine = await quarantineVerifiedPath(operation.backup, preflightSnapshot(operation.file), options,
+        `Managed agent ${operation.file.name} backup changed and was preserved.`);
+      await options.unlinkImpl(quarantine);
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  return errors;
+}
+
+async function quarantineVerifiedPath(path, expected, options, message) {
+  const before = await inspectTarget(path, options.inspectOptions);
+  if (!sameSnapshot(before, expected)) throw new Error(message);
+  const quarantine = temporarySibling(path);
+  await options.renameImpl(path, quarantine);
+  const moved = await inspectTarget(quarantine, options.inspectOptions);
+  if (sameSnapshot(moved, expected)) return quarantine;
+  try {
+    await restoreQuarantinedPath(quarantine, path, options);
+  } catch (restoreError) {
+    throw new AggregateError([new Error(message), restoreError], `${message} Replacement recovery failed.`);
+  }
+  throw new Error(message);
+}
+
+async function restoreQuarantinedPath(source, target, options) {
+  await options.linkImpl(source, target);
+  await options.unlinkImpl(source);
 }
 
 function withLocalLocks(paths, operation, index = 0) {

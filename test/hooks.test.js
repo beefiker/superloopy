@@ -84,10 +84,8 @@ test("SessionStart reuses a fresh manifest without querying or rewriting state a
     const oldTime = new Date("2000-01-01T00:00:00.000Z");
     await utimes(statePath, oldTime, oldTime);
     const fresh = await runSessionStartHook({ hook_event_name: "SessionStart", cwd: repo }, baseOptions);
-    const freshContext = JSON.parse(fresh).hookSpecificOutput.additionalContext;
     assert.equal(queries, 0);
-    assert.match(freshContext, /compatibility|degraded/iu);
-    assert.doesNotMatch(freshContext, /Restart Codex/u);
+    assert.equal(fresh, "");
     assert.equal((await stat(statePath)).mtimeMs, oldTime.getTime());
     const source = join(sourceDir, "franky.toml");
     await writeFile(source, (await readFile(source, "utf8")).replace("Implementation worker", "Focused implementation worker"), "utf8");

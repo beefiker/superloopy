@@ -1,5 +1,4 @@
-import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import { dirname, join, posix as pathPosix, resolve, win32 as pathWin32 } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
@@ -15,14 +14,13 @@ import {
   withManagedAgentInstallLocks
 } from "./managed-agents.js";
 import { prepareCodexModelResolution, resolveModelResolutionStatePath } from "./model-resolution.js";
-
+import { installOneTextFile } from "./text-file-install.js";
 // Worker agents (franky/zoro/usopp/jinbe) report evidence receipts; robin is the
 // read-only auditor; nami is the read-only navigator (no receipt). All are installed so
 // the host can dispatch them; robin was historically shipped only as un-installable skill
 // metadata (the auditor-install gap). Host role-by-name routing is NOT guaranteed, so a
 // dispatch must be self-contained — see docs/superloopy-host-contract.md.
 export { SUPERLOOPY_AGENT_NAMES };
-
 const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const CLI_PATH = join(REPO_ROOT, "src", "cli.js");
 
@@ -34,10 +32,10 @@ export async function installAgents(cwd, argv, options = {}) {
   const source = options.sourceDir ?? join(REPO_ROOT, ".codex", "agents");
   const statePath = options.statePath ?? resolveModelResolutionStatePath(env, homeDir);
   return withManagedAgentInstallLocks(target, statePath,
-    () => installAgentsLocked({ argv, options, force, target, source, statePath }), { withFileLock: options.withFileLock });
+    ({ targetDir, statePath: lockedStatePath }) => installAgentsLocked({ argv, options, force, target: targetDir, source, statePath: lockedStatePath, publicTarget: target, publicStatePath: statePath }), { withFileLock: options.withFileLock });
 }
 
-async function installAgentsLocked({ argv, options, force, target, source, statePath }) {
+async function installAgentsLocked({ argv, options, force, target, source, statePath, publicTarget, publicStatePath }) {
   const resolution = await prepareCodexModelResolution({
     policyRoot: options.policyRoot ?? REPO_ROOT,
     targetDir: target,
@@ -48,23 +46,23 @@ async function installAgentsLocked({ argv, options, force, target, source, state
     compatibility: options.compatibility ?? hasFlag(argv, "--compat")
   });
   if (!resolution.ok) {
-    return failedAgentsInstall({ source, target, force, statePath, message: resolution.message });
+    return failedAgentsInstall({ source, target: publicTarget, force, statePath: publicStatePath, message: resolution.message });
   }
 
   const rendered = await renderManagedAgentFiles(source, target, resolution.state);
   if (!rendered.ok) {
-    return failedAgentsInstall({ source, target, force, statePath, message: rendered.message, resolution });
+    return failedAgentsInstall({ source, target: publicTarget, force, statePath: publicStatePath, message: rendered.message, resolution });
   }
   const legacyManifests = options.legacyManifests ?? await loadLegacyAgentManifests(options.policyRoot ?? REPO_ROOT);
   const preflight = await preflightManagedAgentFiles(rendered.files, resolution.previousFileManifest, force, legacyManifests);
-  const agents = preflight.files.map((file) => publicManagedAgent(file, resolution.state));
-  const metadata = modelResolutionMetadata(resolution, statePath);
+  const agents = preflight.files.map((file) => publicManagedAgent(file, resolution.state, publicTarget));
+  const metadata = modelResolutionMetadata(resolution, publicStatePath);
   if (!preflight.ok) {
     return {
       ok: false,
       kind: "agents_install",
       source,
-      target,
+      target: publicTarget,
       force,
       agents,
       conflicts: agents.filter(({ status }) => status === "conflict"),
@@ -87,7 +85,7 @@ async function installAgentsLocked({ argv, options, force, target, source, state
     ok: true,
     kind: "agents_install",
     source,
-    target,
+    target: publicTarget,
     force,
     agents,
     conflicts: [],
@@ -133,12 +131,12 @@ function failedAgentsInstall({ source, target, force, statePath, message, resolu
   };
 }
 
-function publicManagedAgent(file, state) {
+function publicManagedAgent(file, state, targetDir) {
   const resolution = state.agents[file.name];
   return {
     name: file.name,
     source: file.source,
-    target: file.target,
+    target: join(targetDir, `${file.name}.toml`),
     status: file.status,
     requestedModel: resolution.requestedModel,
     resolvedModel: resolution.resolvedModel,
@@ -308,7 +306,6 @@ export function bootstrapHasUserSignal(result) {
   // Re-surface every session when the wrapper's directory is not on PATH: otherwise a user who
   // missed the one-time hint gets `superloopy: command not found` forever with no breadcrumb.
   return result.ok === false
-    || result.degraded === true
     || result.restartRequired === true
     || result.bin.status !== "unchanged"
     || result.bin.onPath === false
@@ -326,23 +323,6 @@ export function formatBootstrapHookContext(result) {
     `- ${result.next}`,
     `- ${result.bin.ok ? result.bin.next : "Superloopy preserved an unrecognized command wrapper; agent migration did not overwrite it."}`
   ].join("\n");
-}
-
-async function installOneTextFile(targetPath, content, force, mode, options = {}) {
-  if (!existsSync(targetPath)) {
-    await writeFile(targetPath, content, "utf8");
-    if (mode !== undefined) await chmod(targetPath, mode);
-    return "installed";
-  }
-  const targetContent = await readFile(targetPath, "utf8");
-  if (targetContent === content) {
-    if (mode !== undefined) await chmod(targetPath, mode);
-    return "unchanged";
-  }
-  if (!force && !options.replaceIf?.(targetContent)) return "conflict";
-  await writeFile(targetPath, content, "utf8");
-  if (mode !== undefined) await chmod(targetPath, mode);
-  return "updated";
 }
 
 // A marker line embedded in every shim we generate, so a shim is recognized as ours regardless of
