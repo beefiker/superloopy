@@ -42,6 +42,9 @@ test("public docs describe doctor checks", async () => {
   assert.match(designAudit, /## Compatibility Boundary/);
   assert.match(modelPolicy, /steering, not proof/i);
   assert.match(modelPolicy, /gpt-5\.4-mini/);
+  assert.match(modelPolicy, /exact legacy.*without `--force`/is);
+  assert.match(modelPolicy, /model_unverified/);
+  assert.match(modelPolicy, /split-brain/i);
 });
 
 test("public docs describe real marketplace install and bootstrap", async () => {
@@ -57,6 +60,8 @@ test("public docs describe real marketplace install and bootstrap", async () => 
   assert.match(readme, /codex plugin marketplace upgrade beefiker/);
   assert.match(readme, /repair reinstall.*codex plugin add superloopy@beefiker/is);
   assert.match(readme, /hooks.*Modified/s);
+  assert.match(readme, /SessionStart.*automatically reconciles.*wrapper.*agents.*routing/is);
+  assert.doesNotMatch(readme, /following approved session.*Then run `superloopy doctor`/is);
   assert.doesNotMatch(readme, /Built on the Codex marketplace bootstrap shape/i);
   assert.doesNotMatch(readme, /Restart Codex twice/i);
   assert.match(readme, /Restart Codex after installing the plugin/);
@@ -88,6 +93,7 @@ test("agent install guide gives host-specific marketplace flows", async () => {
   assert.match(install, /\/plugin install superloopy@beefiker/);
   assert.match(install, /node "\$\{CLAUDE_PLUGIN_ROOT\}\/src\/cli\.js" doctor --json/);
   assert.match(install, /Do not add dependencies/);
+  assert.match(install, /no (?:Superloopy )?migration command is required/i);
 });
 
 test("README locales are discoverable and do not point at removed PDF manuals", async () => {
@@ -142,6 +148,8 @@ test("README lists the packaged Superloopy skills and their jobs", async () => {
     assert.match(content, /\blpy\b/);
     assert.match(content, /\$lpy/);
     assert.match(content, /\.superloopy\/evidence/);
+    assert.match(content, /\$superloopy:superloopy-frontend/);
+    assert.match(content, /\/superloopy:superloopy-frontend/);
   }
   assert.match(await readFile("README.md", "utf8"), /Guidance aliases do not mutate state/);
   assert.match(await readFile("README.ko.md", "utf8"), /guidance alias는 상태를 바꾸지 않습니다/);

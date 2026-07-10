@@ -1,6 +1,6 @@
 ---
 name: superloopy-frontend
-description: MUST USE for ANY frontend, web UI, UX, or visual work — building, styling, or redesigning a page/screen/component, landing pages, design systems, layout, animation/motion, or any task where appearance is a success criterion. Auto-activates on visual intent; do not wait to be asked. Enforces a mandatory DESIGN.md token gate, a named anti-AI-slop rule set, and a real-browser visual-QA evidence gate on the Superloopy evidence spine. Triggers — frontend, UI, UX, design, redesign, styling, CSS, Tailwind, layout, component, page, landing page, hero section, navbar, animation, motion, taste, premium, luxury, minimal, brutalist, polish, "looks generic", "looks AI", "make it look good/professional/designed", "make it pretty", DESIGN.md, design tokens, color palette, font pairing, dark mode, responsive, "like <brand>". NOT for backend logic, non-visual code, or trivial copy edits.
+description: Use only after explicit Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend` invocation, a visual task started with a leading `loopy` or `루피`, or an active Superloopy loop explicitly routing a visual subtask here. Once active, this frontend, web UI, UX, and visual-deliverable workflow enforces a mandatory DESIGN.md token gate, anti-AI-slop rules, and real-browser visual-QA evidence. Do not activate from UI/frontend vocabulary alone, especially when the interface is only a symptom of backend, API, data, concurrency, or infrastructure work.
 ---
 
 # Superloopy Frontend
@@ -13,7 +13,7 @@ This is a Superloopy skill: the orchestrator owns files, dispatch is self-contai
 
 Open your reply with `SUPERLOOPY FRONTEND ENABLED`. If another active Superloopy mode mandates its own first line, print that first and this marker on the next line.
 
-**Auto-activate** — do not wait to be asked. Engage automatically whenever a request involves building, styling, or redesigning a UI/page/screen/component, a landing page, layout, animation, a design system, or any work where appearance is a success criterion. The only negative scope is non-visual code, backend logic, and trivial copy edits — handle those normally. When in doubt and the output will be seen by a user, activate.
+**Explicit activation only.** Engage when the user invokes `$superloopy:superloopy-frontend` in Codex or `/superloopy:superloopy-frontend` in Claude Code, begins a visual task with a leading `loopy` or `루피`, or an already-active Superloopy loop explicitly assigns a visual subtask to this skill. A plain mention of UI, frontend, CSS, layout, responsiveness, or a visible symptom is not authorization to activate this workflow. Diagnose ownership first; backend, API, data, concurrency, infrastructure, and non-visual work stay with their primary workflow unless a visual deliverable is separately requested.
 
 ## Authority while active
 

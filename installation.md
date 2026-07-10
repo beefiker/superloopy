@@ -88,14 +88,9 @@ Codex marketplace install:
 
 ```bash
 codex plugin marketplace upgrade beefiker
-codex plugin add superloopy@beefiker
 ```
 
-Restart Codex, approve modified hooks if prompted, then verify:
-
-```bash
-superloopy doctor --json
-```
+Restart Codex and approve modified hooks if prompted. The next approved `SessionStart` automatically reconciles the generated wrapper, all six agents, and model-routing state from the new plugin version; no Superloopy migration command is required. If definitions changed, follow only the Codex restart notice so the host reloads them.
 
 Claude Code marketplace install:
 

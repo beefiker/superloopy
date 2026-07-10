@@ -1,67 +1,167 @@
-import { chmod, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import { dirname, join, posix as pathPosix, resolve, win32 as pathWin32 } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { hasFlag, readFlag } from "./args.js";
-
+import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
+import { loadLegacyAgentManifests } from "./legacy-agents.js";
+import {
+  commitManagedAgentFiles,
+  managedFileManifest,
+  manifestsMatch,
+  preflightManagedAgentFiles,
+  renderManagedAgentFiles,
+  withManagedAgentInstallLocks
+} from "./managed-agents.js";
+import { prepareCodexModelResolution, resolveModelResolutionStatePath } from "./model-resolution.js";
+import { installOneTextFile } from "./text-file-install.js";
 // Worker agents (franky/zoro/usopp/jinbe) report evidence receipts; robin is the
 // read-only auditor; nami is the read-only navigator (no receipt). All are installed so
 // the host can dispatch them; robin was historically shipped only as un-installable skill
 // metadata (the auditor-install gap). Host role-by-name routing is NOT guaranteed, so a
 // dispatch must be self-contained — see docs/superloopy-host-contract.md.
-export const SUPERLOOPY_AGENT_NAMES = [
-  "franky",
-  "zoro",
-  "usopp",
-  "jinbe",
-  "robin",
-  "nami"
-];
-
+export { SUPERLOOPY_AGENT_NAMES };
 const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const CLI_PATH = join(REPO_ROOT, "src", "cli.js");
 
 export async function installAgents(cwd, argv, options = {}) {
-  const force = hasFlag(argv, "--force");
-  const target = resolveTargetDir(cwd, argv, options.env ?? process.env, options.homeDir ?? homedir());
+  const force = options.force ?? hasFlag(argv, "--force");
+  const env = options.env ?? process.env;
+  const homeDir = options.homeDir ?? homedir();
+  const target = resolveTargetDir(cwd, argv, env, homeDir);
   const source = options.sourceDir ?? join(REPO_ROOT, ".codex", "agents");
-  await mkdir(target, { recursive: true });
+  const statePath = options.statePath ?? resolveModelResolutionStatePath(env, homeDir);
+  return withManagedAgentInstallLocks(target, statePath,
+    ({ targetDir, statePath: lockedStatePath }) => installAgentsLocked({ argv, options, force, target: targetDir, source, statePath: lockedStatePath, publicTarget: target, publicStatePath: statePath }), { withFileLock: options.withFileLock });
+}
 
-  const agents = [];
-  for (const name of SUPERLOOPY_AGENT_NAMES) {
-    const file = `${name}.toml`;
-    const sourcePath = join(source, file);
-    const targetPath = join(target, file);
-    if (!existsSync(sourcePath)) throw new Error(`Missing bundled agent: ${sourcePath}`);
-    const status = await installOneAgent(sourcePath, targetPath, force);
-    agents.push({ name, source: sourcePath, target: targetPath, status });
+async function installAgentsLocked({ argv, options, force, target, source, statePath, publicTarget, publicStatePath }) {
+  const resolution = await prepareCodexModelResolution({
+    policyRoot: options.policyRoot ?? REPO_ROOT,
+    targetDir: target,
+    statePath,
+    queryModelCatalog: options.queryModelCatalog,
+    clock: options.clock,
+    refreshModels: options.refreshModels ?? hasFlag(argv, "--refresh-models"),
+    compatibility: options.compatibility ?? hasFlag(argv, "--compat")
+  });
+  if (!resolution.ok) {
+    return failedAgentsInstall({ source, target: publicTarget, force, statePath: publicStatePath, message: resolution.message });
   }
 
-  const conflicts = agents.filter((agent) => agent.status === "conflict");
+  const rendered = await renderManagedAgentFiles(source, target, resolution.state);
+  if (!rendered.ok) {
+    return failedAgentsInstall({ source, target: publicTarget, force, statePath: publicStatePath, message: rendered.message, resolution });
+  }
+  const legacyManifests = options.legacyManifests ?? await loadLegacyAgentManifests(options.policyRoot ?? REPO_ROOT);
+  const preflight = await preflightManagedAgentFiles(rendered.files, resolution.previousFileManifest, force, legacyManifests);
+  const agents = preflight.files.map((file) => publicManagedAgent(file, resolution.state, publicTarget));
+  const metadata = modelResolutionMetadata(resolution, publicStatePath);
+  if (!preflight.ok) {
+    return {
+      ok: false,
+      kind: "agents_install",
+      source,
+      target: publicTarget,
+      force,
+      agents,
+      conflicts: agents.filter(({ status }) => status === "conflict"),
+      modelResolution: metadata,
+      degraded: resolution.state.degraded,
+      restartRequired: false,
+      next: "Review conflicting personal agent files, or re-run with --force to replace them."
+    };
+  }
+
+  const manifest = managedFileManifest(rendered.files);
+  const state = { ...resolution.state, files: manifest };
+  const allUnchanged = agents.every(({ status }) => status === "unchanged");
+  const reuseExactFreshManifest = resolution.cacheStatus === "fresh"
+    && allUnchanged
+    && manifestsMatch(manifest, resolution.previousState?.files);
+  await commitManagedAgentFiles(preflight.files, statePath, state, !reuseExactFreshManifest);
+  const restartRequired = agents.some(({ status }) => status === "installed" || status === "updated");
   return {
-    ok: conflicts.length === 0,
+    ok: true,
     kind: "agents_install",
     source,
-    target,
+    target: publicTarget,
     force,
     agents,
-    conflicts,
-    next: conflicts.length === 0
-      ? "Restart Codex so the installed custom agents are loaded."
-      : "Re-run with --force to replace conflicting personal agent files."
+    conflicts: [],
+    modelResolution: metadata,
+    degraded: resolution.state.degraded,
+    restartRequired,
+    next: restartRequired
+      ? "Restart Codex so the changed custom agent definitions are loaded."
+      : resolution.state.degraded
+        ? "Compatibility routing remains active; no agent files changed and no restart is required."
+        : "Agent definitions are current; no restart is required."
   };
 }
 
 export function formatAgentsInstallResult(result) {
   const lines = [
-    `superloopy agents install: ${result.ok ? "ok" : "conflict"}`,
+    `superloopy agents install: ${result.ok ? "ok" : result.conflicts.length > 0 ? "conflict" : "failed"}`,
     `target: ${result.target}`,
-    ...result.agents.map((agent) => `- ${agent.name}: ${agent.status}`)
+    `model resolution: ${formatModelResolution(result)}`,
+    ...result.agents.map((agent) => `- ${agent.name}: ${agent.status} (${agent.requestedModel} -> ${agent.resolvedModel}, ${agent.reason})`),
+    `restart required: ${result.restartRequired ? "yes" : "no"}`,
+    result.next
   ];
-  if (!result.ok) lines.push(result.next);
-  else lines.push(result.next);
   return `${lines.join("\n")}\n`;
+}
+
+function failedAgentsInstall({ source, target, force, statePath, message, resolution }) {
+  return {
+    ok: false,
+    kind: "agents_install",
+    source,
+    target,
+    force,
+    agents: [],
+    conflicts: [],
+    modelResolution: {
+      ...(resolution === undefined ? { statePath } : modelResolutionMetadata(resolution, statePath)),
+      error: message
+    },
+    degraded: resolution?.state?.degraded ?? false,
+    restartRequired: false,
+    next: `Fix the model-resolution or bundled-agent setup, then retry: ${message}`
+  };
+}
+
+function publicManagedAgent(file, state, targetDir) {
+  const resolution = state.agents[file.name];
+  return {
+    name: file.name,
+    source: file.source,
+    target: join(targetDir, `${file.name}.toml`),
+    status: file.status,
+    requestedModel: resolution.requestedModel,
+    resolvedModel: resolution.resolvedModel,
+    reason: resolution.reason,
+    checkedAt: state.checkedAt
+  };
+}
+
+function modelResolutionMetadata(resolution, statePath) {
+  const state = resolution.state;
+  return {
+    policyVersion: state.policyVersion,
+    statePath,
+    cacheStatus: resolution.cacheStatus,
+    availabilitySource: state.availabilitySource,
+    selectionReason: state.selectionReason,
+    ...(state.catalogReason === undefined ? {} : { catalogReason: state.catalogReason })
+  };
+}
+
+function formatModelResolution(result) {
+  const metadata = result.modelResolution ?? {};
+  if (metadata.error !== undefined) return `failed (${metadata.error})`;
+  const degraded = result.degraded ? ", degraded compatibility" : "";
+  return `${metadata.selectionReason ?? metadata.availabilitySource ?? "unknown"}${degraded}`;
 }
 
 export async function installBinShim(cwd, argv, options = {}) {
@@ -135,8 +235,18 @@ export async function bootstrapSuperloopy(cwd, argv = [], options = {}) {
       ok: true,
       kind: "bootstrap",
       host: "claude",
+      degraded: false,
+      restartRequired: false,
       bin: { status: "unchanged", onPath: true, target: "(plugin-bundled)", next: "On Claude Code, Superloopy runs from the bundled plugin; no CLI wrapper is installed." },
-      agents: { ok: true, target: "(plugin-bundled)", agents: [] },
+      agents: {
+        ok: true,
+        target: "(plugin-bundled)",
+        agents: [],
+        conflicts: [],
+        degraded: false,
+        restartRequired: false,
+        modelResolution: { availabilitySource: "plugin", selectionReason: "plugin_bundled" }
+      },
       next: "Superloopy is plugin-bundled on Claude Code (skills, agents, hooks). No ~/.codex install performed."
     };
   }
@@ -149,25 +259,44 @@ export async function bootstrapSuperloopy(cwd, argv = [], options = {}) {
   const agents = await installAgents(cwd, argv, {
     env,
     homeDir,
-    sourceDir: options.sourceDir
+    sourceDir: options.sourceDir,
+    policyRoot: options.policyRoot,
+    statePath: options.statePath,
+    queryModelCatalog: options.queryModelCatalog,
+    clock: options.clock,
+    refreshModels: options.refreshModels,
+    compatibility: options.compatibility,
+    withFileLock: options.withFileLock,
+    force: options.force ?? hasFlag(argv, "--force")
   });
+  const ok = bin.ok && agents.ok;
   return {
-    ok: bin.ok && agents.ok,
+    ok,
     kind: "bootstrap",
     bin,
     agents,
-    next: bin.ok && agents.ok
-      ? "Restart Codex so Superloopy hooks, skills, CLI wrapper, and custom agents are loaded."
-      : "Resolve conflicts, or re-run with --force if replacing local Superloopy files is intended."
+    degraded: agents.degraded,
+    restartRequired: agents.restartRequired,
+    next: !agents.ok
+      ? "Superloopy preserved conflicting custom-agent files. Review the reported conflicts before choosing whether to replace your customizations."
+      : agents.restartRequired
+        ? "Restart Codex so the changed custom agent definitions are loaded."
+        : !bin.ok
+          ? "Superloopy preserved an unrecognized command wrapper. Review it separately; agent migration did not overwrite it."
+          : agents.degraded
+            ? "Compatibility routing is active; no restart is required."
+            : "Superloopy files are current; no restart is required."
   };
 }
 
 export function formatBootstrapResult(result) {
   const agentCounts = countAgentStatuses(result.agents.agents);
   return [
-    `superloopy install: ${result.ok ? "ok" : "conflict"}`,
+    `superloopy install: ${result.ok ? "ok" : "conflict or failure"}`,
     `bin: ${result.bin.status} ${result.bin.target}`,
-    `agents: ${formatAgentCounts(agentCounts)}`,
+    `agents: ${formatAgentCounts(agentCounts) || "none"}`,
+    `model resolution: ${formatModelResolution(result.agents)}`,
+    `restart required: ${result.restartRequired ? "yes" : "no"}`,
     result.next,
     result.bin.next
   ].join("\n") + "\n";
@@ -176,52 +305,24 @@ export function formatBootstrapResult(result) {
 export function bootstrapHasUserSignal(result) {
   // Re-surface every session when the wrapper's directory is not on PATH: otherwise a user who
   // missed the one-time hint gets `superloopy: command not found` forever with no breadcrumb.
-  return result.bin.status !== "unchanged"
+  return result.ok === false
+    || result.restartRequired === true
+    || result.bin.status !== "unchanged"
     || result.bin.onPath === false
     || result.agents.agents.some((agent) => agent.status !== "unchanged");
 }
 
 export function formatBootstrapHookContext(result) {
   return [
-    "Superloopy bootstrap",
+    "Superloopy automatic migration",
     "",
     `- CLI wrapper: ${result.bin.status} at ${result.bin.target}`,
     `- Agents: ${formatAgentCounts(countAgentStatuses(result.agents.agents))}`,
+    `- Model routing: ${formatModelResolution(result.agents)}`,
+    `- Restart required: ${result.restartRequired ? "yes" : "no"}`,
     `- ${result.next}`,
-    `- ${result.bin.next}`
+    `- ${result.bin.ok ? result.bin.next : "Superloopy preserved an unrecognized command wrapper; agent migration did not overwrite it."}`
   ].join("\n");
-}
-
-async function installOneAgent(sourcePath, targetPath, force) {
-  if (!existsSync(targetPath)) {
-    await copyFile(sourcePath, targetPath);
-    return "installed";
-  }
-  const [sourceContent, targetContent] = await Promise.all([
-    readFile(sourcePath, "utf8"),
-    readFile(targetPath, "utf8")
-  ]);
-  if (sourceContent === targetContent) return "unchanged";
-  if (!force) return "conflict";
-  await copyFile(sourcePath, targetPath);
-  return "updated";
-}
-
-async function installOneTextFile(targetPath, content, force, mode, options = {}) {
-  if (!existsSync(targetPath)) {
-    await writeFile(targetPath, content, "utf8");
-    if (mode !== undefined) await chmod(targetPath, mode);
-    return "installed";
-  }
-  const targetContent = await readFile(targetPath, "utf8");
-  if (targetContent === content) {
-    if (mode !== undefined) await chmod(targetPath, mode);
-    return "unchanged";
-  }
-  if (!force && !options.replaceIf?.(targetContent)) return "conflict";
-  await writeFile(targetPath, content, "utf8");
-  if (mode !== undefined) await chmod(targetPath, mode);
-  return "updated";
 }
 
 // A marker line embedded in every shim we generate, so a shim is recognized as ours regardless of

@@ -16,7 +16,7 @@ Run it once on a real install and fill in the results table at the end.
 
 ## 1. Components load
 
-- **Skills**: send a UI prompt (e.g. "make this landing page look less generic"). Expect the `superloopy-frontend` skill to engage (opens with `SUPERLOOPY FRONTEND ENABLED`). Try `loopy <task>` / `루피 <task>` for the loop engineer. Ask for a presentation (e.g. "make me a deck about this repo") — expect `superloopy-slides` to engage (opens with `SUPERLOOPY SLIDES ENABLED`), show three style previews before generating, and finish with a screenshot-backed `VISUAL_QA.md` under `.superloopy/evidence/slides/`.
+- **Skills**: explicitly invoke `/superloopy:superloopy-frontend` or send `loopy make this landing page look less generic`. Expect the frontend skill to engage (opens with `SUPERLOOPY FRONTEND ENABLED`). Confirm the same UI sentence without a leading `loopy` stays free of Superloopy hook context. Try `loopy <task>` / `루피 <task>` for the loop engineer. Ask for a presentation (e.g. "make me a deck about this repo") — expect `superloopy-slides` to engage (opens with `SUPERLOOPY SLIDES ENABLED`), show three style previews before generating, and finish with a screenshot-backed `VISUAL_QA.md` under `.superloopy/evidence/slides/`.
 - **Subagents**: run `/agents`. Expect six entries (namespaced like `superloopy:franky … superloopy:nami`).
 - **Doctor + bootstrap no-op**: `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`. Expect `ok: true`. (SessionStart bootstrap is a clean no-op on Claude — `host: "claude"`, no `~/.codex` writes.)
 

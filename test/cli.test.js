@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { lstat, mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -20,6 +21,14 @@ function runCli(args, options = {}) {
     input: options.input,
     timeout: 10_000
   });
+}
+
+function isolatedInstallEnv(repo, overrides = {}) {
+  return {
+    ...process.env,
+    CODEX_HOME: join(repo, "codex-home"),
+    ...overrides
+  };
 }
 
 function cliPathInvocation(binPath, args, platform = process.platform) {
@@ -81,8 +90,9 @@ test("CLI entrypoint runs through a symlinked bin path", { skip: process.platfor
 test("CLI agents install writes bundled custom agents to target", async () => {
   const repo = await tempRepo();
   const target = join(repo, "codex-agents");
+  const env = isolatedInstallEnv(repo);
 
-  const result = runCli(["agents", "install", "--target", target, "--json"]);
+  const result = runCli(["agents", "install", "--target", target, "--compat", "--json"], { env });
 
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
@@ -99,19 +109,20 @@ test("CLI agents install writes bundled custom agents to target", async () => {
 test("CLI agents install refuses changed files unless forced", async () => {
   const repo = await tempRepo();
   const target = join(repo, "codex-agents");
-  const first = runCli(["agents", "install", "--target", target, "--json"]);
+  const env = isolatedInstallEnv(repo);
+  const first = runCli(["agents", "install", "--target", target, "--compat", "--json"], { env });
   assert.equal(first.status, 0, first.stderr);
 
   const executorPath = join(target, "franky.toml");
   await writeFile(executorPath, "local edit\n", "utf8");
 
-  const conflict = runCli(["agents", "install", "--target", target, "--json"]);
+  const conflict = runCli(["agents", "install", "--target", target, "--compat", "--json"], { env });
   assert.equal(conflict.status, 1, conflict.stderr);
   const parsedConflict = JSON.parse(conflict.stdout);
   assert.equal(parsedConflict.ok, false);
   assert.equal(parsedConflict.conflicts[0].name, "franky");
 
-  const forced = runCli(["agents", "install", "--target", target, "--force", "--json"]);
+  const forced = runCli(["agents", "install", "--target", target, "--compat", "--force", "--json"], { env });
   assert.equal(forced.status, 0, forced.stderr);
   const restored = await readFile(executorPath, "utf8");
   assert.match(restored, /name = "franky"/);
@@ -130,7 +141,7 @@ test("CLI install writes command wrapper and bundled agents", async () => {
     PATH: `${binDir}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}`
   };
 
-  const result = runCli(["install", "--json"], { cwd: repo, env });
+  const result = runCli(["install", "--compat", "--json"], { cwd: repo, env });
 
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
@@ -148,6 +159,50 @@ test("CLI install writes command wrapper and bundled agents", async () => {
   });
   assert.equal(help.status, 0, help.stderr);
   assert.match(help.stdout, /superloopy loop <subcommand>/);
+});
+
+test("CLI install help exposes model refresh and deterministic compatibility controls", () => {
+  const top = runCli(["--help"]);
+  const agents = runCli(["agents", "help"]);
+
+  assert.equal(top.status, 0, top.stderr);
+  assert.equal(agents.status, 0, agents.stderr);
+  assert.match(top.stdout, /superloopy install .*--refresh-models.*--compat/u);
+  assert.match(top.stdout, /superloopy agents install .*--refresh-models.*--compat/u);
+  assert.match(agents.stdout, /--refresh-models/u);
+  assert.match(agents.stdout, /--compat/u);
+});
+
+test("CLI install help variants exit before wrapper, agent, state, or catalog-dependent mutation", async (t) => {
+  const cases = [
+    ["install --help", ["install", "--help"], /Installs the Superloopy command wrapper and managed Codex agents/u],
+    ["install -h", ["install", "-h"], /Installs the Superloopy command wrapper and managed Codex agents/u],
+    ["bin install --help", ["bin", "install", "--help"], /Installs a small superloopy command wrapper/u],
+    ["bin install -h", ["bin", "install", "-h"], /Installs a small superloopy command wrapper/u],
+    ["agents install --help", ["agents", "install", "--help"], /Installs bundled Superloopy custom agents/u],
+    ["agents install -h", ["agents", "install", "-h"], /Installs bundled Superloopy custom agents/u]
+  ];
+  for (const [label, prefix, expectedHelp] of cases) {
+    await t.test(label, async () => {
+      const repo = await tempRepo();
+      const target = join(repo, "agents-target");
+      const binDir = join(repo, "bin-target");
+      const emptyPath = join(repo, "empty-path");
+      const codexHome = join(repo, "codex-home");
+      await mkdir(emptyPath, { recursive: true });
+      const env = isolatedInstallEnv(repo, { SUPERLOOPY_BIN_DIR: binDir, PATH: emptyPath });
+
+      const result = runCli([...prefix, "--target", target, "--bin-dir", binDir], { cwd: repo, env });
+
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, /^Usage:/u);
+      assert.match(result.stdout, expectedHelp);
+      assert.equal(existsSync(binDir), false);
+      assert.equal(existsSync(target), false);
+      assert.equal(existsSync(join(codexHome, "agents")), false);
+      assert.equal(existsSync(join(codexHome, "superloopy", "model-resolution.json")), false);
+    });
+  }
 });
 
 test("CLI bin install updates an older generated Superloopy shim without --force", async () => {
@@ -208,6 +263,56 @@ test("CLI bin install refuses to overwrite a foreign (unmarked) shim without --f
   assert.equal(result.ok, false);
   assert.equal(result.status, "conflict");
   assert.equal(await readFile(binPath, "utf8"), foreignShim); // left untouched
+});
+
+test("CLI bin install preserves a dangling wrapper symlink without force", {
+  skip: process.platform === "win32" ? "file symlink creation is not reliably available on Windows CI" : false
+}, async () => {
+  const repo = await tempRepo();
+  const binDir = join(repo, "bin");
+  const outsideDir = join(repo, "outside");
+  await mkdir(binDir, { recursive: true });
+  await mkdir(outsideDir, { recursive: true });
+  const binPath = join(binDir, "superloopy");
+  const outsideTarget = join(outsideDir, "created-by-install");
+  await symlink(outsideTarget, binPath);
+
+  const result = await installBinShim(repo, ["--bin-dir", binDir], {
+    env: { PATH: `${binDir}:${process.env.PATH ?? ""}` },
+    homeDir: join(repo, "home"),
+    platform: "linux"
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "conflict");
+  assert.equal((await lstat(binPath)).isSymbolicLink(), true);
+  assert.equal(existsSync(outsideTarget), false);
+});
+
+test("CLI bin install never follows the wrapper symlink, even with force", {
+  skip: process.platform === "win32" ? "file symlink creation is not reliably available on Windows CI" : false
+}, async () => {
+  const repo = await tempRepo();
+  const binDir = join(repo, "bin");
+  const outsideDir = join(repo, "outside");
+  await mkdir(binDir, { recursive: true });
+  await mkdir(outsideDir, { recursive: true });
+  const binPath = join(binDir, "superloopy");
+  const outsideTarget = join(outsideDir, "personal-wrapper");
+  const personalWrapper = "personal wrapper\n";
+  await writeFile(outsideTarget, personalWrapper, "utf8");
+  await symlink(outsideTarget, binPath);
+
+  const result = await installBinShim(repo, ["--bin-dir", binDir, "--force"], {
+    env: { PATH: `${binDir}:${process.env.PATH ?? ""}` },
+    homeDir: join(repo, "home"),
+    platform: "linux"
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "conflict");
+  assert.equal((await lstat(binPath)).isSymbolicLink(), true);
+  assert.equal(await readFile(outsideTarget, "utf8"), personalWrapper);
 });
 
 test("CLI bin install uses Windows-safe PATH detection and PowerShell hint", async () => {
