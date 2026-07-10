@@ -4,20 +4,14 @@ import { dirname, join, posix as pathPosix, resolve, win32 as pathWin32 } from "
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { hasFlag, readFlag } from "./args.js";
+import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
 
 // Worker agents (franky/zoro/usopp/jinbe) report evidence receipts; robin is the
 // read-only auditor; nami is the read-only navigator (no receipt). All are installed so
 // the host can dispatch them; robin was historically shipped only as un-installable skill
 // metadata (the auditor-install gap). Host role-by-name routing is NOT guaranteed, so a
 // dispatch must be self-contained — see docs/superloopy-host-contract.md.
-export const SUPERLOOPY_AGENT_NAMES = [
-  "franky",
-  "zoro",
-  "usopp",
-  "jinbe",
-  "robin",
-  "nami"
-];
+export { SUPERLOOPY_AGENT_NAMES };
 
 const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const CLI_PATH = join(REPO_ROOT, "src", "cli.js");

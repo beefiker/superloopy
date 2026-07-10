@@ -357,6 +357,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `skills/superloopy-slides/scripts/export-pdf.sh` | On-demand helper that exports a generated deck to PDF via headless browser screenshots. | User-invoked helper script only; no plugin runtime coupling. |
 | `skills/superloopy-slides/scripts/extract-pptx.py` | On-demand helper that extracts text, images, and notes from a .pptx for conversion. | User-invoked helper script only; no plugin runtime coupling. |
 | `skills/superloopy-slides/viewport-base.css` | Mandatory fixed 1920x1080 stage CSS copied into every generated presentation. | Design reference content embedded into generated decks only; no plugin runtime behavior. |
+| `src/agent-names.js` | Shared six-agent name inventory for policy, cached resolution, and installation modules. | Data-only extraction that prevents an ESM cycle; adds no launch or installation behavior. |
 | `src/agents.js` | Installs bundled Superloopy custom agent TOML files, the command wrapper, and the combined bootstrap used by plugin startup. | Conservative Superloopy installer; skips identical files and requires `--force` for changed local files. |
 | `src/args.js` | Shared flag/stdin/JSON parsing helpers. | Generic Superloopy CLI utility. |
 | `src/artifacts.js` | Evidence path confinement, symlink rejection, and quality-gate dispatch. | Dispatches Superloopy review, matrix, and default gates. |
@@ -392,6 +393,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/matrix-gate.js` | Validator for strict matrix quality gates. | Keeps compatible shape under Superloopy-native module name. |
 | `src/model-catalog.js` | Bounded read-only Codex app-server client that lists and normalizes visible model capabilities with sanitized unknown results. | Uses only initialize and paginated `model/list`; never starts a thread, turn, or prompt and never persists raw server output. |
 | `src/model-policy.js` | Doctor helper that reads `model-policy.json`, checks the Codex model-policy doc + agent TOML defaults, and checks the Claude model-policy doc + `agents/*.md` model frontmatter. | Advisory policy only; never treats model choice as proof or relies on host parent/default inheritance. |
+| `src/model-resolution.js` | Prepares a validated cached Codex fleet resolution from policy, a reusable manifest, or a bounded live catalog result. | Read-only preparation boundary; validates all six hashes before reuse, sanitizes probe failures, and never writes state or agent files. |
 | `src/plan-summary.js` | Compact derived progress summary. | Superloopy-only helper. |
 | `src/pre-tool-use.js` | PreToolUse guard for malformed `create_goal` calls and premature native `update_goal` completion. | Uses Superloopy plan completion as the authority before native goal completion. |
 | `src/prove.js` | ID-free proof shortcut for the active next unresolved criterion. | Superloopy-specific proof path. |
@@ -436,6 +438,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/loop-gates.test.js` | Gate, report, trace, check, review, finish, and checkpoint tests. | Covers completion evidence flows. |
 | `test/loop.test.js` | Core lifecycle and command-capture unit tests. | Tests Superloopy state semantics. |
 | `test/model-catalog.test.js` | Protocol coverage for the bounded Codex model catalog handshake, pagination, normalization, failures, sanitization, and child cleanup. | Uses a fake spawned process only; the test suite does not access accounts, workspaces, or prompts. |
+| `test/model-resolution-cache.test.js` | Cached resolution coverage for TTL reuse, refresh causes, compatibility selection, unknown preservation, manifest validation, and state paths. | Uses temporary synthetic policy/state fixtures and injected catalog queries only; no Codex process or personal state is touched. |
 | `test/model-resolution.test.js` | Pure resolver and policy-loader coverage for ordered complete Codex candidate tuples. | Uses synthetic normalized catalogs and temporary policy fixtures only. |
 | `test/plugin.test.js` | Plugin manifest, hook route, and packaged-skill tests. | Verifies Superloopy packaging and new skill metadata. |
 | `test/pre-tool-use.test.js` | Focused unit tests for native goal-tool lifecycle guards. | Prevents premature native completion while Superloopy state is incomplete. |
