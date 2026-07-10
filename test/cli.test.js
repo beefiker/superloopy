@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -170,6 +171,36 @@ test("CLI install help exposes model refresh and deterministic compatibility con
   assert.match(top.stdout, /superloopy agents install .*--refresh-models.*--compat/u);
   assert.match(agents.stdout, /--refresh-models/u);
   assert.match(agents.stdout, /--compat/u);
+});
+
+test("CLI install help variants exit before wrapper, agent, state, or catalog-dependent mutation", async (t) => {
+  const cases = [
+    ["install --help", ["install", "--help"], /Installs the Superloopy command wrapper and managed Codex agents/u],
+    ["install -h", ["install", "-h"], /Installs the Superloopy command wrapper and managed Codex agents/u],
+    ["agents install --help", ["agents", "install", "--help"], /Installs bundled Superloopy custom agents/u],
+    ["agents install -h", ["agents", "install", "-h"], /Installs bundled Superloopy custom agents/u]
+  ];
+  for (const [label, prefix, expectedHelp] of cases) {
+    await t.test(label, async () => {
+      const repo = await tempRepo();
+      const target = join(repo, "agents-target");
+      const binDir = join(repo, "bin-target");
+      const emptyPath = join(repo, "empty-path");
+      const codexHome = join(repo, "codex-home");
+      await mkdir(emptyPath, { recursive: true });
+      const env = isolatedInstallEnv(repo, { SUPERLOOPY_BIN_DIR: binDir, PATH: emptyPath });
+
+      const result = runCli([...prefix, "--target", target, "--bin-dir", binDir], { cwd: repo, env });
+
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, /^Usage:/u);
+      assert.match(result.stdout, expectedHelp);
+      assert.equal(existsSync(binDir), false);
+      assert.equal(existsSync(target), false);
+      assert.equal(existsSync(join(codexHome, "agents")), false);
+      assert.equal(existsSync(join(codexHome, "superloopy", "model-resolution.json")), false);
+    });
+  }
 });
 
 test("CLI bin install updates an older generated Superloopy shim without --force", async () => {
