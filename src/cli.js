@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { hasFlag, parseJson, readFlag, readStdin } from "./args.js";
 import {
@@ -119,9 +120,20 @@ async function runInstall(argv, stdout, cwd) {
 }
 
 async function runDoctorCommand(argv, stdout, cwd) {
+  if (hasHelpFlag(argv)) {
+    stdout.write(doctorHelp());
+    return 0;
+  }
   const json = hasFlag(argv, "--json");
   const comparisonPath = readFlag(argv, "--comparison-path");
-  const result = await runDoctor(resolveDoctorRoot(cwd, argv), { comparisonPath });
+  const result = await runDoctor(resolveDoctorRoot(cwd, argv), {
+    comparisonPath,
+    installedModelPolicy: {
+      env: process.env,
+      homeDir: homedir(),
+      refreshModels: hasFlag(argv, "--refresh-models")
+    }
+  });
   stdout.write(json ? `${JSON.stringify(result, null, 2)}\n` : formatDoctor(result));
   return result.ok ? 0 : 1;
 }
@@ -302,7 +314,7 @@ function topHelp() {
     "  superloopy install [--bin-dir PATH] [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
     "  superloopy bin install [--bin-dir PATH] [--force] [--json]",
     "  superloopy agents install [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
-    "  superloopy doctor [--json] [--root PATH] [--comparison-path PATH]",
+    "  superloopy doctor [--json] [--root PATH] [--comparison-path PATH] [--refresh-models]",
     "  superloopy hook session-start|pre-tool-use|stop|subagent-stop|user-prompt-submit",
     "",
     helpText()
@@ -330,6 +342,17 @@ function installHelp() {
     "Installs the Superloopy command wrapper and managed Codex agents.",
     "Use --refresh-models to bypass a cached catalog result, or --compat for deterministic compatibility routing.",
     "Existing conflicting files require --force.",
+    ""
+  ].join("\n");
+}
+
+function doctorHelp() {
+  return [
+    "Usage:",
+    "  superloopy doctor [--json] [--root PATH] [--comparison-path PATH] [--refresh-models]",
+    "",
+    "Checks repository and installed Superloopy health without launching workers.",
+    "Use --refresh-models for one read-only live model comparison; no state or agent files are changed.",
     ""
   ].join("\n");
 }

@@ -15,6 +15,11 @@ function runCli(args, options = {}) {
   return spawnSync(process.execPath, [join(process.cwd(), "src/cli.js"), ...args], {
     cwd: options.cwd ?? process.cwd(),
     encoding: "utf8",
+    env: {
+      ...process.env,
+      CODEX_HOME: join(tmpdir(), `superloopy-doctor-empty-${process.pid}`),
+      ...options.env
+    },
     input: options.input,
     timeout: 10_000
   });
@@ -75,6 +80,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
     "claudeHostWiring",
     "modelPolicy",
     "claudeModelPolicy",
+    "installedModelPolicy",
     "hostContract",
     "interop",
     "wrapper"
@@ -127,6 +133,15 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.claudeModelPolicy.policyDataVersion, "2026-07-10");
   assert.equal(parsed.checks.claudeModelPolicy.agents.nami, "haiku");
   assert.equal(parsed.checks.claudeModelPolicy.agents.zoro, "opus");
+  assert.deepEqual(
+    {
+      ok: parsed.checks.installedModelPolicy.ok,
+      installed: parsed.checks.installedModelPolicy.installed,
+      degraded: parsed.checks.installedModelPolicy.degraded,
+      restartRequired: parsed.checks.installedModelPolicy.restartRequired
+    },
+    { ok: true, installed: false, degraded: false, restartRequired: false }
+  );
   // Interop is informational: it never fails and does not gate overall health.
   assert.equal(parsed.checks.interop.ok, true);
   assert.equal(parsed.checks.interop.informational, true);
