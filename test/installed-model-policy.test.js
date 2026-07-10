@@ -13,6 +13,7 @@ import { MODEL_RESOLUTION_TTL_MS, resolveModelResolutionStatePath } from "../src
 const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const NOW = new Date("2026-07-10T12:00:00.000Z");
 const MANAGED_MARKER = "# superloopy-managed-agent v1";
+const SHELL_SAFE_TARGET_PATTERN = /^[\p{L}\p{N}_./:@+,= -]+$/u;
 
 function fullCatalog() {
   return [
@@ -91,6 +92,10 @@ async function snapshot(setup) {
 }
 
 function refreshAction(setup) {
+  if (!SHELL_SAFE_TARGET_PATTERN.test(setup.targetDir)) {
+    const args = ["agents", "install", "--target", setup.targetDir, "--refresh-models"];
+    return `Run Superloopy with these literal arguments (not shell text) to refresh the managed routing state: ${JSON.stringify(args)}.`;
+  }
   return `Run \`superloopy agents install --target "${setup.targetDir}" --refresh-models\` to refresh the managed routing state.`;
 }
 
@@ -157,7 +162,7 @@ test("installed doctor identifies an exact pre-managed fleet as safely migratabl
   assert.equal(check.selectionStatus, "legacy_unmanaged");
   assert.equal(check.restartRequired, true);
   assert.deepEqual(new Set(Object.values(check.agents).map(({ status }) => status)), new Set(["legacy_unmanaged"]));
-  assert.match(check.next, /agents install .*--refresh-models/u);
+  assert.equal(check.next, refreshAction({ targetDir }));
   assert.doesNotMatch(check.next, /--force/u);
 });
 
