@@ -64,12 +64,7 @@ Flickable {
             positionDragVisual(scenePosition)
     }
 
-    function finishDrag() {
-        if (!dragActive)
-            return
-
-        const finishedTaskId = dragTaskId
-        dragVisual.drop()
+    function settleDrag(finishedTaskId) {
         dragActive = false
         Qt.callLater(function() {
             if (!root.dragActive && root.dragTaskId === finishedTaskId) {
@@ -79,6 +74,24 @@ Flickable {
                 dragVisual.taskTitle = ""
             }
         })
+    }
+
+    function finishDrag() {
+        if (!dragActive)
+            return
+
+        const finishedTaskId = dragTaskId
+        dragVisual.drop()
+        settleDrag(finishedTaskId)
+    }
+
+    function cancelDrag() {
+        if (!dragActive)
+            return
+
+        const canceledTaskId = dragTaskId
+        dragVisual.cancel()
+        settleDrag(canceledTaskId)
     }
 
     clip: true
