@@ -243,6 +243,35 @@ TestCase {
         compare(created.priority, "High")
     }
 
+    function test_new_task_uses_canonical_priority_keys_data() {
+        return [
+            { "tag": "low", "priorityIndex": 0, "expectedPriority": "Low" },
+            { "tag": "medium", "priorityIndex": 1,
+              "expectedPriority": "Medium" },
+            { "tag": "high", "priorityIndex": 2,
+              "expectedPriority": "High" }
+        ]
+    }
+
+    function test_new_task_uses_canonical_priority_keys(data) {
+        const view = createView(1300)
+        const dialog = findChild(view, "newTaskDialog")
+        const invoker = findChild(view, "newTaskButton")
+        const titleField = findChild(dialog, "newTaskTitleField")
+        const priority = findChild(dialog, "newTaskPriority")
+
+        dialog.openFrom(invoker)
+        tryVerify(function() { return dialog.opened })
+        priority.model = ["낮음", "보통", "높음"]
+        priority.currentIndex = data.priorityIndex
+        titleField.text = "Localized priority " + data.expectedPriority
+        dialog.submit()
+
+        tryVerify(function() { return !dialog.opened })
+        const created = TaskStore.taskById(TaskStore.selectedTaskId)
+        compare(created.priority, data.expectedPriority)
+    }
+
     function test_dialog_cancel_does_not_create_and_restores_focus() {
         const view = createView(1300)
         const dialog = findChild(view, "newTaskDialog")
@@ -330,6 +359,80 @@ TestCase {
             const owner = namedFocusOwner(testCase.Window.window.activeFocusItem)
             verify(allowedOwners.indexOf(owner) >= 0,
                    "Unexpected focus owner: " + owner)
+        }
+    }
+
+    function test_overlay_drawer_cycles_at_backlog_boundary() {
+        const view = createView(1300)
+        const interaction = findChild(
+                    findChild(view, "taskCard-task-define-goals"),
+                    "cardInteraction")
+        const drawer = findChild(view, "overlayDetailDrawer")
+
+        interaction.forceActiveFocus(Qt.TabFocusReason)
+        keyClick(Qt.Key_Return)
+        tryVerify(function() { return drawer.opened })
+        compare(namedFocusOwner(testCase.Window.window.activeFocusItem),
+                "detailCloseButton")
+
+        const moveControl = findChild(drawer, "moveToColumn")
+        const previousButton = findChild(drawer, "movePreviousButton")
+        const nextButton = findChild(drawer, "moveNextButton")
+        verify(!previousButton.enabled)
+        verify(nextButton.enabled)
+        compare(moveControl.KeyNavigation.tab, nextButton)
+        compare(nextButton.KeyNavigation.backtab, moveControl)
+
+        const forwardOwners = ["moveToColumn", "moveNextButton",
+                               "detailCloseButton"]
+        for (const owner of forwardOwners) {
+            keyClick(Qt.Key_Tab)
+            compare(namedFocusOwner(testCase.Window.window.activeFocusItem), owner)
+        }
+
+        const reverseOwners = ["moveNextButton", "moveToColumn",
+                               "detailCloseButton"]
+        for (const owner of reverseOwners) {
+            keyClick(Qt.Key_Backtab)
+            compare(namedFocusOwner(testCase.Window.window.activeFocusItem), owner)
+        }
+    }
+
+    function test_overlay_drawer_cycles_at_review_boundary() {
+        const view = createView(1300)
+        const interaction = findChild(
+                    findChild(view, "taskCard-task-demo-video"),
+                    "cardInteraction")
+        const drawer = findChild(view, "overlayDetailDrawer")
+
+        interaction.forceActiveFocus(Qt.TabFocusReason)
+        keyClick(Qt.Key_Return)
+        tryVerify(function() { return drawer.opened })
+        compare(namedFocusOwner(testCase.Window.window.activeFocusItem),
+                "detailCloseButton")
+
+        const closeButton = findChild(drawer, "detailCloseButton")
+        const moveControl = findChild(drawer, "moveToColumn")
+        const previousButton = findChild(drawer, "movePreviousButton")
+        const nextButton = findChild(drawer, "moveNextButton")
+        verify(previousButton.enabled)
+        verify(!nextButton.enabled)
+        compare(closeButton.KeyNavigation.backtab, previousButton)
+        compare(previousButton.KeyNavigation.tab, closeButton)
+        compare(previousButton.KeyNavigation.backtab, moveControl)
+
+        const forwardOwners = ["moveToColumn", "movePreviousButton",
+                               "detailCloseButton"]
+        for (const owner of forwardOwners) {
+            keyClick(Qt.Key_Tab)
+            compare(namedFocusOwner(testCase.Window.window.activeFocusItem), owner)
+        }
+
+        const reverseOwners = ["movePreviousButton", "moveToColumn",
+                               "detailCloseButton"]
+        for (const owner of reverseOwners) {
+            keyClick(Qt.Key_Backtab)
+            compare(namedFocusOwner(testCase.Window.window.activeFocusItem), owner)
         }
     }
 
