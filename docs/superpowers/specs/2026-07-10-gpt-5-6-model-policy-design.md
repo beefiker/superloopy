@@ -2,43 +2,75 @@
 
 ## Goal
 
-Move Superloopy's Codex agent defaults to the GPT-5.6 family while preserving the existing centralized-policy contract: one source of truth in `model-policy.json`, explicit resolved pins in every bundled agent TOML, and doctor checks that reject drift instead of silently inheriting a host default.
+Prefer the GPT-5.6 family for Superloopy's Codex agents while keeping every installed agent explicitly pinned to a model the current Codex surface reports as available. When a preferred GPT-5.6 model is unavailable, resolve that profile to GPT-5.5 before installation. Never inherit an unknown parent/default model and never launch a second worker after a failed or ambiguous first launch.
 
-## Profile Mapping
+## Profile Candidates
 
-| Profile | Model | Effort | Tier | Agents |
-| --- | --- | --- | --- | --- |
-| `standard` | `gpt-5.6-terra` | `high` | `priority` | `franky`, `usopp`, `robin` |
-| `deep` | `gpt-5.6-sol` | `xhigh` | `priority` | `zoro`, `jinbe` |
-| `fast` | `gpt-5.6-luna` | `low` | `fast` | `nami` |
+Each profile owns an ordered list of complete model tuples. Resolution selects the first tuple whose model, reasoning effort, and service tier are supported together.
 
-This follows the current Codex role guidance: Terra for everyday work, Sol for complex or high-value judgment, and Luna for clear, repeatable work. Superloopy pins the explicit tier IDs rather than the `gpt-5.6` alias so each lane's capability and cost intent remains reviewable.
+| Profile | Preferred tuple | Compatibility tuple | Agents |
+| --- | --- | --- | --- |
+| `standard` | `gpt-5.6-terra` / `high` / `priority` | `gpt-5.5` / `high` / `priority` | `franky`, `usopp`, `robin` |
+| `deep` | `gpt-5.6-sol` / `xhigh` / `priority` | `gpt-5.5` / `xhigh` / `priority` | `zoro`, `jinbe` |
+| `fast` | `gpt-5.6-luna` / `low` / `fast` | `gpt-5.5` / `low` / `fast` | `nami` |
+
+This keeps role intent reviewable: Sol handles the deepest review/gate lanes, Terra handles everyday implementation and evidence work, and Luna handles navigation. GPT-5.5 preserves each lane's existing effort when preview access is missing.
 
 ## Policy Data
 
-Update the shared policy version to `2026-07-10`. Add the three GPT-5.6 tier IDs to the Codex allowed-model list and retain the existing GPT-5.5, GPT-5.4, GPT-5.4 Mini, and GPT-5.3 Codex Spark IDs as accepted compatibility values. The bundled defaults move to GPT-5.6, but no automatic runtime fallback or parent-model inheritance is introduced.
+`model-policy.json` remains the source of truth. Update its version to `2026-07-10`, add the three GPT-5.6 IDs to the allowed list, and express each Codex profile as ordered `candidates` rather than one model plus an unrelated fallback field. Retain GPT-5.5, GPT-5.4, GPT-5.4 Mini, and GPT-5.3 Codex Spark as allowed compatibility values.
 
-Keep the existing `high`, `xhigh`, and `low` profile efforts. Do not add `max` or `ultra` in this change: the current policy validates effort globally rather than per model, and the narrow migration does not need either setting. Service tiers remain unchanged.
+Validate complete tuples, not model, effort, and tier independently. Do not add `max` or `ultra`; the approved mapping uses the existing `low`, `high`, and `xhigh` values. Claude policy and agent assignments do not change.
 
-## Resolved Pins And Documentation
+## Availability Discovery
 
-Update all six `.codex/agents/*.toml` files to the resolved profile model. Update the Codex model-policy document's allowed list and defaults table, plus the Codex mapping column in the Claude policy document. Claude's own aliases and assignments do not change.
+Use the stable Codex app-server `model/list` method, not the raw models cache and not `codex debug models`, as the availability source. Query it immediately before materializing personal agent TOMLs.
 
-`src/model-policy.js` and `src/doctor.js` remain unchanged because policy loading, profile resolution, and drift detection are already data-driven. The host contract, design audit, file audit, golden set, and READMEs remain model-version-neutral apart from inventorying this design document.
+The live query runs only when one of these conditions holds:
 
-## Availability And Failure Behavior
+- no prior resolution exists;
+- the model-policy version changed;
+- the cached resolution is at least 24 hours old;
+- the user explicitly requests `--refresh-models`.
 
-Current Codex documentation and the live local model catalog list Sol, Terra, and Luna. Some OpenAI availability documentation still describes workspace-scoped preview access, so older model IDs remain allowed for deliberate manual compatibility. If a host cannot use a pinned GPT-5.6 model, it should fail visibly; Superloopy must not silently fall through to an unknown or weaker parent default.
+Every SessionStart may read the small resolution record, but it must not start app-server while the record is fresh. A failed or malformed live query is `unknown`, not proof that GPT-5.6 is unavailable. Keep an existing managed resolution on `unknown`; on a fresh install, materialize the explicit GPT-5.5 compatibility tuples and disclose that conservative choice.
+
+## Managed Agent Installation
+
+`superloopy install` and `superloopy agents install` resolve all six agents before writing any file. Stage the complete set and install it atomically enough that a conflict or resolution failure cannot leave a mixed preferred/compatibility fleet.
+
+Installed files carry a Superloopy managed marker. Persist the policy version, check time, selected tuples, availability source, and generated file hashes under `$CODEX_HOME/superloopy/`, never inside a versioned plugin cache. Replace only files whose managed hash still matches; preserve unknown or user-edited files as conflicts unless the user supplies `--force`.
+
+SessionStart may perform the same managed installation check. Agent definitions changed during SessionStart apply only after Codex restarts, so any changed resolution must emit a visible restart instruction.
+
+## Doctor And Disclosure
+
+Keep the existing repository drift check, then add an installed-resolution check that compares:
+
+- the current policy version;
+- the cached/live availability result;
+- the persisted resolved tuples;
+- the actual fields in `$CODEX_HOME/agents/*.toml`.
+
+Doctor and install JSON must report `requestedModel`, `resolvedModel`, `reason`, `checkedAt`, and whether a restart is required. A compatibility resolution is healthy but visibly degraded; missing GPT-5.5, unsupported tuple fields, stale managed hashes, or mixed installed profiles fail.
+
+Do not log prompts, credentials, account email, workspace IDs, or raw authentication tokens.
+
+## Failure Safety
+
+Model routing occurs before agent launch. Superloopy must not retry a worker on GPT-5.5 after a GPT-5.6 launch error because it cannot prove the first worker performed no tool call or mutation. Network errors, timeouts, 401/403, workspace-policy denials, 429, 5xx, cancellation, context failures, and safety refusals never trigger a model change.
+
+If model access changes after installation, the host may visibly reject the stale pin until the next resolution check and restart. That bounded failure is safer than duplicate or silent work.
 
 ## Validation
 
-- Add failing doctor assertions for the new policy version and all three resolved profile models before changing policy data.
-- Add documentation assertions for Sol, Terra, and Luna.
-- Run the focused doctor and docs tests.
-- Run `superloopy doctor --json` and require both model-policy checks to pass.
-- Run the full test suite and `git diff --check`.
-- For a release, separately bump and synchronize package/plugin versions and confirm `npm pack --dry-run --json` includes the policy data, docs, and agent TOMLs.
+- Add failing pure resolver tests for full, partial, missing, stale, and malformed model catalogs.
+- Add failing installer tests for managed upgrades, user edits, atomic conflicts, cache reuse, refresh, and conservative first install.
+- Add failing doctor tests for preferred, degraded compatibility, stale, mixed, and unsupported installed tuples.
+- Exercise a real local `model/list` handshake without starting a model turn.
+- Run focused CLI, doctor, docs, hook, and policy tests.
+- Run `superloopy doctor --json`, the full test suite, `npm pack --dry-run --json`, and `git diff --check`.
 
 ## Out Of Scope
 
-This change does not alter frontend skill routing, prompt text, Claude models, model discovery, runtime fallback behavior, service-tier policy, or plugin versioning. Those remain separate follow-up decisions.
+This change does not add post-launch retries, parent-model inheritance, provider failover, model changes for Claude, prompt-routing changes, or release-version bumps. Runtime model overrides may be investigated later only on hosts that expose typed pre-execution failures and idempotent dispatch.
