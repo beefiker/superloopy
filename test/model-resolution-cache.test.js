@@ -8,7 +8,8 @@ import {
   MODEL_RESOLUTION_SCHEMA_VERSION,
   MODEL_RESOLUTION_TTL_MS,
   prepareCodexModelResolution,
-  resolveModelResolutionStatePath
+  resolveModelResolutionStatePath,
+  validateModelResolutionState
 } from "../src/model-resolution.js";
 
 const NOW = Date.parse("2026-07-10T12:00:00.000Z");
@@ -160,6 +161,44 @@ test("resolution constants and state path follow the Codex home contract", () =>
     resolveModelResolutionStatePath({ CODEX_HOME: "" }, "/home/tester"),
     "/home/tester/.codex/superloopy/model-resolution.json"
   );
+});
+
+test("state validator requires generated compatibility reasons to select candidate index one for every profile", () => {
+  const policy = policyData();
+  const targetDir = "/tmp/superloopy-agents";
+  const allCompatibility = { standard: 1, deep: 1, fast: 1 };
+  const reasons = [
+    { selectionReason: "compatibility_override", availabilitySource: "policy" },
+    { selectionReason: "probe_unknown_compatibility", availabilitySource: "model_list", catalogReason: "timeout" }
+  ];
+
+  for (const reason of reasons) {
+    const valid = persistedState(policy, targetDir, { ...reason, indexes: allCompatibility });
+    assert.equal(validateModelResolutionState(valid, policy, { targetDir, nowMs: NOW }).ok, true);
+    for (const indexes of [{}, { deep: 1 }]) {
+      const contradictory = persistedState(policy, targetDir, { ...reason, indexes });
+      assert.deepEqual(
+        validateModelResolutionState(contradictory, policy, { targetDir, nowMs: NOW }),
+        { ok: false, reason: "selection" }
+      );
+    }
+  }
+});
+
+test("state validator lets catalog and cached-unknown reasons preserve preferred, partial, or all-compat selections", () => {
+  const policy = policyData();
+  const targetDir = "/tmp/superloopy-agents";
+  const reasons = [
+    { selectionReason: "catalog_resolved", availabilitySource: "model_list" },
+    { selectionReason: "probe_unknown_kept_cached", availabilitySource: "model_list", catalogReason: "timeout" }
+  ];
+
+  for (const reason of reasons) {
+    for (const indexes of [{}, { deep: 1 }, { standard: 1, deep: 1, fast: 1 }]) {
+      const state = persistedState(policy, targetDir, { ...reason, indexes });
+      assert.equal(validateModelResolutionState(state, policy, { targetDir, nowMs: NOW }).ok, true);
+    }
+  }
 });
 
 test("fresh valid state is reused without querying", async (t) => {
