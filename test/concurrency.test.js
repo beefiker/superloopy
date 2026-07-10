@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
 import { withFileLock } from "../src/store.js";
+import { commitManagedAgentFiles } from "../src/managed-agents.js";
 
 const STORE_URL = new URL("../src/store.js", import.meta.url).href;
 
@@ -96,4 +97,49 @@ test("withFileLock release does not delete a successor token", async () => {
     await writeFile(`${target}.lock`, "successor-token\n", "utf8");
   });
   assert.equal(await readFile(`${target}.lock`, "utf8"), "successor-token\n");
+});
+
+test("managed rollback never deletes a same-content replacement inode", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "superloopy-inode-race-"));
+  const target = join(dir, "franky.toml");
+  const statePath = join(dir, "state", "model-resolution.json");
+  await mkdir(dir, { recursive: true });
+  await writeFile(target, "old\n", "utf8");
+  let replacementIdentity;
+
+  await assert.rejects(commitManagedAgentFiles([
+    { name: "franky", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
+  ], statePath, {}, true, {
+    writeState: async () => {
+      const replacement = join(dir, "replacement.toml");
+      await writeFile(replacement, "new\n", "utf8");
+      replacementIdentity = await stat(replacement);
+      await rename(replacement, target);
+      throw new Error("injected state failure");
+    }
+  }), /rollback failed/u);
+
+  const finalIdentity = await stat(target);
+  assert.equal(await readFile(target, "utf8"), "new\n");
+  assert.deepEqual([finalIdentity.dev, finalIdentity.ino], [replacementIdentity.dev, replacementIdentity.ino]);
+});
+
+test("managed commit surfaces an old-backup cleanup failure", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "superloopy-backup-cleanup-"));
+  const target = join(dir, "franky.toml");
+  await writeFile(target, "old\n", "utf8");
+  let unlinkCalls = 0;
+
+  await assert.rejects(commitManagedAgentFiles([
+    { name: "franky", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
+  ], join(dir, "state.json"), {}, true, {
+    writeState: async () => {},
+    unlink: async (path) => {
+      unlinkCalls += 1;
+      if (unlinkCalls === 2) throw Object.assign(new Error("injected cleanup failure"), { code: "EPERM" });
+      return unlink(path);
+    }
+  }), /backup cleanup failed/u);
+
+  assert.equal(await readFile(target, "utf8"), "new\n");
 });

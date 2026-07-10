@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { access, chmod, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, symlink, unlink, utimes, writeFile } from "node:fs/promises";
+import { access, chmod, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, stat, symlink, unlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import test from "node:test";
@@ -408,17 +408,23 @@ test("symlinked managed targets remain conflicts even when their content matches
   assert.equal((await lstat(target)).isSymbolicLink(), false);
   assert.equal(await readFile(external, "utf8"), content);
 });
-
 test("install serializes concurrent same-target transactions across distinct state paths", async (t) => {
   const setup = await fixture(t);
   const secondStatePath = join(setup.root, "other-state", "model-resolution.json");
-  const targetLockPath = join(dirname(setup.targetDir), `.${basename(setup.targetDir)}.superloopy-managed-fleet`);
+  const aliasRoot = join(setup.root, "target-alias");
+  await symlink(setup.root, aliasRoot, process.platform === "win32" ? "junction" : "dir");
+  const aliasTarget = join(aliasRoot, basename(setup.targetDir));
+  const targetLockPaths = new Set([
+    join(dirname(setup.targetDir), `.${basename(setup.targetDir)}.superloopy-managed-fleet`),
+    join(dirname(aliasTarget), `.${basename(aliasTarget)}.superloopy-managed-fleet`),
+    join(await realpath(setup.root), `.${basename(setup.targetDir)}.superloopy-managed-fleet`)
+  ]);
   const lockCalls = [];
   let activeTargetLocks = 0;
   let maxActiveTargetLocks = 0;
   const withFileLock = async (path, operation) => {
     lockCalls.push(path);
-    if (path !== targetLockPath) return operation();
+    if (!targetLockPaths.has(path)) return operation();
     activeTargetLocks += 1;
     maxActiveTargetLocks = Math.max(maxActiveTargetLocks, activeTargetLocks);
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -430,25 +436,22 @@ test("install serializes concurrent same-target transactions across distinct sta
   };
   const [first, second] = await Promise.all([
     installCompatibility(setup, { withFileLock }),
-    installCompatibility(setup, { withFileLock, statePath: secondStatePath })
+    installCompatibility(setup, { withFileLock, statePath: secondStatePath }, ["--compat", "--target", aliasTarget])
   ]);
   assert.equal(first.ok, true);
   assert.equal(second.ok, true);
   assert.equal(maxActiveTargetLocks, 1);
-  assert.equal(lockCalls.filter((path) => path === targetLockPath).length, 2);
+  assert.equal(lockCalls.filter((path) => targetLockPaths.has(path)).length, 2);
   assert.equal(lockCalls.length, 4);
 });
-
 test("force replaces a foreign file and options.force overrides argv", async (t) => {
   const setup = await fixture(t);
   await mkdir(setup.targetDir, { recursive: true });
   const target = join(setup.targetDir, "franky.toml");
   await writeFile(target, "foreign\n", "utf8");
-
   const blocked = await installCompatibility(setup, { force: false }, ["--target", setup.targetDir, "--force", "--compat"]);
   assert.equal(blocked.ok, false);
   assert.equal(await readFile(target, "utf8"), "foreign\n");
-
   const forced = await installCompatibility(setup, { force: true }, ["--target", setup.targetDir, "--compat"]);
   assert.equal(forced.ok, true);
   assert.equal(forced.agents.find(({ name }) => name === "franky").status, "updated");
