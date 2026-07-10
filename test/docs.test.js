@@ -60,6 +60,8 @@ test("public docs describe real marketplace install and bootstrap", async () => 
   assert.match(readme, /codex plugin marketplace upgrade beefiker/);
   assert.match(readme, /repair reinstall.*codex plugin add superloopy@beefiker/is);
   assert.match(readme, /hooks.*Modified/s);
+  assert.match(readme, /SessionStart.*automatically reconciles.*wrapper.*agents.*routing/is);
+  assert.doesNotMatch(readme, /following approved session.*Then run `superloopy doctor`/is);
   assert.doesNotMatch(readme, /Built on the Codex marketplace bootstrap shape/i);
   assert.doesNotMatch(readme, /Restart Codex twice/i);
   assert.match(readme, /Restart Codex after installing the plugin/);
@@ -91,6 +93,7 @@ test("agent install guide gives host-specific marketplace flows", async () => {
   assert.match(install, /\/plugin install superloopy@beefiker/);
   assert.match(install, /node "\$\{CLAUDE_PLUGIN_ROOT\}\/src\/cli\.js" doctor --json/);
   assert.match(install, /Do not add dependencies/);
+  assert.match(install, /no (?:Superloopy )?migration command is required/i);
 });
 
 test("README locales are discoverable and do not point at removed PDF manuals", async () => {

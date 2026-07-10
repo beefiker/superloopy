@@ -153,7 +153,7 @@ codex plugin marketplace upgrade beefiker
 
 Superloopy checks for updates on `SessionStart`. Marketplace installs are Codex-managed, so Superloopy never starts an `npx` self-update for them; when a newer version is detected, it tells you to run the marketplace upgrade and re-approve modified hooks.
 
-Restart Codex after the upgrade. If hooks show up as Modified, approve them; the following approved session reruns the `SessionStart` bootstrap on the new version. Then run `superloopy doctor`.
+Restart Codex after the upgrade. If hooks show up as Modified, approve them; the following approved `SessionStart` automatically reconciles the generated wrapper, all six agents, and model-routing state from the new plugin version. No Superloopy migration command is required. If definitions changed, follow only the Codex restart notice so the host reloads them.
 
 If the plugin still looks stale or degraded after that, do a repair reinstall from the refreshed marketplace:
 

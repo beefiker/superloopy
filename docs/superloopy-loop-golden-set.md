@@ -475,13 +475,14 @@ Total: 100 points.
 | `test/loop-gates.test.js` | `npm test`. | Must cover gate, report, trace, check, review, finish, and checkpoint behavior. |
 | `test/loop.test.js` | `npm test`. | Must cover core lifecycle, evidence recording, steering, and command capture. |
 | `test/model-catalog.test.js` | `npm test`. | Must cover bounded read-only `model/list` pagination, normalization, timeout, failure sanitization, stubborn-child TERM-to-KILL cleanup, and the absence of thread/turn/prompt methods. |
-| `test/legacy-agent-migration.test.js` | `npm test`. | Must prove the six owned legacy files migrate without force, one owned-file edit blocks every write, and unrelated personal agent names remain untouched. |
+| `test/legacy-agent-migration.test.js` | `npm test`. | Must prove the six owned legacy files migrate without force, edited/partial/mixed/symlinked fleets block every write, and unrelated personal agent names remain untouched. |
 | `test/model-install.test.js` | `npm test`. | Must cover policy upgrades, locks, commit-time edits, symlinks, rollback, force, and no partial fleet/state writes. |
 | `test/model-resolution-cache.test.js` | `npm test`. | Must cover 24-hour reuse, every refresh cause, deterministic compatibility, unknown preservation/first-install fallback, manifest validation, and state paths. |
 | `test/model-resolution.test.js` | `npm test`. | Must prove ordered complete tuple resolution, profile-local GPT-5.5 compatibility, no-candidate failure, and strict policy validation. |
 | `test/plugin.test.js` | `npm test`. | Must verify plugin manifest, hook route integrity, and packaged skill metadata. |
 | `test/pre-tool-use.test.js` | `npm test`. | Must verify Superloopy blocks native complete status until aggregate completion is real. |
 | `test/report.test.js` | `npm test`. | Must verify report artifacts remain portable and guide-backed. |
+| `test/session-start-migration.test.js` | `npm test`. | Must prove approved SessionStart automatically migrates an exact legacy fleet, repairs a stale generated wrapper, stays silent and query-free when fresh, and preserves conflicts without prescribing force or a migration command. |
 | `test/subagent-receipt.test.js` | `npm test`. | Must prove the attempt cap counts without agent_id and records a ledger signal on exhaustion. |
 | `test/sync-version.test.js` | `npm test`. | Must prove package metadata, the lockfile root, both host plugin manifests, and the Claude marketplace entry are stamped from one release version. |
 | `test/visual-diff.test.js` | `npm test`. | Must verify PNG encode/decode round-trip and diff scoring, hotspot ranking, alpha, and dimension behavior. |
