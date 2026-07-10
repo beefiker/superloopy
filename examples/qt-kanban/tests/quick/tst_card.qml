@@ -144,6 +144,28 @@ TestCase {
         verify(findChild(focusedOnlyCard, "focusRing").visible)
     }
 
+    function test_focus_ring_only_tracks_keyboard_visual_focus() {
+        const card = createCard("task-define-goals")
+        const interaction = findChild(card, "cardInteraction")
+        const focusRing = findChild(card, "focusRing")
+        verify(interaction)
+        verify(focusRing)
+
+        interaction.forceActiveFocus(Qt.MouseFocusReason)
+        tryVerify(function() { return interaction.activeFocus })
+        verify(!interaction.visualFocus)
+        compare(card.visualState, "normal")
+        verify(!focusRing.visible)
+
+        const keyboardCard = createCard("task-audience-research")
+        const keyboardInteraction = findChild(keyboardCard, "cardInteraction")
+        const keyboardFocusRing = findChild(keyboardCard, "focusRing")
+        keyboardInteraction.forceActiveFocus(Qt.TabFocusReason)
+        tryVerify(function() { return keyboardInteraction.visualFocus })
+        compare(keyboardCard.visualState, "keyboardFocus")
+        verify(keyboardFocusRing.visible)
+    }
+
     function test_selected_outline_yields_to_drag_and_disabled_states() {
         const card = createCard("task-build-landing")
         const selection = findChild(card, "selectionOutline")
