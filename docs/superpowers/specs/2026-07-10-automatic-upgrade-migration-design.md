@@ -35,13 +35,15 @@ On every approved Codex `SessionStart`, the hook must:
 1. Execute bootstrap from the currently loaded plugin root, independent of the installed wrapper.
 2. Repoint a recognized generated Superloopy wrapper to the current plugin CLI. Foreign wrappers remain conflicts.
 3. Resolve the current model policy. Reuse a fresh valid resolution; query `model/list` only under the existing cache-expiry, policy-change, target-change, or missing-state rules.
-4. Preflight all six owned agent names before any mutation.
+4. Preflight all six owned agent names before modifying any agent file or routing state.
 5. Automatically adopt a complete exact legacy fleet, including LF/CRLF-equivalent release files.
 6. Automatically upgrade a complete managed fleet when its prior state and hashes prove ownership.
 7. Commit all changed agent files and routing state transactionally. A failure must not leave a mixed fleet.
 8. Stay silent when the wrapper, fleet, and state are already current.
 
 The same reconciliation behavior must be used by direct `superloopy install`, but normal marketplace users must not need that command.
+
+Wrapper reconciliation and fleet reconciliation are separate safety domains. A recognized generated wrapper may be repointed even when the agent fleet later reports a conflict: that does not modify agent data, and keeping the wrapper on the current audited CLI is necessary to diagnose the preserved conflict. The six agent files and their routing state remain an all-or-nothing transaction.
 
 ## Conflict behavior
 
