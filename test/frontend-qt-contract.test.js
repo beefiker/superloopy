@@ -6,6 +6,13 @@ import test from "node:test";
 const root = "skills/superloopy-frontend";
 const reference = (name) => `${root}/references/${name}.md`;
 
+const activationContract = `## Activation
+
+Open your reply with \`SUPERLOOPY FRONTEND ENABLED\`. If another active Superloopy mode mandates its own first line, print that first and this marker on the next line.
+
+**Explicit activation only.** Engage when the user invokes \`$superloopy:superloopy-frontend\` in Codex or \`/superloopy:superloopy-frontend\` in Claude Code, begins a visual task with a leading \`loopy\` or \`루피\`, or an already-active Superloopy loop explicitly assigns a visual subtask to this skill. A plain mention of UI, frontend, CSS, layout, responsiveness, or a visible symptom is not authorization to activate this workflow. Diagnose ownership first; backend, API, data, concurrency, infrastructure, and non-visual work stay with their primary workflow unless a visual deliverable is separately requested.
+`;
+
 async function read(path) {
   assert.equal(existsSync(path), true, `missing ${path}`);
   return readFile(path, "utf8");
@@ -13,11 +20,16 @@ async function read(path) {
 
 test("frontend skill routes web and Qt only after explicit activation", async () => {
   const skill = await read(`${root}/SKILL.md`);
+  const activation = skill.match(/## Activation\n[\s\S]*?(?=\n## )/)?.[0];
+  assert.equal(activation, activationContract, "the activation section must remain byte-for-byte unchanged");
   assert.match(skill, /Explicit activation only/i);
   assert.match(skill, /web.*Qt Widgets.*Qt Quick\/QML.*mixed/is);
   for (const name of ["web", "qt", "qt-widgets", "qt-quick", "qt-qa"]) {
     assert.match(skill, new RegExp(`references/${name}\\.md`));
   }
+  assert.match(skill, /mixed web UI and Qt.*references\/web\.md.*references\/qt\.md.*relevant one or both.*references\/qt-widgets\.md.*references\/qt-quick\.md.*references\/qt-qa\.md/is);
+  assert.match(skill, /mixed web\/Qt.*gates and evidence independently for each surface/is);
+  assert.match(skill, /web proof cannot substitute for Qt proof.*Qt proof cannot substitute for web proof/is);
   assert.doesNotMatch(skill, /Auto-activate|When in doubt/i);
 });
 
@@ -34,6 +46,11 @@ test("Qt common and Widgets references preserve native ownership", async () => {
   const widgets = await read(reference("qt-widgets"));
   assert.match(common, /minimum Qt version/i);
   assert.match(common, /system palette.*platform font.*accessibility/is);
+  assert.match(common, /QGuiApplication.*application defaults/is);
+  assert.match(common, /Widgets.*effective.*QPalette.*current.*QStyle/is);
+  assert.match(common, /Quick.*type that owns.*palette.*Item.*Window.*Control.*ApplicationWindow.*font.*Control.*ApplicationWindow.*Text.*selected Controls style.*implicit sizes.*Layout\.\*/is);
+  assert.match(common, /generic.*Item.*Window.*must not.*assum.*font/is);
+  assert.match(common, /pure Quick.*must not.*Qt Widgets dependency.*QStyle.*style metrics/is);
   assert.match(widgets, /native-adaptive.*branded-deterministic.*QSS/is);
   assert.match(widgets, /QSS.*QProxyStyle.*same (?:widget )?subtree/is);
   assert.match(widgets, /QStyledItemDelegate/);
@@ -54,6 +71,11 @@ test("Qt Quick and QA references enforce native validation", async () => {
   assert.match(quick, /compile-time.*static fallback.*qmldir import/is);
   assert.match(quick, /dynamic runtime fallback.*only when no static.*qmldir fallback exists/is);
   assert.match(quick, /never configure both/is);
+  assert.match(quick, /Accessible.*attached properties.*metadata.*actions/is);
+  assert.match(quick, /ordinary properties.*value.*minimumValue.*maximumValue.*stepSize/is);
+  assert.match(quick, /availability.*enabled/is);
+  assert.match(quick, /semantics.*unavailable.*standard Control.*validated custom accessibility-interface path/is);
+  assert.doesNotMatch(quick, /Accessible\.(?:value|disabled)\b/);
   assert.match(quick, /QQuickWidget.*threaded render loop/is);
   assert.match(qa, /every implementation or release-proof plan.*configure\/build.*Qt Test\/ctest.*repository lint\/static gates/is);
   assert.match(qa, /applicable commands.*run and pass/is);

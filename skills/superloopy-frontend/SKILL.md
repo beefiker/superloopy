@@ -21,6 +21,9 @@ Resolve the requested surface, existing stack, minimum Qt version, target platfo
 | Qt Widgets | [`references/qt.md`](references/qt.md), [`references/qt-widgets.md`](references/qt-widgets.md), and [`references/qt-qa.md`](references/qt-qa.md) |
 | Qt Quick/QML | [`references/qt.md`](references/qt.md), [`references/qt-quick.md`](references/qt-quick.md), and [`references/qt-qa.md`](references/qt-qa.md) |
 | mixed Qt Widgets and Qt Quick/QML | [`references/qt.md`](references/qt.md), [`references/qt-widgets.md`](references/qt-widgets.md), [`references/qt-quick.md`](references/qt-quick.md), and [`references/qt-qa.md`](references/qt-qa.md) |
+| mixed web UI and Qt | [`references/web.md`](references/web.md) plus [`references/qt.md`](references/qt.md), the relevant one or both of [`references/qt-widgets.md`](references/qt-widgets.md) and [`references/qt-quick.md`](references/qt-quick.md), and [`references/qt-qa.md`](references/qt-qa.md) |
+
+For a mixed web/Qt task, apply gates and evidence independently for each surface. Web proof cannot substitute for Qt proof, and Qt proof cannot substitute for web proof.
 
 ## Shared design gate
 
