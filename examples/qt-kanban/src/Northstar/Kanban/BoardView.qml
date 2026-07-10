@@ -6,6 +6,9 @@ import QtQuick.Controls
 Flickable {
     id: root
 
+    signal taskActivated(string taskId, Item invoker)
+    signal addTaskRequested(string columnId, Item invoker)
+
     readonly property int columnCount: 4
     readonly property real columnWidth: Math.max(
                                             Theme.columnMinimumWidth,
@@ -63,6 +66,10 @@ Flickable {
                 columnId: modelData.key
                 title: modelData.title
                 accent: modelData.accent
+                onTaskActivated: (taskId, invoker) =>
+                                 root.taskActivated(taskId, invoker)
+                onAddTaskRequested: (columnId, invoker) =>
+                                    root.addTaskRequested(columnId, invoker)
             }
         }
     }

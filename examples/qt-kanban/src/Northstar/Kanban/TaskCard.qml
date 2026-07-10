@@ -23,7 +23,7 @@ FocusScope {
                                                    : interaction.hovered ? "hovered"
                                                    : "normal"
 
-    signal activated(string taskId)
+    signal activated(string taskId, Item invoker)
 
     objectName: "taskCard-" + taskId
     implicitWidth: Theme.columnMinimumWidth
@@ -41,7 +41,7 @@ FocusScope {
     }
 
     function activate() {
-        activated(taskId)
+        activated(taskId, interaction)
     }
 
     Rectangle {

@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -15,6 +17,30 @@ Item {
     function showStatus(message) {
         statusToast.text = message
         statusTimer.restart()
+    }
+
+    function restoreFocus(item) {
+        if (!item)
+            return
+        Qt.callLater(function() {
+            item.forceActiveFocus(Qt.TabFocusReason)
+        })
+    }
+
+    function openDetailsFrom(invoker) {
+        if (drawerPersistent || TaskStore.selectedTaskId.length === 0)
+            return
+        overlayDetailDrawer.openFrom(invoker)
+    }
+
+    function openNewTask(columnId, invoker) {
+        newTaskDialog.initialColumnId = columnId
+        newTaskDialog.openFrom(invoker)
+    }
+
+    onDrawerPersistentChanged: {
+        if (drawerPersistent && overlayDetailDrawer.opened)
+            overlayDetailDrawer.close()
     }
 
     Rectangle {
@@ -45,6 +71,8 @@ Item {
             KanbanHeader {
                 objectName: "kanbanHeader"
                 Layout.fillWidth: true
+                onNewTaskRequested: invoker =>
+                                    root.openNewTask("backlog", invoker)
             }
 
             BoardView {
@@ -52,6 +80,12 @@ Item {
                 objectName: "boardView"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                onTaskActivated: (taskId, invoker) => {
+                    if (TaskStore.selectedTaskId === taskId)
+                        root.openDetailsFrom(invoker)
+                }
+                onAddTaskRequested: (columnId, invoker) =>
+                                    root.openNewTask(columnId, invoker)
             }
         }
 
@@ -64,51 +98,41 @@ Item {
             Layout.maximumWidth: root.drawerPersistent ? Theme.drawerWidth : 0
             Layout.fillHeight: true
 
-            Rectangle {
+            DetailDrawer {
+                id: persistentDetailDrawer
+                objectName: "persistentDetailDrawer"
                 anchors.fill: parent
-                color: Theme.surface
-                border.color: Theme.border
-                border.width: Theme.borderWidth
-
-                Column {
-                    anchors.centerIn: parent
-                    width: parent.width - Theme.space8 * 2
-                    spacing: Theme.space2
-
-                    Label {
-                        width: parent.width
-                        text: qsTr("Task details")
-                        color: Theme.ink
-                        font.pixelSize: Theme.sectionFontPixelSize
-                        font.weight: Theme.sectionFontWeight
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-
-                    Label {
-                        width: parent.width
-                        text: qsTr("Select a card to inspect its details")
-                        color: Theme.muted
-                        font.pixelSize: Theme.bodyFontPixelSize
-                        wrapMode: Text.Wrap
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                }
+                closeVisible: true
+                onCloseRequested: TaskStore.clearSelection()
             }
         }
     }
 
-    Popup {
-        id: overlayDrawerHost
-        objectName: "overlayDrawerHost"
+    Drawer {
+        id: overlayDetailDrawer
+        objectName: "overlayDetailDrawer"
+        property Item invokingItem: null
+
         parent: Overlay.overlay
-        x: parent ? parent.width - width : 0
-        y: 0
+        edge: Qt.RightEdge
         width: Theme.drawerWidth
         height: parent ? parent.height : root.height
         padding: 0
         modal: true
         dim: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        function openFrom(invoker) {
+            invokingItem = invoker
+            open()
+        }
+
+        onOpened: overlayDetailContent.focusFirst()
+        onClosed: {
+            const item = invokingItem
+            invokingItem = null
+            root.restoreFocus(item)
+        }
 
         Overlay.modal: Rectangle {
             color: Theme.scrim
@@ -120,17 +144,29 @@ Item {
             border.width: Theme.borderWidth
         }
 
-        contentItem: Item {
-            Label {
-                anchors.centerIn: parent
-                width: parent.width - Theme.space8 * 2
-                text: qsTr("Task details")
-                color: Theme.ink
-                font.pixelSize: Theme.sectionFontPixelSize
-                font.weight: Theme.sectionFontWeight
-                horizontalAlignment: Text.AlignHCenter
-            }
+        contentItem: DetailDrawer {
+            id: overlayDetailContent
+            objectName: "overlayDetailContent"
+            closeVisible: true
+            trapFocus: true
+            onCloseRequested: overlayDetailDrawer.close()
         }
+    }
+
+    NewTaskDialog {
+        id: newTaskDialog
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+Left"
+        enabled: TaskStore.selectedTaskId.length > 0 && !newTaskDialog.opened
+        onActivated: TaskStore.moveSelectedAdjacent(-1)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+Right"
+        enabled: TaskStore.selectedTaskId.length > 0 && !newTaskDialog.opened
+        onActivated: TaskStore.moveSelectedAdjacent(1)
     }
 
     Label {
