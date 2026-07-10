@@ -84,6 +84,20 @@ test("first managed install adopts an exact pre-managed Superloopy fleet without
   assert.equal(JSON.parse(await readFile(setup.statePath, "utf8")).selectionReason, "catalog_resolved");
 });
 
+test("legacy ownership accepts the same release files with CRLF checkout endings", async (t) => {
+  const setup = await fixture(t);
+  for (const name of SUPERLOOPY_AGENT_NAMES) {
+    const path = join(setup.targetDir, `${name}.toml`);
+    const content = await readFile(path, "utf8");
+    await writeFile(path, content.replace(/\r?\n/gu, "\r\n"), "utf8");
+  }
+
+  const result = await installAgents(setup.root, ["--target", setup.targetDir], setup.options);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.agents.map(({ status }) => status), SUPERLOOPY_AGENT_NAMES.map(() => "updated"));
+});
+
 test("legacy adoption remains all-or-conflict when one pre-managed file was edited", async (t) => {
   const setup = await fixture(t);
   const editedPath = join(setup.targetDir, "zoro.toml");

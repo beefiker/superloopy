@@ -31,7 +31,7 @@ export async function inspectLegacyAgentFleet(targetDir, manifests) {
     try {
       const stats = await lstat(path);
       if (!stats.isFile() || stats.isSymbolicLink()) return { name, kind: "foreign", sha256: null };
-      return { name, kind: "file", sha256: sha256(await readFile(path, "utf8")) };
+      return { name, kind: "file", sha256: legacyAgentSha256(await readFile(path, "utf8")) };
     } catch (error) {
       if (error?.code === "ENOENT") return { name, kind: "absent", sha256: null };
       return { name, kind: "foreign", sha256: null };
@@ -66,6 +66,6 @@ function hasExactNames(files) {
     && SUPERLOOPY_AGENT_NAMES.every((name) => Object.hasOwn(files, name));
 }
 
-function sha256(content) {
-  return createHash("sha256").update(content, "utf8").digest("hex");
+export function legacyAgentSha256(content) {
+  return createHash("sha256").update(content.replace(/\r\n/gu, "\n"), "utf8").digest("hex");
 }

@@ -3,6 +3,7 @@ import { link, lstat, mkdir, readFile, readlink, realpath, rename, unlink, write
 import { basename, dirname, join } from "node:path";
 
 import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
+import { legacyAgentSha256 } from "./legacy-agents.js";
 import { withFileLock } from "./store.js";
 
 export const MANAGED_AGENT_MARKER = "# superloopy-managed-agent v1";
@@ -208,7 +209,7 @@ function plannedStatus(file, previousFileManifest, force, legacyFleet) {
 function matchingLegacyFleet(files, manifests) {
   return manifests.find((manifest) => files.every((file) =>
     file.existingKind === "file"
-      && manifest?.files?.[file.name]?.sha256 === sha256(file.existing)
+      && manifest?.files?.[file.name]?.sha256 === legacyAgentSha256(file.existing)
   )) ?? null;
 }
 
