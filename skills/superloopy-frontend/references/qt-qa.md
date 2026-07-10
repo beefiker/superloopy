@@ -6,8 +6,13 @@ Apply this evidence gate to Qt Widgets, Qt Quick/QML, and mixed work. A successf
 
 Record and run the repository's exact commands, with the candidate revision and build directory identifiable:
 
+Every implementation or release-proof plan must explicitly name the configure/build, Qt Test/ctest, and repository lint/static gates. When an exact command is not yet known, record it as unresolved; when no relevant repository check exists, record that fact instead of omitting the gate.
+
+Before returning a plan, include a required release-gate step that says to run and pass all three. Merely inventorying the gates or marking their exact commands unresolved does not satisfy this plan requirement.
+
 - **Project configure/build:** the existing CMake, qmake, preset, or wrapper command for the real UI target.
 - **Qt Test/ctest:** the affected Qt Test executable or focused `ctest` invocation, followed by the project's required suite.
+- **Repository lint/static checks:** the existing formatter, compiler-warning, static-analysis, or other repository-defined command for the changed C++/UI scope. Add module-aware `qmllint` when QML is present; when no relevant check exists, record that fact instead of silently omitting the gate.
 - **Module-aware qmllint:** the QML module's generated lint target or `qmllint` with its real import paths and type information; an isolated file with unresolved imports is not a valid pass.
 - **Quick Test:** the project's Qt Quick Test executable or its registered test invocation, using the same QML modules and target configuration as the application.
 

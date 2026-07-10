@@ -11,6 +11,10 @@ Record one route before loading the application UI. Runtime and compile-time sel
 | Runtime | Import `QtQuick.Controls`. Apply `QQuickStyle::setStyle()`, the command-line option, environment, or configuration file **before loading any QML that imports Qt Quick Controls**. | One binary may support multiple styles; preserve user/deployment selection and its precedence. |
 | Compile-time | Explicitly import the chosen `QtQuick.Controls.<Style>` before any other Controls import and omit the generic runtime import from owned QML. | The QML compiler sees the concrete style; each executable has one compiled style, and a custom style declares its fallback. |
 
+Within the runtime route, choose exactly one selection channel already owned by the repository for the plan and implementation. Do not present `QQuickStyle::setStyle()`, command-line, environment, and configuration-file selection as competing alternatives or add a second channel; document override precedence only when the repository already supports it deliberately.
+
+Even when repository inspection is unavailable, state one provisional channel by name and do not name any alternative channel; record confirmation of repository ownership as unresolved.
+
 Compile-time imports override runtime selection. If third-party QML forces both routes, document that boundary and make the explicit style import first so fonts and palettes remain coherent; otherwise use one route throughout. Check static-build and minimum-version requirements against the repository. See [Styling Qt Quick Controls](https://doc.qt.io/qt-6/qtquickcontrols-styles.html).
 
 ## Customize without replacing the architecture

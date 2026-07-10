@@ -44,8 +44,12 @@ test("Qt Quick and QA references enforce native validation", async () => {
   const qa = await read(reference("qt-qa"));
   assert.match(quick, /style.*before.*Qt Quick Controls/is);
   assert.match(quick, /runtime.*compile-time/is);
+  assert.match(quick, /within the runtime route.*exactly one.*selection channel/is);
+  assert.match(quick, /inspection is unavailable.*one provisional channel.*do not name any alternative/is);
   assert.match(quick, /QtQuick\.Templates.*fallback/is);
   assert.match(quick, /QQuickWidget.*threaded render loop/is);
+  assert.match(qa, /every implementation or release-proof plan.*configure\/build.*Qt Test\/ctest.*repository lint\/static gates/is);
+  assert.match(qa, /before returning a plan.*required release-gate.*run and pass all three/is);
   assert.match(qa, /VISUAL_QA\.md/);
   assert.match(qa, /offscreen.*not.*native/is);
   assert.match(qa, /Lighthouse.*not.*Qt.*proof/is);
