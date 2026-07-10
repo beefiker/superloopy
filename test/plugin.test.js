@@ -158,6 +158,7 @@ test("doctor skill stays Superloopy-native instead of LazyCodex-style source dri
 
 test("plugin packages the Superloopy frontend skill with explicit activation and gates", async () => {
   const frontend = await readSkill("superloopy-frontend");
+  const web = await readFile("skills/superloopy-frontend/references/web.md", "utf8");
 
   assert.match(frontend.frontmatter, /^name: superloopy-frontend$/m);
   assert.match(frontend.frontmatter, /^description: Use only after explicit/m);
@@ -169,11 +170,22 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
   assert.match(frontend.content, /SUPERLOOPY FRONTEND ENABLED/);
   assert.match(frontend.content, /\/superloopy:superloopy-frontend/);
   assert.match(frontend.content, /DESIGN\.md/);
-  assert.match(frontend.content, /anti-slop/i);
-  assert.match(frontend.content, /real-browser visual evidence/i);
+  assert.match(frontend.content, /real rendered-surface evidence/i);
   assert.match(frontend.content, /VISUAL_QA\.md/);
   assert.match(frontend.content, /SUPERLOOPY_EVIDENCE/);
   assert.match(frontend.content, /\.superloopy\/evidence\/frontend/);
+  for (const name of ["web", "qt", "qt-widgets", "qt-quick", "qt-qa"]) {
+    assert.match(frontend.content, new RegExp(`\\]\\(references/${name}\\.md\\)`));
+  }
+
+  assert.match(web, /anti-slop/i);
+  assert.match(web, /real-browser visual evidence/i);
+  assert.match(web, /390.*768.*1280/s);
+  assert.match(web, /CSS variables/i);
+  assert.match(web, /ds-compliance\.mjs/);
+  assert.match(web, /Lighthouse/);
+  assert.match(web, /Completion checklist/i);
+  assert.match(web, /surface renders correctly in a real browser/i);
 
   const antiSlop = await readFile("skills/superloopy-frontend/references/anti-slop.md", "utf8");
   assert.match(antiSlop, /Pre-Flight checklist/i);
