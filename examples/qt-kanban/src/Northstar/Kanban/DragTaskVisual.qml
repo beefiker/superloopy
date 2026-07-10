@@ -12,6 +12,10 @@ Rectangle {
         return Drag.drop()
     }
 
+    function cancel() {
+        Drag.cancel()
+    }
+
     visible: active
     color: Theme.surface
     opacity: 0.92

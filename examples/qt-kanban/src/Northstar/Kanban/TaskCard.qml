@@ -69,6 +69,13 @@ FocusScope {
             if (active && root.dragCoordinator)
                 root.dragCoordinator.updateDrag(centroid.scenePosition)
         }
+
+        onCanceled: {
+            if (!root.dragCoordinator || !root.dragging)
+                return
+            root.dragging = false
+            root.dragCoordinator.cancelDrag()
+        }
     }
 
     Rectangle {
