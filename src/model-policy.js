@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { SUPERLOOPY_AGENT_NAMES } from "./agents.js";
+import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
 
 export const MODEL_POLICY_PATH = "docs/superloopy-model-policy.md";
 export const MODEL_POLICY_DATA_PATH = "model-policy.json";
