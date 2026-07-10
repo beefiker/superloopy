@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { access, mkdir, mkdtemp, readFile, rm, stat, unlink, utimes, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, readdir, rm, stat, unlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   bootstrapSuperloopy,
@@ -11,9 +12,10 @@ import {
   installAgents,
   SUPERLOOPY_AGENT_NAMES
 } from "../src/agents.js";
+import { commitManagedAgentFiles } from "../src/managed-agents.js";
 import { resolveModelResolutionStatePath } from "../src/model-resolution.js";
 
-const REPO_ROOT = dirname(dirname(new URL(import.meta.url).pathname));
+const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const NOW = new Date("2026-07-10T12:00:00.000Z");
 const MANAGED_MARKER = "# superloopy-managed-agent v1";
 
@@ -247,6 +249,27 @@ test("one conflict blocks every other would-write file with no partial fleet or 
   assert.equal(await readFile(zoroTarget, "utf8"), oldZoro);
   assert.equal(await exists(join(setup.targetDir, "nami.toml")), false);
   assert.equal(await readFile(setup.statePath, "utf8"), beforeState);
+});
+
+test("failed staging write cleans a partially created temporary agent file", async (t) => {
+  const setup = await fixture(t);
+  const target = join(setup.targetDir, "franky.toml");
+  let partialPath;
+
+  await assert.rejects(commitManagedAgentFiles([
+    { name: "franky", target, status: "installed", content: "managed\n" }
+  ], setup.statePath, {}, false, {
+    writeFile: async (path) => {
+      partialPath = path;
+      await writeFile(path, "partial\n", "utf8");
+      throw new Error("injected staging failure");
+    }
+  }), /injected staging failure/u);
+
+  assert.equal(await exists(partialPath), false);
+  assert.deepEqual(await readdir(setup.targetDir), []);
+  assert.equal(await exists(target), false);
+  assert.equal(await exists(setup.statePath), false);
 });
 
 test("force replaces a foreign file and options.force overrides argv", async (t) => {

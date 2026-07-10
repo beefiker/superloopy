@@ -86,6 +86,10 @@ async function runAgents(subcommand, argv, stdout, cwd) {
     return 0;
   }
   if (subcommand !== "install") throw new Error(`Unknown agents subcommand: ${subcommand}`);
+  if (hasHelpFlag(argv)) {
+    stdout.write(agentsHelp());
+    return 0;
+  }
   const result = await installAgents(cwd, argv);
   stdout.write(json ? `${JSON.stringify(result, null, 2)}\n` : formatAgentsInstallResult(result));
   return result.ok ? 0 : 1;
@@ -104,6 +108,10 @@ async function runBin(subcommand, argv, stdout, cwd) {
 }
 
 async function runInstall(argv, stdout, cwd) {
+  if (hasHelpFlag(argv)) {
+    stdout.write(installHelp());
+    return 0;
+  }
   const json = hasFlag(argv, "--json");
   const result = await bootstrapSuperloopy(cwd, argv);
   stdout.write(json ? `${JSON.stringify(result, null, 2)}\n` : formatBootstrapResult(result));
@@ -312,6 +320,22 @@ function agentsHelp() {
     "Existing identical managed files are left unchanged. Conflicting files require --force.",
     ""
   ].join("\n");
+}
+
+function installHelp() {
+  return [
+    "Usage:",
+    "  superloopy install [--bin-dir PATH] [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
+    "",
+    "Installs the Superloopy command wrapper and managed Codex agents.",
+    "Use --refresh-models to bypass a cached catalog result, or --compat for deterministic compatibility routing.",
+    "Existing conflicting files require --force.",
+    ""
+  ].join("\n");
+}
+
+function hasHelpFlag(argv) {
+  return hasFlag(argv, "--help") || hasFlag(argv, "-h");
 }
 
 function binHelp() {

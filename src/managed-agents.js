@@ -81,15 +81,16 @@ export async function preflightManagedAgentFiles(files, previousState, force) {
   };
 }
 
-export async function commitManagedAgentFiles(files, statePath, state, writeState) {
+export async function commitManagedAgentFiles(files, statePath, state, writeState, options = {}) {
+  const writeFileImpl = options.writeFile ?? writeFile;
   const changed = files.filter(({ status }) => status === "installed" || status === "updated");
   const staged = [];
   try {
     for (const file of changed) {
       await mkdir(dirname(file.target), { recursive: true });
       const path = temporarySibling(file.target);
-      await writeFile(path, file.content, { encoding: "utf8", flag: "wx" });
       staged.push({ path, target: file.target });
+      await writeFileImpl(path, file.content, { encoding: "utf8", flag: "wx" });
     }
     for (const file of staged) await rename(file.path, file.target);
   } finally {
