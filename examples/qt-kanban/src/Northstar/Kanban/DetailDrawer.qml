@@ -44,6 +44,24 @@ Control {
             moveToColumn.forceActiveFocus(Qt.TabFocusReason)
     }
 
+    function firstEnabledMoveButton() {
+        if (previousButton.enabled)
+            return previousButton
+        if (nextButton.enabled)
+            return nextButton
+        return closeButton
+    }
+
+    function lastEnabledMoveControl() {
+        if (nextButton.enabled)
+            return nextButton
+        if (previousButton.enabled)
+            return previousButton
+        if (moveToColumn.enabled)
+            return moveToColumn
+        return closeButton
+    }
+
     background: Rectangle {
         color: Theme.surface
         border.color: Theme.border
@@ -78,8 +96,10 @@ Control {
                 Accessible.name: text
                 focusPolicy: Qt.StrongFocus
                 onClicked: root.closeRequested()
-                KeyNavigation.tab: root.trapFocus ? moveToColumn : null
-                KeyNavigation.backtab: root.trapFocus ? nextButton : null
+                KeyNavigation.tab: root.trapFocus && moveToColumn.enabled
+                                   ? moveToColumn : null
+                KeyNavigation.backtab: root.trapFocus
+                                       ? root.lastEnabledMoveControl() : null
 
                 background: Rectangle {
                     color: closeButton.down ? Theme.pressed
@@ -274,7 +294,7 @@ Control {
                             TaskStore.moveTask(TaskStore.selectedTaskId,
                                                TaskStore.columnOrder[index])
                     }
-                    KeyNavigation.tab: previousButton
+                    KeyNavigation.tab: root.firstEnabledMoveButton()
                     KeyNavigation.backtab: closeButton
 
                     background: Rectangle {
@@ -299,7 +319,8 @@ Control {
                         Accessible.name: qsTr("Move task to previous column")
                         focusPolicy: Qt.StrongFocus
                         onClicked: TaskStore.moveSelectedAdjacent(-1)
-                        KeyNavigation.tab: nextButton
+                        KeyNavigation.tab: nextButton.enabled ? nextButton
+                                             : root.trapFocus ? closeButton : null
                         KeyNavigation.backtab: moveToColumn
 
                         background: Rectangle {
@@ -326,7 +347,8 @@ Control {
                         focusPolicy: Qt.StrongFocus
                         onClicked: TaskStore.moveSelectedAdjacent(1)
                         KeyNavigation.tab: root.trapFocus ? closeButton : null
-                        KeyNavigation.backtab: previousButton
+                        KeyNavigation.backtab: previousButton.enabled
+                                                 ? previousButton : moveToColumn
 
                         background: Rectangle {
                             color: !nextButton.enabled ? Theme.disabledSurface

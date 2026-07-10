@@ -12,6 +12,7 @@ Dialog {
     property string initialColumnId: "backlog"
     property bool validationAttempted: false
     readonly property bool titleValid: titleField.text.trim().length > 0
+    readonly property var priorityKeys: ["Low", "Medium", "High"]
 
     signal taskCreated(string taskId)
 
@@ -45,7 +46,7 @@ Dialog {
 
         const taskId = TaskStore.addTask(titleField.text,
                                          TaskStore.columnOrder[columnCombo.currentIndex],
-                                         priorityCombo.currentText)
+                                         priorityKeys[priorityCombo.currentIndex])
         if (taskId.length === 0)
             return
 
