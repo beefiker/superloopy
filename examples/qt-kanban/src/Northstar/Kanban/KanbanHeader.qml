@@ -1,0 +1,136 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+
+Control {
+    id: root
+
+    implicitHeight: 104
+    leftPadding: Theme.space6
+    rightPadding: Theme.space6
+    topPadding: Theme.space4
+    bottomPadding: Theme.space4
+
+    background: Rectangle {
+        color: Theme.surface
+        border.color: Theme.border
+        border.width: Theme.borderWidth
+    }
+
+    contentItem: RowLayout {
+        spacing: Theme.space3
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.minimumWidth: 176
+            spacing: Theme.space1
+
+            Label {
+                text: qsTr("Launch board")
+                color: Theme.ink
+                font.pixelSize: Theme.titleFontPixelSize
+                font.weight: Theme.titleFontWeight
+                lineHeight: Theme.titleLineHeight
+            }
+
+            Label {
+                text: qsTr("May 13 to June 7")
+                color: Theme.muted
+                font.pixelSize: Theme.metaFontPixelSize
+                font.weight: Theme.metaFontWeight
+            }
+        }
+
+        TextField {
+            id: searchField
+            objectName: "searchField"
+            Layout.preferredWidth: Math.max(176, Math.min(236, root.width * 0.22))
+            placeholderText: qsTr("Search tasks")
+            selectByMouse: true
+            color: Theme.ink
+            placeholderTextColor: Theme.muted
+            font.pixelSize: Theme.bodyFontPixelSize
+            Accessible.name: qsTr("Search tasks")
+
+            background: Rectangle {
+                color: Theme.surface
+                radius: Theme.controlRadius
+                border.color: searchField.activeFocus ? Theme.focus : Theme.controlBorder
+                border.width: searchField.activeFocus ? 2 : Theme.borderWidth
+            }
+        }
+
+        ComboBox {
+            id: priorityFilter
+            objectName: "priorityFilter"
+            Layout.preferredWidth: 128
+            model: [qsTr("All"), qsTr("High"), qsTr("Medium"), qsTr("Low")]
+            font.pixelSize: Theme.bodyFontPixelSize
+            Accessible.name: qsTr("Priority filter")
+
+            background: Rectangle {
+                color: Theme.surface
+                radius: Theme.controlRadius
+                border.color: priorityFilter.visualFocus ? Theme.focus : Theme.controlBorder
+                border.width: priorityFilter.visualFocus ? 2 : Theme.borderWidth
+            }
+        }
+
+        RowLayout {
+            spacing: -Theme.space1
+
+            Repeater {
+                model: ["MP", "EB", "LC"]
+
+                delegate: Rectangle {
+                    id: collaboratorAvatar
+
+                    required property string modelData
+                    required property int index
+
+                    Layout.preferredWidth: 30
+                    Layout.preferredHeight: 30
+                    radius: 15
+                    color: index === 0 ? "#DCE8FF"
+                                       : index === 1 ? "#E7F5ED" : "#FDECE9"
+                    border.color: Theme.surface
+                    border.width: 2
+
+                    Label {
+                        anchors.centerIn: parent
+                        text: collaboratorAvatar.modelData
+                        color: Theme.ink
+                        font.pixelSize: Theme.metaFontPixelSize
+                        font.weight: Theme.sectionFontWeight
+                    }
+                }
+            }
+        }
+
+        Button {
+            id: newTaskButton
+            objectName: "newTaskButton"
+            text: qsTr("New task")
+            icon.source: Qt.resolvedUrl("assets/icons/add.svg")
+            icon.color: Theme.cobaltContent
+            icon.width: 18
+            icon.height: 18
+            font.pixelSize: Theme.bodyFontPixelSize
+            font.weight: Theme.sectionFontWeight
+            palette.buttonText: Theme.cobaltContent
+            Accessible.name: text
+
+            background: Rectangle {
+                color: newTaskButton.enabled
+                       ? newTaskButton.down ? "#1D4ED8"
+                       : newTaskButton.hovered ? "#2F6FF0" : Theme.cobalt
+                       : Theme.disabledSurface
+                radius: Theme.controlRadius
+                border.color: newTaskButton.visualFocus ? Theme.focus : "transparent"
+                border.width: newTaskButton.visualFocus ? 2 : 0
+            }
+        }
+    }
+}

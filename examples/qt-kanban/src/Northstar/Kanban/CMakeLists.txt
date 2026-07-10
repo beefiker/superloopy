@@ -14,6 +14,9 @@ qt_add_qml_module(qtkanban_ui
     QML_FILES
         Main.qml
         KanbanView.qml
+        Sidebar.qml
+        KanbanHeader.qml
+        BoardView.qml
         Theme.qml
         TaskStore.qml
     RESOURCES
