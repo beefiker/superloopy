@@ -68,7 +68,11 @@ The loop skill is the default guardrail. A complete leading `loopy` token starts
 
 ## The crew
 
-For bigger work, Superloopy ships six optional subagents — each owns one lane (`.codex/agents/*.toml` on Codex, bundled `agents/*.md` on Claude Code). They come with the plugin (no command needed); on Codex, `superloopy agents install` just re-copies them if you ever need it. Their advisory model defaults are documented in `docs/superloopy-model-policy.md` (Codex) and `docs/superloopy-model-policy-claude.md` (Claude Code), and checked by `superloopy doctor`.
+For bigger work, Superloopy ships six optional subagents — each owns one lane. Claude Code uses the plugin-bundled `agents/*.md`. On Codex, bootstrap, `superloopy install`, and `superloopy agents install` materialize personal TOMLs under `$CODEX_HOME/agents`; model routing is resolved during that installation step.
+
+Codex calls the stable `model/list` method only when resolution state is missing, the policy version or target changed, the cache is at least 24 hours old, or `--refresh-models` is supplied. When fresh state still matches the managed files, it reuses the exact manifest without a query or state rewrite. Profiles select the first supported complete model/effort/tier tuple: `gpt-5.6-terra` / `high` / `priority` for `standard`, `gpt-5.6-sol` / `xhigh` / `priority` for `deep`, and `gpt-5.6-luna` / `low` / `fast` for `fast`. If a preferred model is unavailable, that profile uses its explicit `gpt-5.5` compatibility tuple. An unknown first probe conservatively selects policy compatibility; an unknown refresh preserves a valid existing resolution. `--compat` makes the compatibility choice deterministically without querying.
+
+Changed agent definitions require a Codex restart; an unchanged fresh manifest does not. Resolution finishes before launch, with no post-launch retry or model switch. `superloopy doctor --refresh-models` performs a read-only live comparison and does not rewrite resolution state or agent files. The policy details are in `docs/superloopy-model-policy.md` (Codex) and `docs/superloopy-model-policy-claude.md` (Claude Code).
 
 <table>
   <tr>

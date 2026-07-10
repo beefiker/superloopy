@@ -68,7 +68,9 @@ Loop skill 是默认护栏。开头的完整 `loopy` token 会启动或继续 ev
 
 ## Crew
 
-对于更大的任务，Superloopy 提供六个可选子代理，每个代理负责一条工作线（在 Codex 上是 `.codex/agents/*.toml`，在 Claude Code 上是随包提供的 `agents/*.md`）。它们随插件一起提供（无需额外命令）；在 Codex 上，如果需要重新复制，运行 `superloopy agents install` 即可。它们的建议模型默认值记录在 `docs/superloopy-model-policy.md`（Codex）和 `docs/superloopy-model-policy-claude.md`（Claude Code）中，并由 `superloopy doctor` 检查。
+对于更大的任务，Superloopy 提供六个可选子代理，每个代理负责一条工作线。Claude Code 直接使用插件内置的 `agents/*.md`。在 Codex 中，bootstrap、`superloopy install` 和 `superloopy agents install` 会把个人 TOML 写入 `$CODEX_HOME/agents`，并在此时完成模型路由解析。
+
+Codex 仅在没有有效状态、策略或目标发生变化、缓存已满 24 小时，或指定 `--refresh-models` 时调用稳定的 `model/list`；如果有效状态与 managed agent 文件仍一致，则直接复用同一份 manifest。解析会优先选择 `gpt-5.6-terra`、`gpt-5.6-sol` 和 `gpt-5.6-luna` 的完整 tuple，某个首选模型不可用时则明确选择相应的 `gpt-5.5` tuple。首次探测结果未知时会保守选择兼容配置；刷新探测结果未知时会保留现有的有效解析。`--compat` 无需查询即可确定兼容配置。agent 定义有变化时必须重启 Codex；有效 manifest 未变化时不需要。launch 后不会重试或切换 model。`superloopy doctor --refresh-models` 只做只读比较，不会改写 state 或 agent 文件。详情见 `docs/superloopy-model-policy.md` 和 `docs/superloopy-model-policy-claude.md`。
 
 <table>
   <tr>

@@ -68,7 +68,9 @@ La skill de loop es la barandilla por defecto. Un token `loopy` completo al prin
 
 ## Crew
 
-Para trabajos grandes, Superloopy incluye seis subagentes opcionales, cada uno con una única línea de trabajo (`.codex/agents/*.toml` en Codex, `agents/*.md` incluidos en Claude Code). Vienen con el plugin (no hace falta ningún comando); en Codex, `superloopy agents install` solo vuelve a copiarlos si alguna vez lo necesitas. Sus valores de modelo recomendados están documentados en `docs/superloopy-model-policy.md` (Codex) y `docs/superloopy-model-policy-claude.md` (Claude Code), y los verifica `superloopy doctor`.
+Para trabajos grandes, Superloopy incluye seis subagentes opcionales, cada uno con una única línea de trabajo. Claude Code usa los `agents/*.md` incluidos en el plugin. En Codex, bootstrap, `superloopy install` y `superloopy agents install` materializan los TOML personales en `$CODEX_HOME/agents` y resuelven allí el enrutamiento de modelos.
+
+Codex consulta el método estable `model/list` solo si falta el estado, cambió la política o el destino, la caché tiene al menos 24 horas o se usa `--refresh-models`; si el estado y los archivos gestionados siguen coincidiendo, reutiliza el mismo manifest. La resolución elige las tuplas completas de `gpt-5.6-terra`, `gpt-5.6-sol` y `gpt-5.6-luna`, y usa la tupla `gpt-5.5` correspondiente cuando un modelo preferido no está disponible. Un primer sondeo desconocido elige la compatibilidad de forma conservadora; un refresco desconocido conserva una resolución válida. `--compat` elige la compatibilidad sin consultar. Los cambios en los agentes requieren reiniciar Codex; un manifest vigente sin cambios no. No hay reintento ni cambio de modelo después del lanzamiento. `superloopy doctor --refresh-models` solo compara y no modifica archivos ni estado. Los detalles están en `docs/superloopy-model-policy.md` y `docs/superloopy-model-policy-claude.md`.
 
 <table>
   <tr>
