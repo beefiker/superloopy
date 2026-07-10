@@ -114,6 +114,29 @@ test("doctor still flags stale packaging rows in a tracked monorepo subdirectory
   assert.ok(parsed.checks.fileAudit.staleRows.includes(".gitignore"), JSON.stringify(parsed.checks.fileAudit.staleRows));
 });
 
+// Claude Code marks an actively used cached plugin version by writing `.in_use/<pid>`
+// heartbeat files into the install root so it is not garbage-collected mid-session.
+// They are host runtime state, not shipped files: the file audit must ignore them
+// instead of reporting the install as broken.
+test("doctor ignores host .in_use heartbeat files in a packed install", async () => {
+  const packed = await tempNpmPackedCopy();
+  await mkdir(join(packed, ".in_use"), { recursive: true });
+  await writeFile(join(packed, ".in_use", "12345"), '{"pid":12345,"procStart":"Fri Jul 10 07:00:03 2026"}', "utf8");
+  await writeFile(join(packed, ".in_use", "67890"), '{"pid":67890,"procStart":"Fri Jul 10 06:52:23 2026"}', "utf8");
+
+  const result = spawnSync(process.execPath, [join(packed, "src", "cli.js"), "doctor", "--json"], {
+    cwd: packed,
+    encoding: "utf8",
+    timeout: 30_000
+  });
+
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.checks.fileAudit.ok, true);
+  assert.deepEqual(parsed.checks.fileAudit.missing, []);
+});
+
 test("source checkout detection falls back safely when git is unavailable", async () => {
   const repo = await mkdtemp(join(tmpdir(), "superloopy-source-checkout-"));
   const oldPath = process.env.PATH;
