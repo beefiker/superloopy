@@ -14,6 +14,17 @@ Flickable {
                                                       * Theme.boardGutter) / columnCount))
     readonly property real boardContentWidth: columnCount * columnWidth
                                               + (columnCount - 1) * Theme.boardGutter
+    readonly property int storeRevision: TaskStore.revision
+    readonly property string filterSignature: TaskStore.query + "\u001f"
+                                              + TaskStore.priorityFilter + "\u001f"
+                                              + storeRevision
+    readonly property int visibleTaskCount: {
+        const ignoredSignature = filterSignature
+        let count = 0
+        for (const definition of columnDefinitions)
+            count += TaskStore.visibleInColumn(definition.key).length
+        return count
+    }
     readonly property var columnDefinitions: [
         { "key": "backlog", "title": qsTr("Backlog"), "accent": Theme.borderStrong },
         { "key": "ready", "title": qsTr("Ready"), "accent": Theme.cobalt },
@@ -42,67 +53,75 @@ Flickable {
         Repeater {
             model: root.columnDefinitions
 
-            delegate: Rectangle {
-                id: columnPlaceholder
+            delegate: KanbanColumn {
+                id: kanbanColumn
 
                 required property var modelData
 
                 width: root.columnWidth
                 height: root.height
-                color: Theme.canvas
+                columnId: modelData.key
+                title: modelData.title
+                accent: modelData.accent
+            }
+        }
+    }
 
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    height: Theme.space1
-                    color: columnPlaceholder.modelData.accent
+    Rectangle {
+        id: emptyBoardState
+        objectName: "emptyBoardState"
+        anchors.centerIn: parent
+        z: 4
+        visible: root.visibleTaskCount === 0
+        width: Math.min(360, root.width - Theme.space8 * 2)
+        implicitHeight: emptyContent.implicitHeight + Theme.space6 * 2
+        color: Theme.surface
+        radius: Theme.panelRadius
+        border.color: Theme.borderStrong
+        border.width: Theme.borderWidth
+
+        Column {
+            id: emptyContent
+            anchors.centerIn: parent
+            width: parent.width - Theme.space6 * 2
+            spacing: Theme.space3
+
+            Label {
+                width: parent.width
+                text: qsTr("No tasks match these filters")
+                color: Theme.ink
+                font.pixelSize: Theme.sectionFontPixelSize
+                font.weight: Theme.sectionFontWeight
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.Wrap
+            }
+
+            Label {
+                width: parent.width
+                text: qsTr("Clear search and priority to restore the board.")
+                color: Theme.muted
+                font.pixelSize: Theme.bodyFontPixelSize
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.Wrap
+            }
+
+            Button {
+                id: clearFiltersButton
+                objectName: "clearBoardFiltersButton"
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: qsTr("Clear filters")
+                Accessible.name: text
+                onClicked: {
+                    TaskStore.query = ""
+                    TaskStore.priorityFilter = "all"
                 }
 
-                Row {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: Theme.space5
-                    spacing: Theme.space2
-
-                    Label {
-                        text: columnPlaceholder.modelData.title
-                        color: Theme.ink
-                        font.pixelSize: Theme.sectionFontPixelSize
-                        font.weight: Theme.sectionFontWeight
-                    }
-
-                    Label {
-                        readonly property int storeRevision: TaskStore.revision
-
-                        text: TaskStore.countForColumn(columnPlaceholder.modelData.key)
-                        color: Theme.muted
-                        font.pixelSize: Theme.labelFontPixelSize
-                        font.weight: Theme.labelFontWeight
-                    }
-                }
-
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: 60
-                    height: 88
-                    color: Theme.surface
-                    radius: Theme.cardRadius
-                    border.color: Theme.border
-                    border.width: Theme.borderWidth
-
-                    Label {
-                        anchors.centerIn: parent
-                        width: parent.width - Theme.space6 * 2
-                        text: qsTr("Task cards load in the next step")
-                        color: Theme.muted
-                        font.pixelSize: Theme.bodyFontPixelSize
-                        wrapMode: Text.Wrap
-                        horizontalAlignment: Text.AlignHCenter
-                    }
+                background: Rectangle {
+                    color: clearFiltersButton.down ? Theme.pressed
+                           : clearFiltersButton.hovered ? Theme.hover : Theme.cobaltSoft
+                    radius: Theme.controlRadius
+                    border.color: clearFiltersButton.visualFocus ? Theme.focus : Theme.cobalt
+                    border.width: clearFiltersButton.visualFocus ? 2 : Theme.borderWidth
                 }
             }
         }

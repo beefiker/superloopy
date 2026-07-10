@@ -23,6 +23,8 @@ qt_add_qml_module(tst_qtkanban
         tst_store.qml
         tst_theme.qml
         tst_responsive.qml
+        tst_card.qml
+        tst_interactions.qml
     IMPORTS
         TARGET qtkanban_ui
 )
