@@ -13,6 +13,7 @@ import {
   renderManagedAgentFiles
 } from "./managed-agents.js";
 import { prepareCodexModelResolution, resolveModelResolutionStatePath } from "./model-resolution.js";
+import { withFileLock } from "./store.js";
 
 // Worker agents (franky/zoro/usopp/jinbe) report evidence receipts; robin is the
 // read-only auditor; nami is the read-only navigator (no receipt). All are installed so
@@ -31,6 +32,11 @@ export async function installAgents(cwd, argv, options = {}) {
   const target = resolveTargetDir(cwd, argv, env, homeDir);
   const source = options.sourceDir ?? join(REPO_ROOT, ".codex", "agents");
   const statePath = options.statePath ?? resolveModelResolutionStatePath(env, homeDir);
+  const withFileLockImpl = options.withFileLock ?? withFileLock;
+  return withFileLockImpl(statePath, () => installAgentsLocked({ argv, options, force, target, source, statePath }));
+}
+
+async function installAgentsLocked({ argv, options, force, target, source, statePath }) {
   const resolution = await prepareCodexModelResolution({
     policyRoot: options.policyRoot ?? REPO_ROOT,
     targetDir: target,
@@ -48,7 +54,7 @@ export async function installAgents(cwd, argv, options = {}) {
   if (!rendered.ok) {
     return failedAgentsInstall({ source, target, force, statePath, message: rendered.message, resolution });
   }
-  const preflight = await preflightManagedAgentFiles(rendered.files, resolution.previousState, force);
+  const preflight = await preflightManagedAgentFiles(rendered.files, resolution.previousFileManifest, force);
   const agents = preflight.files.map((file) => publicManagedAgent(file, resolution.state));
   const metadata = modelResolutionMetadata(resolution, statePath);
   if (!preflight.ok) {
@@ -260,6 +266,7 @@ export async function bootstrapSuperloopy(cwd, argv = [], options = {}) {
     clock: options.clock,
     refreshModels: options.refreshModels,
     compatibility: options.compatibility,
+    withFileLock: options.withFileLock,
     force: options.force ?? hasFlag(argv, "--force")
   });
   const ok = bin.ok && agents.ok;

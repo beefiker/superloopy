@@ -29,19 +29,20 @@ function candidate(model, model_reasoning_effort, service_tier) {
 function policyData(version = "policy-v1") {
   const profiles = {
     standard: {
-      candidates: [candidate("preferred-standard", "high", "priority"), candidate("stable-standard", "high", "priority")]
+      candidates: [candidate("preferred-standard", "high", "priority"), candidate("stable", "high", "priority")]
     },
     deep: {
-      candidates: [candidate("preferred-deep", "xhigh", "priority"), candidate("stable-deep", "xhigh", "priority")]
+      candidates: [candidate("preferred-deep", "xhigh", "priority"), candidate("stable", "xhigh", "priority")]
     },
     fast: {
-      candidates: [candidate("preferred-fast", "low", "fast"), candidate("stable-fast", "low", "fast")]
+      candidates: [candidate("preferred-fast", "low", "fast"), candidate("stable", "low", "fast")]
     }
   };
   return {
     version,
     policy: "explicit-test-policy",
     codex: {
+      compatibilityModel: "stable",
       allowed: {
         models: Object.values(profiles).flatMap(({ candidates }) => candidates.map(({ model }) => model)),
         reasoningEfforts: ["low", "high", "xhigh"],
@@ -262,9 +263,9 @@ test("compatibility override makes zero queries and uses each profile non-first 
   assert.deepEqual(
     Object.fromEntries(Object.entries(result.state.profiles).map(([name, profile]) => [name, [profile.resolvedModel, profile.reason]])),
     {
-      standard: ["stable-standard", "compatibility_fallback"],
-      deep: ["stable-deep", "compatibility_fallback"],
-      fast: ["stable-fast", "compatibility_fallback"]
+      standard: ["stable", "compatibility_fallback"],
+      deep: ["stable", "compatibility_fallback"],
+      fast: ["stable", "compatibility_fallback"]
     }
   );
   assert.deepEqual(result.state.files, {});
@@ -293,9 +294,9 @@ test("successful query can fall back only an unavailable profile", async (t) => 
   assert.equal(result.ok, true);
   assert.equal(result.state.degraded, true);
   assert.equal(result.state.profiles.standard.reason, "preferred_available");
-  assert.equal(result.state.profiles.deep.resolvedModel, "stable-deep");
+  assert.equal(result.state.profiles.deep.resolvedModel, "stable");
   assert.equal(result.state.profiles.deep.reason, "compatibility_fallback");
-  assert.equal(result.state.agents.zoro.resolvedModel, "stable-deep");
+  assert.equal(result.state.agents.zoro.resolvedModel, "stable");
   assert.equal(result.state.profiles.fast.reason, "preferred_available");
 });
 
@@ -416,7 +417,7 @@ test("unknown first query uses policy compatibility candidates without GPT-5.5 o
   assert.equal(result.state.catalogReason, "timeout");
   assert.equal(result.state.degraded, true);
   assert.deepEqual(Object.values(result.state.profiles).map(({ resolvedModel }) => resolvedModel), [
-    "stable-standard", "stable-deep", "stable-fast"
+    "stable", "stable", "stable"
   ]);
   assert.doesNotMatch(JSON.stringify(result.state), /gpt-5\.5|parent|default/u);
 });

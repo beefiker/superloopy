@@ -35,6 +35,11 @@ test("plugin manifest exposes Superloopy skills and packaged opt-in hooks", asyn
   assert.ok(plugin.interface.defaultPrompt.length <= 3);
   assert.ok(plugin.interface.defaultPrompt.every((line) => line.length <= 128));
   assert.equal(plugin.hooks.includes("./hooks/stop.json"), true);
+
+  const sessionStart = JSON.parse(await readFile("hooks/session-start.json", "utf8"));
+  assert.equal(sessionStart.hooks.SessionStart[0].hooks[0].timeout, 10);
+  const consolidated = JSON.parse(await readFile("hooks/hooks.json", "utf8"));
+  assert.equal(consolidated.hooks.SessionStart[0].hooks[0].timeout, 10);
 });
 
 test("package metadata names author and GitHub topics", async () => {
@@ -157,6 +162,8 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
   assert.match(frontend.content, /SUPERLOOPY FRONTEND ENABLED/);
   assert.match(frontend.content, /DESIGN\.md/);
   assert.match(frontend.content, /anti-slop/i);
+  assert.match(frontend.content, /real-browser visual evidence/i);
+  assert.match(frontend.content, /VISUAL_QA\.md/);
   assert.match(frontend.content, /SUPERLOOPY_EVIDENCE/);
   assert.match(frontend.content, /\.superloopy\/evidence\/frontend/);
 

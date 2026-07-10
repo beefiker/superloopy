@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import test from "node:test";
@@ -295,6 +296,58 @@ test("queryCodexModelCatalog returns a sanitized timeout and terminates the chil
   assert.equal(fake.child.stdin.writableEnded, true);
 });
 
+test("queryCodexModelCatalog escalates and waits when the child ignores SIGTERM", async () => {
+  const fake = createFakeSpawn(() => {});
+  const signals = [];
+  let exited = false;
+  fake.child.kill = (signal = "SIGTERM") => {
+    fake.child.killCalls += 1;
+    signals.push(signal);
+    if (signal === "SIGKILL") {
+      queueMicrotask(() => {
+        exited = true;
+        fake.child.emit("exit", null, signal);
+      });
+    }
+    return true;
+  };
+
+  const result = await queryCodexModelCatalog({
+    spawnImpl: fake.spawnImpl,
+    timeout: 1,
+    terminationGraceMs: 1,
+    clock: () => CHECKED_AT
+  });
+
+  assert.deepEqual(result, unknown("timeout"));
+  assert.deepEqual(signals, ["SIGTERM", "SIGKILL"]);
+  assert.equal(exited, true);
+});
+
+test("queryCodexModelCatalog does not return while a real stubborn child is alive", async () => {
+  const child = spawn(process.execPath, ["-e", "process.on('SIGTERM',()=>{});setInterval(()=>{},1000)"], {
+    stdio: ["pipe", "pipe", "pipe"]
+  });
+  const signals = [];
+  const kill = child.kill.bind(child);
+  child.kill = (signal) => {
+    signals.push(signal);
+    return kill(signal);
+  };
+
+  const result = await queryCodexModelCatalog({
+    spawnImpl: () => child,
+    timeout: 100,
+    terminationGraceMs: 25,
+    clock: () => CHECKED_AT
+  });
+
+  assert.deepEqual(result, unknown("timeout"));
+  assert.equal(child.exitCode !== null || child.signalCode !== null, true);
+  assert.equal(signals[0], "SIGTERM");
+  if (process.platform !== "win32") assert.equal(signals.at(-1), "SIGKILL");
+});
+
 test("queryCodexModelCatalog sanitizes non-zero process exits", async () => {
   const fake = createFakeSpawn(({ child }) => {
     child.stderr.write("workspace=/secret/customer auth=top-secret\n");
@@ -309,7 +362,7 @@ test("queryCodexModelCatalog sanitizes non-zero process exits", async () => {
 
   assert.deepEqual(result, unknown("process_exit"));
   assert.doesNotMatch(JSON.stringify(result), /secret|workspace|customer|auth/iu);
-  assert.equal(fake.child.killCalls, 1);
+  assert.equal(fake.child.killCalls, 0);
 });
 
 test("queryCodexModelCatalog sanitizes spawn failures", async () => {
@@ -334,9 +387,10 @@ function createFakeSpawn(onMessage) {
   child.stdout = new PassThrough();
   child.stderr = new PassThrough();
   child.killCalls = 0;
-  child.kill = () => {
+  child.kill = (signal = "SIGTERM") => {
     child.killCalls += 1;
     child.killed = true;
+    queueMicrotask(() => child.emit("exit", null, signal));
     return true;
   };
 

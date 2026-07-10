@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended when subagents are available) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Record status:** Immutable pre-implementation plan. Completion is recorded in Git history and validation evidence rather than by rewriting the original checklist.
+
 **Goal:** Prefer the approved GPT-5.6 profile tuples when Codex reports them available, otherwise install explicit GPT-5.5 compatibility tuples without any post-launch retry.
 
 **Architecture:** Keep `model-policy.json` as the only routing policy. A dependency-free app-server client obtains the stable `model/list` catalog, a pure resolver selects complete tuples, and a cached resolution manifest under `$CODEX_HOME/superloopy/` feeds an all-or-conflict managed agent installer. Doctor reads the same policy and manifest so repository defaults and personal installed agents are checked by one contract.

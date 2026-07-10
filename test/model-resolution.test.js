@@ -17,6 +17,7 @@ const AGENTS = {
 
 function codexPolicy() {
   return {
+    compatibilityModel: "gpt-5.5",
     allowed: {
       models: [
         "gpt-5.6-terra",
@@ -259,6 +260,32 @@ test("policy loader rejects malformed candidate arrays", async (t) => {
         const result = await loadModelPolicyData(cwd);
         assert.equal(result.ok, false);
         assert.match(result.message, /model policy data\.codex\.profiles\.standard\.candidates/u);
+      } finally {
+        await rm(cwd, { recursive: true, force: true });
+      }
+    });
+  }
+});
+
+test("policy loader requires the declared model in the second compatibility position", async (t) => {
+  const loadModelPolicyData = requireExport("loadModelPolicyData");
+  const cases = [
+    ["missing candidate", (data) => {
+      data.codex.profiles.standard.candidates = data.codex.profiles.standard.candidates.slice(0, 1);
+    }, /Missing compatibility candidate for Codex profile standard/u],
+    ["wrong model", (data) => {
+      data.codex.profiles.standard.candidates[1].model = "gpt-5.4";
+    }, /profiles\.standard\.candidates\.1\.model must match compatibilityModel gpt-5\.5/u]
+  ];
+  for (const [name, mutate, expected] of cases) {
+    await t.test(name, async () => {
+      const data = policyData();
+      mutate(data);
+      const cwd = await writePolicyFixture(data);
+      try {
+        const result = await loadModelPolicyData(cwd);
+        assert.equal(result.ok, false);
+        assert.match(result.message, expected);
       } finally {
         await rm(cwd, { recursive: true, force: true });
       }
