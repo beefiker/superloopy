@@ -86,6 +86,50 @@ TestCase {
         verify(board.contentWidth > board.width)
     }
 
+    function test_compact_sidebar_content_stays_within_bounds_data() {
+        return [
+            { "tag": "compact-1000", "viewWidth": 1000 },
+            { "tag": "minimum-900", "viewWidth": 900 }
+        ]
+    }
+
+    function test_compact_sidebar_content_stays_within_bounds(data) {
+        const view = createView(data.viewWidth)
+        const sidebar = findChild(view, "sidebar")
+        verify(sidebar)
+
+        const content = [
+            findChild(view, "boardButton"),
+            findChild(view, "timelineButton"),
+            findChild(view, "inboxButton"),
+            findChild(view, "teamCluster"),
+            findChild(view, "settingsButton"),
+            findChild(view, "helpButton")
+        ]
+
+        for (const item of content) {
+            verify(item)
+            tryVerify(function() { return item.width > 0 })
+            const origin = item.mapToItem(sidebar, 0, 0)
+            verify(origin.x >= sidebar.leftPadding)
+            verify(origin.x + item.width <= sidebar.width - sidebar.rightPadding)
+            verify(item.width <= sidebar.availableWidth)
+        }
+    }
+
+    function test_board_navigation_exposes_current_checked_state() {
+        const view = createView(1000)
+        const boardButton = findChild(view, "boardButton")
+        const timelineButton = findChild(view, "timelineButton")
+        verify(boardButton)
+        verify(timelineButton)
+
+        verify(boardButton.checkable)
+        verify(boardButton.checked)
+        verify(!timelineButton.checkable)
+        verify(!timelineButton.checked)
+    }
+
     function test_sidebar_unavailable_destinations_share_one_status_surface() {
         const view = createView(1300)
         const timeline = findChild(view, "timelineButton")

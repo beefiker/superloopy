@@ -21,10 +21,16 @@ Control {
 
         property bool selected: false
 
+        implicitWidth: root.compact ? icon.width
+                                    : implicitContentWidth + leftPadding + rightPadding
         implicitHeight: 42
+        Layout.minimumWidth: root.compact ? 0 : implicitWidth
         display: root.compact ? AbstractButton.IconOnly : AbstractButton.TextBesideIcon
-        spacing: Theme.space3
-        horizontalPadding: Theme.space3
+        spacing: root.compact ? 0 : Theme.space3
+        horizontalPadding: root.compact ? 0 : Theme.space3
+        checkable: selected
+        autoExclusive: selected
+        checked: selected
         font.pixelSize: Theme.bodyFontPixelSize
         font.weight: selected ? Theme.sectionFontWeight : Theme.bodyFontWeight
         icon.width: 20
@@ -127,11 +133,13 @@ Control {
         }
 
         RowLayout {
+            objectName: "teamCluster"
             Layout.alignment: Qt.AlignHCenter
+            Layout.minimumWidth: 0
             spacing: -Theme.space1
 
             Repeater {
-                model: ["MP", "EB", "LC"]
+                model: root.compact ? ["MP", "+2"] : ["MP", "EB", "LC"]
 
                 delegate: Rectangle {
                     id: teamAvatar
@@ -139,9 +147,9 @@ Control {
                     required property string modelData
                     required property int index
 
-                    Layout.preferredWidth: 30
-                    Layout.preferredHeight: 30
-                    radius: 15
+                    Layout.preferredWidth: root.compact ? 22 : 30
+                    Layout.preferredHeight: root.compact ? 22 : 30
+                    radius: width / 2
                     color: index === 0 ? "#DCE8FF"
                                        : index === 1 ? "#E7F5ED" : "#FDECE9"
                     border.color: Theme.sidebar
