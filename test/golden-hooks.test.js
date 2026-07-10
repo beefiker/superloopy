@@ -128,7 +128,7 @@ test("golden: SessionStart bootstraps from cached compatibility and then require
   });
   assert.equal(first.status, 0, first.stderr);
   const parsed = JSON.parse(first.stdout);
-  assert.match(parsed.hookSpecificOutput.additionalContext, /Superloopy bootstrap/);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /Superloopy automatic migration/);
   assert.match(parsed.hookSpecificOutput.additionalContext, /CLI wrapper: installed/);
   assert.ok(existsSync(join(binDir, process.platform === "win32" ? "superloopy.cmd" : "superloopy")));
   assert.ok(existsSync(join(codexHome, "agents", "franky.toml")));
