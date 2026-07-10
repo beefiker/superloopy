@@ -93,24 +93,25 @@ export async function runUserPromptSubmitHook(payload) {
   }
 }
 
-export async function runSessionStartHook(payload) {
+export async function runSessionStartHook(payload, options = {}) {
   if (!isRecord(payload)) return "";
   if (payload.hook_event_name !== "SessionStart") return "";
   if (typeof payload.cwd !== "string") return "";
   if (transcriptHasContextPressureMarker(payload.transcript_path)) return "";
+  const env = options.env ?? process.env;
   const contexts = [];
   try {
     // Auto-update is the Codex install-flow concern; on Claude Code updates are managed by
     // `/plugin`, so skip it there (like the bootstrap no-op) to avoid emitting Codex upgrade notices.
-    if (!isClaudeHost()) {
-      const update = await runAutoUpdateCheck({ env: process.env });
+    if (!isClaudeHost(env)) {
+      const update = await runAutoUpdateCheck({ env });
       if (update.notices.length > 0) contexts.push(update.notices.join("\n\n"));
     }
   } catch {
     // Update checks must never break the bootstrap/session context hook.
   }
   try {
-    const bootstrap = await bootstrapSuperloopy(payload.cwd);
+    const bootstrap = await bootstrapSuperloopy(payload.cwd, [], { ...options, env });
     if (bootstrapHasUserSignal(bootstrap)) {
       contexts.push(formatBootstrapHookContext(bootstrap));
     }
@@ -122,7 +123,7 @@ export async function runSessionStartHook(payload) {
       "- Run `superloopy install --json` or `node <plugin-root>/src/cli.js install --json` to retry."
     ].join("\n"));
   }
-  if (envOn(process.env, "SUPERLOOPY_AUTO_CONTEXT")) {
+  if (envOn(env, "SUPERLOOPY_AUTO_CONTEXT")) {
     const superloopyContext = await readContextInjection(payload);
     if (superloopyContext.length > 0) contexts.push(superloopyContext);
   }
