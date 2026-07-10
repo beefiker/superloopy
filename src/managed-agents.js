@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { link, lstat, mkdir, readFile, readlink, rename, unlink, writeFile } from "node:fs/promises";
+import { link, lstat, mkdir, readFile, readlink, realpath, rename, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 
 import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
@@ -11,10 +11,32 @@ const ROUTING_FIELDS = ["model", "model_reasoning_effort", "service_tier"];
 const localInstallLocks = new Map();
 
 export async function withManagedAgentInstallLocks(targetDir, statePath, operation, options = {}) {
-  const targetLockPath = join(dirname(targetDir), `.${basename(targetDir)}.superloopy-managed-fleet`);
-  const paths = [...new Set([statePath, targetLockPath])].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
+  const realpathImpl = options.realpath ?? realpath;
+  const [targetIdentity, stateIdentity] = await Promise.all([
+    canonicalizeLockIdentity(targetDir, realpathImpl),
+    canonicalizeLockIdentity(statePath, realpathImpl)
+  ]);
+  const targetLockPath = join(dirname(targetIdentity), `.${basename(targetIdentity)}.superloopy-managed-fleet`);
+  const paths = [...new Set([stateIdentity, targetLockPath])].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
   const withFileLockImpl = options.withFileLock ?? withFileLock;
   return withLocalLocks(paths, () => withCrossProcessLocks(paths, withFileLockImpl, operation));
+}
+
+async function canonicalizeLockIdentity(path, realpathImpl) {
+  let current = path;
+  const missing = [];
+  for (;;) {
+    try {
+      const existing = await realpathImpl(current);
+      return join(existing, ...missing.reverse());
+    } catch (error) {
+      if (error?.code !== "ENOENT" && error?.code !== "ENOTDIR") throw error;
+      const parent = dirname(current);
+      if (parent === current) throw error;
+      missing.push(basename(current));
+      current = parent;
+    }
+  }
 }
 
 export async function renderManagedAgentFiles(sourceDir, targetDir, resolutionState) {
@@ -118,8 +140,9 @@ export async function commitManagedAgentFiles(files, statePath, state, writeStat
     for (const file of changed) {
       await mkdir(dirname(file.target), { recursive: true });
       const path = temporarySibling(file.target);
-      staged.push({ path, target: file.target, file, backup: null, originalMoved: false, targetCreated: false });
+      staged.push({ path, target: file.target, file, backup: null, originalMoved: false, targetCreated: false, stagedIdentity: null });
       await writeFileImpl(path, file.content, { encoding: "utf8", flag: "wx" });
+      staged.at(-1).stagedIdentity = (await inspectTarget(path, options)).existingIdentity;
     }
     await assertPreflightStillCurrent(files, options);
     for (const entry of staged) {
@@ -135,7 +158,7 @@ export async function commitManagedAgentFiles(files, statePath, state, writeStat
       await linkImpl(entry.path, entry.target);
       entry.targetCreated = true;
     }
-    await assertFinalFleet(files, options);
+    await assertFinalFleet(files, staged, options);
     if (writeState) await writeStateImpl(statePath, state);
     committed = true;
   } catch (error) {
@@ -146,7 +169,13 @@ export async function commitManagedAgentFiles(files, statePath, state, writeStat
     throw error;
   } finally {
     await Promise.all(staged.map(({ path }) => unlinkImpl(path).catch(() => {})));
-    if (committed) await Promise.all(staged.map(({ backup }) => backup === null ? undefined : unlinkImpl(backup).catch(() => {})));
+    if (committed) {
+      const cleanup = await Promise.allSettled(staged
+        .filter(({ backup }) => backup !== null)
+        .map(({ backup }) => unlinkImpl(backup)));
+      const failures = cleanup.filter(({ status }) => status === "rejected").map(({ reason }) => reason);
+      if (failures.length > 0) throw new AggregateError(failures, "Managed agent backup cleanup failed.");
+    }
   }
 }
 
@@ -177,9 +206,10 @@ async function inspectTarget(path, options = {}) {
   const readlinkImpl = options.readlink ?? readlink;
   try {
     const stats = await lstatImpl(path);
-    if (stats.isSymbolicLink()) return { existingKind: "symlink", existing: await readlinkImpl(path) };
+    const existingIdentity = { dev: stats.dev, ino: stats.ino };
+    if (stats.isSymbolicLink()) return { existingKind: "symlink", existing: await readlinkImpl(path), existingIdentity };
     if (!stats.isFile()) return { existingKind: "other", existing: null };
-    return { existingKind: "file", existing: await readFileImpl(path, "utf8") };
+    return { existingKind: "file", existing: await readFileImpl(path, "utf8"), existingIdentity };
   } catch (error) {
     if (error?.code === "ENOENT") return { existingKind: "absent", existing: null };
     throw error;
@@ -196,18 +226,23 @@ async function assertPreflightStillCurrent(files, options) {
   }
 }
 
-async function assertFinalFleet(files, options) {
+async function assertFinalFleet(files, operations, options) {
+  const operationByName = new Map(operations.map((operation) => [operation.file.name, operation]));
   for (const file of files) {
     const actual = await inspectTarget(file.target, options);
     if (actual.existingKind !== "file" || actual.existing !== file.content) {
       throw new Error(`Managed agent ${file.name} target changed during commit.`);
+    }
+    const operation = operationByName.get(file.name);
+    if (operation !== undefined && !sameIdentity(actual.existingIdentity, operation.stagedIdentity)) {
+      throw new Error(`Managed agent ${file.name} inode changed during commit.`);
     }
   }
 }
 
 function preflightSnapshot(file) {
   if (file.existingKind !== undefined) {
-    return { existingKind: file.existingKind, existing: file.existing };
+    return { existingKind: file.existingKind, existing: file.existing, existingIdentity: file.existingIdentity };
   }
   if (file.status === "installed") return { existingKind: "absent", existing: null };
   if (typeof file.existing === "string") return { existingKind: "file", existing: file.existing };
@@ -215,8 +250,13 @@ function preflightSnapshot(file) {
 }
 
 function sameSnapshot(left, right) {
-  return left.existingKind === right.existingKind
-    && ((left.existingKind !== "file" && left.existingKind !== "symlink") || left.existing === right.existing);
+  if (left.existingKind !== right.existingKind) return false;
+  if ((left.existingKind === "file" || left.existingKind === "symlink") && left.existing !== right.existing) return false;
+  return right.existingIdentity === undefined || sameIdentity(left.existingIdentity, right.existingIdentity);
+}
+
+function sameIdentity(left, right) {
+  return left !== undefined && right !== undefined && left.dev === right.dev && left.ino === right.ino;
 }
 
 async function rollbackOperations(operations, options) {
@@ -225,7 +265,7 @@ async function rollbackOperations(operations, options) {
     try {
       if (operation.targetCreated) {
         const actual = await inspectTarget(operation.target, options.inspectOptions);
-        if (actual.existingKind !== "file" || actual.existing !== operation.file.content) {
+        if (actual.existingKind !== "file" || !sameIdentity(actual.existingIdentity, operation.stagedIdentity)) {
           throw new Error(`Managed agent ${operation.file.name} changed before rollback.`);
         }
         await options.unlinkImpl(operation.target);

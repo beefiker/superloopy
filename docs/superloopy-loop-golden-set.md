@@ -387,7 +387,7 @@ Total: 100 points.
 | `skills/superloopy-slides/scripts/extract-pptx.py` | Audit coverage and reviewability check. | Must remain Superloopy-native slides skill support content with no plugin runtime coupling. |
 | `skills/superloopy-slides/viewport-base.css` | Audit coverage and reviewability check. | Must remain Superloopy-native slides skill support content with no plugin runtime coupling. |
 | `src/agent-names.js` | Model resolution, managed install, and installed-policy tests. | Must expose one cycle-free six-agent inventory shared by policy validation, state validation, installation, and doctor. |
-| `src/agents.js` | `test/model-install.test.js`, `test/cli.test.js`, `test/hooks.test.js`, audit coverage. | Must hold ordered target-and-state locks across state read through state rename, materialize all six managed TOMLs, preserve conflicts unless `--force`, and require restart only when definitions change. |
+| `src/agents.js` | `test/model-install.test.js`, `test/cli.test.js`, `test/hooks.test.js`, audit coverage. | Must hold ordered canonical target/state locks across state read through state rename, materialize all six managed TOMLs, preserve conflicts unless `--force`, and require restart only when definitions change. |
 | `src/args.js` | CLI and loop tests using parsed flags/stdin/JSON. | Must parse shared CLI inputs without dependencies. |
 | `src/artifacts.js` | Gate and evidence tests. | Must reject missing, empty, symlink, outside-root, and invalid gate artifacts. |
 | `src/audit-gate-verify.js` | `test/golden-review-gate.test.js`, `test/golden-matrix-gate.test.js`. | Must re-derive and verify every cited audit verdict at completion; reject hand-written/unbound verdicts (never force-complete). |
@@ -419,7 +419,7 @@ Total: 100 points.
 | `src/installed-model-policy.js` | `test/installed-model-policy.test.js`, doctor tests. | Must read cached state and all six managed TOMLs, report absent/preferred/degraded/stale/mixed/tampered status, and keep explicit availability refresh read-only and sanitized. |
 | `src/interop.js` | `test/interop.test.js`. | Must detect a neighboring Superpowers install best-effort across both hosts, honor the `SUPERLOOPY_SUPERPOWERS` override, and never mutate state or fail a hook. |
 | `src/loop.js` | Core loop and CLI tests. | Must preserve lifecycle state, ledger appends, evidence recording, review, checkpoint, status, and steering. |
-| `src/managed-agents.js` | `test/model-install.test.js`, `test/installed-model-policy.test.js`. | Must move and verify original inodes, install staged files without replacement, restore metadata on rollback, preserve symlinks/user files unless forced, and write state last. |
+| `src/managed-agents.js` | `test/model-install.test.js`, `test/concurrency.test.js`, installed-policy tests. | Must canonicalize lock identities, verify original and staged inode identity, install without replacement, restore metadata, preserve concurrent user saves, surface backup cleanup failure, and write state last. |
 | `src/plan-trust.js` | Audit trust-gate tests. | Must fail closed: an audit re-run of a command never executed or approved on this machine must refuse without executing. |
 | `src/matrix-gate.js` | Matrix gate golden tests. | Must validate compatible matrix gate shape through Superloopy artifacts only. |
 | `src/model-catalog.js` | `test/model-catalog.test.js`. | Must use only bounded `initialize` plus paginated `model/list`, normalize complete capabilities, sanitize failures, await bounded TERM-to-KILL cleanup, and never start a thread, turn, or prompt. |
@@ -442,7 +442,7 @@ Total: 100 points.
 | `test/claude-host-wiring.test.js` | `npm test`. | Must verify the doctor Claude-host-wiring check: manifest/hooks presence, SubagentStop CLI wiring, namespaced matcher coverage, and safe handling of invalid regex/JSON. |
 | `test/cli-evidence.test.js` | `npm test`. | Must cover public evidence commands and finalization behavior end to end. |
 | `test/cli.test.js` | `npm test`. | Must cover managed Codex installs, user-file conflict/force behavior, model control help, pre-mutation help exits, symlinked execution, and existing loop smoke paths. |
-| `test/concurrency.test.js` | `npm test`. | Must prove withFileLock serializes concurrent writers, re-enters nested same-path calls, reclaims stale locks, and fails closed on timeout. |
+| `test/concurrency.test.js` | `npm test`. | Must prove shared locks serialize/reclaim/fail closed and managed rollback never deletes a same-content replacement inode or hides backup-cleanup failure. |
 | `test/crew-lines.test.js` | `npm test`. | Must prove crew completion lines are original deterministic localized presentation, pending/unknown lanes stay silent, and CLI status remains visible. |
 | `test/docs.test.js` | `npm test`. | Must keep README, skill, gate notes, design audit, and this golden set aligned with enforced behavior. |
 | `test/doctor-packed.test.js` | `npm test`. | Must prove `doctor --json` reports ok against an npm-pack-shaped root (no `.git`, `.gitignore`, or `package-lock.json`) run from an arbitrary cwd, including a root nested in a parent Git repository that ignores it. |
@@ -470,7 +470,7 @@ Total: 100 points.
 | `test/loop-gates.test.js` | `npm test`. | Must cover gate, report, trace, check, review, finish, and checkpoint behavior. |
 | `test/loop.test.js` | `npm test`. | Must cover core lifecycle, evidence recording, steering, and command capture. |
 | `test/model-catalog.test.js` | `npm test`. | Must cover bounded read-only `model/list` pagination, normalization, timeout, failure sanitization, stubborn-child TERM-to-KILL cleanup, and the absence of thread/turn/prompt methods. |
-| `test/model-install.test.js` | `npm test`. | Must cover policy-version ownership upgrades, ordered target/state locks, commit-time edits, symlinks, exact hashes, metadata-preserving rollback, force, and no partial fleet/state writes. |
+| `test/model-install.test.js` | `npm test`. | Must cover policy-version upgrades, realpath/symlink-alias target locks, commit-time edits, symlinks, exact hashes, metadata-preserving rollback, force, and no partial fleet/state writes. |
 | `test/model-resolution-cache.test.js` | `npm test`. | Must cover 24-hour reuse, every refresh cause, deterministic compatibility, unknown preservation/first-install fallback, manifest validation, and state paths. |
 | `test/model-resolution.test.js` | `npm test`. | Must prove ordered complete tuple resolution, profile-local GPT-5.5 compatibility, no-candidate failure, and strict policy validation. |
 | `test/plugin.test.js` | `npm test`. | Must verify plugin manifest, hook route integrity, and packaged skill metadata. |
