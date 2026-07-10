@@ -9,6 +9,9 @@ Flickable {
     signal taskActivated(string taskId, Item invoker)
     signal addTaskRequested(string columnId, Item invoker)
 
+    property bool dragActive: false
+    property string dragTaskId: ""
+    property Item dragSource: null
     readonly property int columnCount: 4
     readonly property real columnWidth: Math.max(
                                             Theme.columnMinimumWidth,
@@ -35,7 +38,51 @@ Flickable {
         { "key": "review", "title": qsTr("Review"), "accent": Theme.green }
     ]
 
+    function positionDragVisual(scenePosition) {
+        const localPosition = dragOverlay.mapFromItem(null, scenePosition.x,
+                                                      scenePosition.y)
+        dragVisual.x = localPosition.x - dragVisual.width / 2
+        dragVisual.y = localPosition.y - dragVisual.height / 2
+    }
+
+    function beginDrag(taskId, sourceItem, scenePosition) {
+        if (!taskId || !sourceItem)
+            return
+
+        dragTaskId = taskId
+        dragSource = sourceItem
+        dragVisual.taskId = taskId
+        dragVisual.taskTitle = TaskStore.taskById(taskId).title
+        dragVisual.width = sourceItem.width
+        dragVisual.height = sourceItem.height
+        positionDragVisual(scenePosition)
+        dragActive = true
+    }
+
+    function updateDrag(scenePosition) {
+        if (dragActive)
+            positionDragVisual(scenePosition)
+    }
+
+    function finishDrag() {
+        if (!dragActive)
+            return
+
+        const finishedTaskId = dragTaskId
+        dragVisual.drop()
+        dragActive = false
+        Qt.callLater(function() {
+            if (!root.dragActive && root.dragTaskId === finishedTaskId) {
+                root.dragTaskId = ""
+                root.dragSource = null
+                dragVisual.taskId = ""
+                dragVisual.taskTitle = ""
+            }
+        })
+    }
+
     clip: true
+    interactive: !dragActive
     contentWidth: Math.max(width, boardContentWidth)
     contentHeight: height
     flickableDirection: Flickable.HorizontalFlick
@@ -66,6 +113,7 @@ Flickable {
                 columnId: modelData.key
                 title: modelData.title
                 accent: modelData.accent
+                dragCoordinator: root
                 onTaskActivated: (taskId, invoker) =>
                                  root.taskActivated(taskId, invoker)
                 onAddTaskRequested: (columnId, invoker) =>
@@ -131,6 +179,23 @@ Flickable {
                     border.width: clearFiltersButton.visualFocus ? 2 : Theme.borderWidth
                 }
             }
+        }
+    }
+
+    Item {
+        id: dragOverlay
+        objectName: "dragOverlay"
+        parent: root
+        x: 0
+        y: 0
+        width: root.width
+        height: root.height
+        z: 20
+
+        DragTaskVisual {
+            id: dragVisual
+            objectName: "dragTaskVisual"
+            active: root.dragActive
         }
     }
 

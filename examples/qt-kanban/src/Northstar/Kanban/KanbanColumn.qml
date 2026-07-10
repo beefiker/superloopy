@@ -13,6 +13,7 @@ Item {
     required property string columnId
     required property string title
     required property color accent
+    property var dragCoordinator: null
     property var visibleTasks: []
     readonly property int visibleCount: visibleTasks.length
 
@@ -20,6 +21,10 @@ Item {
 
     function refreshVisibleTasks() {
         visibleTasks = TaskStore.visibleInColumn(columnId)
+    }
+
+    function droppedTaskId(source) {
+        return source ? source.taskId : ""
     }
 
     onColumnIdChanged: refreshVisibleTasks()
@@ -46,6 +51,21 @@ Item {
 
         function onCountChanged() {
             root.refreshVisibleTasks()
+        }
+    }
+
+    DropArea {
+        id: taskDropArea
+        objectName: "dropArea-" + root.columnId
+        anchors.fill: parent
+        keys: ["northstar-task"]
+
+        onDropped: drop => {
+            const taskId = root.droppedTaskId(drop.source)
+            if (!taskId)
+                return
+            if (TaskStore.moveTask(taskId, root.columnId))
+                drop.acceptProposedAction()
         }
     }
 
@@ -111,6 +131,7 @@ Item {
 
                         width: cardScroll.availableWidth
                         taskId: modelData.id
+                        dragCoordinator: root.dragCoordinator
                         onActivated: (activatedTaskId, invoker) => {
                             TaskStore.selectTask(activatedTaskId)
                             root.taskActivated(activatedTaskId, invoker)
