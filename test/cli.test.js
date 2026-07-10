@@ -22,6 +22,14 @@ function runCli(args, options = {}) {
   });
 }
 
+function isolatedInstallEnv(repo, overrides = {}) {
+  return {
+    ...process.env,
+    CODEX_HOME: join(repo, "codex-home"),
+    ...overrides
+  };
+}
+
 function cliPathInvocation(binPath, args, platform = process.platform) {
   if (platform !== "win32") return { command: binPath, args, options: {} };
   return {
@@ -81,8 +89,9 @@ test("CLI entrypoint runs through a symlinked bin path", { skip: process.platfor
 test("CLI agents install writes bundled custom agents to target", async () => {
   const repo = await tempRepo();
   const target = join(repo, "codex-agents");
+  const env = isolatedInstallEnv(repo);
 
-  const result = runCli(["agents", "install", "--target", target, "--json"]);
+  const result = runCli(["agents", "install", "--target", target, "--compat", "--json"], { env });
 
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
@@ -99,19 +108,20 @@ test("CLI agents install writes bundled custom agents to target", async () => {
 test("CLI agents install refuses changed files unless forced", async () => {
   const repo = await tempRepo();
   const target = join(repo, "codex-agents");
-  const first = runCli(["agents", "install", "--target", target, "--json"]);
+  const env = isolatedInstallEnv(repo);
+  const first = runCli(["agents", "install", "--target", target, "--compat", "--json"], { env });
   assert.equal(first.status, 0, first.stderr);
 
   const executorPath = join(target, "franky.toml");
   await writeFile(executorPath, "local edit\n", "utf8");
 
-  const conflict = runCli(["agents", "install", "--target", target, "--json"]);
+  const conflict = runCli(["agents", "install", "--target", target, "--compat", "--json"], { env });
   assert.equal(conflict.status, 1, conflict.stderr);
   const parsedConflict = JSON.parse(conflict.stdout);
   assert.equal(parsedConflict.ok, false);
   assert.equal(parsedConflict.conflicts[0].name, "franky");
 
-  const forced = runCli(["agents", "install", "--target", target, "--force", "--json"]);
+  const forced = runCli(["agents", "install", "--target", target, "--compat", "--force", "--json"], { env });
   assert.equal(forced.status, 0, forced.stderr);
   const restored = await readFile(executorPath, "utf8");
   assert.match(restored, /name = "franky"/);
@@ -130,7 +140,7 @@ test("CLI install writes command wrapper and bundled agents", async () => {
     PATH: `${binDir}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}`
   };
 
-  const result = runCli(["install", "--json"], { cwd: repo, env });
+  const result = runCli(["install", "--compat", "--json"], { cwd: repo, env });
 
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
@@ -148,6 +158,18 @@ test("CLI install writes command wrapper and bundled agents", async () => {
   });
   assert.equal(help.status, 0, help.stderr);
   assert.match(help.stdout, /superloopy loop <subcommand>/);
+});
+
+test("CLI install help exposes model refresh and deterministic compatibility controls", () => {
+  const top = runCli(["--help"]);
+  const agents = runCli(["agents", "help"]);
+
+  assert.equal(top.status, 0, top.stderr);
+  assert.equal(agents.status, 0, agents.stderr);
+  assert.match(top.stdout, /superloopy install .*--refresh-models.*--compat/u);
+  assert.match(top.stdout, /superloopy agents install .*--refresh-models.*--compat/u);
+  assert.match(agents.stdout, /--refresh-models/u);
+  assert.match(agents.stdout, /--compat/u);
 });
 
 test("CLI bin install updates an older generated Superloopy shim without --force", async () => {

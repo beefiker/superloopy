@@ -358,7 +358,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `skills/superloopy-slides/scripts/extract-pptx.py` | On-demand helper that extracts text, images, and notes from a .pptx for conversion. | User-invoked helper script only; no plugin runtime coupling. |
 | `skills/superloopy-slides/viewport-base.css` | Mandatory fixed 1920x1080 stage CSS copied into every generated presentation. | Design reference content embedded into generated decks only; no plugin runtime behavior. |
 | `src/agent-names.js` | Shared six-agent name inventory for policy, cached resolution, and installation modules. | Data-only extraction that prevents an ESM cycle; adds no launch or installation behavior. |
-| `src/agents.js` | Installs bundled Superloopy custom agent TOML files, the command wrapper, and the combined bootstrap used by plugin startup. | Conservative Superloopy installer; skips identical files and requires `--force` for changed local files. |
+| `src/agents.js` | Resolves and installs the managed Codex agent fleet, installs the command wrapper, and coordinates the combined bootstrap used by plugin startup. | Conservative Superloopy installer; discloses compatibility and restart state while preserving conflicts unless `--force` is explicit. |
 | `src/args.js` | Shared flag/stdin/JSON parsing helpers. | Generic Superloopy CLI utility. |
 | `src/artifacts.js` | Evidence path confinement, symlink rejection, and quality-gate dispatch. | Dispatches Superloopy review, matrix, and default gates. |
 | `src/audit-gate-verify.js` | Completion-time provenance: re-derives every cited audit verdict so the deterministic spine actually gates aggregate completion. | Superloopy-native; closes the gate-decoupling gap. |
@@ -371,7 +371,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/begin.js` | One-command entrypoint that creates a plan and starts the first goal. | Superloopy-specific ease-of-start flow. |
 | `src/capture.js` | Runs validation commands and records transcript artifacts as pass/fail evidence. | Superloopy evidence convenience layer. |
 | `src/check.js` | Non-mutating evidence preflight with summary counts, warnings, repair plan, and exact commands. | Superloopy-only strictness layer. |
-| `src/cli.js` | Single command dispatcher for install, loop, bin, agents, doctor, hook entrypoints, and handoff/fleet text output; supports symlinked bin execution. | Public doctor scan uses generic comparison paths and resolves the checked plugin root explicitly; install writes only local wrapper and agent files; crew lines remain presentation-only. |
+| `src/cli.js` | Single command dispatcher for install, loop, bin, agents, doctor, hook entrypoints, and handoff/fleet text output; supports symlinked bin execution. | Install exposes explicit model refresh and compatibility controls, writes only local wrapper/agent state, and keeps crew lines presentation-only. |
 | `src/comparison-similarity.js` | Optional copied-block scanner against a caller-provided folder. | Generic comparison; no named source coupling. |
 | `src/continuation.js` | Bounded, progress-gated Stop-hook engine that drives the loop toward evidence-backed completion and marks blocked on a cap or stall. | Superloopy-native continuation; never force-completes. |
 | `src/crew-lines.js` | Deterministic original localized one-line responses for known crew handoffs with terminal verdicts. | Output-only flavor; pending or unknown lanes stay silent and persisted handoff state is not decorated. |
@@ -385,10 +385,11 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/goals.js` | Goal parsing, seeded evidence criteria, lookup, completion guards, and artifact collection. | Original Superloopy plan model. |
 | `src/guide.js` | Computes next action, proof target, proof plan, recorded evidence, templates, blockers, and paths. | Original navigation layer with flow checklist. |
 | `src/help.js` | CLI help text with shortest evidence-backed flow and pass-artifact rule. | Superloopy-specific onboarding surface. |
-| `src/hooks.js` | Codex hook runtime for bootstrap, receipts, guide-backed context, continuation, and steering. | Superloopy hook messages, setup paths, and evidence roots. |
+| `src/hooks.js` | Codex hook runtime for bootstrap, receipts, guide-backed context, continuation, and steering. | SessionStart reuses fresh managed model state without a catalog query and surfaces compatibility or restart instructions when relevant. |
 | `src/install-flow.js` | Distinguishes marketplace, checkout, future npx-local snapshot, and unknown install states. | Prevents unsafe npx self-update when Superloopy was installed from marketplace or checkout. |
 | `src/interop.js` | Best-effort, advisory detection of a neighboring Superpowers install for coexistence routing. | Superloopy-native; read-only filesystem probe, env-overridable, never mutates state or fails a hook. |
 | `src/loop.js` | Core plan lifecycle: create, status, next, evidence, review, checkpoint, and steering. | Original `.superloopy` state machine. |
+| `src/managed-agents.js` | Renders explicit routing fields into all six bundled TOMLs, hashes exact managed content, preflights the fleet, stages replacements, and writes resolution state last. | Dependency-free managed-file boundary; conflicts and resolution/template failures make no agent or manifest changes. |
 | `src/plan-trust.js` | Trust boundary for plan-recorded commands: audit re-runs execute only commands captured locally or approved via `loop trust`; the approval ledger lives in the user home so repo contents cannot forge trust. | Superloopy-native repo-poisoning defense. |
 | `src/matrix-gate.js` | Validator for strict matrix quality gates. | Keeps compatible shape under Superloopy-native module name. |
 | `src/model-catalog.js` | Bounded read-only Codex app-server client that lists and normalizes visible model capabilities with sanitized unknown results. | Uses only initialize and paginated `model/list`; never starts a thread, turn, or prompt and never persists raw server output. |
@@ -438,6 +439,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/loop-gates.test.js` | Gate, report, trace, check, review, finish, and checkpoint tests. | Covers completion evidence flows. |
 | `test/loop.test.js` | Core lifecycle and command-capture unit tests. | Tests Superloopy state semantics. |
 | `test/model-catalog.test.js` | Protocol coverage for the bounded Codex model catalog handshake, pagination, normalization, failures, sanitization, and child cleanup. | Uses a fake spawned process only; the test suite does not access accounts, workspaces, or prompts. |
+| `test/model-install.test.js` | Managed fleet coverage for preferred and compatibility installs, exact hashes, cache reuse, refresh, conflicts, force, full preflight, structured failures, and bootstrap propagation. | Uses isolated temporary Codex homes and injected catalog results only; never reads or writes personal state or performs a live model query. |
 | `test/model-resolution-cache.test.js` | Cached resolution coverage for TTL reuse, refresh causes, compatibility selection, unknown preservation, manifest validation, and state paths. | Uses temporary synthetic policy/state fixtures and injected catalog queries only; no Codex process or personal state is touched. |
 | `test/model-resolution.test.js` | Pure resolver and policy-loader coverage for ordered complete Codex candidate tuples. | Uses synthetic normalized catalogs and temporary policy fixtures only. |
 | `test/plugin.test.js` | Plugin manifest, hook route, and packaged-skill tests. | Verifies Superloopy packaging and new skill metadata. |
@@ -450,7 +452,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 
 ## Weight Notes
 
-- Current largest source file: `src/doctor.js`, below the reviewability cap (550 lines). Keep new checks in helper modules (for example `src/interop.js` holds `checkInterop` and `src/doctor-skills.js` holds bundled skill checks) rather than growing orchestrators past the cap.
+- Current largest source file: `src/agents.js`, below the reviewability cap (550 lines). Keep managed-file mechanics in `src/managed-agents.js` and other new checks in focused helpers rather than growing orchestrators past the cap.
 - No package dependencies are added; `package.json` stays dependency-free and `superloopy doctor --json` checks that boundary.
 - Marketplace update checks are advisory and self-update only runs for a future npx-local snapshot; current marketplace and checkout installs keep their documented update commands.
 - Runtime state is ignored under `.superloopy/`; `superloopy doctor --json` verifies runtime samples are ignored and not tracked.

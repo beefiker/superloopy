@@ -291,9 +291,9 @@ function topHelp() {
   return [
     "Usage:",
     "  superloopy loop <subcommand> [args]",
-    "  superloopy install [--bin-dir PATH] [--target PATH] [--force] [--json]",
+    "  superloopy install [--bin-dir PATH] [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
     "  superloopy bin install [--bin-dir PATH] [--force] [--json]",
-    "  superloopy agents install [--target PATH] [--force] [--json]",
+    "  superloopy agents install [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
     "  superloopy doctor [--json] [--root PATH] [--comparison-path PATH]",
     "  superloopy hook session-start|pre-tool-use|stop|subagent-stop|user-prompt-submit",
     "",
@@ -304,11 +304,12 @@ function topHelp() {
 function agentsHelp() {
   return [
     "Usage:",
-    "  superloopy agents install [--target PATH] [--force] [--json]",
+    "  superloopy agents install [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
     "",
     "Installs bundled Superloopy custom agents into Codex's personal agents directory.",
     "Default target: $CODEX_HOME/agents when CODEX_HOME is set, otherwise ~/.codex/agents.",
-    "Existing identical files are left unchanged. Conflicting files require --force.",
+    "Use --refresh-models to bypass a cached catalog result, or --compat for deterministic compatibility routing.",
+    "Existing identical managed files are left unchanged. Conflicting files require --force.",
     ""
   ].join("\n");
 }
