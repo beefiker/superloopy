@@ -130,6 +130,11 @@ function prepareOptions(setup, queryModelCatalog, overrides = {}) {
   };
 }
 
+function sequenceClock(...values) {
+  let index = 0;
+  return () => values[Math.min(index++, values.length - 1)];
+}
+
 async function writeState(setup, state) {
   await mkdir(join(setup.policyRoot, "codex", "superloopy"), { recursive: true });
   await writeFile(setup.statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
@@ -255,6 +260,33 @@ test("successful query can fall back only an unavailable profile", async (t) => 
   assert.equal(result.state.profiles.fast.reason, "preferred_available");
 });
 
+test("successful live query uses the local completion clock instead of catalog checkedAt", async (t) => {
+  const catalogCheckedAtValues = [
+    new Date(NOW - MODEL_RESOLUTION_TTL_MS).toISOString(),
+    new Date(NOW + MODEL_RESOLUTION_TTL_MS).toISOString(),
+    "account=private prompt=do-not-store"
+  ];
+  for (const catalogCheckedAt of catalogCheckedAtValues) {
+    await t.test(catalogCheckedAt, async (t) => {
+      const setup = await fixture(t);
+      const completedAt = new Date(NOW + 5_000);
+      const result = await prepareCodexModelResolution(prepareOptions(setup, async () => ({
+        ok: true,
+        source: "model_list",
+        checkedAt: catalogCheckedAt,
+        models: catalogFor(setup.policy)
+      }), {
+        clock: sequenceClock(new Date(NOW), completedAt)
+      }));
+
+      assert.equal(result.ok, true);
+      assert.equal(result.state.checkedAt, completedAt.toISOString());
+      assert.notEqual(result.state.checkedAt, catalogCheckedAt);
+      assert.doesNotMatch(JSON.stringify(result.state), /account|private|prompt|do-not-store/u);
+    });
+  }
+});
+
 test("successful query with no full candidate returns a visible failure and writes nothing", async (t) => {
   const setup = await fixture(t);
   const result = await prepareCodexModelResolution(prepareOptions(setup, async () => ({
@@ -270,7 +302,8 @@ test("successful query with no full candidate returns a visible failure and writ
 
 test("unknown query preserves a valid stale state and stores only its sanitized reason", async (t) => {
   const setup = await fixture(t);
-  const attemptCheckedAt = new Date(NOW + 5_000).toISOString();
+  const completedAt = new Date(NOW + 5_000);
+  const maliciousCatalogCheckedAt = new Date(NOW + MODEL_RESOLUTION_TTL_MS).toISOString();
   const prior = persistedState(setup.policy, setup.targetDir, {
     checkedAt: new Date(NOW - MODEL_RESOLUTION_TTL_MS - 1).toISOString(),
     indexes: { deep: 1 }
@@ -281,22 +314,53 @@ test("unknown query preserves a valid stale state and stores only its sanitized 
   const result = await prepareCodexModelResolution(prepareOptions(setup, async () => ({
     ok: false,
     source: "model_list",
-    checkedAt: attemptCheckedAt,
+    checkedAt: maliciousCatalogCheckedAt,
     reason: "server_error",
     stderr: "token=do-not-store",
     raw: { account: "private" }
-  })));
+  }), {
+    clock: sequenceClock(new Date(NOW), completedAt)
+  }));
 
   assert.equal(result.ok, true);
   assert.equal(result.cacheStatus, "unknown_kept_cached");
   assert.deepEqual(result.state.profiles, prior.profiles);
   assert.deepEqual(result.state.agents, prior.agents);
   assert.deepEqual(result.state.files, prior.files);
-  assert.equal(result.state.checkedAt, attemptCheckedAt);
+  assert.equal(result.state.checkedAt, completedAt.toISOString());
+  assert.notEqual(result.state.checkedAt, maliciousCatalogCheckedAt);
   assert.equal(result.state.selectionReason, "probe_unknown_kept_cached");
   assert.equal(result.state.catalogReason, "server_error");
   assert.doesNotMatch(JSON.stringify(result.state), /token|private|stderr|raw/u);
   assert.equal(await readFile(setup.statePath, "utf8"), before);
+});
+
+test("backward or invalid post-query clocks cannot decrease an unknown cached timestamp", async (t) => {
+  const completionValues = [
+    new Date(NOW - (MODEL_RESOLUTION_TTL_MS * 2)),
+    new Date(Number.NaN)
+  ];
+  for (const completionValue of completionValues) {
+    await t.test(String(completionValue), async (t) => {
+      const setup = await fixture(t);
+      const prior = persistedState(setup.policy, setup.targetDir, {
+        checkedAt: new Date(NOW - MODEL_RESOLUTION_TTL_MS).toISOString()
+      });
+      await writeState(setup, prior);
+      const result = await prepareCodexModelResolution(prepareOptions(setup, async () => ({
+        ok: false,
+        source: "model_list",
+        checkedAt: new Date(NOW + MODEL_RESOLUTION_TTL_MS).toISOString(),
+        reason: "timeout"
+      }), {
+        clock: sequenceClock(new Date(NOW), completionValue)
+      }));
+
+      assert.equal(result.ok, true);
+      assert.equal(result.state.checkedAt, new Date(NOW).toISOString());
+      assert.ok(Date.parse(result.state.checkedAt) >= Date.parse(prior.checkedAt));
+    });
+  }
 });
 
 test("unknown first query uses policy compatibility candidates without GPT-5.5 or inheritance", async (t) => {
@@ -391,4 +455,38 @@ test("a valid state checked at exact now is fresh", async (t) => {
   assert.equal(result.ok, true);
   assert.equal(result.cacheStatus, "fresh");
   assert.equal(queries, 0);
+});
+
+test("initial clock accepts Date's boundary and rejects finite values outside it", async (t) => {
+  const maximumDateMs = 8_640_000_000_000_000;
+  await t.test("maximum boundary", async (t) => {
+    const setup = await fixture(t);
+    const result = await prepareCodexModelResolution(prepareOptions(setup, async () => {
+      throw new Error("compatibility must not query");
+    }, {
+      compatibility: true,
+      clock: () => maximumDateMs
+    }));
+
+    assert.equal(result.ok, true);
+    assert.equal(result.state.checkedAt, new Date(maximumDateMs).toISOString());
+  });
+
+  await t.test("outside boundary", async (t) => {
+    const setup = await fixture(t);
+    class OutOfRangeDate extends Date {
+      getTime() {
+        return maximumDateMs + 1;
+      }
+    }
+    let result;
+    await assert.doesNotReject(async () => {
+      result = await prepareCodexModelResolution(prepareOptions(setup, async () => {
+        throw new Error("invalid clock must not query");
+      }, {
+        clock: () => new OutOfRangeDate(0)
+      }));
+    });
+    assert.deepEqual(result, { ok: false, message: "Model resolution clock returned an invalid time." });
+  });
 });
