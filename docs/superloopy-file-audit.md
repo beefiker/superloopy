@@ -390,6 +390,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/loop.js` | Core plan lifecycle: create, status, next, evidence, review, checkpoint, and steering. | Original `.superloopy` state machine. |
 | `src/plan-trust.js` | Trust boundary for plan-recorded commands: audit re-runs execute only commands captured locally or approved via `loop trust`; the approval ledger lives in the user home so repo contents cannot forge trust. | Superloopy-native repo-poisoning defense. |
 | `src/matrix-gate.js` | Validator for strict matrix quality gates. | Keeps compatible shape under Superloopy-native module name. |
+| `src/model-catalog.js` | Bounded read-only Codex app-server client that lists and normalizes visible model capabilities with sanitized unknown results. | Uses only initialize and paginated `model/list`; never starts a thread, turn, or prompt and never persists raw server output. |
 | `src/model-policy.js` | Doctor helper that reads `model-policy.json`, checks the Codex model-policy doc + agent TOML defaults, and checks the Claude model-policy doc + `agents/*.md` model frontmatter. | Advisory policy only; never treats model choice as proof or relies on host parent/default inheritance. |
 | `src/plan-summary.js` | Compact derived progress summary. | Superloopy-only helper. |
 | `src/pre-tool-use.js` | PreToolUse guard for malformed `create_goal` calls and premature native `update_goal` completion. | Uses Superloopy plan completion as the authority before native goal completion. |
@@ -434,6 +435,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/interop.test.js` | Tests Superpowers detection (override, filesystem, both hosts), the doctor interop check, and coexistence routing in loop guidance. | Tests Superloopy-native coexistence behavior only. |
 | `test/loop-gates.test.js` | Gate, report, trace, check, review, finish, and checkpoint tests. | Covers completion evidence flows. |
 | `test/loop.test.js` | Core lifecycle and command-capture unit tests. | Tests Superloopy state semantics. |
+| `test/model-catalog.test.js` | Protocol coverage for the bounded Codex model catalog handshake, pagination, normalization, failures, sanitization, and child cleanup. | Uses a fake spawned process only; the test suite does not access accounts, workspaces, or prompts. |
 | `test/model-resolution.test.js` | Pure resolver and policy-loader coverage for ordered complete Codex candidate tuples. | Uses synthetic normalized catalogs and temporary policy fixtures only. |
 | `test/plugin.test.js` | Plugin manifest, hook route, and packaged-skill tests. | Verifies Superloopy packaging and new skill metadata. |
 | `test/pre-tool-use.test.js` | Focused unit tests for native goal-tool lifecycle guards. | Prevents premature native completion while Superloopy state is incomplete. |
