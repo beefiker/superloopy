@@ -159,40 +159,56 @@ test("frontend discovery rows publish routed web and Qt evidence", async () => {
   const locales = [
     {
       file: "README.md",
-      webEvidence: /browser evidence for web/i,
-      qtEvidence: /native rendered-application evidence for Qt/i
+      invocation: "You explicitly invoke Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend`, or start a visual task with a leading `loopy`/`루피`. Plain UI mentions do not activate it.",
+      webEvidence: /for web,.*browser evidence/i,
+      qtEvidence: /for Qt,.*native rendered-application evidence/i,
+      scopedPreflight: /for web, the anti-slop pre-flight[^|]*for Qt, the Qt pre-flight/i
     },
     {
       file: "README.ko.md",
+      invocation: "Codex에서 `$superloopy:superloopy-frontend`, Claude Code에서 `/superloopy:superloopy-frontend`를 직접 호출하거나, 선행 `loopy`/`루피`로 시각 작업을 시작할 때. UI를 언급하기만 해서는 켜지지 않습니다.",
       webEvidence: /웹.*브라우저.*근거/u,
-      qtEvidence: /Qt.*네이티브.*애플리케이션.*렌더링.*근거/u
+      qtEvidence: /Qt.*네이티브.*애플리케이션.*렌더링.*근거/u,
+      scopedPreflight: /웹은 anti-slop pre-flight[^|]*Qt는 Qt pre-flight/u
     },
     {
       file: "README.ja.md",
+      invocation: "Codex で `$superloopy:superloopy-frontend`、Claude Code で `/superloopy:superloopy-frontend` を明示的に呼び出すか、先頭の `loopy`/`루피` で視覚タスクを始めるとき。UI への単なる言及では起動しません。",
       webEvidence: /Web.*ブラウザー.*証拠/u,
-      qtEvidence: /Qt.*ネイティブアプリ.*レンダリング.*証拠/u
+      qtEvidence: /Qt.*ネイティブアプリ.*レンダリング.*証拠/u,
+      scopedPreflight: /Web は anti-slop の事前チェック[^|]*Qt は Qt の事前チェック/u
     },
     {
       file: "README.zh-CN.md",
+      invocation: "在 Codex 中显式调用 `$superloopy:superloopy-frontend`，或在 Claude Code 中调用 `/superloopy:superloopy-frontend`，也可用开头的 `loopy`/`루피` 启动可视化任务。仅提到 UI 不会激活它。",
       webEvidence: /Web.*浏览器证据/u,
-      qtEvidence: /Qt.*原生应用渲染证据/u
+      qtEvidence: /Qt.*原生应用渲染证据/u,
+      scopedPreflight: /Web 使用 anti-slop 预检[^|]*Qt 使用 Qt 预检/u
     },
     {
       file: "README.es.md",
-      webEvidence: /evidencia del navegador para web/i,
-      qtEvidence: /aplicación nativa renderizada para Qt/i
+      invocation: "Invocas `$superloopy:superloopy-frontend` en Codex o `/superloopy:superloopy-frontend` en Claude Code, o inicias una tarea visual con `loopy`/`루피` al principio. Una simple mención de UI no la activa.",
+      webEvidence: /para web,.*evidencia del navegador/i,
+      qtEvidence: /para Qt,.*aplicación nativa renderizada/i,
+      scopedPreflight: /para web, la comprobación anti-slop previa[^|]*para Qt, la comprobación previa de Qt/i
     }
   ];
 
-  for (const { file, webEvidence, qtEvidence } of locales) {
+  for (const { file, invocation, webEvidence, qtEvidence, scopedPreflight } of locales) {
     const content = await readFile(file, "utf8");
     const row = content.split("\n").find((line) => line.startsWith("| `superloopy-frontend` |"));
     assert.ok(row, `${file} is missing the superloopy-frontend row`);
+    const cells = row.split("|").map((cell) => cell.trim());
+    assert.equal(cells[2], invocation, `${file} must preserve its complete localized invocation cell`);
     assert.match(row, /\$superloopy:superloopy-frontend/);
     assert.match(row, /\/superloopy:superloopy-frontend/);
     assert.match(row, /loopy.*루피/u);
     assert.match(row, webEvidence);
     assert.match(row, qtEvidence);
+    assert.match(row, scopedPreflight, `${file} must scope anti-slop to web and Qt pre-flight to Qt`);
+    assert.doesNotMatch(row, /for web[^|]*browser evidence for web|for Qt[^|]*evidence for Qt|para web[^|]*evidencia del navegador para web|para Qt[^|]*aplicación nativa renderizada para Qt/i);
+    assert.equal(row.match(/\$superloopy:superloopy-frontend/g)?.length, 1, `${file} must preserve the Codex invocation once`);
+    assert.equal(row.match(/\/superloopy:superloopy-frontend/g)?.length, 1, `${file} must preserve the Claude invocation once`);
   }
 });
 
