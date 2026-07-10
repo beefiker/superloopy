@@ -24,6 +24,16 @@ TestCase {
         return view
     }
 
+    function init() {
+        Theme.baseFontPixelSize = 13
+        Theme.motionEnabled = true
+    }
+
+    function cleanup() {
+        Theme.baseFontPixelSize = 13
+        Theme.motionEnabled = true
+    }
+
     function test_breakpoints_data() {
         return [
             { "tag": "persistent-1600", "viewWidth": 1600,
@@ -144,5 +154,79 @@ TestCase {
 
         inbox.clicked()
         compare(status.text, "Inbox is not available in this demo")
+    }
+
+    function test_rtl_mirrors_shell_columns_and_directional_controls() {
+        const view = createTemporaryObject(viewComponent, testCase, {
+            "width": 1600,
+            "rightToLeft": true
+        })
+        verify(view)
+        waitForRendering(view)
+
+        verify(view.LayoutMirroring.enabled)
+        const sidebar = findChild(view, "sidebar")
+        const board = findChild(view, "boardView")
+        const backlog = findChild(view, "column-backlog")
+        const review = findChild(view, "column-review")
+        const drawer = findChild(view, "persistentDetailDrawer")
+        const previousButton = findChild(drawer, "movePreviousButton")
+        const nextButton = findChild(drawer, "moveNextButton")
+        verify(sidebar)
+        verify(board)
+        verify(backlog)
+        verify(review)
+        verify(previousButton)
+        verify(nextButton)
+
+        verify(sidebar.x > board.x)
+        const backlogPosition = backlog.mapToItem(board, 0, 0).x
+        const reviewPosition = review.mapToItem(board, 0, 0).x
+        verify(backlogPosition > reviewPosition,
+               "RTL column positions: backlog=" + backlogPosition
+               + ", review=" + reviewPosition)
+        verify(previousButton.mapToItem(drawer, 0, 0).x
+               > nextButton.mapToItem(drawer, 0, 0).x)
+        compare(previousButton.Accessible.name,
+                "Move task to previous column")
+        compare(nextButton.Accessible.name, "Move task to next column")
+    }
+
+    function test_enlarged_font_keeps_labels_and_targets_unclipped() {
+        Theme.baseFontPixelSize = 13 * 1.35
+        const view = createView(1000)
+        const controls = [
+            findChild(view, "boardButton"),
+            findChild(view, "searchField"),
+            findChild(view, "priorityFilter"),
+            findChild(view, "newTaskButton"),
+            findChild(view, "cardInteraction")
+        ]
+
+        for (const control of controls) {
+            verify(control)
+            verify(control.height + 0.5 >= control.implicitHeight,
+                   control.objectName + " is shorter than its implicit height")
+            verify(control.height >= 40,
+                   control.objectName + " has an undersized target")
+        }
+
+        const labels = [
+            findChild(view, "headerTitle"),
+            findChild(view, "headerDate"),
+            findChild(view, "cardTitle")
+        ]
+        for (const label of labels) {
+            verify(label)
+            verify(label.height + 0.5 >= label.contentHeight,
+                   label.objectName + " clips enlarged text")
+        }
+
+        const card = findChild(view, "taskCard-task-launch-readiness-review")
+        const content = findChild(card, "cardContent")
+        verify(card)
+        verify(content)
+        verify(content.y + content.height + Theme.cardPadding
+               <= card.height + 0.5)
     }
 }

@@ -30,6 +30,7 @@ Control {
             spacing: Theme.space1
 
             Label {
+                objectName: "headerTitle"
                 text: qsTr("Launch board")
                 color: Theme.ink
                 font.pixelSize: Theme.titleFontPixelSize
@@ -38,6 +39,7 @@ Control {
             }
 
             Label {
+                objectName: "headerDate"
                 text: qsTr("May 13 to June 7")
                 color: Theme.muted
                 font.pixelSize: Theme.metaFontPixelSize
@@ -48,6 +50,7 @@ Control {
         TextField {
             id: searchField
             objectName: "searchField"
+            Layout.minimumHeight: 40
             Layout.preferredWidth: Math.max(176, Math.min(236, root.width * 0.22))
             placeholderText: qsTr("Search tasks")
             text: TaskStore.query
@@ -69,6 +72,7 @@ Control {
         ComboBox {
             id: priorityFilter
             objectName: "priorityFilter"
+            Layout.minimumHeight: 40
             Layout.preferredWidth: 128
             model: [qsTr("All"), qsTr("High"), qsTr("Medium"), qsTr("Low")]
             currentIndex: {
@@ -127,6 +131,7 @@ Control {
         Button {
             id: newTaskButton
             objectName: "newTaskButton"
+            Layout.minimumHeight: 40
             text: qsTr("New task")
             icon.source: Qt.resolvedUrl("assets/icons/add.svg")
             icon.color: Theme.cobaltContent

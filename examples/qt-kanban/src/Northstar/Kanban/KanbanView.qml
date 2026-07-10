@@ -8,11 +8,15 @@ Item {
     id: root
     objectName: "kanbanView"
 
+    property bool rightToLeft: Qt.locale().textDirection === Qt.RightToLeft
     readonly property int sidebarWidth: width < Theme.compactSidebarBreakpoint
                                         ? Theme.sidebarCompact : Theme.sidebarWide
     readonly property bool drawerPersistent: width >= Theme.persistentDrawerBreakpoint
     readonly property bool drawerOverlay: !drawerPersistent
     readonly property real boardContentWidth: boardView.boardContentWidth
+
+    LayoutMirroring.enabled: rightToLeft
+    LayoutMirroring.childrenInherit: true
 
     function showStatus(message) {
         statusToast.text = message
@@ -78,6 +82,7 @@ Item {
             BoardView {
                 id: boardView
                 objectName: "boardView"
+                rightToLeft: root.rightToLeft
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 onTaskActivated: (taskId, invoker) => {
@@ -121,6 +126,26 @@ Item {
         modal: true
         dim: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        enter: Transition {
+            NumberAnimation {
+                property: "position"
+                from: 0
+                to: 1
+                duration: Theme.transitionDuration
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        exit: Transition {
+            NumberAnimation {
+                property: "position"
+                from: 1
+                to: 0
+                duration: Theme.transitionDuration
+                easing.type: Easing.OutCubic
+            }
+        }
 
         function openFrom(invoker) {
             invokingItem = invoker

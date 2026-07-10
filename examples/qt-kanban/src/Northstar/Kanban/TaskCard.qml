@@ -41,6 +41,17 @@ FocusScope {
         return combined.toUpperCase()
     }
 
+    function accessibleDescription(taskData) {
+        if (!taskData)
+            return ""
+        const description = taskData.description.trim()
+        if (taskData.assignee.length === 0)
+            return description
+        if (description.length === 0)
+            return qsTr("Assignee: %1").arg(taskData.assignee)
+        return qsTr("%1 Assignee: %2").arg(description).arg(taskData.assignee)
+    }
+
     function activate() {
         activated(taskId, interaction)
     }
@@ -89,6 +100,7 @@ FocusScope {
         radius: Theme.cardRadius + 4
         border.color: Theme.focus
         border.width: 2
+        Accessible.ignored: true
     }
 
     Button {
@@ -100,7 +112,7 @@ FocusScope {
         padding: Theme.cardPadding
         focusPolicy: Qt.StrongFocus
         Accessible.name: root.task ? root.task.title : ""
-        Accessible.description: root.task ? root.task.description : ""
+        Accessible.description: root.accessibleDescription(root.task)
         Accessible.role: Accessible.Button
         Accessible.onPressAction: root.activate()
         onClicked: root.activate()
@@ -135,6 +147,7 @@ FocusScope {
                 id: titleLabel
                 objectName: "cardTitle"
                 Layout.fillWidth: true
+                Layout.minimumHeight: contentHeight
                 text: root.task ? root.task.title : ""
                 color: root.enabled ? Theme.ink : Theme.disabledInk
                 font.pixelSize: Theme.cardTitleFontPixelSize
@@ -146,6 +159,7 @@ FocusScope {
             Label {
                 objectName: "cardDescription"
                 Layout.fillWidth: true
+                Layout.minimumHeight: contentHeight
                 visible: text.length > 0
                 text: root.task ? root.task.description : ""
                 color: root.enabled ? Theme.muted : Theme.disabledInk
@@ -182,6 +196,7 @@ FocusScope {
                                : priorityLabel.text === "Medium" ? Theme.cobaltSoft
                                : Theme.neutralSoft
                         radius: Theme.controlRadius
+                        Accessible.ignored: true
                     }
                 }
 
@@ -235,6 +250,7 @@ FocusScope {
                     border.color: Theme.border
                     border.width: Theme.borderWidth
                     Accessible.name: root.task ? root.task.assignee : ""
+                    Accessible.ignored: true
 
                     Label {
                         objectName: "assigneeInitials"
@@ -259,6 +275,7 @@ FocusScope {
         radius: Theme.cardRadius
         border.color: Theme.cobalt
         border.width: 2
+        Accessible.ignored: true
     }
 
     Rectangle {
@@ -272,5 +289,6 @@ FocusScope {
         width: 3
         color: Theme.coral
         radius: Theme.cardRadius
+        Accessible.ignored: true
     }
 }
