@@ -1,9 +1,12 @@
 {
-  "version": "2026-07-08",
+  "version": "2026-07-10",
   "policy": "advisory-model-defaults-are-explicit",
   "codex": {
     "allowed": {
       "models": [
+        "gpt-5.6-terra",
+        "gpt-5.6-sol",
+        "gpt-5.6-luna",
         "gpt-5.5",
         "gpt-5.4",
         "gpt-5.4-mini",
@@ -23,19 +26,46 @@
     },
     "profiles": {
       "standard": {
-        "model": "gpt-5.5",
-        "model_reasoning_effort": "high",
-        "service_tier": "priority"
+        "candidates": [
+          {
+            "model": "gpt-5.6-terra",
+            "model_reasoning_effort": "high",
+            "service_tier": "priority"
+          },
+          {
+            "model": "gpt-5.5",
+            "model_reasoning_effort": "high",
+            "service_tier": "priority"
+          }
+        ]
       },
       "deep": {
-        "model": "gpt-5.5",
-        "model_reasoning_effort": "xhigh",
-        "service_tier": "priority"
+        "candidates": [
+          {
+            "model": "gpt-5.6-sol",
+            "model_reasoning_effort": "xhigh",
+            "service_tier": "priority"
+          },
+          {
+            "model": "gpt-5.5",
+            "model_reasoning_effort": "xhigh",
+            "service_tier": "priority"
+          }
+        ]
       },
       "fast": {
-        "model": "gpt-5.4-mini",
-        "model_reasoning_effort": "low",
-        "service_tier": "fast"
+        "candidates": [
+          {
+            "model": "gpt-5.6-luna",
+            "model_reasoning_effort": "low",
+            "service_tier": "fast"
+          },
+          {
+            "model": "gpt-5.5",
+            "model_reasoning_effort": "low",
+            "service_tier": "fast"
+          }
+        ]
       }
     },
     "agents": {
