@@ -7,6 +7,8 @@ import QtQuick.Layouts
 Control {
     id: root
 
+    signal newTaskRequested(Item invoker)
+
     implicitHeight: 104
     leftPadding: Theme.space6
     rightPadding: Theme.space6
@@ -134,6 +136,7 @@ Control {
             font.weight: Theme.sectionFontWeight
             palette.buttonText: Theme.cobaltContent
             Accessible.name: text
+            onClicked: root.newTaskRequested(newTaskButton)
 
             background: Rectangle {
                 color: newTaskButton.enabled

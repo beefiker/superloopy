@@ -19,6 +19,8 @@ qt_add_qml_module(qtkanban_ui
         BoardView.qml
         KanbanColumn.qml
         TaskCard.qml
+        DetailDrawer.qml
+        NewTaskDialog.qml
         Theme.qml
         TaskStore.qml
     RESOURCES

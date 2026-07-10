@@ -7,20 +7,47 @@ import QtQuick.Layouts
 Item {
     id: root
 
+    signal taskActivated(string taskId, Item invoker)
+    signal addTaskRequested(string columnId, Item invoker)
+
     required property string columnId
     required property string title
     required property color accent
-    readonly property int storeRevision: TaskStore.revision
-    readonly property string filterSignature: TaskStore.query + "\u001f"
-                                              + TaskStore.priorityFilter + "\u001f"
-                                              + storeRevision
-    readonly property var visibleTasks: {
-        const ignoredSignature = filterSignature
-        return TaskStore.visibleInColumn(columnId)
-    }
+    property var visibleTasks: []
     readonly property int visibleCount: visibleTasks.length
 
     objectName: "column-" + columnId
+
+    function refreshVisibleTasks() {
+        visibleTasks = TaskStore.visibleInColumn(columnId)
+    }
+
+    onColumnIdChanged: refreshVisibleTasks()
+    Component.onCompleted: refreshVisibleTasks()
+
+    Connections {
+        target: TaskStore
+
+        function onPriorityFilterChanged() {
+            root.refreshVisibleTasks()
+        }
+
+        function onQueryChanged() {
+            root.refreshVisibleTasks()
+        }
+
+        function onRevisionChanged() {
+            root.refreshVisibleTasks()
+        }
+    }
+
+    Connections {
+        target: TaskStore.tasks
+
+        function onCountChanged() {
+            root.refreshVisibleTasks()
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -84,7 +111,10 @@ Item {
 
                         width: cardScroll.availableWidth
                         taskId: modelData.id
-                        onActivated: activatedTaskId => TaskStore.selectTask(activatedTaskId)
+                        onActivated: (activatedTaskId, invoker) => {
+                            TaskStore.selectTask(activatedTaskId)
+                            root.taskActivated(activatedTaskId, invoker)
+                        }
                     }
                 }
 
@@ -97,6 +127,7 @@ Item {
                     Accessible.name: qsTr("Add task to %1").arg(root.title)
                     font.pixelSize: Theme.bodyFontPixelSize
                     font.weight: Theme.labelFontWeight
+                    onClicked: root.addTaskRequested(root.columnId, addTaskButton)
 
                     contentItem: Label {
                         text: addTaskButton.text
