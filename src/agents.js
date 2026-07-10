@@ -10,10 +10,10 @@ import {
   managedFileManifest,
   manifestsMatch,
   preflightManagedAgentFiles,
-  renderManagedAgentFiles
+  renderManagedAgentFiles,
+  withManagedAgentInstallLocks
 } from "./managed-agents.js";
 import { prepareCodexModelResolution, resolveModelResolutionStatePath } from "./model-resolution.js";
-import { withFileLock } from "./store.js";
 
 // Worker agents (franky/zoro/usopp/jinbe) report evidence receipts; robin is the
 // read-only auditor; nami is the read-only navigator (no receipt). All are installed so
@@ -32,8 +32,8 @@ export async function installAgents(cwd, argv, options = {}) {
   const target = resolveTargetDir(cwd, argv, env, homeDir);
   const source = options.sourceDir ?? join(REPO_ROOT, ".codex", "agents");
   const statePath = options.statePath ?? resolveModelResolutionStatePath(env, homeDir);
-  const withFileLockImpl = options.withFileLock ?? withFileLock;
-  return withFileLockImpl(statePath, () => installAgentsLocked({ argv, options, force, target, source, statePath }));
+  return withManagedAgentInstallLocks(target, statePath,
+    () => installAgentsLocked({ argv, options, force, target, source, statePath }), { withFileLock: options.withFileLock });
 }
 
 async function installAgentsLocked({ argv, options, force, target, source, statePath }) {
