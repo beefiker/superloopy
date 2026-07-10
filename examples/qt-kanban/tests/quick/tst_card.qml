@@ -144,6 +144,42 @@ TestCase {
         verify(findChild(focusedOnlyCard, "focusRing").visible)
     }
 
+    function test_selected_outline_yields_to_drag_and_disabled_states() {
+        const card = createCard("task-build-landing")
+        const selection = findChild(card, "selectionOutline")
+        const interaction = findChild(card, "cardInteraction")
+
+        verify(selection.visible)
+        interaction.forceActiveFocus(Qt.TabFocusReason)
+        tryVerify(function() { return interaction.activeFocus })
+        verify(selection.visible)
+
+        card.dragging = true
+        tryVerify(function() { return !selection.visible })
+        card.dragging = false
+        tryVerify(function() { return selection.visible })
+
+        card.enabled = false
+        tryVerify(function() { return !selection.visible })
+        card.enabled = true
+        tryVerify(function() { return selection.visible })
+    }
+
+    function test_accessible_press_action_activates_exactly_once() {
+        const card = createCard("task-define-goals")
+        const interaction = findChild(card, "cardInteraction")
+        const spy = createTemporaryObject(spyComponent, testCase, {
+            "target": card,
+            "signalName": "activated"
+        })
+        verify(interaction)
+        verify(spy)
+
+        interaction.Accessible.pressAction()
+        compare(spy.count, 1)
+        compare(spy.signalArguments[0][0], "task-define-goals")
+    }
+
     function test_pointer_enter_and_space_share_activation_signal() {
         const card = createCard("task-define-goals")
         const interaction = findChild(card, "cardInteraction")

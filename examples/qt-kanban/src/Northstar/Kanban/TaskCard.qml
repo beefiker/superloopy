@@ -220,7 +220,7 @@ FocusScope {
         objectName: "selectionOutline"
         anchors.fill: parent
         z: 2
-        visible: root.selected
+        visible: root.selected && root.enabled && !root.dragging
         color: "transparent"
         radius: Theme.cardRadius
         border.color: Theme.cobalt
