@@ -325,8 +325,39 @@ test("queryCodexModelCatalog escalates and waits when the child ignores SIGTERM"
 });
 
 test("queryCodexModelCatalog does not return while a real stubborn child is alive", async () => {
-  const child = spawn(process.execPath, ["-e", "process.on('SIGTERM',()=>{});setInterval(()=>{},1000)"], {
+  const child = spawn(process.execPath, ["-e", "process.on('SIGTERM',()=>{});process.stdout.write('READY\\n');setInterval(()=>{},1000)"], {
     stdio: ["pipe", "pipe", "pipe"]
+  });
+  await new Promise((resolve, reject) => {
+    let stdout = "";
+    const readinessTimeout = setTimeout(() => {
+      child.kill("SIGKILL");
+      cleanup();
+      reject(new Error("stubborn child did not become ready"));
+    }, 2_000);
+    const cleanup = () => {
+      clearTimeout(readinessTimeout);
+      child.stdout.off("data", onData);
+      child.off("error", onError);
+      child.off("exit", onExit);
+    };
+    const onData = (chunk) => {
+      stdout += String(chunk);
+      if (!stdout.includes("READY\n")) return;
+      cleanup();
+      resolve();
+    };
+    const onError = (error) => {
+      cleanup();
+      reject(error);
+    };
+    const onExit = (code, signal) => {
+      cleanup();
+      reject(new Error(`stubborn child exited before readiness (${code ?? signal})`));
+    };
+    child.stdout.on("data", onData);
+    child.once("error", onError);
+    child.once("exit", onExit);
   });
   const signals = [];
   const kill = child.kill.bind(child);

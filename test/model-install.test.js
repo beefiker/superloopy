@@ -14,7 +14,6 @@ import {
 } from "../src/agents.js";
 import { commitManagedAgentFiles } from "../src/managed-agents.js";
 import { resolveModelResolutionStatePath } from "../src/model-resolution.js";
-
 const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const NOW = new Date("2026-07-10T12:00:00.000Z");
 const MANAGED_MARKER = "# superloopy-managed-agent v1";
@@ -108,7 +107,7 @@ test("first unknown install conservatively writes a complete managed compatibili
     assert.match(content, /^developer_instructions = """$/mu);
   }
   const state = await readState(setup);
-  assert.equal(state.targetDir, setup.targetDir);
+  assert.equal(state.targetDir, await realpath(setup.targetDir));
   assert.equal(state.selectionReason, "probe_unknown_compatibility");
   assert.deepEqual(Object.keys(state.files), SUPERLOOPY_AGENT_NAMES);
   for (const name of SUPERLOOPY_AGENT_NAMES) {
@@ -444,6 +443,7 @@ test("install serializes concurrent same-target transactions across distinct sta
   assert.equal(lockCalls.filter((path) => targetLockPaths.has(path)).length, 2);
   assert.equal(lockCalls.length, 4);
 });
+
 test("force replaces a foreign file and options.force overrides argv", async (t) => {
   const setup = await fixture(t);
   await mkdir(setup.targetDir, { recursive: true });

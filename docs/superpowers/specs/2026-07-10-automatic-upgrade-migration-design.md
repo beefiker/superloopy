@@ -38,12 +38,12 @@ On every approved Codex `SessionStart`, the hook must:
 4. Preflight all six owned agent names before modifying any agent file or routing state.
 5. Automatically adopt a complete exact legacy fleet, including LF/CRLF-equivalent release files.
 6. Automatically upgrade a complete managed fleet when its prior state and hashes prove ownership.
-7. Commit all changed agent files and routing state transactionally. A failure must not leave a mixed fleet.
+7. Commit all changed agent files and routing state transactionally for handled failures. A caught failure must not leave a mixed fleet; an abrupt process termination may leave private backups for recovery and is not claimed to be crash-atomic.
 8. Stay silent when the wrapper, fleet, and state are already current.
 
 The same reconciliation behavior must be used by direct `superloopy install`, but normal marketplace users must not need that command.
 
-Wrapper reconciliation and fleet reconciliation are separate safety domains. A recognized generated wrapper may be repointed even when the agent fleet later reports a conflict: that does not modify agent data, and keeping the wrapper on the current audited CLI is necessary to diagnose the preserved conflict. The six agent files and their routing state remain an all-or-nothing transaction.
+Wrapper reconciliation and fleet reconciliation are separate safety domains. A recognized generated wrapper may be repointed even when the agent fleet later reports a conflict: that does not modify agent data, and keeping the wrapper on the current audited CLI is necessary to diagnose the preserved conflict. The six agent files and their routing state roll back as one unit for handled failures; abrupt process failure is outside that guarantee and can require manual recovery from preserved private backups.
 
 ## Conflict behavior
 

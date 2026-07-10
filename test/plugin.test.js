@@ -51,6 +51,12 @@ test("package metadata names author and GitHub topics", async () => {
   }
 });
 
+test("package ignore rules exclude Claude runtime lock state", async () => {
+  const ignore = await readFile(".gitignore", "utf8");
+
+  assert.match(ignore, /^\.claude\/scheduled_tasks\.lock$/mu);
+});
+
 test("subagent receipt hook covers Superloopy evidence-reporting agents", async () => {
   const hook = JSON.parse(await readFile("hooks/subagent-stop.json", "utf8"));
   const matcher = new RegExp(hook.hooks.SubagentStop[0].matcher);
@@ -155,11 +161,13 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
 
   assert.match(frontend.frontmatter, /^name: superloopy-frontend$/m);
   assert.match(frontend.frontmatter, /^description: Use only after explicit/m);
-  assert.match(frontend.frontmatter, /\$superloopy-frontend/);
+  assert.match(frontend.frontmatter, /\$superloopy:superloopy-frontend/);
+  assert.match(frontend.frontmatter, /\/superloopy:superloopy-frontend/);
   assert.match(frontend.frontmatter, /leading `loopy` or `루피`/u);
   assert.doesNotMatch(frontend.frontmatter, /MUST USE|Auto-activates|do not wait/i);
   assert.doesNotMatch(frontend.content, /Auto-activate|When in doubt/i);
   assert.match(frontend.content, /SUPERLOOPY FRONTEND ENABLED/);
+  assert.match(frontend.content, /\/superloopy:superloopy-frontend/);
   assert.match(frontend.content, /DESIGN\.md/);
   assert.match(frontend.content, /anti-slop/i);
   assert.match(frontend.content, /real-browser visual evidence/i);
@@ -175,7 +183,8 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
   assert.match(designSystem, /7 sections|7-section/i);
 
   const metadata = await readFile("skills/superloopy-frontend/agents/openai.yaml", "utf8");
-  assert.match(metadata, /\$superloopy-frontend/);
+  assert.match(metadata, /\$superloopy:superloopy-frontend/);
+  assert.match(metadata, /\/superloopy:superloopy-frontend/);
   assert.doesNotMatch(metadata, /any UI\/visual work/i);
 
   const promptHook = await readFile("hooks/user-prompt-submit.json", "utf8");

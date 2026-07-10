@@ -14,7 +14,7 @@
 - Normal install or upgrade paths must not require `superloopy install`, `superloopy agents install`, or a version-specific Node command.
 - Automatic migration must never imply or add `--force`.
 - A managed marker plus matching prior-state hash, or an exact legacy release manifest, is required before automatic replacement.
-- All six agent files and routing state remain an all-or-nothing transaction; wrapper reconciliation is an independent safety domain.
+- Handled commit failures restore the six-agent fleet before surfacing the error; wrapper reconciliation is an independent safety domain. An abrupt process termination may leave private backups for recovery and is not claimed to be crash-atomic.
 - Edited, partial, mixed, foreign, or symlinked owned fleets must be preserved.
 - Unrelated personal agents must remain byte-for-byte unchanged.
 - Existing 550-line reviewability limits must remain satisfied.
@@ -204,4 +204,3 @@ Review the complete diff for lifecycle correctness, command-free normal migratio
 - [ ] **Step 3: Push and update PR #23**
 
 Push `codex/gpt-5-6-model-policy`, update the PR description with automatic SessionStart migration and validation evidence, then monitor all GitHub Actions jobs through completion.
-

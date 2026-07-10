@@ -411,6 +411,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/spawn-command.js` | Cross-platform process invocation helper for npm/npx command shims. | Minimal Superloopy utility used by update planning only. |
 | `src/store.js` | `.superloopy/` path construction, session normalization, atomic JSON writes, and ledger appends. | Original storage layer. |
 | `src/subagent-attempts.js` | SubagentStop evidence-receipt attempt tracking and the post-cap ledger signal, factored out of hooks.js. | Superloopy-native; keeps hooks.js within the reviewability budget. |
+| `src/text-file-install.js` | Race-safe text-wrapper installation through verified file descriptors, no-follow opens where available, and inode checks. | Never performs path-based wrapper writes or chmod after validation; raced symlinks and replacements fail closed. |
 | `src/trace.js` | Builds compact evidence trail with summary counts, warnings, missing proof, suggested paths, and timeline. | Superloopy-only inspection surface. |
 | `src/wrapper-check.js` | Advisory doctor check for stale, pruned, or split-brain generated wrappers whose CLI root differs from the plugin being diagnosed. | Superloopy-native warning only, no-throw, dependency-injectable, and emits a direct-root repair command. |
 | `test/audit.test.js` | Prevents this audit from missing repository files or reviewability limits. | Tests Superloopy file inventory. |
@@ -458,6 +459,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/sync-version.test.js` | Release-helper tests for stamping package metadata, the lockfile root, both host plugin manifests, and the Claude marketplace entry from one version. | Tests Superloopy release metadata sync only. |
 | `test/visual-diff.test.js` | Unit tests for the visual-diff PNG decode/encode/diff logic. | Superloopy-native test only. |
 | `test/wrapper-check.test.js` | Wrapper-currency unit coverage for generated shims, stale/pruned plugin caches, first-PATH precedence, and resilient sibling fallback. | Synthetic filesystem fixtures only; no host wrapper mutation. |
+| `test/wrapper-install-race.test.js` | Deterministic wrapper replacement race coverage for recognized and forced installs. | Uses isolated files and proves a post-validation symlink swap never modifies its referent. |
 
 ## Weight Notes
 

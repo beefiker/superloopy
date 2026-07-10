@@ -103,6 +103,10 @@ async function runBin(subcommand, argv, stdout, cwd) {
     return 0;
   }
   if (subcommand !== "install") throw new Error(`Unknown bin subcommand: ${subcommand}`);
+  if (hasHelpFlag(argv)) {
+    stdout.write(binHelp());
+    return 0;
+  }
   const result = await installBinShim(cwd, argv);
   stdout.write(json ? `${JSON.stringify(result, null, 2)}\n` : formatBinInstallResult(result));
   return result.ok ? 0 : 1;

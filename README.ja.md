@@ -48,7 +48,7 @@ Superloopy はコマンド層を小さく保ちます。専門的な進め方は
 | `superloopy-doctor` | install、wrapper、plugin cache、hook/bootstrap、agent、Codex/Claude Code host wiring、stale version の問題を診断するとき。 | 読み取り専用の health report: wrapper/cache/version の証拠、失敗した check、承認後にだけ実行する正確な修復コマンド。 |
 | `superloopy-research` | `loopy research`、deep research、exhaustive investigation、または引用付きレポートを求めるとき。 | 調査軸、拡張 wave、claim ledger、検証メモ、引用付き synthesis artifact。 |
 | `superloopy-clone` | `loopy clone`、許可された Web サイトのクローン、再構築、移行、ピクセル単位の復元を求めるとき。 | ブラウザ取得、ページ構造、デザイントークン、アセット一覧、実装メモ、build 出力、visual QA 証拠。 |
-| `superloopy-frontend` | `$superloopy-frontend` を明示的に呼び出すか、先頭の `loopy`/`루피` で視覚タスクを始めるとき。UI への単なる言及では起動しません。 | DESIGN.md のトークン契約、anti-slop の事前チェック結果、実ブラウザでの visual QA 証拠 artifact。 |
+| `superloopy-frontend` | Codex で `$superloopy:superloopy-frontend`、Claude Code で `/superloopy:superloopy-frontend` を明示的に呼び出すか、先頭の `loopy`/`루피` で視覚タスクを始めるとき。UI への単なる言及では起動しません。 | DESIGN.md のトークン契約、anti-slop の事前チェック結果、実ブラウザでの visual QA 証拠 artifact。 |
 | `humanize-korean` | 韓国語テキストの AI っぽさや翻訳調を抑え、事実を変えずに人が書いたように整えるとき。 | `final.md`、`summary.md`、`audit.json` を書き、Superloopy loop では `.superloopy/evidence/humanize-korean/` に証拠を残します。 |
 | `superloopy-slides` | スライド・プレゼン・デッキを頼むとき、または PPT/PPTX を Web に変換するとき。 | 固定 16:9 ステージの依存ゼロ単一 HTML デッキ、選べる 3 種のスタイルプレビュー、`.superloopy/evidence/slides/` 配下のレンダリングスクリーンショット visual-QA artifact。 |
 

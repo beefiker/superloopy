@@ -120,7 +120,7 @@ Expected: FAIL against the current auto-activation metadata.
 
 - [ ] **Step 3: Narrow metadata and update inventories**
 
-Describe activation through `$superloopy-frontend`, a leading `loopy`/`루피` visual request, or explicit routing from an active loop. Remove all auto-activation and environment opt-out claims without changing the frontend execution workflow. Assert the prompt hook has no always-visible status message.
+Describe activation through `$superloopy:superloopy-frontend` in Codex, `/superloopy:superloopy-frontend` in Claude Code, a leading `loopy`/`루피` visual request, or explicit routing from an active loop. Remove all auto-activation and environment opt-out claims without changing the frontend execution workflow. Assert the prompt hook has no always-visible status message.
 
 - [ ] **Step 4: Verify GREEN and the full repository**
 

@@ -139,10 +139,7 @@ test("golden: SessionStart bootstraps from cached compatibility and then require
     input: `${JSON.stringify(payload)}\n`
   });
   assert.equal(second.status, 0, second.stderr);
-  const secondContext = JSON.parse(second.stdout).hookSpecificOutput.additionalContext;
-  assert.match(secondContext, /degraded compatibility/u);
-  assert.match(secondContext, /Restart required: no/u);
-  assert.doesNotMatch(secondContext, /Restart Codex/u);
+  assert.equal(second.stdout, "");
 });
 
 test("golden: SessionStart reports marketplace-managed Superloopy updates without running npx self-update", async () => {

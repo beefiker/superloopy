@@ -440,6 +440,7 @@ Total: 100 points.
 | `src/spawn-command.js` | `test/auto-update.test.js`. | Must route npm/npx through Windows `.cmd` shims and leave other commands unchanged. |
 | `src/store.js` | Loop, hook, and scoped-session tests. | Must normalize sessions, isolate `.superloopy/` state, write JSON atomically, and append ledger entries. |
 | `src/subagent-attempts.js` | `npm test`, doctor reviewability. | Must count the 3-attempt cap (with a session/cwd fallback key) and record the exhaustion ledger signal. |
+| `src/text-file-install.js` | `test/wrapper-install-race.test.js`, `test/cli.test.js`, audit coverage. | Must write and chmod wrappers only through verified file handles, reject inode changes, and never follow a raced symlink. |
 | `src/trace.js` | Loop-gate and CLI evidence tests. | Must show artifact-backed proof, warnings, missing proof, suggested paths, ledger timeline, and evidence summary counts. |
 | `src/wrapper-check.js` | `test/wrapper-check.test.js`, `test/doctor.test.js`. | Must warn without failing when a generated wrapper is stale, pruned, or belongs to a different root than the diagnosed plugin; no-throw and dependency-injectable. |
 | `test/audit.test.js` | `npm test`. | Must fail if repo files are missing from audit or hand-reviewable file-size limits are exceeded. |
@@ -487,6 +488,7 @@ Total: 100 points.
 | `test/sync-version.test.js` | `npm test`. | Must prove package metadata, the lockfile root, both host plugin manifests, and the Claude marketplace entry are stamped from one release version. |
 | `test/visual-diff.test.js` | `npm test`. | Must verify PNG encode/decode round-trip and diff scoring, hotspot ranking, alpha, and dimension behavior. |
 | `test/wrapper-check.test.js` | `npm test`. | Must cover generated wrapper parsing, stale/dangling/recovered wrapper advice, first-PATH precedence, and no-wrapper silence without touching real user wrappers. |
+| `test/wrapper-install-race.test.js` | `npm test`. | Must prove normal and forced wrapper replacement preserve a symlink referent when the path changes after validation. |
 
 ## Run History
 

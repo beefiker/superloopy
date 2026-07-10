@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { lstat, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 
 import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
 import { MANAGED_AGENT_MARKER, parseManagedAgentRouting } from "./managed-agents.js";
@@ -29,6 +29,8 @@ const REPAIR_STATUSES = new Set([
   "unsupported_tuple"
 ]);
 const DEFAULT_REFRESH_ACTION = "Run `superloopy agents install --refresh-models` to refresh the managed routing state.";
+const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
+const SHELL_SAFE_TARGET_PATTERN = /^[\p{L}\p{N}_./:@+,= -]+$/u;
 
 export async function checkInstalledModelPolicy(policyRoot, options = {}) {
   const statePath = resolveStatePath(options);
@@ -51,9 +53,10 @@ export async function checkInstalledModelPolicy(policyRoot, options = {}) {
     return invalidState(policy.version, "state_invalid");
   }
   const nowMs = readClock(options.clock ?? (() => new Date()));
-  if (nowMs === null) return invalidState(policy.version, "clock_invalid");
+  const repair = inspectRepairState(state);
+  if (nowMs === null) return invalidState(policy.version, "clock_invalid", repair);
   const validation = validateModelResolutionState(state, policy, { nowMs });
-  if (!validation.ok) return invalidState(policy.version, validation.reason);
+  if (!validation.ok) return invalidState(policy.version, validation.reason, repair);
 
   const stale = nowMs - validation.checkedAtMs >= MODEL_RESOLUTION_TTL_MS;
   const inspections = await Promise.all(SUPERLOOPY_AGENT_NAMES.map((name) =>
@@ -266,15 +269,17 @@ function absent() {
   };
 }
 
-function invalidState(policyVersion, reason) {
+function invalidState(policyVersion, reason, repair = null) {
   const status = reason === "unsupported_tuple"
     ? "unsupported_tuple"
     : reason === "mixed_profile" ? "mixed_profile" : "state_invalid";
+  const targetDir = repair?.targetDir ?? null;
+  const ownershipProven = repair?.ownershipProven === true;
   return {
     ok: false,
     installed: true,
     policyVersion,
-    targetDir: null,
+    targetDir,
     checkedAt: null,
     selectionStatus: "invalid",
     availabilityStatus: "not_checked",
@@ -287,9 +292,34 @@ function invalidState(policyVersion, reason) {
       reason: "invalid_state",
       status
     }])),
-    message: "Installed model policy state is invalid and cannot be trusted.",
-    next: DEFAULT_REFRESH_ACTION
+    message: ownershipProven
+      ? "Installed model policy state is invalid, but its managed-file ownership manifest is still usable for repair."
+      : "Installed model policy state is invalid and managed-file ownership cannot be trusted.",
+    next: ownershipProven
+      ? refreshAction(targetDir)
+      : reviewInvalidStateAction(targetDir)
   };
+}
+
+function inspectRepairState(state) {
+  if (state === null || typeof state !== "object" || Array.isArray(state)) return null;
+  const targetDir = typeof state.targetDir === "string" && isAbsolute(state.targetDir) ? state.targetDir : null;
+  if (targetDir === null) return null;
+  const files = state.files;
+  const ownershipProven = state.schemaVersion === 1
+    && files !== null
+    && typeof files === "object"
+    && !Array.isArray(files)
+    && Object.keys(files).length === SUPERLOOPY_AGENT_NAMES.length
+    && SUPERLOOPY_AGENT_NAMES.every((name) => {
+      const entry = files[name];
+      return entry !== null
+        && typeof entry === "object"
+        && !Array.isArray(entry)
+        && Object.keys(entry).length === 1
+        && SHA256_PATTERN.test(entry.sha256 ?? "");
+    });
+  return { targetDir, ownershipProven };
 }
 
 function resolveStatePath(options) {
@@ -300,7 +330,16 @@ function resolveStatePath(options) {
 
 function refreshAction(targetDir) {
   if (typeof targetDir !== "string" || targetDir.length === 0) return DEFAULT_REFRESH_ACTION;
+  if (!SHELL_SAFE_TARGET_PATTERN.test(targetDir)) {
+    const args = ["agents", "install", "--target", targetDir, "--refresh-models"];
+    return `Run Superloopy with these literal arguments (not shell text) to refresh the managed routing state: ${JSON.stringify(args)}.`;
+  }
   return `Run \`superloopy agents install --target "${targetDir}" --refresh-models\` to refresh the managed routing state.`;
+}
+
+function reviewInvalidStateAction(targetDir) {
+  const location = typeof targetDir === "string" ? ` under ${JSON.stringify(targetDir)}` : "";
+  return `Review the managed agent files${location}; use --force only if replacement is intended.`;
 }
 
 function readClock(clock) {

@@ -1,6 +1,6 @@
 ---
 name: superloopy-frontend
-description: Use only after explicit `$superloopy-frontend` invocation, a visual task started with a leading `loopy` or `루피`, or an active Superloopy loop explicitly routing a visual subtask here. Once active, this frontend, web UI, UX, and visual-deliverable workflow enforces a mandatory DESIGN.md token gate, anti-AI-slop rules, and real-browser visual-QA evidence. Do not activate from UI/frontend vocabulary alone, especially when the interface is only a symptom of backend, API, data, concurrency, or infrastructure work.
+description: Use only after explicit Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend` invocation, a visual task started with a leading `loopy` or `루피`, or an active Superloopy loop explicitly routing a visual subtask here. Once active, this frontend, web UI, UX, and visual-deliverable workflow enforces a mandatory DESIGN.md token gate, anti-AI-slop rules, and real-browser visual-QA evidence. Do not activate from UI/frontend vocabulary alone, especially when the interface is only a symptom of backend, API, data, concurrency, or infrastructure work.
 ---
 
 # Superloopy Frontend
@@ -13,7 +13,7 @@ This is a Superloopy skill: the orchestrator owns files, dispatch is self-contai
 
 Open your reply with `SUPERLOOPY FRONTEND ENABLED`. If another active Superloopy mode mandates its own first line, print that first and this marker on the next line.
 
-**Explicit activation only.** Engage when the user invokes `$superloopy-frontend`, begins a visual task with a leading `loopy` or `루피`, or an already-active Superloopy loop explicitly assigns a visual subtask to this skill. A plain mention of UI, frontend, CSS, layout, responsiveness, or a visible symptom is not authorization to activate this workflow. Diagnose ownership first; backend, API, data, concurrency, infrastructure, and non-visual work stay with their primary workflow unless a visual deliverable is separately requested.
+**Explicit activation only.** Engage when the user invokes `$superloopy:superloopy-frontend` in Codex or `/superloopy:superloopy-frontend` in Claude Code, begins a visual task with a leading `loopy` or `루피`, or an already-active Superloopy loop explicitly assigns a visual subtask to this skill. A plain mention of UI, frontend, CSS, layout, responsiveness, or a visible symptom is not authorization to activate this workflow. Diagnose ownership first; backend, API, data, concurrency, infrastructure, and non-visual work stay with their primary workflow unless a visual deliverable is separately requested.
 
 ## Authority while active
 
