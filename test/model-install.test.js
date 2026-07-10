@@ -375,14 +375,14 @@ test("state persistence failure rolls the managed fleet back", async (t) => {
   const target = join(setup.targetDir, "franky.toml");
   await mkdir(setup.targetDir, { recursive: true });
   await writeFile(target, "old franky\n", "utf8");
-  await chmod(target, 0o600);
+  const originalMode = await chmod(target, 0o600).then(async () => (await stat(target)).mode & 0o777);
   await assert.rejects(commitManagedAgentFiles([
     { name: "franky", target, status: "updated", content: "new franky\n", existingKind: "file", existing: "old franky\n" }
   ], setup.statePath, {}, true, {
     writeState: async () => { throw new Error("injected state failure"); }
   }), /injected state failure/u);
   assert.equal(await readFile(target, "utf8"), "old franky\n");
-  assert.equal((await stat(target)).mode & 0o777, 0o600);
+  assert.equal((await stat(target)).mode & 0o777, originalMode);
   assert.equal(await exists(setup.statePath), false);
 });
 
