@@ -279,15 +279,15 @@ export async function bootstrapSuperloopy(cwd, argv = [], options = {}) {
     agents,
     degraded: agents.degraded,
     restartRequired: agents.restartRequired,
-    next: !ok
-      ? agents.restartRequired
-        ? "Resolve remaining conflicts, then restart Codex so changed custom agents are loaded."
-        : "Superloopy preserved conflicting custom-agent files. Review the reported conflicts before choosing whether to replace your customizations."
+    next: !agents.ok
+      ? "Superloopy preserved conflicting custom-agent files. Review the reported conflicts before choosing whether to replace your customizations."
       : agents.restartRequired
         ? "Restart Codex so the changed custom agent definitions are loaded."
-        : agents.degraded
-          ? "Compatibility routing is active; no restart is required."
-          : "Superloopy files are current; no restart is required."
+        : !bin.ok
+          ? "Superloopy preserved an unrecognized command wrapper. Review it separately; agent migration did not overwrite it."
+          : agents.degraded
+            ? "Compatibility routing is active; no restart is required."
+            : "Superloopy files are current; no restart is required."
   };
 }
 
@@ -324,7 +324,7 @@ export function formatBootstrapHookContext(result) {
     `- Model routing: ${formatModelResolution(result.agents)}`,
     `- Restart required: ${result.restartRequired ? "yes" : "no"}`,
     `- ${result.next}`,
-    `- ${result.bin.next}`
+    `- ${result.bin.ok ? result.bin.next : "Superloopy preserved an unrecognized command wrapper; agent migration did not overwrite it."}`
   ].join("\n");
 }
 

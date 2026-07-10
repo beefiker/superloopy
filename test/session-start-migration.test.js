@@ -100,7 +100,7 @@ test("SessionStart automatically migrates a legacy fleet and stale generated wra
 
   const context = JSON.parse(first).hookSpecificOutput.additionalContext;
   assert.match(context, /Superloopy automatic migration/u);
-  assert.match(context, /Restart Codex/u);
+  assert.match(context, /restart Codex/iu);
   assert.doesNotMatch(context, migrationCommandPattern());
   assert.equal(await readFile(personalPath, "utf8"), personal);
   for (const name of SUPERLOOPY_AGENT_NAMES) {
@@ -155,6 +155,35 @@ test("SessionStart preserves an edited legacy fleet without prescribing a migrat
   assert.equal(await exists(setup.statePath), false);
   for (const { name, content } of before) {
     assert.equal(await readFile(join(setup.targetDir, `${name}.toml`), "utf8"), content);
+  }
+});
+
+test("SessionStart keeps a foreign wrapper separate from a successful fleet migration", async (t) => {
+  const setup = await fixture(t);
+  const foreignWrapper = process.platform === "win32"
+    ? "@echo off\r\necho personal wrapper\r\n"
+    : "#!/usr/bin/env sh\necho personal wrapper\n";
+  await writeFile(setup.wrapperPath, foreignWrapper, "utf8");
+
+  const output = await runSessionStartHook(
+    { hook_event_name: "SessionStart", cwd: setup.root },
+    {
+      env: setup.env,
+      homeDir: setup.homeDir,
+      policyRoot: REPO_ROOT,
+      statePath: setup.statePath,
+      compatibility: true
+    }
+  );
+
+  const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+  assert.match(context, /restart Codex/iu);
+  assert.match(context, /preserved.*unrecognized.*wrapper/iu);
+  assert.doesNotMatch(context, migrationCommandPattern());
+  assert.equal(await readFile(setup.wrapperPath, "utf8"), foreignWrapper);
+  assert.equal(await exists(setup.statePath), true);
+  for (const name of SUPERLOOPY_AGENT_NAMES) {
+    assert.match(await readFile(join(setup.targetDir, `${name}.toml`), "utf8"), /^# superloopy-managed-agent v1$/mu);
   }
 });
 
