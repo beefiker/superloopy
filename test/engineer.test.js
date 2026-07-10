@@ -87,6 +87,8 @@ test("runUserPromptSubmitHook injects the crew fan-out playbook in team mode, wi
   assert.match(context, /multi_agent_v1\.wait_agent/);
   // agent_type must be set per crew role so the child loads that role's TOML.
   assert.match(context, /"agent_type": "franky"/);
+  assert.match(context, /model_unverified/);
+  assert.match(context, /does not expose `agent_type` or resolved-model attestation/);
   assert.match(context, /"zoro"/);
   assert.match(context, /"usopp"/);
   assert.match(context, /"jinbe"/);

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import test from "node:test";
 
 import { binShimSupportsSiblingFallback, parseBinShimCliPath } from "../src/agents.js";
@@ -111,6 +111,29 @@ test("checkWrapper reports stale, dangling, recovered, foreign, and absent wrapp
 
   const absent = checkWrapper({ env: { PATH: "/nowhere" }, platform: "linux", fs: fakeFs({}) });
   assert.equal(absent.found, false);
+});
+
+test("checkWrapper warns when the generated command targets a different Superloopy root", () => {
+  const wrapperRoot = join("home", "checkout", "superloopy");
+  const diagnosedRoot = join("home", "cache", "superloopy", "0.9.0");
+  const binDir = join("home", "bin");
+  const wrapper = join(binDir, "superloopy");
+  const cliPath = join(wrapperRoot, "src", "cli.js");
+
+  const result = checkWrapper({
+    env: { PATH: binDir },
+    platform: "linux",
+    diagnosedRoot,
+    fs: fakeFs({ [wrapper]: shimFor(cliPath), [cliPath]: "x" })
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.warning, true);
+  assert.equal(result.splitBrain, true);
+  assert.equal(result.cliPath, cliPath);
+  assert.equal(result.diagnosedRoot, resolve(diagnosedRoot));
+  assert.match(result.message, /different Superloopy root/u);
+  assert.match(result.message, /bin install --force/u);
 });
 
 function fakeFs(files, dirs = {}) {

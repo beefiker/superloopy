@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { hasFlag, readFlag } from "./args.js";
 import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
+import { loadLegacyAgentManifests } from "./legacy-agents.js";
 import {
   commitManagedAgentFiles,
   managedFileManifest,
@@ -54,7 +55,8 @@ async function installAgentsLocked({ argv, options, force, target, source, state
   if (!rendered.ok) {
     return failedAgentsInstall({ source, target, force, statePath, message: rendered.message, resolution });
   }
-  const preflight = await preflightManagedAgentFiles(rendered.files, resolution.previousFileManifest, force);
+  const legacyManifests = options.legacyManifests ?? await loadLegacyAgentManifests(options.policyRoot ?? REPO_ROOT);
+  const preflight = await preflightManagedAgentFiles(rendered.files, resolution.previousFileManifest, force, legacyManifests);
   const agents = preflight.files.map((file) => publicManagedAgent(file, resolution.state));
   const metadata = modelResolutionMetadata(resolution, statePath);
   if (!preflight.ok) {

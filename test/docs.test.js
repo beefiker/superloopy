@@ -42,6 +42,9 @@ test("public docs describe doctor checks", async () => {
   assert.match(designAudit, /## Compatibility Boundary/);
   assert.match(modelPolicy, /steering, not proof/i);
   assert.match(modelPolicy, /gpt-5\.4-mini/);
+  assert.match(modelPolicy, /exact legacy.*without `--force`/is);
+  assert.match(modelPolicy, /model_unverified/);
+  assert.match(modelPolicy, /split-brain/i);
 });
 
 test("public docs describe real marketplace install and bootstrap", async () => {

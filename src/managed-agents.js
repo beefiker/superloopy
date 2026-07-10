@@ -110,12 +110,16 @@ export function parseManagedAgentRouting(content) {
   return { ok: true, routing };
 }
 
-export async function preflightManagedAgentFiles(files, previousFileManifest, force) {
+export async function preflightManagedAgentFiles(files, previousFileManifest, force, legacyManifests = []) {
   const inspected = await Promise.all(files.map(async (file) => ({
     ...file,
     ...await inspectTarget(file.target)
   })));
-  const planned = inspected.map((file) => ({ ...file, status: plannedStatus(file, previousFileManifest, force) }));
+  const legacyFleet = matchingLegacyFleet(inspected, legacyManifests);
+  const planned = inspected.map((file) => ({
+    ...file,
+    status: plannedStatus(file, previousFileManifest, force, legacyFleet !== null)
+  }));
   const hasConflict = planned.some(({ status }) => status === "conflict");
   const filesWithFinalStatus = hasConflict
     ? planned.map((file) => file.status === "installed" || file.status === "updated" ? { ...file, status: "blocked" } : file)
@@ -189,15 +193,23 @@ export function manifestsMatch(left, right) {
     && Object.keys(right ?? {}).length === SUPERLOOPY_AGENT_NAMES.length;
 }
 
-function plannedStatus(file, previousFileManifest, force) {
+function plannedStatus(file, previousFileManifest, force, legacyFleet) {
   if (file.existingKind === "absent") return "installed";
   if (file.existingKind === "symlink") return force ? "updated" : "conflict";
   if (file.existingKind !== "file") return "conflict";
   if (file.existing === file.content) return "unchanged";
   if (force) return "updated";
+  if (legacyFleet) return "updated";
   const previousHash = previousFileManifest?.[file.name]?.sha256;
   const stillManaged = file.existing.startsWith(`${MANAGED_AGENT_MARKER}\n`);
   return stillManaged && previousHash === sha256(file.existing) ? "updated" : "conflict";
+}
+
+function matchingLegacyFleet(files, manifests) {
+  return manifests.find((manifest) => files.every((file) =>
+    file.existingKind === "file"
+      && manifest?.files?.[file.name]?.sha256 === sha256(file.existing)
+  )) ?? null;
 }
 
 async function inspectTarget(path, options = {}) {
