@@ -210,29 +210,64 @@ test("frontend audit inventories cover each routed reference and contract test o
   const fileAudit = await readFile("docs/superloopy-file-audit.md", "utf8");
   const golden = await readFile("docs/superloopy-loop-golden-set.md", "utf8");
   const routedFiles = [
-    "skills/superloopy-frontend/references/web.md",
-    "skills/superloopy-frontend/references/qt.md",
-    "skills/superloopy-frontend/references/qt-widgets.md",
-    "skills/superloopy-frontend/references/qt-quick.md",
-    "skills/superloopy-frontend/references/qt-qa.md",
-    "test/frontend-qt-contract.test.js"
+    {
+      path: "skills/superloopy-frontend/references/web.md",
+      fileProvenance: /original prose/iu,
+      goldenProvenance: /Original-prose contract/u
+    },
+    {
+      path: "skills/superloopy-frontend/references/qt.md",
+      fileProvenance: /original prose/iu,
+      goldenProvenance: /Original-prose contract/u,
+      officialSource: "https://doc.qt.io/qt-6/qguiapplication.html"
+    },
+    {
+      path: "skills/superloopy-frontend/references/qt-widgets.md",
+      fileProvenance: /original prose/iu,
+      goldenProvenance: /Original-prose contract/u,
+      officialSource: "https://doc.qt.io/qt-6/qstyle.html"
+    },
+    {
+      path: "skills/superloopy-frontend/references/qt-quick.md",
+      fileProvenance: /original prose/iu,
+      goldenProvenance: /Original-prose contract/u,
+      officialSource: "https://doc.qt.io/qt-6/qtquickcontrols-styles.html"
+    },
+    {
+      path: "skills/superloopy-frontend/references/qt-qa.md",
+      fileProvenance: /original prose/iu,
+      goldenProvenance: /Original-prose contract/u,
+      officialSource: "https://doc.qt.io/qt-6/qttest-best-practices.html"
+    },
+    {
+      path: "test/frontend-qt-contract.test.js",
+      fileProvenance: /Superloopy-native test/u,
+      goldenProvenance: /node --test test\/frontend-qt-contract\.test\.js/u
+    }
   ];
 
-  for (const inventory of [fileAudit, golden]) {
-    for (const path of routedFiles) {
-      const rows = inventory.split("\n").filter((line) => line.startsWith(`| \`${path}\` |`));
-      assert.equal(rows.length, 1, `${path} must have one exact inventory row`);
+  const designRows = designAudit.split("\n").filter((line) => line.startsWith("| `frontend-quality-skill` |"));
+  assert.equal(designRows.length, 1, "frontend-quality-skill must have one exact design-audit row");
+  const designRow = designRows[0];
+
+  for (const { path, fileProvenance, goldenProvenance, officialSource } of routedFiles) {
+    assert.ok(designRow.includes(`\`${path}\``), `${path} must occur in the frontend-quality-skill decision row`);
+
+    const fileRows = fileAudit.split("\n").filter((line) => line.startsWith(`| \`${path}\` |`));
+    const goldenRows = golden.split("\n").filter((line) => line.startsWith(`| \`${path}\` |`));
+    assert.equal(fileRows.length, 1, `${path} must have one exact file-audit row`);
+    assert.equal(goldenRows.length, 1, `${path} must have one exact golden-set row`);
+    assert.match(fileRows[0], fileProvenance, `${path} file-audit row must state its provenance`);
+    assert.match(goldenRows[0], goldenProvenance, `${path} golden-set row must state its provenance`);
+
+    if (officialSource) {
+      assert.ok(fileRows[0].includes(officialSource), `${path} file-audit row must link its official Qt source`);
+      assert.ok(goldenRows[0].includes(officialSource), `${path} golden-set row must link its official Qt source`);
     }
   }
 
-  assert.match(designAudit, /browser evidence for web.*native rendered-application evidence for Qt/is);
-  assert.match(designAudit, /original prose.*official Qt documentation/is);
-  assert.match(fileAudit, /references\/web\.md.*original prose/is);
-  assert.match(fileAudit, /references\/qt\.md.*original prose.*https:\/\/doc\.qt\.io\/qt-6\/qguiapplication\.html/is);
-  assert.match(fileAudit, /references\/qt-widgets\.md.*original prose.*https:\/\/doc\.qt\.io\/qt-6\/qstyle\.html/is);
-  assert.match(fileAudit, /references\/qt-quick\.md.*original prose.*https:\/\/doc\.qt\.io\/qt-6\/qtquickcontrols-styles\.html/is);
-  assert.match(fileAudit, /references\/qt-qa\.md.*original prose.*https:\/\/doc\.qt\.io\/qt-6\/qttest-best-practices\.html/is);
-  assert.match(fileAudit, /test\/frontend-qt-contract\.test\.js.*Superloopy-native test/is);
+  assert.match(designRow, /browser evidence for web.*native rendered-application evidence for Qt/iu);
+  assert.match(designRow, /original prose.*official Qt documentation/iu);
 });
 
 test("public docs describe loose prompt triggers as guidance-only", async () => {
