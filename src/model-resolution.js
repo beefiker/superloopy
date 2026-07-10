@@ -220,6 +220,11 @@ export function validateModelResolutionState(state, policy, options = {}) {
 
   const profileValidation = validateProfiles(state.profiles, policy.codex.profiles);
   if (!profileValidation.ok) return profileValidation;
+  const compatibilitySelection = state.selectionReason === "compatibility_override"
+    || state.selectionReason === "probe_unknown_compatibility";
+  if (compatibilitySelection && !Object.values(profileValidation.indexes).every((index) => index === 1)) {
+    return invalid("selection");
+  }
   if (state.degraded !== Object.values(profileValidation.indexes).some((index) => index > 0)) {
     return invalid("degraded");
   }

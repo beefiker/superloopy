@@ -262,6 +262,24 @@ test("installed doctor rejects malformed state fields and never echoes raw state
   }
 });
 
+test("installed doctor rejects contradictory unknown-compatibility state without leaking agent content", async (t) => {
+  const setup = await fixture(t);
+  const state = await readState(setup);
+  state.selectionReason = "probe_unknown_compatibility";
+  state.catalogReason = "timeout";
+  await writeState(setup, state);
+  const namiPath = join(setup.targetDir, "nami.toml");
+  await writeFile(namiPath, `${await readFile(namiPath, "utf8")}# credential-secret-content\n`, "utf8");
+
+  const check = installedCheck(await runDoctor(REPO_ROOT, options(setup)));
+
+  assert.equal(check.ok, false);
+  assert.equal(check.installed, true);
+  assert.equal(check.selectionStatus, "invalid");
+  assert.deepEqual(new Set(Object.values(check.agents).map(({ status }) => status)), new Set(["state_invalid"]));
+  assert.doesNotMatch(JSON.stringify(check), /credential-secret|developer_instructions/u);
+});
+
 test("explicit doctor refresh queries once, reports current, and mutates no state or agent file", async (t) => {
   const setup = await fixture(t);
   const before = await snapshot(setup);
