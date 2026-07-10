@@ -23,7 +23,7 @@ const REPAIR_STATUSES = new Set([
   "unreadable",
   "unsupported_tuple"
 ]);
-const REFRESH_ACTION = "Run `superloopy agents install --refresh-models` to refresh the managed routing state.";
+const DEFAULT_REFRESH_ACTION = "Run `superloopy agents install --refresh-models` to refresh the managed routing state.";
 
 export async function checkInstalledModelPolicy(policyRoot, options = {}) {
   const statePath = resolveStatePath(options);
@@ -77,10 +77,10 @@ export async function checkInstalledModelPolicy(policyRoot, options = {}) {
   };
   if (restartRequired) {
     base.message = "Installed model policy files require repair before Codex is restarted.";
-    base.next = REFRESH_ACTION;
+    base.next = refreshAction(state.targetDir);
   } else if (stale) {
     base.message = "Installed model policy state is stale.";
-    base.next = REFRESH_ACTION;
+    base.next = refreshAction(state.targetDir);
   }
   if (options.refreshModels !== true || restartRequired) return base;
   return compareLivePolicy(base, state, policy, options);
@@ -129,7 +129,7 @@ async function compareLivePolicy(base, state, policy, options) {
       restartRequired: false,
       agents: mapAgentStatuses(base.agents, () => "refresh_required"),
       message: "Live model availability has no fully supported policy selection.",
-      next: REFRESH_ACTION
+      next: refreshAction(state.targetDir)
     };
   }
   const changed = new Set(SUPERLOOPY_AGENT_NAMES.filter((name) =>
@@ -149,7 +149,7 @@ async function compareLivePolicy(base, state, policy, options) {
     restartRequired: false,
     agents: mapAgentStatuses(base.agents, (name) => changed.has(name) ? "refresh_required" : "current"),
     message: "Live model availability differs from the installed routing selection.",
-    next: REFRESH_ACTION
+    next: refreshAction(state.targetDir)
   };
 }
 
@@ -207,7 +207,7 @@ function invalidState(policyVersion, reason) {
       status
     }])),
     message: "Installed model policy state is invalid and cannot be trusted.",
-    next: REFRESH_ACTION
+    next: DEFAULT_REFRESH_ACTION
   };
 }
 
@@ -215,6 +215,11 @@ function resolveStatePath(options) {
   if (typeof options.statePath === "string" && options.statePath.length > 0) return options.statePath;
   if (typeof options.homeDir !== "string" || options.homeDir.length === 0) return null;
   return resolveModelResolutionStatePath(options.env ?? {}, options.homeDir);
+}
+
+function refreshAction(targetDir) {
+  if (typeof targetDir !== "string" || targetDir.length === 0) return DEFAULT_REFRESH_ACTION;
+  return `Run \`superloopy agents install --target "${targetDir}" --refresh-models\` to refresh the managed routing state.`;
 }
 
 function readClock(clock) {

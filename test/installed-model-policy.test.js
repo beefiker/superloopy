@@ -31,15 +31,19 @@ function compatibilityCatalog() {
   }];
 }
 
-async function fixture(t, { compatibility = false, clock = () => NOW } = {}) {
+async function fixture(t, { compatibility = false, clock = () => NOW, customTarget = false } = {}) {
   const root = await mkdtemp(join(tmpdir(), "superloopy-installed-doctor-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const codexHome = join(root, "codex-home");
   const homeDir = join(root, "home");
   const env = { CODEX_HOME: codexHome };
-  const targetDir = join(codexHome, "agents");
+  const targetDir = customTarget ? join(root, "custom-agents") : join(codexHome, "agents");
   const statePath = resolveModelResolutionStatePath(env, homeDir);
-  const result = await installAgents(REPO_ROOT, compatibility ? ["--compat"] : [], {
+  const argv = [
+    ...(compatibility ? ["--compat"] : []),
+    ...(customTarget ? ["--target", targetDir] : [])
+  ];
+  const result = await installAgents(REPO_ROOT, argv, {
     env,
     homeDir,
     policyRoot: REPO_ROOT,
@@ -83,6 +87,10 @@ async function snapshot(setup) {
     content: await readFile(path, "utf8"),
     mtimeMs: (await stat(path)).mtimeMs
   })));
+}
+
+function refreshAction(setup) {
+  return `Run \`superloopy agents install --target "${setup.targetDir}" --refresh-models\` to refresh the managed routing state.`;
 }
 
 test("installed doctor treats absent state as healthy and makes zero catalog queries", async (t) => {
@@ -193,7 +201,18 @@ test("installed doctor fails an exactly 24-hour stale state without requesting r
   assert.equal(check.stale, true);
   assert.equal(check.restartRequired, false);
   assert.deepEqual(new Set(Object.values(check.agents).map(({ status }) => status)), new Set(["stale"]));
-  assert.match(check.next, /agents install --refresh-models/u);
+  assert.equal(check.next, refreshAction(setup));
+});
+
+test("installed doctor preserves a custom target in its repair command", async (t) => {
+  const setup = await fixture(t, { customTarget: true });
+  const state = await readState(setup);
+  state.checkedAt = new Date(NOW.getTime() - MODEL_RESOLUTION_TTL_MS).toISOString();
+  await writeState(setup, state);
+
+  const check = installedCheck(await runDoctor(REPO_ROOT, options(setup)));
+
+  assert.equal(check.next, refreshAction(setup));
 });
 
 test("installed doctor distinguishes mixed-profile and unsupported routing without leaking values", async (t) => {
@@ -242,7 +261,7 @@ test("installed doctor distinguishes missing marker, missing file, and managed h
       assert.equal(check.ok, false);
       assert.equal(check.restartRequired, true);
       assert.equal(check.agents[name].status, expectedStatus);
-      assert.match(check.next, /agents install --refresh-models/u);
+      assert.equal(check.next, refreshAction(setup));
     });
   }
 });
@@ -321,7 +340,7 @@ test("explicit doctor refresh fails changed or unsupported live routing without 
       assert.equal(check.ok, false);
       assert.equal(check.availabilityStatus, availabilityStatus);
       assert.equal(check.restartRequired, false);
-      assert.match(check.next, /agents install --refresh-models/u);
+      assert.equal(check.next, refreshAction(setup));
       assert.deepEqual(await snapshot(setup), before);
     });
   }
