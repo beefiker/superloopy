@@ -8,6 +8,7 @@ FocusScope {
     id: root
 
     required property string taskId
+    property var dragCoordinator: null
     property bool dragging: false
     readonly property int storeRevision: TaskStore.revision
     readonly property var task: {
@@ -42,6 +43,32 @@ FocusScope {
 
     function activate() {
         activated(taskId, interaction)
+    }
+
+    DragHandler {
+        id: dragHandler
+        objectName: "cardDragHandler"
+        target: null
+        acceptedButtons: Qt.LeftButton
+
+        onActiveChanged: {
+            if (!root.dragCoordinator)
+                return
+            if (active) {
+                root.dragging = true
+                root.dragCoordinator.beginDrag(root.taskId, root,
+                                               centroid.scenePosition)
+            } else if (root.dragging) {
+                root.dragCoordinator.updateDrag(centroid.scenePosition)
+                root.dragCoordinator.finishDrag()
+                root.dragging = false
+            }
+        }
+
+        onCentroidChanged: {
+            if (active && root.dragCoordinator)
+                root.dragCoordinator.updateDrag(centroid.scenePosition)
+        }
     }
 
     Rectangle {
