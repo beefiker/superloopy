@@ -155,6 +155,86 @@ test("README lists the packaged Superloopy skills and their jobs", async () => {
   assert.match(await readFile("README.ko.md", "utf8"), /guidance alias는 상태를 바꾸지 않습니다/);
 });
 
+test("frontend discovery rows publish routed web and Qt evidence", async () => {
+  const locales = [
+    {
+      file: "README.md",
+      webEvidence: /browser evidence for web/i,
+      qtEvidence: /native rendered-application evidence for Qt/i
+    },
+    {
+      file: "README.ko.md",
+      webEvidence: /웹.*브라우저.*근거/u,
+      qtEvidence: /Qt.*네이티브.*애플리케이션.*렌더링.*근거/u
+    },
+    {
+      file: "README.ja.md",
+      webEvidence: /Web.*ブラウザー.*証拠/u,
+      qtEvidence: /Qt.*ネイティブアプリ.*レンダリング.*証拠/u
+    },
+    {
+      file: "README.zh-CN.md",
+      webEvidence: /Web.*浏览器证据/u,
+      qtEvidence: /Qt.*原生应用渲染证据/u
+    },
+    {
+      file: "README.es.md",
+      webEvidence: /evidencia del navegador para web/i,
+      qtEvidence: /aplicación nativa renderizada para Qt/i
+    }
+  ];
+
+  for (const { file, webEvidence, qtEvidence } of locales) {
+    const content = await readFile(file, "utf8");
+    const row = content.split("\n").find((line) => line.startsWith("| `superloopy-frontend` |"));
+    assert.ok(row, `${file} is missing the superloopy-frontend row`);
+    assert.match(row, /\$superloopy:superloopy-frontend/);
+    assert.match(row, /\/superloopy:superloopy-frontend/);
+    assert.match(row, /loopy.*루피/u);
+    assert.match(row, webEvidence);
+    assert.match(row, qtEvidence);
+  }
+});
+
+test("frontend agent metadata keeps explicit activation and routed rendered evidence", async () => {
+  const agent = await readFile("skills/superloopy-frontend/agents/openai.yaml", "utf8");
+
+  assert.match(agent, /only after explicit invocation or an explicit route from an active `loopy`\/`루피` task/u);
+  assert.match(agent, /real-browser rendered-surface evidence for web/i);
+  assert.match(agent, /native rendered-application evidence for Qt/i);
+  assert.doesNotMatch(agent, /auto-activat|when in doubt|plain UI mention|frontend vocabulary/i);
+});
+
+test("frontend audit inventories cover each routed reference and contract test once", async () => {
+  const designAudit = await readFile("docs/superloopy-design-audit.md", "utf8");
+  const fileAudit = await readFile("docs/superloopy-file-audit.md", "utf8");
+  const golden = await readFile("docs/superloopy-loop-golden-set.md", "utf8");
+  const routedFiles = [
+    "skills/superloopy-frontend/references/web.md",
+    "skills/superloopy-frontend/references/qt.md",
+    "skills/superloopy-frontend/references/qt-widgets.md",
+    "skills/superloopy-frontend/references/qt-quick.md",
+    "skills/superloopy-frontend/references/qt-qa.md",
+    "test/frontend-qt-contract.test.js"
+  ];
+
+  for (const inventory of [fileAudit, golden]) {
+    for (const path of routedFiles) {
+      const rows = inventory.split("\n").filter((line) => line.startsWith(`| \`${path}\` |`));
+      assert.equal(rows.length, 1, `${path} must have one exact inventory row`);
+    }
+  }
+
+  assert.match(designAudit, /browser evidence for web.*native rendered-application evidence for Qt/is);
+  assert.match(designAudit, /original prose.*official Qt documentation/is);
+  assert.match(fileAudit, /references\/web\.md.*original prose/is);
+  assert.match(fileAudit, /references\/qt\.md.*original prose.*https:\/\/doc\.qt\.io\/qt-6\/qguiapplication\.html/is);
+  assert.match(fileAudit, /references\/qt-widgets\.md.*original prose.*https:\/\/doc\.qt\.io\/qt-6\/qstyle\.html/is);
+  assert.match(fileAudit, /references\/qt-quick\.md.*original prose.*https:\/\/doc\.qt\.io\/qt-6\/qtquickcontrols-styles\.html/is);
+  assert.match(fileAudit, /references\/qt-qa\.md.*original prose.*https:\/\/doc\.qt\.io\/qt-6\/qttest-best-practices\.html/is);
+  assert.match(fileAudit, /test\/frontend-qt-contract\.test\.js.*Superloopy-native test/is);
+});
+
 test("public docs describe loose prompt triggers as guidance-only", async () => {
   const readme = await readFile("README.md", "utf8");
   const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");
