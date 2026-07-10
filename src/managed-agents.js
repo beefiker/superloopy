@@ -60,6 +60,25 @@ export function renderManagedAgentTemplate(name, sourceContent, resolution) {
   return { ok: true, content: `${MANAGED_AGENT_MARKER}\n${content}` };
 }
 
+export function parseManagedAgentRouting(content) {
+  if (typeof content !== "string") return fail("Managed agent must be UTF-8 text.");
+  const assignments = findTopLevelAssignments(content);
+  const routing = {};
+  for (const field of ROUTING_FIELDS) {
+    const matches = assignments.filter((assignment) => assignment.field === field);
+    if (matches.length !== 1) return fail(`Managed agent must contain exactly one top-level ${field} field.`);
+    let value;
+    try {
+      value = JSON.parse(content.slice(matches[0].valueStart, matches[0].valueEnd));
+    } catch {
+      return fail(`Managed agent ${field} must be a quoted string.`);
+    }
+    if (typeof value !== "string" || value.length === 0) return fail(`Managed agent ${field} must be a quoted string.`);
+    routing[field] = value;
+  }
+  return { ok: true, routing };
+}
+
 export async function preflightManagedAgentFiles(files, previousState, force) {
   const inspected = await Promise.all(files.map(async (file) => {
     try {

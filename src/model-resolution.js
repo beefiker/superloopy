@@ -67,7 +67,9 @@ export async function prepareCodexModelResolution(options = {}) {
   if (!policyResult.ok) return fail(policyResult.message);
   const policy = policyResult.data;
   const storedState = await readState(statePath);
-  const previousState = isReusableState(storedState, policy, targetDir, nowMs) ? storedState : null;
+  const previousState = validateModelResolutionState(storedState, policy, { targetDir, nowMs }).ok
+    ? storedState
+    : null;
 
   if (options.compatibility === true) {
     const resolution = resolveCompatibility(policy.codex);
@@ -193,57 +195,72 @@ async function readState(statePath) {
   }
 }
 
-function isReusableState(state, policy, targetDir, nowMs) {
-  if (!isRecord(state)) return false;
+export function validateModelResolutionState(state, policy, options = {}) {
+  if (!isRecord(state) || !isRecord(policy) || !isRecord(policy.codex)) return invalid("invalid_schema");
   const expectedStateFields = Object.hasOwn(state, "catalogReason") ? [...STATE_FIELDS, "catalogReason"] : STATE_FIELDS;
-  if (!hasExactKeys(state, expectedStateFields)) return false;
-  if (state.schemaVersion !== MODEL_RESOLUTION_SCHEMA_VERSION) return false;
-  if (state.policyVersion !== policy.version || state.targetDir !== targetDir) return false;
+  if (!hasExactKeys(state, expectedStateFields)) return invalid("invalid_schema");
+  if (state.schemaVersion !== MODEL_RESOLUTION_SCHEMA_VERSION) return invalid("schema_version");
+  if (state.policyVersion !== policy.version) return invalid("policy_version");
+  if (typeof state.targetDir !== "string" || !isAbsolute(state.targetDir)) return invalid("target_dir");
+  if (options.targetDir !== undefined && state.targetDir !== options.targetDir) return invalid("target_dir");
   const checkedAtMs = typeof state.checkedAt === "string" ? Date.parse(state.checkedAt) : Number.NaN;
-  if (!Number.isFinite(checkedAtMs) || checkedAtMs > nowMs) return false;
-  if (!SELECTION_REASONS.has(state.selectionReason)) return false;
-  if (state.availabilitySource !== "model_list" && state.availabilitySource !== "policy") return false;
+  if (!Number.isFinite(checkedAtMs) || new Date(checkedAtMs).toISOString() !== state.checkedAt) {
+    return invalid("checked_at");
+  }
+  if (options.nowMs !== undefined && checkedAtMs > options.nowMs) return invalid("checked_at");
+  if (!SELECTION_REASONS.has(state.selectionReason)) return invalid("selection");
+  if (state.availabilitySource !== "model_list" && state.availabilitySource !== "policy") return invalid("selection");
   const unknownSelection = state.selectionReason === "probe_unknown_kept_cached"
     || state.selectionReason === "probe_unknown_compatibility";
-  if (unknownSelection !== Object.hasOwn(state, "catalogReason")) return false;
-  if (unknownSelection && sanitizeCatalogReason(state.catalogReason) !== state.catalogReason) return false;
-  if ((state.selectionReason === "compatibility_override") !== (state.availabilitySource === "policy")) return false;
+  if (unknownSelection !== Object.hasOwn(state, "catalogReason")) return invalid("selection");
+  if (unknownSelection && sanitizeCatalogReason(state.catalogReason) !== state.catalogReason) return invalid("selection");
+  if ((state.selectionReason === "compatibility_override") !== (state.availabilitySource === "policy")) {
+    return invalid("selection");
+  }
 
-  const profileIndexes = validateProfiles(state.profiles, policy.codex.profiles);
-  if (profileIndexes === null) return false;
-  if (state.degraded !== Object.values(profileIndexes).some((index) => index > 0)) return false;
-  if (!validateAgents(state.agents, policy.codex.agents, state.profiles)) return false;
-  return validateFiles(state.files);
+  const profileValidation = validateProfiles(state.profiles, policy.codex.profiles);
+  if (!profileValidation.ok) return profileValidation;
+  if (state.degraded !== Object.values(profileValidation.indexes).some((index) => index > 0)) {
+    return invalid("degraded");
+  }
+  const agentValidation = validateAgents(state.agents, policy.codex.agents, state.profiles);
+  if (!agentValidation.ok) return agentValidation;
+  if (!validateFiles(state.files)) return invalid("files");
+  return { ok: true, checkedAtMs, profileIndexes: profileValidation.indexes };
 }
 
 function validateProfiles(profiles, policyProfiles) {
-  if (!isRecord(profiles) || !hasExactKeys(profiles, Object.keys(policyProfiles))) return null;
+  if (!isRecord(policyProfiles) || !isRecord(profiles) || !hasExactKeys(profiles, Object.keys(policyProfiles))) {
+    return invalid("profiles");
+  }
   const indexes = {};
   for (const [profileName, policyProfile] of Object.entries(policyProfiles)) {
     const profile = profiles[profileName];
-    if (!isRecord(profile) || !hasExactKeys(profile, PROFILE_FIELDS)) return null;
+    if (!isRecord(profile) || !hasExactKeys(profile, PROFILE_FIELDS)) return invalid("profiles");
     const index = policyProfile.candidates.findIndex((candidate) => tupleMatches(profile, candidate));
-    if (index === -1) return null;
-    if (profile.requestedModel !== policyProfile.candidates[0].model) return null;
-    if (profile.resolvedModel !== profile.model) return null;
+    if (index === -1) return invalid("unsupported_tuple");
+    if (profile.requestedModel !== policyProfile.candidates[0].model) return invalid("profiles");
+    if (profile.resolvedModel !== profile.model) return invalid("profiles");
     const expectedReason = index === 0 ? "preferred_available" : "compatibility_fallback";
-    if (profile.reason !== expectedReason) return null;
+    if (profile.reason !== expectedReason) return invalid("profiles");
     indexes[profileName] = index;
   }
-  return indexes;
+  return { ok: true, indexes };
 }
 
 function validateAgents(agents, policyAgents, profiles) {
-  if (!isRecord(agents) || !hasExactKeys(agents, SUPERLOOPY_AGENT_NAMES)) return false;
+  if (!isRecord(agents) || !hasExactKeys(agents, SUPERLOOPY_AGENT_NAMES)) return invalid("agents");
   for (const name of SUPERLOOPY_AGENT_NAMES) {
     const agent = agents[name];
     const policyAgent = policyAgents?.[name];
-    if (!isRecord(agent) || !isRecord(policyAgent) || !hasExactKeys(agent, AGENT_FIELDS)) return false;
-    if (agent.profile !== policyAgent.profile || agent.purpose !== policyAgent.purpose) return false;
+    if (!isRecord(agent) || !isRecord(policyAgent) || !hasExactKeys(agent, AGENT_FIELDS)) return invalid("agents");
+    if (agent.profile !== policyAgent.profile || agent.purpose !== policyAgent.purpose) return invalid("agents");
     const profile = profiles[agent.profile];
-    if (!isRecord(profile) || PROFILE_FIELDS.some((field) => agent[field] !== profile[field])) return false;
+    if (!isRecord(profile) || PROFILE_FIELDS.some((field) => agent[field] !== profile[field])) {
+      return invalid("mixed_profile");
+    }
   }
-  return true;
+  return { ok: true };
 }
 
 function validateFiles(files) {
@@ -261,6 +278,13 @@ function tupleMatches(value, candidate) {
   return value.model === candidate.model
     && value.model_reasoning_effort === candidate.model_reasoning_effort
     && value.service_tier === candidate.service_tier;
+}
+
+export function isAllowedCodexModelTuple(codexPolicy, value) {
+  if (!isRecord(codexPolicy?.profiles) || !isRecord(value)) return false;
+  return Object.values(codexPolicy.profiles).some((profile) =>
+    Array.isArray(profile?.candidates) && profile.candidates.some((candidate) => tupleMatches(value, candidate))
+  );
 }
 
 function isFresh(state, nowMs) {
@@ -301,6 +325,10 @@ function isRecord(value) {
 
 function success(policy, previousState, state, cacheStatus) {
   return { ok: true, policy, previousState, state, cacheStatus };
+}
+
+function invalid(reason) {
+  return { ok: false, reason };
 }
 
 function fail(message) {
