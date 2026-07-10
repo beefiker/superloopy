@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { access, mkdir, mkdtemp, readFile, readdir, rm, stat, unlink, utimes, writeFile } from "node:fs/promises";
+import { access, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, symlink, unlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -184,6 +184,55 @@ test("explicit refresh updates a managed preferred fleet to compatibility and pe
   assert.deepEqual(new Set(Object.values(state.agents).map(({ resolvedModel }) => resolvedModel)), new Set(["gpt-5.5"]));
 });
 
+test("policy-version refresh upgrades hash-matching managed files without force", async (t) => {
+  const setup = await fixture(t);
+  await installCompatibility(setup);
+  const previousState = await readState(setup);
+  previousState.policyVersion = "2026-07-09";
+  await writeFile(setup.statePath, `${JSON.stringify(previousState, null, 2)}\n`, "utf8");
+
+  const result = await installAgents(setup.root, ["--target", setup.targetDir], {
+    ...setup.options,
+    queryModelCatalog: async () => ({ ok: true, source: "model_list", models: fullCatalog() })
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.modelResolution.cacheStatus, "refreshed");
+  assert.equal(result.restartRequired, true);
+  assert.deepEqual(result.agents.map(({ status }) => status), SUPERLOOPY_AGENT_NAMES.map(() => "updated"));
+  assert.deepEqual(new Set(result.agents.map(({ resolvedModel }) => resolvedModel)), new Set([
+    "gpt-5.6-terra",
+    "gpt-5.6-sol",
+    "gpt-5.6-luna"
+  ]));
+  const currentState = await readState(setup);
+  assert.equal(currentState.policyVersion, "2026-07-10");
+});
+
+test("policy-version refresh still preserves a user-edited managed file", async (t) => {
+  const setup = await fixture(t);
+  await installCompatibility(setup);
+  const editedTarget = join(setup.targetDir, "franky.toml");
+  const editedContent = `${await readFile(editedTarget, "utf8")}# user edit\n`;
+  await writeFile(editedTarget, editedContent, "utf8");
+  const previousState = await readState(setup);
+  previousState.policyVersion = "2026-07-09";
+  const previousStateText = `${JSON.stringify(previousState, null, 2)}\n`;
+  await writeFile(setup.statePath, previousStateText, "utf8");
+
+  const result = await installAgents(setup.root, ["--target", setup.targetDir], {
+    ...setup.options,
+    queryModelCatalog: async () => ({ ok: true, source: "model_list", models: fullCatalog() })
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.agents.find(({ name }) => name === "franky").status, "conflict");
+  assert.deepEqual(result.agents.filter(({ name }) => name !== "franky").map(({ status }) => status),
+    SUPERLOOPY_AGENT_NAMES.slice(1).map(() => "blocked"));
+  assert.equal(await readFile(editedTarget, "utf8"), editedContent);
+  assert.equal(await readFile(setup.statePath, "utf8"), previousStateText);
+});
+
 test("explicit compatibility wins over refresh and performs no catalog query", async (t) => {
   const setup = await fixture(t);
   let queries = 0;
@@ -270,6 +319,113 @@ test("failed staging write cleans a partially created temporary agent file", asy
   assert.deepEqual(await readdir(setup.targetDir), []);
   assert.equal(await exists(target), false);
   assert.equal(await exists(setup.statePath), false);
+});
+
+test("commit refuses a target changed after preflight without overwriting the edit", async (t) => {
+  const setup = await fixture(t);
+  const target = join(setup.targetDir, "franky.toml");
+  await mkdir(setup.targetDir, { recursive: true });
+  await writeFile(target, "preflight content\n", "utf8");
+  await writeFile(target, "late user edit\n", "utf8");
+
+  await assert.rejects(commitManagedAgentFiles([
+    {
+      name: "franky",
+      target,
+      status: "updated",
+      content: "new managed content\n",
+      existingKind: "file",
+      existing: "preflight content\n"
+    }
+  ], setup.statePath, {}, false), /changed after preflight/u);
+
+  assert.equal(await readFile(target, "utf8"), "late user edit\n");
+  assert.equal(await exists(setup.statePath), false);
+});
+
+test("commit rolls back earlier replacements when a later rename fails", async (t) => {
+  const setup = await fixture(t);
+  await mkdir(setup.targetDir, { recursive: true });
+  const targets = [join(setup.targetDir, "franky.toml"), join(setup.targetDir, "zoro.toml")];
+  await writeFile(targets[0], "old franky\n", "utf8");
+  await writeFile(targets[1], "old zoro\n", "utf8");
+  let renameCalls = 0;
+
+  await assert.rejects(commitManagedAgentFiles([
+    { name: "franky", target: targets[0], status: "updated", content: "new franky\n", existingKind: "file", existing: "old franky\n" },
+    { name: "zoro", target: targets[1], status: "updated", content: "new zoro\n", existingKind: "file", existing: "old zoro\n" }
+  ], setup.statePath, {}, false, {
+    rename: async (source, target) => {
+      renameCalls += 1;
+      if (renameCalls === 2) throw Object.assign(new Error("injected rename failure"), { code: "EIO" });
+      return rename(source, target);
+    }
+  }), /injected rename failure/u);
+
+  assert.equal(await readFile(targets[0], "utf8"), "old franky\n");
+  assert.equal(await readFile(targets[1], "utf8"), "old zoro\n");
+  assert.equal(await exists(setup.statePath), false);
+  assert.deepEqual((await readdir(setup.targetDir)).sort(), ["franky.toml", "zoro.toml"]);
+});
+
+test("state persistence failure rolls the managed fleet back", async (t) => {
+  const setup = await fixture(t);
+  const target = join(setup.targetDir, "franky.toml");
+  await mkdir(setup.targetDir, { recursive: true });
+  await writeFile(target, "old franky\n", "utf8");
+
+  await assert.rejects(commitManagedAgentFiles([
+    { name: "franky", target, status: "updated", content: "new franky\n", existingKind: "file", existing: "old franky\n" }
+  ], setup.statePath, {}, true, {
+    writeState: async () => { throw new Error("injected state failure"); }
+  }), /injected state failure/u);
+
+  assert.equal(await readFile(target, "utf8"), "old franky\n");
+  assert.equal(await exists(setup.statePath), false);
+});
+
+test("symlinked managed targets remain conflicts even when their content matches", async (t) => {
+  const setup = await fixture(t);
+  await installCompatibility(setup);
+  const target = join(setup.targetDir, "franky.toml");
+  const external = join(setup.root, "external-franky.toml");
+  const content = await readFile(target, "utf8");
+  await writeFile(external, content, "utf8");
+  await unlink(target);
+  await symlink(external, target);
+  const stateBefore = await readFile(setup.statePath, "utf8");
+
+  const result = await installCompatibility(setup);
+
+  assert.equal(result.ok, false);
+  assert.equal(result.agents.find(({ name }) => name === "franky").status, "conflict");
+  assert.equal((await lstat(target)).isSymbolicLink(), true);
+  assert.equal(await readFile(external, "utf8"), content);
+  assert.equal(await readFile(setup.statePath, "utf8"), stateBefore);
+
+  const forced = await installCompatibility(setup, { force: true });
+  assert.equal(forced.ok, true);
+  assert.equal(forced.agents.find(({ name }) => name === "franky").status, "updated");
+  assert.equal((await lstat(target)).isSymbolicLink(), false);
+  assert.equal(await readFile(external, "utf8"), content);
+});
+
+test("install serializes the full managed-fleet transaction on the state path", async (t) => {
+  const setup = await fixture(t);
+  let lockedPath;
+  let lockCalls = 0;
+
+  const result = await installCompatibility(setup, {
+    withFileLock: async (path, operation) => {
+      lockCalls += 1;
+      lockedPath = path;
+      return operation();
+    }
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(lockCalls, 1);
+  assert.equal(lockedPath, setup.statePath);
 });
 
 test("force replaces a foreign file and options.force overrides argv", async (t) => {

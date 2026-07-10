@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Record status:** Immutable pre-implementation plan. Completion is recorded in Git history and validation evidence rather than by rewriting the original checklist.
+
 **Goal:** Replace semantic specialist prompt classification with explicit Superloopy invocation while preserving the packaged specialist workflows.
 
 **Architecture:** `UserPromptSubmit` recognizes the existing explicit loop aliases and structured steering only; it no longer scans arbitrary prompts for UI intent. Frontend specialization remains available after explicit invocation through skill metadata whose activation boundary matches the hook contract.

@@ -117,6 +117,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.modelPolicy.policyPath, "docs/superloopy-model-policy.md");
   assert.equal(parsed.checks.modelPolicy.policyDataPath, "model-policy.json");
   assert.equal(parsed.checks.modelPolicy.policyDataVersion, "2026-07-10");
+  assert.equal(parsed.checks.modelPolicy.compatibilityModel, "gpt-5.5");
   assert.equal(parsed.checks.modelPolicy.agents.nami.profile, "fast");
   assert.equal(parsed.checks.modelPolicy.profiles.standard.candidates[0].model, "gpt-5.6-terra");
   assert.equal(parsed.checks.modelPolicy.agents.nami.model, "gpt-5.6-luna");

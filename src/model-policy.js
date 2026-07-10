@@ -48,6 +48,7 @@ export async function checkModelPolicy(cwd) {
     policyPath: MODEL_POLICY_PATH,
     policyDataPath: MODEL_POLICY_DATA_PATH,
     policyDataVersion: data.version,
+    compatibilityModel: codex.compatibilityModel,
     allowedModels: codex.allowed.models,
     allowedEfforts: codex.allowed.reasoningEfforts,
     allowedTiers: codex.allowed.serviceTiers,
@@ -135,11 +136,15 @@ function validateModelPolicyData(data) {
 
 function validateCodexPolicyData(codex) {
   assertRecord(codex, "model policy data.codex");
+  assertString(codex.compatibilityModel, "model policy data.codex.compatibilityModel");
   assertStringArray(codex.allowed?.models, "model policy data.codex.allowed.models");
   assertStringArray(codex.allowed?.reasoningEfforts, "model policy data.codex.allowed.reasoningEfforts");
   assertStringArray(codex.allowed?.serviceTiers, "model policy data.codex.allowed.serviceTiers");
   assertRecord(codex.profiles, "model policy data.codex.profiles");
   assertRecord(codex.agents, "model policy data.codex.agents");
+  if (!codex.allowed.models.includes(codex.compatibilityModel)) {
+    throw new Error("model policy data.codex.compatibilityModel is not allowed");
+  }
   for (const [profileName, profile] of Object.entries(codex.profiles)) {
     assertRecord(profile, `model policy data.codex.profiles.${profileName}`);
     assertNonEmptyArray(profile.candidates, `model policy data.codex.profiles.${profileName}.candidates`);
@@ -154,6 +159,12 @@ function validateCodexPolicyData(codex) {
         throw new Error(`${candidatePath}.model_reasoning_effort is not allowed`);
       }
       if (!codex.allowed.serviceTiers.includes(candidate.service_tier)) throw new Error(`${candidatePath}.service_tier is not allowed`);
+    }
+    if (profile.candidates.length < 2) {
+      throw new Error(`Missing compatibility candidate for Codex profile ${profileName}`);
+    }
+    if (profile.candidates[1].model !== codex.compatibilityModel) {
+      throw new Error(`model policy data.codex.profiles.${profileName}.candidates.1.model must match compatibilityModel ${codex.compatibilityModel}`);
     }
   }
 }

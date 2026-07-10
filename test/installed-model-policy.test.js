@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -225,7 +225,13 @@ test("installed doctor distinguishes missing marker, missing file, and managed h
   const cases = [
     ["marker_missing", "franky", async (path) => writeFile(path, (await readFile(path, "utf8")).replace(`${MANAGED_MARKER}\n`, ""), "utf8")],
     ["missing", "robin", async (path) => unlink(path)],
-    ["hash_mismatch", "usopp", async (path) => writeFile(path, `${await readFile(path, "utf8")}# tampered\n`, "utf8")]
+    ["hash_mismatch", "usopp", async (path) => writeFile(path, `${await readFile(path, "utf8")}# tampered\n`, "utf8")],
+    ["symlink", "jinbe", async (path) => {
+      const external = `${path}.external`;
+      await writeFile(external, await readFile(path, "utf8"), "utf8");
+      await unlink(path);
+      await symlink(external, path);
+    }]
   ];
   for (const [expectedStatus, name, mutate] of cases) {
     await t.test(expectedStatus, async (t) => {

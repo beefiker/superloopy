@@ -67,6 +67,7 @@ export async function prepareCodexModelResolution(options = {}) {
   if (!policyResult.ok) return fail(policyResult.message);
   const policy = policyResult.data;
   const storedState = await readState(statePath);
+  const previousFileManifest = readPreviousFileManifest(storedState, targetDir);
   const previousState = validateModelResolutionState(storedState, policy, { targetDir, nowMs }).ok
     ? storedState
     : null;
@@ -81,11 +82,11 @@ export async function prepareCodexModelResolution(options = {}) {
       availabilitySource: "policy",
       selectionReason: "compatibility_override",
       resolution
-    }), "compatibility_override");
+    }), "compatibility_override", previousFileManifest);
   }
 
   if (options.refreshModels !== true && previousState !== null && isFresh(previousState, nowMs)) {
-    return success(policy, previousState, previousState, "fresh");
+    return success(policy, previousState, previousState, "fresh", previousFileManifest);
   }
 
   const query = options.queryModelCatalog ?? queryCodexModelCatalog;
@@ -112,7 +113,7 @@ export async function prepareCodexModelResolution(options = {}) {
       availabilitySource: "model_list",
       selectionReason: "catalog_resolved",
       resolution
-    }), "refreshed");
+    }), "refreshed", previousFileManifest);
   }
 
   const catalogReason = sanitizeCatalogReason(catalogResult?.reason);
@@ -124,7 +125,7 @@ export async function prepareCodexModelResolution(options = {}) {
       selectionReason: "probe_unknown_kept_cached",
       catalogReason
     };
-    return success(policy, previousState, state, "unknown_kept_cached");
+    return success(policy, previousState, state, "unknown_kept_cached", previousFileManifest);
   }
 
   const resolution = resolveCompatibility(policy.codex);
@@ -137,7 +138,7 @@ export async function prepareCodexModelResolution(options = {}) {
     selectionReason: "probe_unknown_compatibility",
     catalogReason,
     resolution
-  }), "unknown_compatibility");
+  }), "unknown_compatibility", previousFileManifest);
 }
 
 function resolveCompatibility(codexPolicy) {
@@ -279,6 +280,16 @@ function validateFiles(files) {
   });
 }
 
+function readPreviousFileManifest(state, targetDir) {
+  if (!isRecord(state)
+    || state.schemaVersion !== MODEL_RESOLUTION_SCHEMA_VERSION
+    || state.targetDir !== targetDir
+    || !validateFiles(state.files)) {
+    return null;
+  }
+  return state.files;
+}
+
 function tupleMatches(value, candidate) {
   return value.model === candidate.model
     && value.model_reasoning_effort === candidate.model_reasoning_effort
@@ -328,8 +339,8 @@ function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function success(policy, previousState, state, cacheStatus) {
-  return { ok: true, policy, previousState, state, cacheStatus };
+function success(policy, previousState, state, cacheStatus, previousFileManifest) {
+  return { ok: true, policy, previousState, previousFileManifest, state, cacheStatus };
 }
 
 function invalid(reason) {

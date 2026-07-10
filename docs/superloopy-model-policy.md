@@ -2,7 +2,7 @@
 
 Superloopy's bundled agent model fields are steering, not proof. They give the host sensible defaults for cost and depth, but completion authority still comes from Superloopy artifacts, `loop check`, and the quality gate.
 
-`model-policy.json` is the source of truth for allowed values, reusable profiles, and per-agent profile assignment. Each Codex profile contains an ordered list of complete model, effort, and tier candidate tuples. Resolution selects the first tuple that the current catalog supports in full. The bundled `.codex/agents/*.toml` files stay pinned to the preferred resolved model IDs so Superloopy never falls through to a weak parent/default model by accident.
+`model-policy.json` is the source of truth for allowed values, reusable profiles, and per-agent profile assignment. Each Codex profile contains an ordered list of complete model, effort, and tier candidate tuples. `codex.compatibilityModel` declares the model that every profile must place in the second candidate position. Resolution selects the first tuple that the current catalog supports in full. The bundled `.codex/agents/*.toml` files stay pinned to the preferred resolved model IDs so Superloopy never falls through to a weak parent/default model by accident.
 
 ## Allowed Fields
 

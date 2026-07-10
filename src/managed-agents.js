@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, readlink, rename, symlink, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 
 import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
@@ -79,16 +79,12 @@ export function parseManagedAgentRouting(content) {
   return { ok: true, routing };
 }
 
-export async function preflightManagedAgentFiles(files, previousState, force) {
-  const inspected = await Promise.all(files.map(async (file) => {
-    try {
-      return { ...file, existing: await readFile(file.target, "utf8") };
-    } catch (error) {
-      if (error?.code === "ENOENT") return { ...file, existing: null };
-      throw error;
-    }
-  }));
-  const planned = inspected.map((file) => ({ ...file, status: plannedStatus(file, previousState, force) }));
+export async function preflightManagedAgentFiles(files, previousFileManifest, force) {
+  const inspected = await Promise.all(files.map(async (file) => ({
+    ...file,
+    ...await inspectTarget(file.target)
+  })));
+  const planned = inspected.map((file) => ({ ...file, status: plannedStatus(file, previousFileManifest, force) }));
   const hasConflict = planned.some(({ status }) => status === "conflict");
   const filesWithFinalStatus = hasConflict
     ? planned.map((file) => file.status === "installed" || file.status === "updated" ? { ...file, status: "blocked" } : file)
@@ -102,20 +98,42 @@ export async function preflightManagedAgentFiles(files, previousState, force) {
 
 export async function commitManagedAgentFiles(files, statePath, state, writeState, options = {}) {
   const writeFileImpl = options.writeFile ?? writeFile;
+  const renameImpl = options.rename ?? rename;
+  const symlinkImpl = options.symlink ?? symlink;
+  const unlinkImpl = options.unlink ?? unlink;
+  const writeStateImpl = options.writeState ?? writeStateAtomically;
   const changed = files.filter(({ status }) => status === "installed" || status === "updated");
   const staged = [];
+  const committed = [];
   try {
     for (const file of changed) {
       await mkdir(dirname(file.target), { recursive: true });
       const path = temporarySibling(file.target);
-      staged.push({ path, target: file.target });
+      staged.push({ path, target: file.target, file });
       await writeFileImpl(path, file.content, { encoding: "utf8", flag: "wx" });
     }
-    for (const file of staged) await rename(file.path, file.target);
+    await assertPreflightStillCurrent(files, options);
+    for (const entry of staged) {
+      await renameImpl(entry.path, entry.target);
+      committed.push(entry.file);
+    }
+    await assertFinalFleet(files, options);
+    if (writeState) await writeStateImpl(statePath, state);
+  } catch (error) {
+    const rollbackErrors = await rollbackCommittedFiles(committed, {
+      writeFileImpl,
+      renameImpl,
+      symlinkImpl,
+      unlinkImpl,
+      inspectOptions: options
+    });
+    if (rollbackErrors.length > 0) {
+      throw new AggregateError([error, ...rollbackErrors], "Managed agent rollback failed after a commit error.");
+    }
+    throw error;
   } finally {
-    await Promise.all(staged.map(({ path }) => unlink(path).catch(() => {})));
+    await Promise.all(staged.map(({ path }) => unlinkImpl(path).catch(() => {})));
   }
-  if (writeState) await writeStateAtomically(statePath, state);
 }
 
 export function managedFileManifest(files) {
@@ -128,13 +146,94 @@ export function manifestsMatch(left, right) {
     && Object.keys(right ?? {}).length === SUPERLOOPY_AGENT_NAMES.length;
 }
 
-function plannedStatus(file, previousState, force) {
-  if (file.existing === null) return "installed";
+function plannedStatus(file, previousFileManifest, force) {
+  if (file.existingKind === "absent") return "installed";
+  if (file.existingKind === "symlink") return force ? "updated" : "conflict";
+  if (file.existingKind !== "file") return "conflict";
   if (file.existing === file.content) return "unchanged";
   if (force) return "updated";
-  const previousHash = previousState?.files?.[file.name]?.sha256;
+  const previousHash = previousFileManifest?.[file.name]?.sha256;
   const stillManaged = file.existing.startsWith(`${MANAGED_AGENT_MARKER}\n`);
   return stillManaged && previousHash === sha256(file.existing) ? "updated" : "conflict";
+}
+
+async function inspectTarget(path, options = {}) {
+  const lstatImpl = options.lstat ?? lstat;
+  const readFileImpl = options.readFile ?? readFile;
+  const readlinkImpl = options.readlink ?? readlink;
+  try {
+    const stats = await lstatImpl(path);
+    if (stats.isSymbolicLink()) return { existingKind: "symlink", existing: await readlinkImpl(path) };
+    if (!stats.isFile()) return { existingKind: "other", existing: null };
+    return { existingKind: "file", existing: await readFileImpl(path, "utf8") };
+  } catch (error) {
+    if (error?.code === "ENOENT") return { existingKind: "absent", existing: null };
+    throw error;
+  }
+}
+
+async function assertPreflightStillCurrent(files, options) {
+  for (const file of files) {
+    const expected = preflightSnapshot(file);
+    const actual = await inspectTarget(file.target, options);
+    if (!sameSnapshot(actual, expected)) {
+      throw new Error(`Managed agent ${file.name} target changed after preflight.`);
+    }
+  }
+}
+
+async function assertFinalFleet(files, options) {
+  for (const file of files) {
+    const actual = await inspectTarget(file.target, options);
+    if (actual.existingKind !== "file" || actual.existing !== file.content) {
+      throw new Error(`Managed agent ${file.name} target changed during commit.`);
+    }
+  }
+}
+
+function preflightSnapshot(file) {
+  if (file.existingKind !== undefined) {
+    return { existingKind: file.existingKind, existing: file.existing };
+  }
+  if (file.status === "installed") return { existingKind: "absent", existing: null };
+  if (typeof file.existing === "string") return { existingKind: "file", existing: file.existing };
+  throw new Error(`Managed agent ${file.name} is missing its preflight snapshot.`);
+}
+
+function sameSnapshot(left, right) {
+  return left.existingKind === right.existingKind
+    && ((left.existingKind !== "file" && left.existingKind !== "symlink") || left.existing === right.existing);
+}
+
+async function rollbackCommittedFiles(files, options) {
+  const errors = [];
+  for (const file of [...files].reverse()) {
+    try {
+      const actual = await inspectTarget(file.target, options.inspectOptions);
+      if (actual.existingKind !== "file" || actual.existing !== file.content) {
+        throw new Error(`Managed agent ${file.name} changed before rollback.`);
+      }
+      const previous = preflightSnapshot(file);
+      if (previous.existingKind === "absent") {
+        await options.unlinkImpl(file.target);
+        continue;
+      }
+      if (previous.existingKind !== "file" && previous.existingKind !== "symlink") {
+        throw new Error(`Managed agent ${file.name} has an unsafe rollback target.`);
+      }
+      const temporary = temporarySibling(file.target);
+      try {
+        if (previous.existingKind === "symlink") await options.symlinkImpl(previous.existing, temporary);
+        else await options.writeFileImpl(temporary, previous.existing, { encoding: "utf8", flag: "wx" });
+        await options.renameImpl(temporary, file.target);
+      } finally {
+        await options.unlinkImpl(temporary).catch(() => {});
+      }
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  return errors;
 }
 
 async function writeStateAtomically(path, state) {

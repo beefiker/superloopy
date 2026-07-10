@@ -46,6 +46,13 @@ test("hasEngineerTrigger wakes on connected loopycrew and standalone ultrawork",
   assert.equal(hasEngineerTrigger("ultrawork처럼 실행해"), false);
 });
 
+test("hasEngineerTrigger separates CLI references from explicit loop tasks", () => {
+  for (const prompt of ["loopy loop status?", "loopy loop status.", "loopy loop status)", "loopy loop status --json"]) {
+    assert.equal(hasEngineerTrigger(prompt), false, prompt);
+  }
+  assert.equal(hasEngineerTrigger("loopy loop review feedback until clean"), true);
+});
+
 test("parseInvocation strips spaced, connected, and ultrawork keywords and reports orchestration intent", () => {
   assert.deepEqual(parseInvocation("loopy team migrate the auth module"), {
     orchestrate: true,

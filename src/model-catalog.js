@@ -2,6 +2,8 @@ import { spawn } from "node:child_process";
 
 const DEFAULT_TIMEOUT_MS = 3_000;
 const MAX_TIMEOUT_MS = 4_999;
+const DEFAULT_TERMINATION_GRACE_MS = 100;
+const MAX_TERMINATION_GRACE_MS = 500;
 const MODEL_LIST_LIMIT = 100;
 const MAX_BUFFER_LENGTH = 1_000_000;
 // This identifies the probe protocol, not the Superloopy release. Bump it only when
@@ -11,6 +13,7 @@ const CLIENT_INFO = { name: "superloopy-model-probe", version: "1" };
 export async function queryCodexModelCatalog(options = {}) {
   const spawnImpl = options.spawnImpl ?? spawn;
   const timeoutMs = normalizeTimeout(options.timeoutMs ?? options.timeout);
+  const terminationGraceMs = normalizeTerminationGrace(options.terminationGraceMs);
   const clock = options.clock ?? (() => new Date());
   const setTimeoutImpl = options.setTimeoutImpl ?? setTimeout;
   const clearTimeoutImpl = options.clearTimeoutImpl ?? clearTimeout;
@@ -25,12 +28,13 @@ export async function queryCodexModelCatalog(options = {}) {
   }
 
   if (!isUsableChild(child)) {
-    terminate(child);
+    await terminateAndWait(child, () => false, 0);
     return failure("protocol_error", clock);
   }
 
   return new Promise((resolve) => {
     let settled = false;
+    let childExited = false;
     let phase = "initialize";
     let expectedId = 0;
     let nextRequestId = 1;
@@ -43,8 +47,9 @@ export async function queryCodexModelCatalog(options = {}) {
       if (settled) return;
       settled = true;
       clearTimeoutImpl(timer);
-      terminate(child);
-      resolve({ ...result, checkedAt: readClock(clock) });
+      void terminateAndWait(child, () => childExited, terminationGraceMs).then(() => {
+        resolve({ ...result, checkedAt: readClock(clock) });
+      });
     }
 
     function finishFailure(reason) {
@@ -137,8 +142,13 @@ export async function queryCodexModelCatalog(options = {}) {
       handleMessage(message);
     }
 
-    child.on("error", () => finishFailure("spawn_error"));
-    child.on("exit", () => finishFailure("process_exit"));
+    child.on("error", () => {
+      finishFailure("spawn_error");
+    });
+    child.on("exit", () => {
+      childExited = true;
+      finishFailure("process_exit");
+    });
     child.stdin.on("error", () => finishFailure("process_exit"));
     child.stdout.setEncoding("utf8");
     child.stdout.on("error", () => finishFailure("protocol_error"));
@@ -232,17 +242,60 @@ function normalizeTimeout(value) {
   return Math.min(value, MAX_TIMEOUT_MS);
 }
 
-function terminate(child) {
+function normalizeTerminationGrace(value) {
+  if (!Number.isFinite(value) || value < 0) return DEFAULT_TERMINATION_GRACE_MS;
+  return Math.min(value, MAX_TERMINATION_GRACE_MS);
+}
+
+async function terminateAndWait(child, hasExited, graceMs) {
   if (child === null || typeof child !== "object") return;
   try {
     if (child.stdin !== null && !child.stdin.destroyed && !child.stdin.writableEnded) child.stdin.end();
   } catch {
     // Best-effort shutdown only.
   }
+  if (!hasExited()) {
+    sendSignal(child, "SIGTERM");
+    if (!await waitForExit(child, hasExited, graceMs)) {
+      sendSignal(child, "SIGKILL");
+      await waitForExit(child, hasExited, graceMs);
+    }
+  }
+  destroyStream(child.stdin);
+  destroyStream(child.stdout);
+  destroyStream(child.stderr);
+  if (!hasExited() && typeof child.unref === "function") child.unref();
+}
+
+function sendSignal(child, signal) {
   try {
-    if (typeof child.kill === "function" && !child.killed) child.kill();
+    if (typeof child.kill === "function") child.kill(signal);
   } catch {
-    // Best-effort shutdown only.
+    // Best-effort escalation only.
+  }
+}
+
+function waitForExit(child, hasExited, graceMs) {
+  if (hasExited()) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    let timer;
+    const onExit = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    if (typeof child.once === "function") child.once("exit", onExit);
+    timer = setTimeout(() => {
+      if (typeof child.removeListener === "function") child.removeListener("exit", onExit);
+      resolve(hasExited());
+    }, graceMs);
+  });
+}
+
+function destroyStream(stream) {
+  try {
+    if (stream !== null && typeof stream?.destroy === "function" && !stream.destroyed) stream.destroy();
+  } catch {
+    // Best-effort pipe cleanup only.
   }
 }
 

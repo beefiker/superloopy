@@ -14,10 +14,11 @@ import { detectSuperpowers } from "./interop.js";
 // JavaScript treats the boundary before a Korean particle as a word boundary (`loopy가`),
 // while a bare Hangul prefix (`루피가`) has no useful `\b` boundary at all.
 const ENGINEER_TRIGGER_PATTERN = /^\s*@?(?:loopy|루피)(?=$|[\s:,])[\s:,]*/iu;
-// Suppress only a prompt-shaped `loopy loop <subcommand>` command reference (or a bare `loopy loop`),
-// NOT any task that merely starts with the word "loop" — e.g. "loopy loop over the array"
-// is a real task and must still wake the engineer.
-const CLI_REFERENCE_PATTERN = /^loop(?:\s+(?:begin|create|next|guide|trace|report|check|evidence|capture|prove|review|checkpoint|finish|status|audit|fleet|handoff)(?=$|[\s:,])|\s*$)/iu;
+// Suppress only a prompt-shaped `loopy loop <subcommand>` command reference (or a bare
+// `loopy loop`). A subcommand is a reference when it ends, meets punctuation, or is followed
+// by a CLI flag. Ordinary task prose such as `loopy loop review feedback until clean` must
+// still wake the engineer.
+const CLI_REFERENCE_PATTERN = /^loop(?:\s+(?:begin|create|next|guide|trace|report|check|evidence|capture|prove|review|checkpoint|finish|status|audit|fleet|handoff)(?=$|[?!.,):;]|\s+-{1,2}[A-Za-z0-9])|\s*$)/iu;
 // Escalation keyword right after the leading keyword: `team`/`crew` (English) or
 // `팀`/`크루` (Korean). Every form uses the same explicit-token separator contract.
 const TEAM_TRIGGER_PATTERN = /^(?:team|crew|팀|크루)(?=$|[\s:,])[\s:,]*/iu;

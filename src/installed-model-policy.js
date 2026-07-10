@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { lstat, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
@@ -19,6 +19,7 @@ const REPAIR_STATUSES = new Set([
   "missing",
   "mixed_profile",
   "routing_invalid",
+  "symlink",
   "unreadable",
   "unsupported_tuple"
 ]);
@@ -86,9 +87,18 @@ export async function checkInstalledModelPolicy(policyRoot, options = {}) {
 }
 
 async function inspectAgentFile(name, state, codexPolicy) {
+  const path = join(state.targetDir, `${name}.toml`);
+  let stats;
+  try {
+    stats = await lstat(path);
+  } catch (error) {
+    return { name, status: error?.code === "ENOENT" ? "missing" : "unreadable" };
+  }
+  if (stats.isSymbolicLink()) return { name, status: "symlink" };
+  if (!stats.isFile()) return { name, status: "unreadable" };
   let content;
   try {
-    content = await readFile(join(state.targetDir, `${name}.toml`), "utf8");
+    content = await readFile(path, "utf8");
   } catch (error) {
     return { name, status: error?.code === "ENOENT" ? "missing" : "unreadable" };
   }
