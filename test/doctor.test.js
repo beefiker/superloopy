@@ -125,6 +125,9 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.modelPolicy.agents.zoro.model_reasoning_effort, "xhigh");
   assert.equal(parsed.checks.hostContract.ok, true);
   assert.ok(parsed.checks.hostContract.cannotVerify.length >= 3);
+  assert.ok(parsed.checks.hostContract.cannotVerify.some((item) => /resolved model/u.test(item)));
+  assert.equal(parsed.checks.hostContract.modelRoutingVerification, "unverified");
+  assert.equal(parsed.checks.hostContract.unverifiedStatus, "model_unverified");
   assert.equal(parsed.checks.claudeHostWiring.ok, true);
   assert.equal(parsed.checks.claudeHostWiring.policy, "claude-host-wiring-present-and-namespaced");
   assert.ok(parsed.checks.claudeHostWiring.matchers.length >= 1);
@@ -286,6 +289,20 @@ test("doctor text reports whether comparison scanning was skipped", () => {
 
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /comparisonSimilarity: ok - skipped; pass `--comparison-path PATH`/);
+});
+
+test("doctor text renders advisory warning checks as warn", () => {
+  const output = formatDoctor({
+    ok: true,
+    checks: {
+      wrapper: { ok: true, warning: true, message: "wrapper/plugin split-brain" },
+      hostContract: { ok: true, message: "configured routing" }
+    }
+  });
+
+  assert.match(output, /- wrapper: warn - wrapper\/plugin split-brain/u);
+  assert.match(output, /- hostContract: ok - configured routing/u);
+  assert.match(output, /overall: ok/u);
 });
 
 test("doctor comparison scan fails on copied-looking blocks", async () => {

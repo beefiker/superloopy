@@ -7,6 +7,11 @@ import { MANAGED_AGENT_MARKER, parseManagedAgentRouting } from "./managed-agents
 import { queryCodexModelCatalog } from "./model-catalog.js";
 import { loadModelPolicyData, resolveCodexModelPolicy } from "./model-policy.js";
 import {
+  inspectLegacyAgentFleet,
+  loadLegacyAgentManifests,
+  resolveDefaultAgentTarget
+} from "./legacy-agents.js";
+import {
   isAllowedCodexModelTuple,
   MODEL_RESOLUTION_TTL_MS,
   resolveModelResolutionStatePath,
@@ -32,7 +37,7 @@ export async function checkInstalledModelPolicy(policyRoot, options = {}) {
   try {
     raw = await readFile(statePath, "utf8");
   } catch (error) {
-    if (error?.code === "ENOENT") return absent();
+    if (error?.code === "ENOENT") return inspectAbsentInstallation(policyRoot, options);
     return invalidState(null, "state_unreadable");
   }
 
@@ -84,6 +89,82 @@ export async function checkInstalledModelPolicy(policyRoot, options = {}) {
   }
   if (options.refreshModels !== true || restartRequired) return base;
   return compareLivePolicy(base, state, policy, options);
+}
+
+async function inspectAbsentInstallation(policyRoot, options) {
+  const targetDir = resolveDefaultAgentTarget(options.env ?? {}, options.homeDir);
+  let fleet;
+  let policy;
+  try {
+    const [manifests, policyResult] = await Promise.all([
+      loadLegacyAgentManifests(policyRoot),
+      loadModelPolicyData(policyRoot)
+    ]);
+    if (!policyResult.ok) return invalidState(null, "policy_invalid");
+    policy = policyResult.data;
+    fleet = await inspectLegacyAgentFleet(targetDir, manifests);
+  } catch {
+    return invalidState(null, "legacy_manifest_invalid");
+  }
+
+  const base = fleet.status === "absent"
+    ? absent()
+    : unmanagedFleet(targetDir, fleet.status);
+  if (options.refreshModels !== true) return base;
+  return compareAvailableBeforeInstall(base, policy, options);
+}
+
+async function compareAvailableBeforeInstall(base, policy, options) {
+  const query = options.queryModelCatalog ?? queryCodexModelCatalog;
+  let catalog;
+  try {
+    catalog = await query({ clock: options.clock });
+  } catch {
+    catalog = null;
+  }
+  if (catalog?.ok !== true) return { ...base, availabilityStatus: "unknown" };
+  const resolution = resolveCodexModelPolicy(policy.codex, catalog.models);
+  if (!resolution.ok) return { ...base, availabilityStatus: "unsupported" };
+  const degraded = Object.values(resolution.agents).some(({ reason }) => reason === "compatibility_fallback");
+  const availableAgents = Object.fromEntries(Object.entries(resolution.agents).map(([name, agent]) => [name, {
+    requestedModel: agent.requestedModel,
+    resolvedModel: agent.resolvedModel,
+    reason: agent.reason
+  }]));
+  return {
+    ...base,
+    availabilityStatus: degraded ? "compatibility_only" : "preferred_available",
+    availableAgents
+  };
+}
+
+function unmanagedFleet(targetDir, status) {
+  const migratable = status === "legacy_unmanaged";
+  return {
+    ok: migratable,
+    ...(migratable ? { warning: true } : {}),
+    installed: false,
+    policyVersion: null,
+    targetDir,
+    checkedAt: null,
+    selectionStatus: status,
+    availabilityStatus: "not_checked",
+    stale: false,
+    degraded: false,
+    restartRequired: true,
+    agents: Object.fromEntries(SUPERLOOPY_AGENT_NAMES.map((name) => [name, {
+      requestedModel: null,
+      resolvedModel: null,
+      reason: migratable ? "known_legacy_template" : "unmanaged_or_modified",
+      status
+    }])),
+    message: migratable
+      ? "Exact pre-managed Superloopy agents are installed and can be migrated safely."
+      : "Personal agent files exist without trusted managed state and require review.",
+    next: migratable
+      ? refreshAction(targetDir)
+      : `Review personal agents under ${targetDir}, then run the installer with --force only if replacement is intended.`
+  };
 }
 
 async function inspectAgentFile(name, state, codexPolicy) {

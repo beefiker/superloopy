@@ -88,6 +88,7 @@ Total: 100 points.
 | `docs/superpowers/plans/2026-07-07-astro-landing.md` | Astro migration implementation plan. | Must record the migration steps, proof gates, and deployment path without adding plugin runtime behavior. |
 | `docs/superpowers/plans/2026-07-10-explicit-frontend-activation.md` | Explicit activation implementation plan. | Must record the exact-token, semantic-steer removal, metadata, documentation, and validation steps. |
 | `docs/superpowers/plans/2026-07-10-gpt-5-6-model-resolution.md` | GPT-5.6 model-resolution implementation plan. | Must record the dependency-free catalog, cached resolution, managed install, read-only doctor, lifecycle documentation, and validation tasks without authorizing post-launch retry. |
+| `docs/superpowers/plans/2026-07-10-gpt-5-6-routing-hardening.md` | GPT-5.6 routing-hardening implementation plan. | Must require test-first exact legacy adoption, split-brain diagnosis, runtime verification disclosure, full validation, and PR publication. |
 | `docs/superpowers/specs/2026-07-07-astro-landing-design.md` | Astro landing design brief. | Must record the mobile, performance, image, and Cloudflare constraints for the website rewrite. |
 | `docs/superpowers/specs/2026-07-10-explicit-frontend-activation-design.md` | Explicit activation design brief. | Must keep prompt-hook activation lexical and specialist routing explicit. |
 | `docs/superpowers/specs/2026-07-10-gpt-5-6-model-policy-design.md` | GPT-5.6 model-policy design brief. | Must define ordered complete Terra/Sol/Luna and GPT-5.5 tuples, managed pre-launch resolution, 24-hour caching, hash-safe upgrades, conservative unknown handling, and no post-launch retry. |
@@ -100,6 +101,7 @@ Total: 100 points.
 | `hooks/user-prompt-submit.json` | `test/plugin.test.js`, doctor hook check. | Must route structured steering and exact trigger-scoped context through the Superloopy CLI without an always-visible status message. |
 | `installation.md` | `test/docs.test.js`, audit coverage. | Must give agents a root-level install contract for Codex and Claude Code from the GitHub URL, including verification and no-dependency boundaries. |
 | `model-policy.json` | `test/model-resolution.test.js`, `test/doctor.test.js`, audit coverage. | Must centralize ordered complete Codex candidates, explicit GPT-5.5 compatibility, allowed values, and per-agent assignments without parent inheritance or post-launch switching. |
+| `legacy-agent-manifests.json` | `test/model-install.test.js`, installed-policy coverage. | Must contain complete lowercase SHA-256 manifests for known pre-managed fleets and authorize nothing from partial or name-only matches. |
 | `package-lock.json` | Hashgraph catalog readiness and npm audit surface. | Must lock only the dependency-free package root unless real dependencies are intentionally added. |
 | `package.json` | `npm test`, doctor dependency check. | Must stay dependency-free and expose `superloopy`, `test`, `check`, and `sync-version` scripts. |
 | `scripts/serve-web.mjs` | Browser QA preview server. | Must serve `web-superloopy/dist/` without dependencies and expose MIME types for landing WebGL assets. |
@@ -416,10 +418,11 @@ Total: 100 points.
 | `src/help.js` | CLI help tests. | Must show the shortest evidence-backed flow and pass-artifact rule. |
 | `src/hooks.js` | Hook, model-install, and golden-hook tests. | Must run managed bootstrap at SessionStart, reuse fresh state without a catalog query, surface compatibility/restart status, and keep continuation, steering, and receipt validation fail-closed. |
 | `src/install-flow.js` | `test/auto-update.test.js`. | Must distinguish marketplace, checkout, future npx-local snapshot, and unknown install states so unsafe npx updates stay off. |
-| `src/installed-model-policy.js` | `test/installed-model-policy.test.js`, doctor tests. | Must read cached state and all six managed TOMLs, report absent/preferred/degraded/stale/mixed/tampered status, and keep explicit availability refresh read-only and sanitized. |
+| `src/installed-model-policy.js` | `test/installed-model-policy.test.js`, doctor tests. | Must report absent/legacy/unmanaged/preferred/degraded/stale/mixed/tampered status and keep explicit availability refresh read-only before and after install. |
 | `src/interop.js` | `test/interop.test.js`. | Must detect a neighboring Superpowers install best-effort across both hosts, honor the `SUPERLOOPY_SUPERPOWERS` override, and never mutate state or fail a hook. |
 | `src/loop.js` | Core loop and CLI tests. | Must preserve lifecycle state, ledger appends, evidence recording, review, checkpoint, status, and steering. |
-| `src/managed-agents.js` | `test/model-install.test.js`, `test/concurrency.test.js`, installed-policy tests. | Must canonicalize lock identities, verify original and staged inode identity, install without replacement, restore metadata, preserve concurrent user saves, surface backup cleanup failure, and write state last. |
+| `src/legacy-agents.js` | `test/model-install.test.js`, `test/installed-model-policy.test.js`. | Must validate known legacy manifests, classify only complete exact regular-file fleets as migratable, and expose no personal file content. |
+| `src/managed-agents.js` | `test/model-install.test.js`, `test/concurrency.test.js`, installed-policy tests. | Must canonicalize lock identities, adopt only complete hash-known legacy fleets, verify inode identity, preserve concurrent user saves, roll back safely, and write state last. |
 | `src/plan-trust.js` | Audit trust-gate tests. | Must fail closed: an audit re-run of a command never executed or approved on this machine must refuse without executing. |
 | `src/matrix-gate.js` | Matrix gate golden tests. | Must validate compatible matrix gate shape through Superloopy artifacts only. |
 | `src/model-catalog.js` | `test/model-catalog.test.js`. | Must use only bounded `initialize` plus paginated `model/list`, normalize complete capabilities, sanitize failures, await bounded TERM-to-KILL cleanup, and never start a thread, turn, or prompt. |
@@ -436,7 +439,7 @@ Total: 100 points.
 | `src/store.js` | Loop, hook, and scoped-session tests. | Must normalize sessions, isolate `.superloopy/` state, write JSON atomically, and append ledger entries. |
 | `src/subagent-attempts.js` | `npm test`, doctor reviewability. | Must count the 3-attempt cap (with a session/cwd fallback key) and record the exhaustion ledger signal. |
 | `src/trace.js` | Loop-gate and CLI evidence tests. | Must show artifact-backed proof, warnings, missing proof, suggested paths, ledger timeline, and evidence summary counts. |
-| `src/wrapper-check.js` | `test/wrapper-check.test.js`, `test/doctor.test.js`. | Must read the installed bin wrapper and advise (never fail) when it points at a stale or pruned versioned cache after an upgrade; informational, no-throw, dependency-injectable, and aware of resilient sibling-fallback shims. |
+| `src/wrapper-check.js` | `test/wrapper-check.test.js`, `test/doctor.test.js`. | Must warn without failing when a generated wrapper is stale, pruned, or belongs to a different root than the diagnosed plugin; no-throw and dependency-injectable. |
 | `test/audit.test.js` | `npm test`. | Must fail if repo files are missing from audit or hand-reviewable file-size limits are exceeded. |
 | `test/auto-update.test.js` | `npm test`. | Must prove marketplace skip notices, checkout skip behavior, future npx-local snapshot behavior, semver planning, install-flow detection, and Windows npx shims. |
 | `test/claude-host-wiring.test.js` | `npm test`. | Must verify the doctor Claude-host-wiring check: manifest/hooks presence, SubagentStop CLI wiring, namespaced matcher coverage, and safe handling of invalid regex/JSON. |
@@ -470,7 +473,8 @@ Total: 100 points.
 | `test/loop-gates.test.js` | `npm test`. | Must cover gate, report, trace, check, review, finish, and checkpoint behavior. |
 | `test/loop.test.js` | `npm test`. | Must cover core lifecycle, evidence recording, steering, and command capture. |
 | `test/model-catalog.test.js` | `npm test`. | Must cover bounded read-only `model/list` pagination, normalization, timeout, failure sanitization, stubborn-child TERM-to-KILL cleanup, and the absence of thread/turn/prompt methods. |
-| `test/model-install.test.js` | `npm test`. | Must cover policy-version upgrades, realpath/symlink-alias target locks, commit-time edits, symlinks, exact hashes, metadata-preserving rollback, force, and no partial fleet/state writes. |
+| `test/legacy-agent-migration.test.js` | `npm test`. | Must prove the six owned legacy files migrate without force, one owned-file edit blocks every write, and unrelated personal agent names remain untouched. |
+| `test/model-install.test.js` | `npm test`. | Must cover policy upgrades, locks, commit-time edits, symlinks, rollback, force, and no partial fleet/state writes. |
 | `test/model-resolution-cache.test.js` | `npm test`. | Must cover 24-hour reuse, every refresh cause, deterministic compatibility, unknown preservation/first-install fallback, manifest validation, and state paths. |
 | `test/model-resolution.test.js` | `npm test`. | Must prove ordered complete tuple resolution, profile-local GPT-5.5 compatibility, no-candidate failure, and strict policy validation. |
 | `test/plugin.test.js` | `npm test`. | Must verify plugin manifest, hook route integrity, and packaged skill metadata. |

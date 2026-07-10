@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm, stat, symlink, unlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -93,6 +93,27 @@ function refreshAction(setup) {
   return `Run \`superloopy agents install --target "${setup.targetDir}" --refresh-models\` to refresh the managed routing state.`;
 }
 
+const LEGACY_MODELS = {
+  franky: "gpt-5.5",
+  zoro: "gpt-5.5",
+  usopp: "gpt-5.5",
+  jinbe: "gpt-5.5",
+  robin: "gpt-5.5",
+  nami: "gpt-5.4-mini"
+};
+
+async function writeExactLegacyFleet(targetDir) {
+  await mkdir(targetDir, { recursive: true });
+  for (const name of SUPERLOOPY_AGENT_NAMES) {
+    const preferred = await readFile(join(REPO_ROOT, ".codex", "agents", `${name}.toml`), "utf8");
+    await writeFile(
+      join(targetDir, `${name}.toml`),
+      preferred.replace(/^model = ".+"$/mu, `model = "${LEGACY_MODELS[name]}"`),
+      "utf8"
+    );
+  }
+}
+
 test("installed doctor treats absent state as healthy and makes zero catalog queries", async (t) => {
   const root = await mkdtemp(join(tmpdir(), "superloopy-installed-absent-"));
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -114,6 +135,76 @@ test("installed doctor treats absent state as healthy and makes zero catalog que
   assert.equal(check.selectionStatus, "not_installed");
   assert.equal(check.availabilityStatus, "not_checked");
   assert.deepEqual(check.agents, {});
+});
+
+test("installed doctor identifies an exact pre-managed fleet as safely migratable", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "superloopy-installed-legacy-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const codexHome = join(root, "codex-home");
+  const targetDir = join(codexHome, "agents");
+  await writeExactLegacyFleet(targetDir);
+
+  const check = installedCheck(await runDoctor(REPO_ROOT, options({
+    env: { CODEX_HOME: codexHome },
+    homeDir: join(root, "home")
+  })));
+
+  assert.equal(check.ok, true);
+  assert.equal(check.warning, true);
+  assert.equal(check.installed, false);
+  assert.equal(check.targetDir, targetDir);
+  assert.equal(check.selectionStatus, "legacy_unmanaged");
+  assert.equal(check.restartRequired, true);
+  assert.deepEqual(new Set(Object.values(check.agents).map(({ status }) => status)), new Set(["legacy_unmanaged"]));
+  assert.match(check.next, /agents install .*--refresh-models/u);
+  assert.doesNotMatch(check.next, /--force/u);
+});
+
+test("installed doctor refuses to adopt an edited pre-managed fleet", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "superloopy-installed-edited-legacy-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const codexHome = join(root, "codex-home");
+  const targetDir = join(codexHome, "agents");
+  await writeExactLegacyFleet(targetDir);
+  const editedPath = join(targetDir, "nami.toml");
+  await writeFile(editedPath, `${await readFile(editedPath, "utf8")}# personal edit\n`, "utf8");
+
+  const check = installedCheck(await runDoctor(REPO_ROOT, options({
+    env: { CODEX_HOME: codexHome },
+    homeDir: join(root, "home")
+  })));
+
+  assert.equal(check.ok, false);
+  assert.equal(check.selectionStatus, "unmanaged_conflict");
+  assert.match(check.next, /--force/u);
+  assert.doesNotMatch(JSON.stringify(check), /personal edit/u);
+});
+
+test("explicit doctor refresh reports preferred availability before managed state exists", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "superloopy-installed-preflight-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  let queries = 0;
+  const check = installedCheck(await runDoctor(REPO_ROOT, options({
+    env: { CODEX_HOME: join(root, "codex-home") },
+    homeDir: join(root, "home")
+  }, {
+    refreshModels: true,
+    queryModelCatalog: async () => {
+      queries += 1;
+      return { ok: true, source: "model_list", models: fullCatalog() };
+    }
+  })));
+
+  assert.equal(queries, 1);
+  assert.equal(check.ok, true);
+  assert.equal(check.installed, false);
+  assert.equal(check.selectionStatus, "not_installed");
+  assert.equal(check.availabilityStatus, "preferred_available");
+  assert.deepEqual(new Set(Object.values(check.availableAgents).map(({ resolvedModel }) => resolvedModel)), new Set([
+    "gpt-5.6-terra",
+    "gpt-5.6-sol",
+    "gpt-5.6-luna"
+  ]));
 });
 
 test("programmatic doctor without installed options never reads process CODEX_HOME", async (t) => {

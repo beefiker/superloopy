@@ -42,6 +42,8 @@ override them, but Superloopy does not omit them just to inherit a parent/defaul
 improve crew routing efficiency, but they are never proof: Superloopy accepts only artifacts,
 command transcripts, audit verdicts, and gate reports.
 
+The structured doctor value is `modelRoutingVerification: "unverified"` until a host can attest both the resolved `agent_type` and model. A spawn surface that lacks either signal is reported as `model_unverified`; the parent must not claim that the configured GPT-5.6 tuple was enforced at runtime.
+
 ## SubagentStop hook payload
 
 Superloopy's `SubagentStop` handlers read these fields from the JSON piped on stdin:
@@ -76,6 +78,7 @@ hosts.
 Superloopy cannot confirm, from inside a hook, that the host:
 
 - spawns the installed agents by name on dispatch;
+- exposes resolved-model attestation for the launched worker;
 - routes a dispatch to the requested TOML role (model, effort, and service tier are not
   selectable by name) — so the parent must paste the role's requirements into the message and
   judge by delivered evidence, never by the role label it asked for;
