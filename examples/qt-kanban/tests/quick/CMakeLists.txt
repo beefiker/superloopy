@@ -21,6 +21,7 @@ qt_add_qml_module(tst_qtkanban
     QML_FILES
         tst_smoke.qml
         tst_store.qml
+        tst_theme.qml
     IMPORTS
         TARGET qtkanban_ui
 )

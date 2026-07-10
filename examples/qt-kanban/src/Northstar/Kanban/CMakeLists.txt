@@ -16,6 +16,16 @@ qt_add_qml_module(qtkanban_ui
         KanbanView.qml
         Theme.qml
         TaskStore.qml
+    RESOURCES
+        assets/icons/add.svg
+        assets/icons/board.svg
+        assets/icons/close.svg
+        assets/icons/filter.svg
+        assets/icons/help.svg
+        assets/icons/inbox.svg
+        assets/icons/search.svg
+        assets/icons/settings.svg
+        assets/icons/timeline.svg
 )
 
 target_link_libraries(qtkanban_ui PRIVATE
