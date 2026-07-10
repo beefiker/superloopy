@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { access, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, symlink, unlink, utimes, writeFile } from "node:fs/promises";
+import { access, chmod, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, symlink, unlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -304,7 +304,6 @@ test("failed staging write cleans a partially created temporary agent file", asy
   const setup = await fixture(t);
   const target = join(setup.targetDir, "franky.toml");
   let partialPath;
-
   await assert.rejects(commitManagedAgentFiles([
     { name: "franky", target, status: "installed", content: "managed\n" }
   ], setup.statePath, {}, false, {
@@ -314,7 +313,6 @@ test("failed staging write cleans a partially created temporary agent file", asy
       throw new Error("injected staging failure");
     }
   }), /injected staging failure/u);
-
   assert.equal(await exists(partialPath), false);
   assert.deepEqual(await readdir(setup.targetDir), []);
   assert.equal(await exists(target), false);
@@ -326,8 +324,7 @@ test("commit refuses a target changed after preflight without overwriting the ed
   const target = join(setup.targetDir, "franky.toml");
   await mkdir(setup.targetDir, { recursive: true });
   await writeFile(target, "preflight content\n", "utf8");
-  await writeFile(target, "late user edit\n", "utf8");
-
+  let injected = false;
   await assert.rejects(commitManagedAgentFiles([
     {
       name: "franky",
@@ -337,8 +334,15 @@ test("commit refuses a target changed after preflight without overwriting the ed
       existingKind: "file",
       existing: "preflight content\n"
     }
-  ], setup.statePath, {}, false), /changed after preflight/u);
-
+  ], setup.statePath, {}, false, {
+    rename: async (source, destination) => {
+      if (!injected && source === target) {
+        injected = true;
+        await writeFile(target, "late user edit\n", "utf8");
+      }
+      return rename(source, destination);
+    }
+  }), /changed after preflight/u);
   assert.equal(await readFile(target, "utf8"), "late user edit\n");
   assert.equal(await exists(setup.statePath), false);
 });
@@ -350,7 +354,6 @@ test("commit rolls back earlier replacements when a later rename fails", async (
   await writeFile(targets[0], "old franky\n", "utf8");
   await writeFile(targets[1], "old zoro\n", "utf8");
   let renameCalls = 0;
-
   await assert.rejects(commitManagedAgentFiles([
     { name: "franky", target: targets[0], status: "updated", content: "new franky\n", existingKind: "file", existing: "old franky\n" },
     { name: "zoro", target: targets[1], status: "updated", content: "new zoro\n", existingKind: "file", existing: "old zoro\n" }
@@ -361,7 +364,6 @@ test("commit rolls back earlier replacements when a later rename fails", async (
       return rename(source, target);
     }
   }), /injected rename failure/u);
-
   assert.equal(await readFile(targets[0], "utf8"), "old franky\n");
   assert.equal(await readFile(targets[1], "utf8"), "old zoro\n");
   assert.equal(await exists(setup.statePath), false);
@@ -373,14 +375,14 @@ test("state persistence failure rolls the managed fleet back", async (t) => {
   const target = join(setup.targetDir, "franky.toml");
   await mkdir(setup.targetDir, { recursive: true });
   await writeFile(target, "old franky\n", "utf8");
-
+  await chmod(target, 0o600);
   await assert.rejects(commitManagedAgentFiles([
     { name: "franky", target, status: "updated", content: "new franky\n", existingKind: "file", existing: "old franky\n" }
   ], setup.statePath, {}, true, {
     writeState: async () => { throw new Error("injected state failure"); }
   }), /injected state failure/u);
-
   assert.equal(await readFile(target, "utf8"), "old franky\n");
+  assert.equal((await stat(target)).mode & 0o777, 0o600);
   assert.equal(await exists(setup.statePath), false);
 });
 
@@ -394,15 +396,12 @@ test("symlinked managed targets remain conflicts even when their content matches
   await unlink(target);
   await symlink(external, target);
   const stateBefore = await readFile(setup.statePath, "utf8");
-
   const result = await installCompatibility(setup);
-
   assert.equal(result.ok, false);
   assert.equal(result.agents.find(({ name }) => name === "franky").status, "conflict");
   assert.equal((await lstat(target)).isSymbolicLink(), true);
   assert.equal(await readFile(external, "utf8"), content);
   assert.equal(await readFile(setup.statePath, "utf8"), stateBefore);
-
   const forced = await installCompatibility(setup, { force: true });
   assert.equal(forced.ok, true);
   assert.equal(forced.agents.find(({ name }) => name === "franky").status, "updated");
@@ -410,22 +409,34 @@ test("symlinked managed targets remain conflicts even when their content matches
   assert.equal(await readFile(external, "utf8"), content);
 });
 
-test("install serializes the full managed-fleet transaction on the state path", async (t) => {
+test("install serializes concurrent same-target transactions across distinct state paths", async (t) => {
   const setup = await fixture(t);
-  let lockedPath;
-  let lockCalls = 0;
-
-  const result = await installCompatibility(setup, {
-    withFileLock: async (path, operation) => {
-      lockCalls += 1;
-      lockedPath = path;
-      return operation();
+  const secondStatePath = join(setup.root, "other-state", "model-resolution.json");
+  const targetLockPath = join(dirname(setup.targetDir), `.${basename(setup.targetDir)}.superloopy-managed-fleet`);
+  const lockCalls = [];
+  let activeTargetLocks = 0;
+  let maxActiveTargetLocks = 0;
+  const withFileLock = async (path, operation) => {
+    lockCalls.push(path);
+    if (path !== targetLockPath) return operation();
+    activeTargetLocks += 1;
+    maxActiveTargetLocks = Math.max(maxActiveTargetLocks, activeTargetLocks);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    try {
+      return await operation();
+    } finally {
+      activeTargetLocks -= 1;
     }
-  });
-
-  assert.equal(result.ok, true);
-  assert.equal(lockCalls, 1);
-  assert.equal(lockedPath, setup.statePath);
+  };
+  const [first, second] = await Promise.all([
+    installCompatibility(setup, { withFileLock }),
+    installCompatibility(setup, { withFileLock, statePath: secondStatePath })
+  ]);
+  assert.equal(first.ok, true);
+  assert.equal(second.ok, true);
+  assert.equal(maxActiveTargetLocks, 1);
+  assert.equal(lockCalls.filter((path) => path === targetLockPath).length, 2);
+  assert.equal(lockCalls.length, 4);
 });
 
 test("force replaces a foreign file and options.force overrides argv", async (t) => {
