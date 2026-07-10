@@ -37,9 +37,9 @@ test("plugin manifest exposes Superloopy skills and packaged opt-in hooks", asyn
   assert.equal(plugin.hooks.includes("./hooks/stop.json"), true);
 
   const sessionStart = JSON.parse(await readFile("hooks/session-start.json", "utf8"));
-  assert.equal(sessionStart.hooks.SessionStart[0].hooks[0].timeout, 10);
+  assert.equal(sessionStart.hooks.SessionStart[0].hooks[0].timeout, 20);
   const consolidated = JSON.parse(await readFile("hooks/hooks.json", "utf8"));
-  assert.equal(consolidated.hooks.SessionStart[0].hooks[0].timeout, 10);
+  assert.equal(consolidated.hooks.SessionStart[0].hooks[0].timeout, 20);
 });
 
 test("package metadata names author and GitHub topics", async () => {
