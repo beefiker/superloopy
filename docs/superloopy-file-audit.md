@@ -34,11 +34,11 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `.gitignore` | Keeps runtime state, logs, coverage, dependencies, and generated Astro build output out of source control. | Superloopy runtime ignore set plus web build artifacts only. |
 | `DESIGN.md` | Static landing-page design token contract: reference-inspired editorial colors, typography, spacing, component states, motion, and depth for the Superloopy web preview. | Web presentation design contract only; no plugin runtime behavior and no vendored external design system. |
 | `LICENSE` | MIT license for this repo. | Standard license text. |
-| `README.es.md` | Spanish public product overview translated from the root README. | Documentation-only locale surface; mirrors Superloopy behavior without adding runtime logic. |
-| `README.ja.md` | Japanese public product overview translated from the root README. | Documentation-only locale surface; mirrors Superloopy behavior without adding runtime logic. |
-| `README.ko.md` | Korean public product overview translated from the root README. | Documentation-only locale surface; mirrors Superloopy behavior without adding runtime logic. |
-| `README.md` | English public product overview, language switcher, marketplace install flow, bootstrap behavior, command flow, state model, hooks, gates, and doctor checks. | Uses Superloopy-native product terms and current install commands. |
-| `README.zh-CN.md` | Simplified Chinese public product overview translated from the root README. | Documentation-only locale surface; mirrors Superloopy behavior without adding runtime logic. |
+| `README.es.md` | Spanish public product overview and managed Codex model-lifecycle summary. | Documentation-only locale surface; mirrors the root install and routing behavior without adding runtime logic. |
+| `README.ja.md` | Japanese public product overview and managed Codex model-lifecycle summary. | Documentation-only locale surface; mirrors the root install and routing behavior without adding runtime logic. |
+| `README.ko.md` | Korean public product overview and managed Codex model-lifecycle summary. | Documentation-only locale surface; mirrors the root install and routing behavior without adding runtime logic. |
+| `README.md` | English public overview covering marketplace install, managed Codex agent materialization and model resolution, command flow, hooks, gates, and doctor checks. | Uses current install controls and distinguishes pre-launch mutation from read-only diagnosis. |
+| `README.zh-CN.md` | Simplified Chinese public product overview and managed Codex model-lifecycle summary. | Documentation-only locale surface; mirrors the root install and routing behavior without adding runtime logic. |
 | `SECURITY.md` | Vulnerability disclosure policy required for plugin catalog submissions. | Process documentation only; avoids publishing exploit details or secrets. |
 | `agents/franky.md` | Claude-format bounded implementation subagent (frontmatter + ported instructions). | Superloopy-native role; advisory model alias, ported prose, no vendored code. |
 | `agents/jinbe.md` | Claude-format final gate-review subagent. | Superloopy-native role; advisory model alias, ported prose, no vendored code. |
@@ -48,33 +48,33 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `agents/zoro.md` | Claude-format skeptical code-review subagent. | Superloopy-native role; advisory model alias, ported prose, no vendored code. |
 | `docs/superloopy-claude-validation.md` | Live validation checklist for the Claude Code dual-host port: install, component load, the four empirical linchpins, a full loop, and degrade-safety confirmation. | Superloopy-native operator doc; no runtime logic or vendored code. |
 | `docs/superloopy-crew-lines.md` | Crew-line precedent, policy, and runtime contract for presentation-only handoff flavor. | Keeps lines Superloopy-original and non-authoritative beside mechanical evidence state. |
-| `docs/superloopy-design-audit.md` | Doctor-verified decision matrix for naming, compatibility, and threshold records. | Records Superloopy decisions, not source-project lineage. |
+| `docs/superloopy-design-audit.md` | Doctor-verified decision matrix for naming, compatibility, model resolution, and threshold records. | Records Superloopy decisions with concrete source/test guards, not source-project lineage. |
 | `docs/superloopy-file-audit.md` | File-by-file audit and reviewability note. | Proves every Git-visible file has a role and boundary. |
 | `docs/superloopy-gate-notes.md` | Gate compatibility notes and golden scenario list. | Names review and matrix gates as Superloopy contracts. |
 | `docs/superloopy-host-contract.md` | The host-runtime contract Superloopy rides: installable agents, the SubagentStop payload fields, and the host behaviors Superloopy cannot verify. | Superloopy-native; states advisory limits and the deterministic-floor backstop. |
 | `docs/superloopy-interop-superpowers.md` | Coexistence note: how Superloopy divides labor with the Superpowers plugin, how detection works, and the doctor visibility check. | Superloopy-native operator doc; advisory guidance only, no runtime logic or vendored code. |
 | `docs/superloopy-loop-golden-set.md` | Long-running golden set, threshold model, file evidence inventory, and run history. | Scores Superloopy on its own behavior. |
 | `docs/superloopy-model-policy-claude.md` | Advisory Claude model-alias policy for the bundled subagents. | Superloopy-native; treats model choice as steering, not proof. |
-| `docs/superloopy-model-policy.md` | Advisory model, reasoning-effort, and service-tier defaults for bundled Superloopy agents. | Explicitly treats model choice as steering, not proof. |
+| `docs/superloopy-model-policy.md` | Ordered complete Codex profile tuples, preferred pins, and explicit GPT-5.5 compatibility policy for bundled agents. | Keeps routing pre-launch and explicit while treating model choice as steering, not proof. |
 | `docs/superpowers/plans/2026-07-07-astro-landing.md` | Written implementation plan for migrating the landing page to Astro while preserving the existing visual system and deferred orbit runtime. | Planning artifact only; no runtime plugin behavior. |
 | `docs/superpowers/plans/2026-07-10-explicit-frontend-activation.md` | Implementation plan for replacing semantic specialist prompt steers with explicit invocation. | Planning artifact only; records the TDD and validation contract. |
 | `docs/superpowers/plans/2026-07-10-gpt-5-6-model-resolution.md` | Implementation plan for catalog-aware GPT-5.6 tuple resolution and managed agent installation. | Planning artifact only; records pre-launch resolution, compatibility, and validation contracts. |
 | `docs/superpowers/specs/2026-07-07-astro-landing-design.md` | Design brief for the Astro landing rewrite, including performance, mobile, and deployment constraints. | Planning artifact only; no runtime plugin behavior. |
 | `docs/superpowers/specs/2026-07-10-explicit-frontend-activation-design.md` | Design brief for exact Superloopy invocation tokens and explicit frontend activation. | Planning artifact only; documents the approved routing boundary. |
-| `docs/superpowers/specs/2026-07-10-gpt-5-6-model-policy-design.md` | Design brief for mapping the bundled Codex agent profiles to GPT-5.6 Sol, Terra, and Luna. | Planning artifact only; preserves explicit pins and adds no runtime fallback. |
+| `docs/superpowers/specs/2026-07-10-gpt-5-6-model-policy-design.md` | Design brief for ordered Terra/Sol/Luna tuples, managed install-time resolution, and GPT-5.5 compatibility. | Planning artifact only; requires explicit pre-launch routing and forbids post-launch retry. |
 | `hooks/hooks.json` | Consolidated Claude hook wiring routing the five events to the Superloopy CLI via ${CLAUDE_PLUGIN_ROOT}. | Thin Superloopy hook wrapper; Claude root variable and native event names only. |
 | `hooks/pre-tool-use.json` | Registers the PreToolUse guard command. | Thin Superloopy hook wrapper. |
-| `hooks/session-start.json` | Provides first-launch bootstrap, marketplace update notices, and optional session-start context injection. | Routes through Superloopy CLI; bootstrap installs only the command wrapper and bundled agents, and update checks never run npx self-update for marketplace or checkout installs. |
+| `hooks/session-start.json` | Provides first-launch bootstrap, managed Codex agent materialization, marketplace update notices, and optional session-start context. | Routes through the CLI; fresh manifests avoid catalog queries, changed definitions surface restart instructions, and update checks never run npx self-update for marketplace or checkout installs. |
 | `hooks/stop.json` | Provides optional stop continuation guard. | Routes through Superloopy CLI when enabled locally. |
 | `hooks/subagent-stop-audit.json` | Registers robin verdict-receipt validation. | Verdict receipts use Superloopy evidence roots. |
 | `hooks/subagent-stop.json` | Registers evidence receipt verification for Superloopy executor, review, QA, and gate subagents. | Receipts use Superloopy evidence roots. |
 | `hooks/user-prompt-submit.json` | Registers structured steering and explicit trigger-scoped context injection without an always-visible status message. | Structured `SUPERLOOPY_STEER` and explicit Superloopy prompt triggers only. |
 | `installation.md` | Agent-facing install contract for `install https://github.com/beefiker/superloopy` prompts, covering Codex, Claude Code, checkout fallback, update, and verification. | Documentation-only install guide; reuses current marketplace/plugin commands and adds no runtime logic or dependencies. |
-| `model-policy.json` | Central advisory model policy data for Codex and Claude profiles, allowed values, and per-agent profile assignments. | Superloopy-native policy data only; keeps resolved pins explicit without adding runtime model fallback or external dependencies. |
+| `model-policy.json` | Central advisory policy with ordered complete Codex candidates, Claude profiles, allowed values, and per-agent assignments. | Feeds managed pre-launch resolution and explicit GPT-5.5 compatibility without parent inheritance, post-launch switching, or external dependencies. |
 | `package-lock.json` | npm lockfile required by plugin catalog readiness checks. | Lockfile records the dependency-free package root only; no runtime dependencies are introduced. |
 | `package.json` | Dependency-free Node package metadata, bin, and scripts including manifest version sync. | Keeps Superloopy small and dependency-free. |
 | `scripts/serve-web.mjs` | Local HTTP preview server for the static web payload, including image URL mapping and WebGL MIME types. | Development preview utility only; dependency-free and no plugin runtime side effects. |
-| `scripts/sync-version.mjs` | Release helper that stamps `package.json` and `.codex-plugin/plugin.json` from one authoritative Superloopy version. | Superloopy release metadata only; no runtime dependency or publishing side effect. |
+| `scripts/sync-version.mjs` | Release helper that stamps package metadata, the lockfile root, both host plugin manifests, and the Claude marketplace entry from one authoritative Superloopy version. | Superloopy release metadata only; no runtime dependency or publishing side effect. |
 | `web-superloopy/README.md` | Landing workspace notes: stack, vendored orbit runtime layout, and build commands. | Documentation for the website workspace only; no plugin runtime behavior. |
 | `web-superloopy/astro.config.mjs` | Astro static-site configuration for the Superloopy landing page. | Website build configuration only; no plugin runtime behavior. |
 | `web-superloopy/package-lock.json` | npm lockfile for the isolated Astro landing workspace. | Lockfile records the user-approved website dependency set for reproducible builds. |
@@ -394,8 +394,8 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/plan-trust.js` | Trust boundary for plan-recorded commands: audit re-runs execute only commands captured locally or approved via `loop trust`; the approval ledger lives in the user home so repo contents cannot forge trust. | Superloopy-native repo-poisoning defense. |
 | `src/matrix-gate.js` | Validator for strict matrix quality gates. | Keeps compatible shape under Superloopy-native module name. |
 | `src/model-catalog.js` | Bounded read-only Codex app-server client that lists and normalizes visible model capabilities with sanitized unknown results. | Uses only initialize and paginated `model/list`; never starts a thread, turn, or prompt and never persists raw server output. |
-| `src/model-policy.js` | Doctor helper that reads `model-policy.json`, checks the Codex model-policy doc + agent TOML defaults, and checks the Claude model-policy doc + `agents/*.md` model frontmatter. | Advisory policy only; never treats model choice as proof or relies on host parent/default inheritance. |
-| `src/model-resolution.js` | Prepares a cached Codex fleet resolution and exports its focused state/tuple validator for read-only installed diagnostics. | One schema contract validates policy version, absolute target, safe reasons, profile/agent tuples, and all six lowercase hashes without writing. |
+| `src/model-policy.js` | Loads and validates `model-policy.json`, resolves ordered complete Codex tuples, and checks bundled Codex/Claude policy documentation and agent pins. | Pure policy/resolver boundary; never launches agents, treats model choice as proof, or relies on parent/default inheritance. |
+| `src/model-resolution.js` | Prepares the managed Codex fleet resolution, reuses a valid 24-hour cache, handles policy/target/explicit refresh, and exports the shared state validator. | Unknown first probes choose policy compatibility; unknown refreshes preserve valid state; preparation validates but does not persist files. |
 | `src/plan-summary.js` | Compact derived progress summary. | Superloopy-only helper. |
 | `src/pre-tool-use.js` | PreToolUse guard for malformed `create_goal` calls and premature native `update_goal` completion. | Uses Superloopy plan completion as the authority before native goal completion. |
 | `src/prove.js` | ID-free proof shortcut for the active next unresolved criterion. | Superloopy-specific proof path. |
@@ -412,13 +412,13 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/auto-update.test.js` | Auto-update contract tests for marketplace skip notices, checkout skip behavior, npx-local snapshot behavior, semver planning, install-flow detection, and Windows npx shims. | Tests Superloopy's adapted LazyCodex-style update flow without requiring an npm publish. |
 | `test/claude-host-wiring.test.js` | Unit tests for the doctor Claude-host-wiring check (manifest presence, SubagentStop CLI wiring, namespaced matcher coverage, invalid-regex/JSON handling). | Superloopy-native test only. |
 | `test/cli-evidence.test.js` | CLI evidence and completion smoke tests. | Covers public evidence flow. |
-| `test/cli.test.js` | CLI and hook smoke tests for install, symlinked bin execution, help, create, status, next, begin, and guide output. | Tests Superloopy command surface. |
+| `test/cli.test.js` | CLI smoke tests for managed install, conflict/force behavior, model refresh and compatibility help, symlinked execution, and loop commands. | Uses isolated install homes and deterministic `--compat`; tests the command surface without a live catalog query. |
 | `test/concurrency.test.js` | Cross-process file-lock serialization, re-entrancy, stale reclaim, and fail-closed timeout tests. | Tests Superloopy shared-state locking. |
 | `test/crew-lines.test.js` | Unit and CLI coverage for presentation-only localized crew completion lines. | Prevents crew flavor from replacing status or speaking for pending/unknown lanes. |
 | `test/docs.test.js` | Public documentation contract tests for Superloopy-native docs and threshold history. | Keeps docs aligned with product contract. |
 | `test/doctor-packed.test.js` | Regression coverage proving doctor accepts an npm-packed install (packaging-stripped repo-only files absent) from an arbitrary cwd, including one nested inside a parent Git repository. | Simulated pack extract; Superloopy-native coverage only. |
 | `test/doctor-review-feedback.test.js` | Regression tests for PR review hardening around doctor root selection and corrupt skills paths. | Superloopy-native review-feedback coverage only. |
-| `test/doctor.test.js` | Doctor coverage for package, audit, comparison, design audit, and reviewability checks. | Uses synthetic fixtures only. |
+| `test/doctor.test.js` | Doctor coverage for package, audits, repository model policy, installed-routing summary, and reviewability checks. | Uses synthetic or isolated fixtures; absent personal installation remains healthy and informational. |
 | `test/ds-compliance.test.js` | Unit tests for the design-system compliance scanner. | Superloopy-native test only. |
 | `test/engineer.test.js` | Loop-engineer trigger tests: team/crew escalation parsing and the baseline vs. crew fan-out directive. | Tests Superloopy `loopy`/`loopy team` directive behavior. |
 | `test/file-audit.test.js` | Direct unit coverage for row-level file audit verifier. | Tests Superloopy audit parser. |
@@ -433,7 +433,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/golden-hooks.test.js` | Hook, scoped-state, steering, continuation, receipt, and manifest scenarios. | Exercises Superloopy hook behavior. |
 | `test/golden-matrix-gate.test.js` | `@goal` and matrix gate scenarios. | Keeps matrix compatibility evidence isolated. |
 | `test/golden-review-gate.test.js` | Review gate acceptance and rejection scenarios. | Tests five-section gate compatibility. |
-| `test/hooks.test.js` | Focused hook unit tests for guards, receipts, steering, context, and stop behavior. | Tests Superloopy hook implementation. |
+| `test/hooks.test.js` | Hook tests for fresh-manifest reuse, restart disclosure after managed definition changes, guards, receipts, steering, context, and stop behavior. | Uses isolated paths and injected resolution behavior; does not query a live catalog. |
 | `test/host-adapter.test.js` | Unit tests for host-agnostic receipt recovery (direct + transcript fallback, evidence + audit). | Superloopy-native test only. |
 | `test/humanize-korean.test.js` | Contract tests for the Korean humanizer audit script's accept and reject paths. | Superloopy-native test for dependency-free safeguards and protected-token gating. |
 | `test/interop.test.js` | Tests Superpowers detection (override, filesystem, both hosts), the doctor interop check, and coexistence routing in loop guidance. | Tests Superloopy-native coexistence behavior only. |
@@ -448,7 +448,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/pre-tool-use.test.js` | Focused unit tests for native goal-tool lifecycle guards. | Prevents premature native completion while Superloopy state is incomplete. |
 | `test/report.test.js` | Focused report artifact tests. | Tests report portability and guide output. |
 | `test/subagent-receipt.test.js` | SubagentStop attempt-cap robustness and exhaustion ledger-signal tests. | Tests Superloopy receipt gate behavior. |
-| `test/sync-version.test.js` | Release-helper tests for stamping package and plugin manifests from one version. | Tests Superloopy release metadata sync only. |
+| `test/sync-version.test.js` | Release-helper tests for stamping package metadata, the lockfile root, both host plugin manifests, and the Claude marketplace entry from one version. | Tests Superloopy release metadata sync only. |
 | `test/visual-diff.test.js` | Unit tests for the visual-diff PNG decode/encode/diff logic. | Superloopy-native test only. |
 | `test/wrapper-check.test.js` | Wrapper-currency unit coverage for generated shims, stale/pruned plugin caches, first-PATH precedence, and resilient sibling fallback. | Synthetic filesystem fixtures only; no host wrapper mutation. |
 
