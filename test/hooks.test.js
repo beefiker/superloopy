@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -9,6 +9,7 @@ import {
   hasLoosePromptTrigger,
   parseSteeringDirective,
   runPreToolUseHook,
+  runSessionStartHook,
   runStopHook,
   runSubagentStopHook,
   runUserPromptSubmitHook
@@ -47,6 +48,56 @@ async function withStopHookEnabled(fn) {
     else process.env.SUPERLOOPY_STOP_HOOK = previous;
   }
 }
+
+test("SessionStart reuses a fresh manifest without querying or rewriting state and requests restart on definition changes", async () => {
+  const repo = await tempRepo();
+  const sourceDir = join(repo, "source-agents");
+  const codexHome = join(repo, "codex-home");
+  const binDir = join(repo, "bin");
+  const statePath = join(codexHome, "superloopy", "model-resolution.json");
+  await mkdir(sourceDir, { recursive: true });
+  for (const name of ["franky", "zoro", "usopp", "jinbe", "robin", "nami"]) {
+    const source = await readFile(join(process.cwd(), ".codex", "agents", `${name}.toml`), "utf8");
+    await writeFile(join(sourceDir, `${name}.toml`), source, "utf8");
+  }
+  const env = {
+    CODEX_HOME: codexHome,
+    SUPERLOOPY_BIN_DIR: binDir,
+    SUPERLOOPY_AUTO_UPDATE_DISABLED: "1",
+    PATH: `${binDir}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}`
+  };
+  let queries = 0;
+  const baseOptions = {
+    env,
+    homeDir: join(repo, "home"),
+    sourceDir,
+    policyRoot: process.cwd(),
+    statePath,
+    clock: () => new Date("2026-07-10T12:00:00.000Z"),
+    queryModelCatalog: async () => { queries += 1; throw new Error("fresh manifest must not query"); }
+  };
+  const previousClaudeRoot = process.env.CLAUDE_PLUGIN_ROOT;
+  process.env.CLAUDE_PLUGIN_ROOT = process.cwd();
+  try {
+    const first = await runSessionStartHook({ hook_event_name: "SessionStart", cwd: repo }, { ...baseOptions, compatibility: true });
+    assert.match(JSON.parse(first).hookSpecificOutput.additionalContext, /Restart Codex/u);
+    const oldTime = new Date("2000-01-01T00:00:00.000Z");
+    await utimes(statePath, oldTime, oldTime);
+    const fresh = await runSessionStartHook({ hook_event_name: "SessionStart", cwd: repo }, baseOptions);
+    assert.equal(queries, 0);
+    assert.equal(fresh, "");
+    assert.equal((await stat(statePath)).mtimeMs, oldTime.getTime());
+    const source = join(sourceDir, "franky.toml");
+    await writeFile(source, (await readFile(source, "utf8")).replace("Implementation worker", "Focused implementation worker"), "utf8");
+    const changed = await runSessionStartHook({ hook_event_name: "SessionStart", cwd: repo }, baseOptions);
+    assert.equal(queries, 0);
+    assert.match(JSON.parse(changed).hookSpecificOutput.additionalContext, /Restart Codex/u);
+    assert.notEqual((await stat(statePath)).mtimeMs, oldTime.getTime());
+  } finally {
+    if (previousClaudeRoot === undefined) delete process.env.CLAUDE_PLUGIN_ROOT;
+    else process.env.CLAUDE_PLUGIN_ROOT = previousClaudeRoot;
+  }
+});
 
 test("runPreToolUseHook denies create_goal payloads with token budget", () => {
   const output = runPreToolUseHook({
@@ -173,10 +224,14 @@ test("parseSteeringDirective accepts annotate-only directives", () => {
   });
 });
 
-test("hasLoosePromptTrigger recognizes Superloopy-native prompt aliases only at token boundaries", () => {
+test("hasLoosePromptTrigger recognizes only leading complete Superloopy aliases", () => {
   assert.equal(hasLoosePromptTrigger("loopywork ship the feature"), true);
   assert.equal(hasLoosePromptTrigger("$lpy ship the feature"), true);
-  assert.equal(hasLoosePromptTrigger("please lpy ship the feature"), true);
+  assert.equal(hasLoosePromptTrigger("lpy ship the feature"), true);
+  assert.equal(hasLoosePromptTrigger("$loopywork ship the feature"), false);
+  assert.equal(hasLoosePromptTrigger("please lpy ship the feature"), false);
+  assert.equal(hasLoosePromptTrigger("lpy가 왜 켜졌지?"), false);
+  assert.equal(hasLoosePromptTrigger("loopywork처럼 실행해"), false);
   assert.equal(hasLoosePromptTrigger("edit loopywork_helper.ts"), false);
   assert.equal(hasLoosePromptTrigger("deploy_lpy_module"), false);
 });
@@ -187,7 +242,11 @@ test("hasEngineerTrigger fires only on a leading loopy keyword", () => {
   assert.equal(hasEngineerTrigger("@loopy: ship it"), true);
   assert.equal(hasEngineerTrigger("loopywork ship it"), false);
   assert.equal(hasEngineerTrigger("please loopy this"), false);
+  assert.equal(hasEngineerTrigger("loopy가 왜 켜졌지?"), false);
+  assert.equal(hasEngineerTrigger("루피는 뭐야?"), false);
   assert.equal(hasEngineerTrigger("loopy loop begin --brief x"), false);
+  assert.equal(hasEngineerTrigger("loopy loop begin: explain the command"), false);
+  assert.equal(hasEngineerTrigger("loopy loop begin, explain the command"), false);
   // A real task whose first word is "loop" must still wake the engineer — only an actual
   // `loopy loop <subcommand>` prompt-shaped command references are suppressed.
   assert.equal(hasEngineerTrigger("loopy loop over the array and sum it"), true);

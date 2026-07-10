@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { hasFlag, parseJson, readFlag, readStdin } from "./args.js";
 import {
@@ -86,6 +87,10 @@ async function runAgents(subcommand, argv, stdout, cwd) {
     return 0;
   }
   if (subcommand !== "install") throw new Error(`Unknown agents subcommand: ${subcommand}`);
+  if (hasHelpFlag(argv)) {
+    stdout.write(agentsHelp());
+    return 0;
+  }
   const result = await installAgents(cwd, argv);
   stdout.write(json ? `${JSON.stringify(result, null, 2)}\n` : formatAgentsInstallResult(result));
   return result.ok ? 0 : 1;
@@ -98,12 +103,20 @@ async function runBin(subcommand, argv, stdout, cwd) {
     return 0;
   }
   if (subcommand !== "install") throw new Error(`Unknown bin subcommand: ${subcommand}`);
+  if (hasHelpFlag(argv)) {
+    stdout.write(binHelp());
+    return 0;
+  }
   const result = await installBinShim(cwd, argv);
   stdout.write(json ? `${JSON.stringify(result, null, 2)}\n` : formatBinInstallResult(result));
   return result.ok ? 0 : 1;
 }
 
 async function runInstall(argv, stdout, cwd) {
+  if (hasHelpFlag(argv)) {
+    stdout.write(installHelp());
+    return 0;
+  }
   const json = hasFlag(argv, "--json");
   const result = await bootstrapSuperloopy(cwd, argv);
   stdout.write(json ? `${JSON.stringify(result, null, 2)}\n` : formatBootstrapResult(result));
@@ -111,9 +124,20 @@ async function runInstall(argv, stdout, cwd) {
 }
 
 async function runDoctorCommand(argv, stdout, cwd) {
+  if (hasHelpFlag(argv)) {
+    stdout.write(doctorHelp());
+    return 0;
+  }
   const json = hasFlag(argv, "--json");
   const comparisonPath = readFlag(argv, "--comparison-path");
-  const result = await runDoctor(resolveDoctorRoot(cwd, argv), { comparisonPath });
+  const result = await runDoctor(resolveDoctorRoot(cwd, argv), {
+    comparisonPath,
+    installedModelPolicy: {
+      env: process.env,
+      homeDir: homedir(),
+      refreshModels: hasFlag(argv, "--refresh-models")
+    }
+  });
   stdout.write(json ? `${JSON.stringify(result, null, 2)}\n` : formatDoctor(result));
   return result.ok ? 0 : 1;
 }
@@ -291,10 +315,10 @@ function topHelp() {
   return [
     "Usage:",
     "  superloopy loop <subcommand> [args]",
-    "  superloopy install [--bin-dir PATH] [--target PATH] [--force] [--json]",
+    "  superloopy install [--bin-dir PATH] [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
     "  superloopy bin install [--bin-dir PATH] [--force] [--json]",
-    "  superloopy agents install [--target PATH] [--force] [--json]",
-    "  superloopy doctor [--json] [--root PATH] [--comparison-path PATH]",
+    "  superloopy agents install [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
+    "  superloopy doctor [--json] [--root PATH] [--comparison-path PATH] [--refresh-models]",
     "  superloopy hook session-start|pre-tool-use|stop|subagent-stop|user-prompt-submit",
     "",
     helpText()
@@ -304,13 +328,41 @@ function topHelp() {
 function agentsHelp() {
   return [
     "Usage:",
-    "  superloopy agents install [--target PATH] [--force] [--json]",
+    "  superloopy agents install [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
     "",
     "Installs bundled Superloopy custom agents into Codex's personal agents directory.",
     "Default target: $CODEX_HOME/agents when CODEX_HOME is set, otherwise ~/.codex/agents.",
-    "Existing identical files are left unchanged. Conflicting files require --force.",
+    "Use --refresh-models to bypass a cached catalog result, or --compat for deterministic compatibility routing.",
+    "Existing identical managed files are left unchanged. Conflicting files require --force.",
     ""
   ].join("\n");
+}
+
+function installHelp() {
+  return [
+    "Usage:",
+    "  superloopy install [--bin-dir PATH] [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
+    "",
+    "Installs the Superloopy command wrapper and managed Codex agents.",
+    "Use --refresh-models to bypass a cached catalog result, or --compat for deterministic compatibility routing.",
+    "Existing conflicting files require --force.",
+    ""
+  ].join("\n");
+}
+
+function doctorHelp() {
+  return [
+    "Usage:",
+    "  superloopy doctor [--json] [--root PATH] [--comparison-path PATH] [--refresh-models]",
+    "",
+    "Checks repository and installed Superloopy health without launching workers.",
+    "Use --refresh-models for one read-only live model comparison; no state or agent files are changed.",
+    ""
+  ].join("\n");
+}
+
+function hasHelpFlag(argv) {
+  return hasFlag(argv, "--help") || hasFlag(argv, "-h");
 }
 
 function binHelp() {

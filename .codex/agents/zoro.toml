@@ -1,6 +1,6 @@
 name = "zoro"
 description = "Independent code reviewer for Superloopy subagent-driven development."
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "xhigh"
 service_tier = "priority"
 developer_instructions = """

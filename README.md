@@ -48,11 +48,11 @@ Superloopy keeps the command layer small. Skills carry the specialist workflow: 
 | `superloopy-doctor` | You diagnose install, wrapper, plugin cache, hook/bootstrap, agent, Codex/Claude Code host wiring, or stale-version problems. | A read-only health report with wrapper/cache/version evidence, failing checks, and the exact repair command to run only if approved. |
 | `superloopy-research` | You ask for `loopy research`, deep research, exhaustive investigation, or a cited report. | Research axes, expansion waves, a claim ledger, verification notes, and a cited synthesis artifact. |
 | `superloopy-clone` | You ask for `loopy clone`, authorized website cloning, rebuilding, migration, or pixel-focused page recovery. | Browser captures, page topology, design tokens, asset inventory, implementation notes, build output, and visual QA evidence. |
-| `superloopy-frontend` | You build, style, or redesign any UI/page/component, or ask to make something look designed (auto-activates on visual work). | A DESIGN.md token contract, an anti-slop pre-flight result, and a real-browser visual-QA evidence artifact. |
+| `superloopy-frontend` | You explicitly invoke Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend`, or start a visual task with a leading `loopy`/`루피`. Plain UI mentions do not activate it. | A DESIGN.md token contract, an anti-slop pre-flight result, and a real-browser visual-QA evidence artifact. |
 | `humanize-korean` | Use when Korean users ask to remove AI tone, fix 번역투, or make Korean text sound human without changing facts. | Writes `final.md`, `summary.md`, and `audit.json`; in Superloopy loops it records evidence under `.superloopy/evidence/humanize-korean/`. |
 | `superloopy-slides` | You ask for slides, a presentation, a deck, or a PPT/PPTX-to-web conversion. | A zero-dependency single-file HTML deck on a fixed 16:9 stage, three style previews to pick from, and a rendered-screenshot visual-QA artifact under `.superloopy/evidence/slides/`. |
 
-The loop skill is the default guardrail. `loopy` starts or resumes the evidence loop; `loopy team` escalates to crew mode. `loopywork`, `lpy`, and `$lpy` only inject starter guidance. Research and clone are opt-in specialist modes, and both still finish by recording Superloopy evidence instead of trusting a status sentence. The frontend skill auto-activates on visual work and injects a short guidance-only steer; set `SUPERLOOPY_FRONTEND_STEER=off` to silence it.
+The loop skill is the default guardrail. A complete leading `loopy` token starts or resumes the evidence loop; `loopy team` escalates to crew mode. Leading `loopywork`, `lpy`, and `$lpy` tokens only inject starter guidance. Structured `SUPERLOOPY_STEER` directives can adjust an active loop. The prompt hook does not infer frontend or Korean-writing modes from ordinary text; invoke specialist skills explicitly or let an already-active loop route a real specialist subtask.
 
 ## Clone Demo
 
@@ -68,7 +68,13 @@ The loop skill is the default guardrail. `loopy` starts or resumes the evidence 
 
 ## The crew
 
-For bigger work, Superloopy ships six optional subagents — each owns one lane (`.codex/agents/*.toml` on Codex, bundled `agents/*.md` on Claude Code). They come with the plugin (no command needed); on Codex, `superloopy agents install` just re-copies them if you ever need it. Their advisory model defaults are documented in `docs/superloopy-model-policy.md` (Codex) and `docs/superloopy-model-policy-claude.md` (Claude Code), and checked by `superloopy doctor`.
+For bigger work, Superloopy ships six optional subagents — each owns one lane. Claude Code uses the plugin-bundled `agents/*.md`. On Codex, bootstrap, `superloopy install`, and `superloopy agents install` materialize personal TOMLs under `$CODEX_HOME/agents`; model routing is resolved during that installation step.
+
+Codex calls the stable `model/list` method only when resolution state is missing, the policy version or target changed, the cache is at least 24 hours old, or `--refresh-models` is supplied. When fresh state still matches the managed files, it reuses the exact manifest without a query or state rewrite. Profiles select the first supported complete model/effort/tier tuple: `gpt-5.6-terra` / `high` / `priority` for `standard`, `gpt-5.6-sol` / `xhigh` / `priority` for `deep`, and `gpt-5.6-luna` / `low` / `fast` for `fast`. If a preferred model is unavailable, that profile uses its explicit `gpt-5.5` compatibility tuple. An unknown first probe conservatively selects policy compatibility; an unknown refresh preserves a valid existing resolution. `--compat` makes the compatibility choice deterministically without querying.
+
+Upgrades from pre-managed Superloopy releases are hash-bound: a complete exact legacy fleet is adopted and upgraded without `--force`, while one edit, symlink, missing file, or unknown hash keeps the whole fleet in conflict. Changed agent definitions require a Codex restart; an unchanged fresh manifest does not. `superloopy doctor --refresh-models` can report preferred availability before managed state exists, detects a wrapper/plugin split-brain, and never rewrites resolution state or agent files.
+
+Resolution finishes before launch, with no post-launch retry or model switch. The TOML pins configure routing, but a host that does not expose `agent_type` plus resolved-model attestation remains `model_unverified`; Superloopy never presents that as a proven GPT-5.6 runtime gate. The policy details are in `docs/superloopy-model-policy.md` (Codex) and `docs/superloopy-model-policy-claude.md` (Claude Code).
 
 <table>
   <tr>
@@ -147,7 +153,7 @@ codex plugin marketplace upgrade beefiker
 
 Superloopy checks for updates on `SessionStart`. Marketplace installs are Codex-managed, so Superloopy never starts an `npx` self-update for them; when a newer version is detected, it tells you to run the marketplace upgrade and re-approve modified hooks.
 
-Restart Codex after the upgrade. If hooks show up as Modified, approve them; the following approved session reruns the `SessionStart` bootstrap on the new version. Then run `superloopy doctor`.
+Restart Codex after the upgrade. If hooks show up as Modified, approve them; the following approved `SessionStart` automatically reconciles the generated wrapper, all six agents, and model-routing state from the new plugin version. No Superloopy migration command is required. If definitions changed, follow only the Codex restart notice so the host reloads them.
 
 If the plugin still looks stale or degraded after that, do a repair reinstall from the refreshed marketplace:
 

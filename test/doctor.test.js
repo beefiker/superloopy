@@ -15,6 +15,11 @@ function runCli(args, options = {}) {
   return spawnSync(process.execPath, [join(process.cwd(), "src/cli.js"), ...args], {
     cwd: options.cwd ?? process.cwd(),
     encoding: "utf8",
+    env: {
+      ...process.env,
+      CODEX_HOME: join(tmpdir(), `superloopy-doctor-empty-${process.pid}`),
+      ...options.env
+    },
     input: options.input,
     timeout: 10_000
   });
@@ -75,6 +80,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
     "claudeHostWiring",
     "modelPolicy",
     "claudeModelPolicy",
+    "installedModelPolicy",
     "hostContract",
     "interop",
     "wrapper"
@@ -110,21 +116,36 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.modelPolicy.ok, true);
   assert.equal(parsed.checks.modelPolicy.policyPath, "docs/superloopy-model-policy.md");
   assert.equal(parsed.checks.modelPolicy.policyDataPath, "model-policy.json");
-  assert.equal(parsed.checks.modelPolicy.policyDataVersion, "2026-07-08");
+  assert.equal(parsed.checks.modelPolicy.policyDataVersion, "2026-07-10");
+  assert.equal(parsed.checks.modelPolicy.compatibilityModel, "gpt-5.5");
   assert.equal(parsed.checks.modelPolicy.agents.nami.profile, "fast");
-  assert.equal(parsed.checks.modelPolicy.agents.nami.model, "gpt-5.4-mini");
+  assert.equal(parsed.checks.modelPolicy.profiles.standard.candidates[0].model, "gpt-5.6-terra");
+  assert.equal(parsed.checks.modelPolicy.agents.nami.model, "gpt-5.6-luna");
+  assert.equal(parsed.checks.modelPolicy.agents.zoro.model, "gpt-5.6-sol");
   assert.equal(parsed.checks.modelPolicy.agents.zoro.model_reasoning_effort, "xhigh");
   assert.equal(parsed.checks.hostContract.ok, true);
   assert.ok(parsed.checks.hostContract.cannotVerify.length >= 3);
+  assert.ok(parsed.checks.hostContract.cannotVerify.some((item) => /resolved model/u.test(item)));
+  assert.equal(parsed.checks.hostContract.modelRoutingVerification, "unverified");
+  assert.equal(parsed.checks.hostContract.unverifiedStatus, "model_unverified");
   assert.equal(parsed.checks.claudeHostWiring.ok, true);
   assert.equal(parsed.checks.claudeHostWiring.policy, "claude-host-wiring-present-and-namespaced");
   assert.ok(parsed.checks.claudeHostWiring.matchers.length >= 1);
   assert.equal(parsed.checks.claudeModelPolicy.ok, true);
   assert.equal(parsed.checks.claudeModelPolicy.policyPath, "docs/superloopy-model-policy-claude.md");
   assert.equal(parsed.checks.claudeModelPolicy.policyDataPath, "model-policy.json");
-  assert.equal(parsed.checks.claudeModelPolicy.policyDataVersion, "2026-07-08");
+  assert.equal(parsed.checks.claudeModelPolicy.policyDataVersion, "2026-07-10");
   assert.equal(parsed.checks.claudeModelPolicy.agents.nami, "haiku");
   assert.equal(parsed.checks.claudeModelPolicy.agents.zoro, "opus");
+  assert.deepEqual(
+    {
+      ok: parsed.checks.installedModelPolicy.ok,
+      installed: parsed.checks.installedModelPolicy.installed,
+      degraded: parsed.checks.installedModelPolicy.degraded,
+      restartRequired: parsed.checks.installedModelPolicy.restartRequired
+    },
+    { ok: true, installed: false, degraded: false, restartRequired: false }
+  );
   // Interop is informational: it never fails and does not gate overall health.
   assert.equal(parsed.checks.interop.ok, true);
   assert.equal(parsed.checks.interop.informational, true);
@@ -160,7 +181,7 @@ test("doctor model policy fails when bundled agent defaults drift", async () => 
   const repo = await tempRepoCopy();
   const agentPath = join(repo, ".codex", "agents", "nami.toml");
   const agent = await readFile(agentPath, "utf8");
-  await writeFile(agentPath, agent.replace('model = "gpt-5.4-mini"', 'model = "gpt-5.5"'), "utf8");
+  await writeFile(agentPath, agent.replace('model = "gpt-5.6-luna"', 'model = "gpt-5.5"'), "utf8");
 
   const result = await runDoctor(repo);
 
@@ -173,7 +194,8 @@ test("doctor model policy resolves bundled defaults from the model policy data",
   const repo = await tempRepoCopy();
   const policyDataPath = join(repo, "model-policy.json");
   const policyData = JSON.parse(await readFile(policyDataPath, "utf8"));
-  policyData.codex.profiles.fast.model = "gpt-5.5";
+  assert.ok(Array.isArray(policyData.codex.profiles.fast.candidates), "fast profile must expose ordered candidates");
+  policyData.codex.profiles.fast.candidates[0].model = "gpt-5.5";
   await writeFile(policyDataPath, `${JSON.stringify(policyData, null, 2)}\n`, "utf8");
 
   const result = await runDoctor(repo);
@@ -267,6 +289,20 @@ test("doctor text reports whether comparison scanning was skipped", () => {
 
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /comparisonSimilarity: ok - skipped; pass `--comparison-path PATH`/);
+});
+
+test("doctor text renders advisory warning checks as warn", () => {
+  const output = formatDoctor({
+    ok: true,
+    checks: {
+      wrapper: { ok: true, warning: true, message: "wrapper/plugin split-brain" },
+      hostContract: { ok: true, message: "configured routing" }
+    }
+  });
+
+  assert.match(output, /- wrapper: warn - wrapper\/plugin split-brain/u);
+  assert.match(output, /- hostContract: ok - configured routing/u);
+  assert.match(output, /overall: ok/u);
 });
 
 test("doctor comparison scan fails on copied-looking blocks", async () => {

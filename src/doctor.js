@@ -11,6 +11,7 @@ import { checkClaudeModelPolicy, checkModelPolicy } from "./model-policy.js";
 import { isSourceCheckoutRoot } from "./source-checkout.js";
 import { checkInterop } from "./interop.js";
 import { checkWrapper } from "./wrapper-check.js";
+import { checkInstalledModelPolicy } from "./installed-model-policy.js";
 
 const FILE_AUDIT_PATH = "docs/superloopy-file-audit.md";
 const GATE_NOTES_PATH = "docs/superloopy-gate-notes.md";
@@ -54,7 +55,8 @@ export async function runDoctor(cwd, options = {}) {
   const claudeHostWiring = await checkClaudeHostWiring(cwd);
   const modelPolicy = await checkModelPolicy(cwd);
   const claudeModelPolicy = await checkClaudeModelPolicy(cwd);
-  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, modelPolicy, claudeModelPolicy, hostContract: checkHostContract(), interop: checkInterop(options), wrapper: checkWrapper(options) };
+  const installedModelPolicy = await checkInstalledModelPolicy(cwd, options.installedModelPolicy ?? {});
+  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, modelPolicy, claudeModelPolicy, installedModelPolicy, hostContract: checkHostContract(), interop: checkInterop(options), wrapper: checkWrapper({ ...options, diagnosedRoot: cwd }) };
   return {
     ok: Object.values(checks).every((check) => check.ok),
     root: cwd,
@@ -65,7 +67,8 @@ export async function runDoctor(cwd, options = {}) {
 export function formatDoctor(result) {
   const lines = ["Superloopy doctor"];
   for (const [name, check] of Object.entries(result.checks)) {
-    lines.push(`- ${name}: ${check.ok ? "ok" : "fail"}${doctorDetail(name, check)}`);
+    const verdict = check.ok ? check.warning === true ? "warn" : "ok" : "fail";
+    lines.push(`- ${name}: ${verdict}${doctorDetail(name, check)}`);
   }
   lines.push(`overall: ${result.ok ? "ok" : "fail"}`);
   return `${lines.join("\n")}\n`;
@@ -482,12 +485,15 @@ function checkHostContract() {
   return {
     ok: true,
     policy: "hook-gates-are-advisory-completion-floor-is-authoritative",
+    modelRoutingVerification: "unverified",
+    unverifiedStatus: "model_unverified",
     cannotVerify: [
       "the host spawns custom agents from ~/.codex/agents by subagent_type",
+      "the host attests the resolved model used for each spawned agent",
       "the host emits SubagentStop with agent_type and agent_id populated",
       "the host honors a subagent hook returning a block decision by re-prompting it"
     ],
-    message: "hook gates are advisory; if the host ignores them the deterministic completion floor still gates completion"
+    message: "model routing is configured but unverified unless the host attests the resolved agent type and model; the deterministic completion floor still gates completion"
   };
 }
 

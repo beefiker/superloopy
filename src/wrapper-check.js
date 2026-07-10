@@ -10,7 +10,7 @@
 // version is available or the wrapper is stale. It is no-throw and dependency-injectable.
 
 import { existsSync as fsExistsSync, readFileSync as fsReadFileSync, readdirSync as fsReaddirSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { binShimSupportsSiblingFallback, parseBinShimCliPath } from "./agents.js";
 import { compareVersions, parseVersion } from "./auto-update-plan.js";
 
@@ -52,6 +52,22 @@ export function checkWrapper(options = {}) {
       return informational(
         `bin wrapper at ${located.path} points at ${cliPath}, which no longer exists (a marketplace upgrade likely pruned that cached version). The \`superloopy\` command will not run until re-pointed: ${repair}.`,
         { found: true, dangling: true, wrapperPath: located.path, cliPath }
+      );
+    }
+    const diagnosedRoot = typeof options.diagnosedRoot === "string" ? resolve(options.diagnosedRoot) : null;
+    const wrapperRoot = resolve(dirname(dirname(cliPath)));
+    if (diagnosedRoot !== null && wrapperRoot !== diagnosedRoot) {
+      const diagnosedCli = join(diagnosedRoot, "src", "cli.js");
+      return informational(
+        `bin wrapper at ${located.path} runs ${cliPath}, which belongs to a different Superloopy root than the diagnosed plugin at ${diagnosedRoot}. Run \`node "${diagnosedCli}" bin install --force\` and restart Codex to remove the split-brain command path.`,
+        {
+          found: true,
+          warning: true,
+          splitBrain: true,
+          wrapperPath: located.path,
+          cliPath,
+          diagnosedRoot
+        }
       );
     }
     const currency = evaluateWrapperCurrency(cliPath, fs);

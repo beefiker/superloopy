@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
 
@@ -97,7 +97,7 @@ test("golden: scoped steering errors do not fall back to global plan mutation", 
   assert.equal(JSON.parse(globalStatus.stdout).plan.goals[1].criteria[0].scenario, "Happy path works from the real user-facing surface.");
 });
 
-test("golden: SessionStart bootstraps CLI and agents once, then stays quiet", async () => {
+test("golden: SessionStart bootstraps from cached compatibility and then requires no restart", async () => {
   const repo = await tempRepo();
   const home = join(repo, "home");
   const codexHome = join(home, ".codex");
@@ -118,6 +118,9 @@ test("golden: SessionStart bootstraps CLI and agents once, then stays quiet", as
     model: "gpt-5",
     permission_mode: "default"
   };
+  const seed = runCli(["agents", "install", "--compat", "--json"], { env });
+  assert.equal(seed.status, 0, seed.stderr);
+  await rm(join(codexHome, "agents"), { recursive: true, force: true });
 
   const first = runCli(["hook", "session-start"], {
     env,
@@ -125,7 +128,7 @@ test("golden: SessionStart bootstraps CLI and agents once, then stays quiet", as
   });
   assert.equal(first.status, 0, first.stderr);
   const parsed = JSON.parse(first.stdout);
-  assert.match(parsed.hookSpecificOutput.additionalContext, /Superloopy bootstrap/);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /Superloopy automatic migration/);
   assert.match(parsed.hookSpecificOutput.additionalContext, /CLI wrapper: installed/);
   assert.ok(existsSync(join(binDir, process.platform === "win32" ? "superloopy.cmd" : "superloopy")));
   assert.ok(existsSync(join(codexHome, "agents", "franky.toml")));

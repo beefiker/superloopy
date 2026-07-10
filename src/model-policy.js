@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { SUPERLOOPY_AGENT_NAMES } from "./agents.js";
+import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
 
 export const MODEL_POLICY_PATH = "docs/superloopy-model-policy.md";
 export const MODEL_POLICY_DATA_PATH = "model-policy.json";
@@ -14,7 +14,10 @@ export async function checkModelPolicy(cwd) {
   if (!dataResult.ok) return fail(`Model policy drift: ${dataResult.message}.`);
   const data = dataResult.data;
   const codex = data.codex;
-  const agentDefaultsResult = resolveHostAgentsSafely(codex, "codex");
+  const preferredProfiles = Object.fromEntries(
+    Object.entries(codex.profiles).map(([profileName, profile]) => [profileName, profile.candidates[0]])
+  );
+  const agentDefaultsResult = resolveHostAgentsSafely({ ...codex, profiles: preferredProfiles }, "codex");
   if (!agentDefaultsResult.ok) return fail(`Model policy drift: ${agentDefaultsResult.message}.`);
   const agentDefaults = agentDefaultsResult.agents;
   const doc = await readFile(policyPath, "utf8");
@@ -45,6 +48,7 @@ export async function checkModelPolicy(cwd) {
     policyPath: MODEL_POLICY_PATH,
     policyDataPath: MODEL_POLICY_DATA_PATH,
     policyDataVersion: data.version,
+    compatibilityModel: codex.compatibilityModel,
     allowedModels: codex.allowed.models,
     allowedEfforts: codex.allowed.reasoningEfforts,
     allowedTiers: codex.allowed.serviceTiers,
@@ -110,7 +114,7 @@ export async function checkClaudeModelPolicy(cwd) {
   };
 }
 
-async function loadModelPolicyData(cwd) {
+export async function loadModelPolicyData(cwd) {
   const path = join(cwd, MODEL_POLICY_DATA_PATH);
   if (!existsSync(path)) return { ok: false, message: `Missing ${MODEL_POLICY_DATA_PATH}` };
   try {
@@ -132,19 +136,84 @@ function validateModelPolicyData(data) {
 
 function validateCodexPolicyData(codex) {
   assertRecord(codex, "model policy data.codex");
+  assertString(codex.compatibilityModel, "model policy data.codex.compatibilityModel");
   assertStringArray(codex.allowed?.models, "model policy data.codex.allowed.models");
   assertStringArray(codex.allowed?.reasoningEfforts, "model policy data.codex.allowed.reasoningEfforts");
   assertStringArray(codex.allowed?.serviceTiers, "model policy data.codex.allowed.serviceTiers");
   assertRecord(codex.profiles, "model policy data.codex.profiles");
   assertRecord(codex.agents, "model policy data.codex.agents");
-  for (const [profileName, profile] of Object.entries(codex.profiles)) {
-    assertString(profile.model, `model policy data.codex.profiles.${profileName}.model`);
-    assertString(profile.model_reasoning_effort, `model policy data.codex.profiles.${profileName}.model_reasoning_effort`);
-    assertString(profile.service_tier, `model policy data.codex.profiles.${profileName}.service_tier`);
-    if (!codex.allowed.models.includes(profile.model)) throw new Error(`model policy data.codex.profiles.${profileName}.model is not allowed`);
-    if (!codex.allowed.reasoningEfforts.includes(profile.model_reasoning_effort)) throw new Error(`model policy data.codex.profiles.${profileName}.model_reasoning_effort is not allowed`);
-    if (!codex.allowed.serviceTiers.includes(profile.service_tier)) throw new Error(`model policy data.codex.profiles.${profileName}.service_tier is not allowed`);
+  if (!codex.allowed.models.includes(codex.compatibilityModel)) {
+    throw new Error("model policy data.codex.compatibilityModel is not allowed");
   }
+  for (const [profileName, profile] of Object.entries(codex.profiles)) {
+    assertRecord(profile, `model policy data.codex.profiles.${profileName}`);
+    assertNonEmptyArray(profile.candidates, `model policy data.codex.profiles.${profileName}.candidates`);
+    for (const [candidateIndex, candidate] of profile.candidates.entries()) {
+      const candidatePath = `model policy data.codex.profiles.${profileName}.candidates.${candidateIndex}`;
+      assertRecord(candidate, candidatePath);
+      assertString(candidate.model, `${candidatePath}.model`);
+      assertString(candidate.model_reasoning_effort, `${candidatePath}.model_reasoning_effort`);
+      assertString(candidate.service_tier, `${candidatePath}.service_tier`);
+      if (!codex.allowed.models.includes(candidate.model)) throw new Error(`${candidatePath}.model is not allowed`);
+      if (!codex.allowed.reasoningEfforts.includes(candidate.model_reasoning_effort)) {
+        throw new Error(`${candidatePath}.model_reasoning_effort is not allowed`);
+      }
+      if (!codex.allowed.serviceTiers.includes(candidate.service_tier)) throw new Error(`${candidatePath}.service_tier is not allowed`);
+    }
+    if (profile.candidates.length < 2) {
+      throw new Error(`Missing compatibility candidate for Codex profile ${profileName}`);
+    }
+    if (profile.candidates.length !== 2) {
+      throw new Error(`Codex profile ${profileName} must define exactly one preferred and one compatibility candidate`);
+    }
+    if (profile.candidates[1].model !== codex.compatibilityModel) {
+      throw new Error(`model policy data.codex.profiles.${profileName}.candidates.1.model must match compatibilityModel ${codex.compatibilityModel}`);
+    }
+  }
+}
+
+export function resolveCodexModelPolicy(policy, catalog) {
+  try {
+    assertRecord(policy, "model policy data.codex");
+    assertRecord(policy.profiles, "model policy data.codex.profiles");
+    if (!Array.isArray(catalog)) return fail("Codex model catalog must be an array.");
+
+    const profiles = {};
+    for (const [profileName, profile] of Object.entries(policy.profiles)) {
+      assertRecord(profile, `model policy data.codex.profiles.${profileName}`);
+      assertNonEmptyArray(profile.candidates, `model policy data.codex.profiles.${profileName}.candidates`);
+      const requestedModel = profile.candidates[0].model;
+      const candidateIndex = profile.candidates.findIndex((candidate) => catalogSupportsCandidate(catalog, candidate));
+      if (candidateIndex === -1) {
+        return fail(`No fully supported model tuple for Codex profile ${profileName} (requested ${requestedModel}).`);
+      }
+      const candidate = profile.candidates[candidateIndex];
+      profiles[profileName] = {
+        ...candidate,
+        requestedModel,
+        resolvedModel: candidate.model,
+        reason: candidateIndex === 0 ? "preferred_available" : "compatibility_fallback"
+      };
+    }
+
+    const agentResult = resolveHostAgentsSafely({ ...policy, profiles }, "codex");
+    if (!agentResult.ok) return fail(agentResult.message);
+    return { ok: true, profiles, agents: agentResult.agents };
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
+}
+
+function catalogSupportsCandidate(catalog, candidate) {
+  return catalog.some((item) =>
+    item !== null
+    && typeof item === "object"
+    && item.id === candidate.model
+    && Array.isArray(item.reasoningEfforts)
+    && item.reasoningEfforts.includes(candidate.model_reasoning_effort)
+    && Array.isArray(item.serviceTiers)
+    && item.serviceTiers.includes(candidate.service_tier)
+  );
 }
 
 function validateClaudePolicyData(claude) {
@@ -204,6 +273,10 @@ function assertStringArray(value, path) {
   if (!Array.isArray(value) || value.length === 0 || value.some((item) => typeof item !== "string" || item.length === 0)) {
     throw new Error(`${path} must be a non-empty string array`);
   }
+}
+
+function assertNonEmptyArray(value, path) {
+  if (!Array.isArray(value) || value.length === 0) throw new Error(`${path} must be a non-empty array`);
 }
 
 // Read a scalar field from the leading `---` YAML frontmatter block of a Markdown agent file.
