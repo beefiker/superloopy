@@ -82,7 +82,7 @@ test("queryCodexModelCatalog performs the read-only paginated handshake and norm
     {
       method: "initialize",
       id: 0,
-      params: { clientInfo: { name: "superloopy-model-probe", version: "0.8.1" } }
+      params: { clientInfo: { name: "superloopy-model-probe", version: "1" } }
     },
     { method: "initialized", params: {} },
     { method: "model/list", id: 1, params: { limit: 100, includeHidden: false } },
@@ -92,6 +92,105 @@ test("queryCodexModelCatalog performs the read-only paginated handshake and norm
   assert.equal(fake.child.stdin.writableEnded, true);
   const sent = JSON.stringify(fake.messages);
   assert.doesNotMatch(sent, /thread\/start|turn\/start|prompt/iu);
+});
+
+test("queryCodexModelCatalog accepts a legacy-only service tier payload", async () => {
+  const fake = createCatalogSpawn([
+    {
+      id: "gpt-legacy",
+      supportedReasoningEfforts: [{ reasoningEffort: "high" }],
+      additionalSpeedTiers: ["fast", "fast"]
+    }
+  ]);
+
+  const result = await queryCodexModelCatalog({
+    spawnImpl: fake.spawnImpl,
+    timeoutMs: 100,
+    clock: () => CHECKED_AT
+  });
+
+  assert.deepEqual(result.models, [
+    { id: "gpt-legacy", reasoningEfforts: ["high"], serviceTiers: ["fast"] }
+  ]);
+});
+
+test("queryCodexModelCatalog accepts a current-only service tier payload", async () => {
+  const fake = createCatalogSpawn([
+    {
+      id: "gpt-current",
+      supportedReasoningEfforts: [{ reasoningEffort: "low" }],
+      serviceTiers: [{ id: "priority" }]
+    }
+  ]);
+
+  const result = await queryCodexModelCatalog({
+    spawnImpl: fake.spawnImpl,
+    timeoutMs: 100,
+    clock: () => CHECKED_AT
+  });
+
+  assert.deepEqual(result.models, [
+    { id: "gpt-current", reasoningEfforts: ["low"], serviceTiers: ["priority"] }
+  ]);
+});
+
+test("queryCodexModelCatalog strictly validates each provided service tier source", async (t) => {
+  const cases = [
+    ["current tiers", { serviceTiers: "priority" }],
+    ["legacy tiers", { additionalSpeedTiers: { id: "fast" } }]
+  ];
+
+  for (const [name, tierFields] of cases) {
+    await t.test(name, async () => {
+      const fake = createCatalogSpawn([
+        {
+          id: "gpt-malformed",
+          supportedReasoningEfforts: [{ reasoningEffort: "high" }],
+          ...tierFields
+        }
+      ]);
+      const result = await queryCodexModelCatalog({
+        spawnImpl: fake.spawnImpl,
+        timeoutMs: 100,
+        clock: () => CHECKED_AT
+      });
+
+      assert.deepEqual(result, unknown("protocol_error"));
+    });
+  }
+});
+
+test("queryCodexModelCatalog caps every timeout override below five seconds", async (t) => {
+  const cases = [
+    ["timeoutMs boundary", { timeoutMs: 4_999 }, 4_999],
+    ["timeoutMs overflow", { timeoutMs: 5_000 }, 4_999],
+    ["timeout alias overflow", { timeout: 50_000 }, 4_999]
+  ];
+
+  for (const [name, timeoutOptions, expectedDelay] of cases) {
+    await t.test(name, async () => {
+      const fake = createCatalogSpawn([]);
+      const timerToken = {};
+      let scheduledDelay;
+      let clearedToken;
+      const result = await queryCodexModelCatalog({
+        ...timeoutOptions,
+        spawnImpl: fake.spawnImpl,
+        clock: () => CHECKED_AT,
+        setTimeoutImpl(_callback, delay) {
+          scheduledDelay = delay;
+          return timerToken;
+        },
+        clearTimeoutImpl(token) {
+          clearedToken = token;
+        }
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(scheduledDelay, expectedDelay);
+      assert.equal(clearedToken, timerToken);
+    });
+  }
 });
 
 test("queryCodexModelCatalog rejects malformed requested responses", async (t) => {
@@ -264,6 +363,15 @@ function createFakeSpawn(onMessage) {
   };
 
   return { child, messages, spawnCalls, spawnImpl };
+}
+
+function createCatalogSpawn(data) {
+  return createFakeSpawn(({ child, message }) => {
+    if (message.method === "initialize") send(child, { id: 0, result: {} });
+    if (message.method === "model/list") {
+      send(child, { id: message.id, result: { data, nextCursor: null } });
+    }
+  });
 }
 
 function send(child, message) {

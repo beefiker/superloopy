@@ -1,14 +1,19 @@
 import { spawn } from "node:child_process";
 
 const DEFAULT_TIMEOUT_MS = 3_000;
+const MAX_TIMEOUT_MS = 4_999;
 const MODEL_LIST_LIMIT = 100;
 const MAX_BUFFER_LENGTH = 1_000_000;
-const CLIENT_INFO = { name: "superloopy-model-probe", version: "0.8.1" };
+// This identifies the probe protocol, not the Superloopy release. Bump it only when
+// the initialize/model-list handshake contract changes.
+const CLIENT_INFO = { name: "superloopy-model-probe", version: "1" };
 
 export async function queryCodexModelCatalog(options = {}) {
   const spawnImpl = options.spawnImpl ?? spawn;
   const timeoutMs = normalizeTimeout(options.timeoutMs ?? options.timeout);
   const clock = options.clock ?? (() => new Date());
+  const setTimeoutImpl = options.setTimeoutImpl ?? setTimeout;
+  const clearTimeoutImpl = options.clearTimeoutImpl ?? clearTimeout;
   let child;
 
   try {
@@ -32,12 +37,12 @@ export async function queryCodexModelCatalog(options = {}) {
     let buffer = "";
     const models = [];
     const seenCursors = new Set();
-    const timer = setTimeout(() => finishFailure("timeout"), timeoutMs);
+    const timer = setTimeoutImpl(() => finishFailure("timeout"), timeoutMs);
 
     function finish(result) {
       if (settled) return;
       settled = true;
-      clearTimeout(timer);
+      clearTimeoutImpl(timer);
       terminate(child);
       resolve({ ...result, checkedAt: readClock(clock) });
     }
@@ -176,7 +181,9 @@ function normalizeModel(item) {
   const id = Object.hasOwn(item, "model") ? item.model : item.id;
   assertNonEmptyString(id);
   if (!Array.isArray(item.supportedReasoningEfforts)) throw new Error("invalid reasoning efforts");
-  if (!Array.isArray(item.serviceTiers)) throw new Error("invalid service tiers");
+  if (item.serviceTiers !== undefined && !Array.isArray(item.serviceTiers)) {
+    throw new Error("invalid service tiers");
+  }
   if (item.additionalSpeedTiers !== undefined && !Array.isArray(item.additionalSpeedTiers)) {
     throw new Error("invalid additional speed tiers");
   }
@@ -186,7 +193,7 @@ function normalizeModel(item) {
     assertNonEmptyString(effort.reasoningEffort);
     return effort.reasoningEffort;
   });
-  const serviceTiers = item.serviceTiers.map((tier) => {
+  const serviceTiers = (item.serviceTiers ?? []).map((tier) => {
     if (!isRecord(tier)) throw new Error("invalid service tier");
     assertNonEmptyString(tier.id);
     return tier.id;
@@ -221,7 +228,8 @@ function assertNonEmptyString(value) {
 }
 
 function normalizeTimeout(value) {
-  return Number.isFinite(value) && value >= 0 ? value : DEFAULT_TIMEOUT_MS;
+  if (!Number.isFinite(value) || value < 0) return DEFAULT_TIMEOUT_MS;
+  return Math.min(value, MAX_TIMEOUT_MS);
 }
 
 function terminate(child) {
