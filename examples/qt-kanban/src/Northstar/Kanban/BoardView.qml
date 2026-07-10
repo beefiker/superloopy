@@ -9,6 +9,7 @@ Flickable {
     signal taskActivated(string taskId, Item invoker)
     signal addTaskRequested(string columnId, Item invoker)
 
+    property bool rightToLeft: false
     property bool dragActive: false
     property string dragTaskId: ""
     property Item dragSource: null
@@ -37,6 +38,9 @@ Flickable {
         { "key": "inProgress", "title": qsTr("In progress"), "accent": Theme.coral },
         { "key": "review", "title": qsTr("Review"), "accent": Theme.green }
     ]
+
+    LayoutMirroring.enabled: rightToLeft
+    LayoutMirroring.childrenInherit: true
 
     function positionDragVisual(scenePosition) {
         const localPosition = dragOverlay.mapFromItem(null, scenePosition.x,

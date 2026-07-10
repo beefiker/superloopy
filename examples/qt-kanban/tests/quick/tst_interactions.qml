@@ -10,6 +10,11 @@ TestCase {
     height: 700
     visible: true
 
+    // Injected by QtKanbanSetup::qmlEngineAvailable for real QAccessible checks.
+    // qmllint disable unqualified
+    readonly property var accessibilityProbe: AccessibilityProbe
+    // qmllint enable unqualified
+
     Component {
         id: viewComponent
 
@@ -21,6 +26,11 @@ TestCase {
 
     function init() {
         TaskStore.reset()
+        Theme.motionEnabled = true
+    }
+
+    function cleanup() {
+        Theme.motionEnabled = true
     }
 
     function createView(viewWidth) {
@@ -452,5 +462,57 @@ TestCase {
         keyClick(Qt.Key_Tab)
         for (const control of controls)
             verify(!control.activeFocus)
+    }
+
+    function test_primary_tab_order_is_stable_in_both_directions() {
+        const view = createView(1600)
+        const start = findChild(view, "boardButton")
+        verify(start)
+        start.forceActiveFocus(Qt.TabFocusReason)
+        tryVerify(function() { return start.activeFocus })
+
+        const forwardOwners = [
+            "timelineButton", "inboxButton", "settingsButton", "helpButton",
+            "searchField", "priorityFilter", "newTaskButton",
+            "cardInteraction"
+        ]
+        for (const owner of forwardOwners) {
+            keyClick(Qt.Key_Tab)
+            compare(namedFocusOwner(testCase.Window.window.activeFocusItem), owner)
+        }
+
+        const backwardOwners = [
+            "newTaskButton", "priorityFilter", "searchField", "helpButton",
+            "settingsButton", "inboxButton", "timelineButton", "boardButton"
+        ]
+        for (const owner of backwardOwners) {
+            keyClick(Qt.Key_Backtab)
+            compare(namedFocusOwner(testCase.Window.window.activeFocusItem), owner)
+        }
+    }
+
+    function test_motion_off_reaches_drawer_states_and_restores_focus() {
+        Theme.motionEnabled = false
+        const view = createView(1300)
+        const card = findChild(view, "taskCard-task-define-goals")
+        const interaction = findChild(card, "cardInteraction")
+        const drawer = findChild(view, "overlayDetailDrawer")
+        verify(interaction)
+        verify(drawer)
+        compare(Theme.feedbackDuration, 0)
+        compare(Theme.transitionDuration, 0)
+
+        interaction.forceActiveFocus(Qt.TabFocusReason)
+        verify(accessibilityProbe.press(interaction))
+        wait(0)
+        verify(drawer.opened)
+        compare(drawer.position, 1)
+
+        drawer.close()
+        wait(0)
+        verify(!drawer.opened)
+        compare(drawer.position, 0)
+        wait(0)
+        verify(interaction.activeFocus)
     }
 }
