@@ -10,6 +10,7 @@ Flickable {
     signal addTaskRequested(string columnId, Item invoker)
 
     property bool rightToLeft: false
+    property bool _initialViewportPending: true
     property bool dragActive: false
     property string dragTaskId: ""
     property Item dragSource: null
@@ -41,6 +42,25 @@ Flickable {
 
     LayoutMirroring.enabled: rightToLeft
     LayoutMirroring.childrenInherit: true
+
+    function applyInitialViewport() {
+        if (!_initialViewportPending || width <= 0 || contentWidth <= 0)
+            return
+        contentX = rightToLeft ? Math.max(0, contentWidth - width) : 0
+        _initialViewportPending = false
+    }
+
+    onRightToLeftChanged: {
+        _initialViewportPending = true
+        Qt.callLater(function() { root.applyInitialViewport() })
+    }
+    onWidthChanged: Qt.callLater(function() { root.applyInitialViewport() })
+    onContentWidthChanged: Qt.callLater(function() {
+        root.applyInitialViewport()
+    })
+    Component.onCompleted: Qt.callLater(function() {
+        root.applyInitialViewport()
+    })
 
     function positionDragVisual(scenePosition) {
         const localPosition = dragOverlay.mapFromItem(null, scenePosition.x,

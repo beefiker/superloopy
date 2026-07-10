@@ -119,7 +119,7 @@ Item {
         property Item invokingItem: null
 
         parent: Overlay.overlay
-        edge: Qt.RightEdge
+        edge: root.rightToLeft ? Qt.LeftEdge : Qt.RightEdge
         width: Theme.drawerWidth
         height: parent ? parent.height : root.height
         padding: 0
@@ -185,13 +185,13 @@ Item {
     Shortcut {
         sequence: "Ctrl+Shift+Left"
         enabled: TaskStore.selectedTaskId.length > 0 && !newTaskDialog.opened
-        onActivated: TaskStore.moveSelectedAdjacent(-1)
+        onActivated: TaskStore.moveSelectedAdjacent(root.rightToLeft ? 1 : -1)
     }
 
     Shortcut {
         sequence: "Ctrl+Shift+Right"
         enabled: TaskStore.selectedTaskId.length > 0 && !newTaskDialog.opened
-        onActivated: TaskStore.moveSelectedAdjacent(1)
+        onActivated: TaskStore.moveSelectedAdjacent(root.rightToLeft ? -1 : 1)
     }
 
     Label {

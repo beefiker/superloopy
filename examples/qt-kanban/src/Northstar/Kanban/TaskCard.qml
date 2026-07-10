@@ -18,7 +18,7 @@ FocusScope {
     readonly property bool selected: TaskStore.selectedTaskId === taskId
     readonly property string visualState: !enabled ? "disabled"
                                                    : dragging ? "dragging"
-                                                   : interaction.activeFocus ? "keyboardFocus"
+                                                   : interaction.visualFocus ? "keyboardFocus"
                                                    : selected ? "selected"
                                                    : interaction.down ? "pressed"
                                                    : interaction.hovered ? "hovered"
@@ -95,7 +95,7 @@ FocusScope {
         anchors.fill: parent
         anchors.margins: -4
         z: -2
-        visible: interaction.activeFocus
+        visible: interaction.visualFocus
         color: "transparent"
         radius: Theme.cardRadius + 4
         border.color: Theme.focus

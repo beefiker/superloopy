@@ -52,6 +52,21 @@ TestCase {
         return ""
     }
 
+    function namedFocusPath(item) {
+        let candidate = item
+        let owner = ""
+        while (candidate) {
+            if (candidate.objectName && candidate.objectName.length > 0) {
+                if (candidate.objectName.indexOf("taskCard-") === 0)
+                    return candidate.objectName
+                if (owner.length === 0)
+                    owner = candidate.objectName
+            }
+            candidate = candidate.parent
+        }
+        return owner
+    }
+
     function test_columns_bind_store_visible_arrays_and_counts() {
         const view = createView()
         const keys = ["backlog", "ready", "inProgress", "review"]
@@ -474,21 +489,67 @@ TestCase {
         const forwardOwners = [
             "timelineButton", "inboxButton", "settingsButton", "helpButton",
             "searchField", "priorityFilter", "newTaskButton",
-            "cardInteraction"
+            "taskCard-task-define-goals",
+            "taskCard-task-audience-research",
+            "taskCard-task-localize-launch",
+            "taskCard-task-finalize-messaging",
+            "taskCard-task-design-system",
+            "taskCard-task-email-campaign",
+            "taskCard-task-build-landing",
+            "taskCard-task-integrate-analytics",
+            "taskCard-task-mobile-qa",
+            "taskCard-task-demo-video",
+            "taskCard-task-go-to-market",
+            "taskCard-task-launch-readiness-review",
+            "detailCloseButton", "moveToColumn",
+            "movePreviousButton", "moveNextButton"
         ]
-        for (const owner of forwardOwners) {
+        let forwardIndex = 0
+        while (forwardIndex < forwardOwners.length) {
             keyClick(Qt.Key_Tab)
-            compare(namedFocusOwner(testCase.Window.window.activeFocusItem), owner)
+            const owner = namedFocusPath(
+                            testCase.Window.window.activeFocusItem)
+            if (owner.indexOf("addTask-") === 0)
+                continue
+            compare(owner, forwardOwners[forwardIndex])
+            ++forwardIndex
         }
 
-        const backwardOwners = [
-            "newTaskButton", "priorityFilter", "searchField", "helpButton",
-            "settingsButton", "inboxButton", "timelineButton", "boardButton"
-        ]
+        const backwardOwners = forwardOwners.slice(0, -1).reverse()
+        backwardOwners.push("boardButton")
         for (const owner of backwardOwners) {
             keyClick(Qt.Key_Backtab)
-            compare(namedFocusOwner(testCase.Window.window.activeFocusItem), owner)
+            let actualOwner = namedFocusPath(
+                                testCase.Window.window.activeFocusItem)
+            while (actualOwner.indexOf("addTask-") === 0) {
+                keyClick(Qt.Key_Backtab)
+                actualOwner = namedFocusPath(
+                            testCase.Window.window.activeFocusItem)
+            }
+            compare(actualOwner, owner)
         }
+    }
+
+    function test_compact_rtl_shortcuts_follow_physical_direction() {
+        const view = createTemporaryObject(viewComponent, testCase, {
+            "width": 1000,
+            "rightToLeft": true
+        })
+        verify(view)
+        waitForRendering(view)
+        verify(TaskStore.selectTask("task-define-goals"))
+
+        const focusTarget = findChild(view, "boardButton")
+        verify(focusTarget)
+        focusTarget.forceActiveFocus(Qt.TabFocusReason)
+
+        keyClick(Qt.Key_Left, Qt.ControlModifier | Qt.ShiftModifier)
+        tryCompare(TaskStore.taskById("task-define-goals"), "columnId",
+                   "ready")
+
+        keyClick(Qt.Key_Right, Qt.ControlModifier | Qt.ShiftModifier)
+        tryCompare(TaskStore.taskById("task-define-goals"), "columnId",
+                   "backlog")
     }
 
     function test_motion_off_reaches_drawer_states_and_restores_focus() {

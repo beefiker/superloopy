@@ -192,6 +192,44 @@ TestCase {
         compare(nextButton.Accessible.name, "Move task to next column")
     }
 
+    function test_compact_rtl_starts_at_backlog_and_remains_scrollable() {
+        const view = createTemporaryObject(viewComponent, testCase, {
+            "width": 1000,
+            "rightToLeft": true
+        })
+        verify(view)
+        waitForRendering(view)
+
+        const board = findChild(view, "boardView")
+        const backlog = findChild(view, "column-backlog")
+        verify(board)
+        verify(backlog)
+        const rtlStart = Math.max(0, board.contentWidth - board.width)
+        verify(rtlStart > 0)
+        tryCompare(board, "contentX", rtlStart)
+
+        const backlogPosition = backlog.mapToItem(board, 0, 0).x
+        verify(backlogPosition < board.width)
+        verify(backlogPosition + backlog.width > 0)
+
+        board.contentX = 0
+        wait(0)
+        compare(board.contentX, 0)
+    }
+
+    function test_compact_rtl_overlay_drawer_opens_from_left_edge() {
+        const view = createTemporaryObject(viewComponent, testCase, {
+            "width": 1000,
+            "rightToLeft": true
+        })
+        verify(view)
+        waitForRendering(view)
+
+        const drawer = findChild(view, "overlayDetailDrawer")
+        verify(drawer)
+        compare(drawer.edge, Qt.LeftEdge)
+    }
+
     function test_enlarged_font_keeps_labels_and_targets_unclipped() {
         Theme.baseFontPixelSize = 13 * 1.35
         const view = createView(1000)
