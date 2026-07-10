@@ -48,11 +48,13 @@ Control {
             objectName: "searchField"
             Layout.preferredWidth: Math.max(176, Math.min(236, root.width * 0.22))
             placeholderText: qsTr("Search tasks")
+            text: TaskStore.query
             selectByMouse: true
             color: Theme.ink
             placeholderTextColor: Theme.muted
             font.pixelSize: Theme.bodyFontPixelSize
             Accessible.name: qsTr("Search tasks")
+            onTextEdited: TaskStore.query = text
 
             background: Rectangle {
                 color: Theme.surface
@@ -67,8 +69,19 @@ Control {
             objectName: "priorityFilter"
             Layout.preferredWidth: 128
             model: [qsTr("All"), qsTr("High"), qsTr("Medium"), qsTr("Low")]
+            currentIndex: {
+                const normalizedFilter = TaskStore.priorityFilter.toLowerCase()
+                return normalizedFilter === "high" ? 1
+                     : normalizedFilter === "medium" ? 2
+                     : normalizedFilter === "low" ? 3 : 0
+            }
             font.pixelSize: Theme.bodyFontPixelSize
             Accessible.name: qsTr("Priority filter")
+            onActivated: index => {
+                TaskStore.priorityFilter = index === 1 ? "high"
+                                           : index === 2 ? "medium"
+                                           : index === 3 ? "low" : "all"
+            }
 
             background: Rectangle {
                 color: Theme.surface
