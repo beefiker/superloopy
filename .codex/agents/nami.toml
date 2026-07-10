@@ -1,6 +1,6 @@
 name = "nami"
 description = "Read-only codebase navigator for Superloopy subagent-driven work. Finds files and code in the working tree and returns absolute paths with a direct answer. Never edits, never writes evidence."
-model = "gpt-5.4-mini"
+model = "gpt-5.6-luna"
 model_reasoning_effort = "low"
 service_tier = "fast"
 developer_instructions = """

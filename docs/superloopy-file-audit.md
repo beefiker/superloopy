@@ -58,6 +58,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `docs/superloopy-model-policy.md` | Advisory model, reasoning-effort, and service-tier defaults for bundled Superloopy agents. | Explicitly treats model choice as steering, not proof. |
 | `docs/superpowers/plans/2026-07-07-astro-landing.md` | Written implementation plan for migrating the landing page to Astro while preserving the existing visual system and deferred orbit runtime. | Planning artifact only; no runtime plugin behavior. |
 | `docs/superpowers/plans/2026-07-10-explicit-frontend-activation.md` | Implementation plan for replacing semantic specialist prompt steers with explicit invocation. | Planning artifact only; records the TDD and validation contract. |
+| `docs/superpowers/plans/2026-07-10-gpt-5-6-model-resolution.md` | Implementation plan for catalog-aware GPT-5.6 tuple resolution and managed agent installation. | Planning artifact only; records pre-launch resolution, compatibility, and validation contracts. |
 | `docs/superpowers/specs/2026-07-07-astro-landing-design.md` | Design brief for the Astro landing rewrite, including performance, mobile, and deployment constraints. | Planning artifact only; no runtime plugin behavior. |
 | `docs/superpowers/specs/2026-07-10-explicit-frontend-activation-design.md` | Design brief for exact Superloopy invocation tokens and explicit frontend activation. | Planning artifact only; documents the approved routing boundary. |
 | `docs/superpowers/specs/2026-07-10-gpt-5-6-model-policy-design.md` | Design brief for mapping the bundled Codex agent profiles to GPT-5.6 Sol, Terra, and Luna. | Planning artifact only; preserves explicit pins and adds no runtime fallback. |
@@ -433,6 +434,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `test/interop.test.js` | Tests Superpowers detection (override, filesystem, both hosts), the doctor interop check, and coexistence routing in loop guidance. | Tests Superloopy-native coexistence behavior only. |
 | `test/loop-gates.test.js` | Gate, report, trace, check, review, finish, and checkpoint tests. | Covers completion evidence flows. |
 | `test/loop.test.js` | Core lifecycle and command-capture unit tests. | Tests Superloopy state semantics. |
+| `test/model-resolution.test.js` | Pure resolver and policy-loader coverage for ordered complete Codex candidate tuples. | Uses synthetic normalized catalogs and temporary policy fixtures only. |
 | `test/plugin.test.js` | Plugin manifest, hook route, and packaged-skill tests. | Verifies Superloopy packaging and new skill metadata. |
 | `test/pre-tool-use.test.js` | Focused unit tests for native goal-tool lifecycle guards. | Prevents premature native completion while Superloopy state is incomplete. |
 | `test/report.test.js` | Focused report artifact tests. | Tests report portability and guide output. |

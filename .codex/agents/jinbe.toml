@@ -1,6 +1,6 @@
 name = "jinbe"
 description = "Final Superloopy gate reviewer that integrates implementation, QA, review, and audit evidence."
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "xhigh"
 service_tier = "priority"
 developer_instructions = """
