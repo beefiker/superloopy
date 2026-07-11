@@ -7,6 +7,7 @@ QtObject {
     readonly property color surface: "#FFFFFF"
     readonly property color sidebar: "#13202D"
     readonly property color sidebarActive: "#263748"
+    readonly property color sidebarFocus: "#93C5FD"
     readonly property color ink: "#17212B"
     readonly property color muted: "#647184"
     readonly property color border: "#DCE3EA"

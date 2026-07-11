@@ -47,6 +47,7 @@ Cool-paper planning desk. Dense information remains breathable through hairline 
 | `surface` | `#FFFFFF` | cards, header, drawer |
 | `sidebar` | `#13202D` | navigation chrome |
 | `sidebarActive` | `#263748` | selected navigation item |
+| `sidebarFocus` | `#93C5FD` | keyboard focus on dark navigation |
 | `ink` | `#17212B` | primary text |
 | `muted` | `#647184` | secondary text |
 | `border` | `#DCE3EA` | hairlines and card borders |
@@ -127,7 +128,7 @@ Visible copy contains no em dash, AI marketing cliché, emoji icon, fake statist
 - Unit-test `moveTask()` and other store operations, then verify one real pointer drag plus search, filtering, creation, selection, drawer behavior, keyboard traversal, and Escape handling. Reset the singleton store between tests.
 - Verify normal, selected, High, disabled, focus, empty-search, long-text, Korean text, RTL mirroring, enlarged-font, motion-disabled, and resized states. The branded demo is light-only; dark-theme parity is out of scope.
 - Wait for `windowShown`, activation, polish, and rendering; disable nonessential motion for assertions. Record macOS version, Qt version, Basic style, DPR, locale, graphics backend, capture method, and any unverified native surface in `VISUAL_QA.md`.
-- Verify each custom card's accessible name, Button role, focused state, and press action through tests plus macOS Accessibility Inspector or VoiceOver evidence. Mouse, keyboard, and accessibility activation share one selection path.
+- Verify each custom card's accessible name, Button role, focused state, and press action through tests plus direct macOS AX API, Accessibility Inspector, or VoiceOver evidence. Mouse, keyboard, and accessibility activation share one selection path.
 - Use the target image only for hierarchy and drift review. Generated faces/text and exact pixels are not acceptance criteria.
 
 ## Acceptance

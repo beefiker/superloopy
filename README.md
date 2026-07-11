@@ -74,6 +74,10 @@ The [Northstar Qt Kanban demo](examples/qt-kanban/) is a runnable Qt Quick accep
 qt-cmake -S examples/qt-kanban -B build/qt-kanban -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build/qt-kanban --parallel
 build/qt-kanban/src/app/qtkanban --window-size 1600x1000
+
+# macOS: verify the exported native accessibility contract
+examples/qt-kanban/scripts/audit-macos-accessibility.sh \
+  build/qt-kanban/src/app/qtkanban
 ```
 
 ## The crew

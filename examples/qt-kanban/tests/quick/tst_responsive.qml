@@ -142,6 +142,10 @@ TestCase {
         verify(!timelineButton.checked)
         compare(timelineButton.palette.buttonText.toString(),
                 Theme.sidebarText.toString())
+
+        boardButton.forceActiveFocus(Qt.TabFocusReason)
+        tryVerify(function() { return boardButton.visualFocus })
+        compare(boardButton.background.border.color, Theme.sidebarFocus)
     }
 
     function test_sidebar_unavailable_destinations_share_one_status_surface() {

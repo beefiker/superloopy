@@ -25,6 +25,17 @@ TestCase {
         SignalSpy {}
     }
 
+    Component {
+        id: dragTakeoverComponent
+
+        DragHandler {
+            objectName: "dragTakeoverHandler"
+            target: null
+            dragThreshold: 1000
+            grabPermissions: PointerHandler.CanTakeOverFromAnything
+        }
+    }
+
     function init() {
         TaskStore.reset()
     }
@@ -87,11 +98,14 @@ TestCase {
         const interaction = findChild(card, "cardInteraction")
         const dragHandler = findChild(card, "cardDragHandler")
         const readySurface = findChild(view, "dropArea-ready")
+        const takeoverHandler = createTemporaryObject(dragTakeoverComponent,
+                                                       view)
         verify(board)
         verify(card)
         verify(interaction)
         verify(dragHandler)
         verify(readySurface)
+        verify(takeoverHandler)
 
         const dropSpy = createTemporaryObject(spyComponent, testCase, {
             "target": readySurface,
@@ -127,16 +141,26 @@ TestCase {
                   Qt.LeftButton)
         tryCompare(readySurface, "containsDrag", true)
         verify(grabSpy.count > 0)
-        const cancelPoint = grabSpy.signalArguments[grabSpy.count - 1][1]
 
-        dragHandler.enabled = false
-        compare(dragHandler.enabled, false)
-        dragHandler.canceled(cancelPoint)
+        takeoverHandler.dragThreshold = 0
+        mouseMove(testCase, destination.x + 1, destination.y, 50,
+                  Qt.LeftButton)
+        tryCompare(takeoverHandler, "active", true)
         tryCompare(cancelSpy, "count", 1)
+        tryCompare(dragHandler, "active", false)
         tryCompare(board, "dragActive", false)
         compare(board.interactive, true)
-        mouseRelease(testCase, destination.x, destination.y, Qt.LeftButton)
-        tryCompare(dragHandler, "active", false)
+
+        let sawCancelExclusive = false
+        for (const emission of grabSpy.signalArguments) {
+            if (emission[0] === PointerDevice.CancelGrabExclusive)
+                sawCancelExclusive = true
+        }
+        verify(sawCancelExclusive)
+
+        mouseRelease(testCase, destination.x + 1, destination.y,
+                     Qt.LeftButton)
+        tryCompare(takeoverHandler, "active", false)
 
         compare(dropSpy.count, 0)
         compare(TaskStore.taskById("task-define-goals").columnId, "backlog")
