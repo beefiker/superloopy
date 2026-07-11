@@ -212,6 +212,25 @@ test("frontend discovery rows publish routed web and Qt evidence", async () => {
   }
 });
 
+test("English and Korean READMEs publish the runnable Qt Kanban demo", async () => {
+  const readmes = [
+    await readFile("README.md", "utf8"),
+    await readFile("README.ko.md", "utf8")
+  ];
+  const commands = [
+    "qt-cmake -S examples/qt-kanban -B build/qt-kanban -G Ninja -DCMAKE_BUILD_TYPE=Release",
+    "cmake --build build/qt-kanban --parallel",
+    "build/qt-kanban/src/app/qtkanban --window-size 1600x1000"
+  ];
+
+  for (const readme of readmes) {
+    assert.match(readme, /\]\(examples\/qt-kanban\/?\)/);
+    for (const command of commands) {
+      assert.ok(readme.includes(command), `README must publish: ${command}`);
+    }
+  }
+});
+
 test("frontend agent metadata keeps explicit activation and routed rendered evidence", async () => {
   const agent = await readFile("skills/superloopy-frontend/agents/openai.yaml", "utf8");
 
