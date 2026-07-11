@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 const root = "skills/superloopy-frontend";
@@ -15,8 +17,17 @@ Open your reply with \`SUPERLOOPY FRONTEND ENABLED\`. If another active Superloo
 
 async function read(path) {
   assert.equal(existsSync(path), true, `missing ${path}`);
-  return readFile(path, "utf8");
+  return (await readFile(path, "utf8")).replace(/\r\n?/gu, "\n");
 }
+
+test("frontend contract reader normalizes platform line endings", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "superloopy-frontend-contract-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, "contract.md");
+  await writeFile(path, "## Activation\r\n\r\nBody\r\n", "utf8");
+
+  assert.equal(await read(path), "## Activation\n\nBody\n");
+});
 
 test("frontend skill routes web and Qt only after explicit activation", async () => {
   const skill = await read(`${root}/SKILL.md`);
