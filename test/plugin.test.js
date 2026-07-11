@@ -191,6 +191,43 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
   assert.doesNotMatch(promptHook, /statusMessage/);
 });
 
+test("frontend skill routes system-map, motion, and redesign references with dial inference", async () => {
+  const frontend = await readSkill("superloopy-frontend");
+
+  // Router: the three context references are lazily loadable, never inlined.
+  assert.match(frontend.content, /references\/system-map\.md/);
+  assert.match(frontend.content, /references\/motion\.md/);
+  assert.match(frontend.content, /references\/redesign\.md/);
+  assert.match(frontend.content, /one system per project/i);
+
+  // Phase 1: dial values trace to the Design Read via the inference table.
+  assert.match(frontend.content, /dial inference/i);
+  assert.match(frontend.content, /trust-first \/ public-sector \/ regulated/);
+
+  const systemMap = await readFile("skills/superloopy-frontend/references/system-map.md", "utf8");
+  assert.match(systemMap, /official package/i);
+  assert.match(systemMap, /One system per project/);
+  assert.match(systemMap, /govuk-frontend/);
+  assert.match(systemMap, /labeled approximation|labeled as approximation/i);
+  assert.match(systemMap, /dependency-free `package\.json`/);
+
+  const motion = await readFile("skills/superloopy-frontend/references/motion.md", "utf8");
+  assert.match(motion, /window\.addEventListener\("scroll"/);
+  assert.match(motion, /useMotionValue/);
+  assert.match(motion, /start: "top top"/);
+  assert.match(motion, /useReducedMotion|prefers-reduced-motion/);
+  assert.match(motion, /ctx\.revert\(\)/);
+  assert.doesNotMatch(motion, /framer-motion"/); // imports come from motion/react, legacy alias only mentioned as such
+
+  const redesign = await readFile("skills/superloopy-frontend/references/redesign.md", "utf8");
+  assert.match(redesign, /Greenfield/);
+  assert.match(redesign, /Preserve/);
+  assert.match(redesign, /Overhaul/);
+  assert.match(redesign, /REDESIGN_AUDIT\.md/);
+  assert.match(redesign, /Never change silently/i);
+  assert.match(redesign, /form field names or order/i);
+});
+
 test("clone skill preserves exact extraction pipeline and crew dispatch guardrails", async () => {
   const clone = await readSkill("superloopy-clone");
 

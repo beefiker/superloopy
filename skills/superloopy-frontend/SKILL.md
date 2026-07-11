@@ -36,6 +36,9 @@ Load the *smallest* set that covers the request and state which you loaded in on
 - **A named brand or a mood** ("like Stripe", "premium", "dev-tool dark", "editorial") → `references/design/_INDEX.md`, then load the ONE matching brand teardown and let its tokens drive DESIGN.md. ~47 brands are bundled; for a brand not listed, extract it on-demand per `references/design-system.md`.
 - **Visually-important build (page/screen from intent)** → `references/image-first.md` (secure a visual target before coding, deep-analyze to a spec, then implement).
 - **Creating or extending a design system / tokens** → `references/design-system.md` (the 7-section DESIGN.md schema and how to author loopy-native brand token sets).
+- **Brief reads as a platform with an official component package** (Microsoft/Google/IBM/Shopify/Atlassian/GitHub-style product UI, public-sector) → `references/system-map.md` (adopt the official design system instead of hand-rolling its look; one system per project).
+- **Scroll-driven or physics motion** (pin, scrub, stagger, parallax, magnetic hover) → `references/motion.md` (banned jank patterns and canonical pin/scrub/stagger skeletons with reduced-motion fallbacks).
+- **Redesigning an existing site** → `references/redesign.md` (mode detection, audit-first evidence, preservation rules, modernization levers).
 - **Measuring quality (compliance + performance)** → `references/perfection.md` (the design-system compliance script + the real-browser Lighthouse protocol).
 
 Loading nothing produces generic slop; loading everything dilutes the signal. Load deliberately — at most one brand teardown at a time (they encode opposing systems).
@@ -56,6 +59,17 @@ Before generating, emit a one-line **Design Read**: `Reading this as: <page kind
 - `DESIGN_VARIANCE` (1-10): layout boldness. Above ~4, avoid the centered hero and symmetric three-card row.
 - `MOTION_INTENSITY` (1-10): if you claim motion, motion must be shown (implemented, not described).
 - `VISUAL_DENSITY` (1-10): low = generous whitespace; high = line separators, mono numerals, no cards.
+
+Set the dials from the Design Read, not from habit — dial inference:
+
+| Read signal | VARIANCE | MOTION | DENSITY |
+| --- | --- | --- | --- |
+| minimalist / calm / editorial / Linear-style | 5-6 | 3-4 | 2-3 |
+| premium consumer / luxury / Apple-adjacent | 7-8 | 5-7 | 3-4 |
+| playful / experimental / agency | 9-10 | 8-10 | 3-4 |
+| landing page / portfolio / marketing (default) | 7-9 | 6-8 | 3-5 |
+| trust-first / public-sector / regulated / accessibility-critical | 3-4 | 2-3 | 4-5 |
+| redesign of an existing site | read the current site's dials first (`references/redesign.md`) — that reading is the baseline | | |
 
 ## Phase 2 — Build against the contract
 
