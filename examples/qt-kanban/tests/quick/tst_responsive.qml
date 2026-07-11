@@ -217,6 +217,42 @@ TestCase {
         compare(board.contentX, 0)
     }
 
+    function test_rtl_resize_tracks_start_without_pinning_user_scroll() {
+        const view = createTemporaryObject(viewComponent, testCase, {
+            "width": 1600,
+            "rightToLeft": true
+        })
+        verify(view)
+        waitForRendering(view)
+
+        const board = findChild(view, "boardView")
+        const backlog = findChild(view, "column-backlog")
+        verify(board)
+        verify(backlog)
+        const wideStart = Math.max(0, board.contentWidth - board.width)
+        tryCompare(board, "contentX", wideStart)
+
+        view.width = 1000
+        waitForRendering(view)
+        const compactStart = Math.max(0, board.contentWidth - board.width)
+        verify(compactStart > wideStart)
+        tryCompare(board, "contentX", compactStart)
+
+        const backlogPosition = backlog.mapToItem(board, 0, 0).x
+        verify(backlogPosition < board.width)
+        verify(backlogPosition + backlog.width > 0)
+
+        board.contentX = 0
+        wait(0)
+        compare(board.contentX, 0)
+
+        view.width = 1001
+        waitForRendering(view)
+        compare(board.contentX, 0)
+        wait(0)
+        compare(board.contentX, 0)
+    }
+
     function test_compact_rtl_overlay_drawer_opens_from_left_edge() {
         const view = createTemporaryObject(viewComponent, testCase, {
             "width": 1000,

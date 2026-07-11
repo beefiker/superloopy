@@ -10,7 +10,10 @@ Flickable {
     signal addTaskRequested(string columnId, Item invoker)
 
     property bool rightToLeft: false
-    property bool _initialViewportPending: true
+    property bool _viewportInitialized: false
+    property bool _viewportUpdateScheduled: false
+    property bool _trackingLogicalStart: true
+    property bool _settingContentX: false
     property bool dragActive: false
     property string dragTaskId: ""
     property Item dragSource: null
@@ -43,24 +46,50 @@ Flickable {
     LayoutMirroring.enabled: rightToLeft
     LayoutMirroring.childrenInherit: true
 
-    function applyInitialViewport() {
-        if (!_initialViewportPending || width <= 0 || contentWidth <= 0)
+    function scheduleViewportUpdate() {
+        if (_viewportUpdateScheduled)
             return
-        contentX = rightToLeft ? Math.max(0, contentWidth - width) : 0
-        _initialViewportPending = false
+        _viewportUpdateScheduled = true
+        Qt.callLater(function() {
+            root._viewportUpdateScheduled = false
+            root.updateViewportForGeometry()
+        })
+    }
+
+    function logicalStartForGeometry() {
+        return rightToLeft ? Math.max(0, contentWidth - width) : 0
+    }
+
+    function updateViewportForGeometry() {
+        if (width <= 0 || contentWidth <= 0)
+            return
+
+        const shouldFollow = !_viewportInitialized || _trackingLogicalStart
+        const nextLogicalStart = logicalStartForGeometry()
+        _viewportInitialized = true
+        if (!shouldFollow)
+            return
+
+        _settingContentX = true
+        contentX = nextLogicalStart
+        _settingContentX = false
+        _trackingLogicalStart = true
     }
 
     onRightToLeftChanged: {
-        _initialViewportPending = true
-        Qt.callLater(function() { root.applyInitialViewport() })
+        _trackingLogicalStart = true
+        scheduleViewportUpdate()
     }
-    onWidthChanged: Qt.callLater(function() { root.applyInitialViewport() })
-    onContentWidthChanged: Qt.callLater(function() {
-        root.applyInitialViewport()
-    })
-    Component.onCompleted: Qt.callLater(function() {
-        root.applyInitialViewport()
-    })
+    onWidthChanged: scheduleViewportUpdate()
+    onContentWidthChanged: scheduleViewportUpdate()
+    onContentXChanged: {
+        if (!_viewportInitialized || _settingContentX) {
+            return
+        }
+        _trackingLogicalStart = Math.abs(contentX
+                                         - logicalStartForGeometry()) < 0.5
+    }
+    Component.onCompleted: scheduleViewportUpdate()
 
     function positionDragVisual(scenePosition) {
         const localPosition = dragOverlay.mapFromItem(null, scenePosition.x,
