@@ -35,3 +35,5 @@ add_test(
     NAME qtkanban.quick
     COMMAND tst_qtkanban -platform offscreen
 )
+
+set_tests_properties(qtkanban.quick PROPERTIES TIMEOUT 120)

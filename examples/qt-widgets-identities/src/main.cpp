@@ -3,13 +3,49 @@
 #include <QApplication>
 #include <QCommandLineOption>
 #include <QCommandLineParser>
+#include <QLocale>
 #include <QTextStream>
 #include <QTimer>
 
 using namespace SignalBench;
 
+namespace {
+
+bool requestsGallery(int argc, char *argv[])
+{
+    for (int index = 1; index < argc; ++index) {
+        const QByteArray argument(argv[index]);
+        if (argument == QByteArrayLiteral("--")) {
+            return false;
+        }
+        if (argument == QByteArrayLiteral("--gallery")
+            || argument.startsWith(QByteArrayLiteral("--gallery="))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void pinGalleryEnvironment()
+{
+    qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("offscreen"));
+    qputenv("QT_SCALE_FACTOR", QByteArrayLiteral("1"));
+    qputenv("QT_SCREEN_SCALE_FACTORS", QByteArrayLiteral("1"));
+    qputenv("QT_FONT_DPI", QByteArrayLiteral("96"));
+    qputenv("QT_STYLE_OVERRIDE", QByteArrayLiteral("Fusion"));
+    qputenv("QT_OPENGL", QByteArrayLiteral("software"));
+    qputenv("LC_ALL", QByteArrayLiteral("en_US.UTF-8"));
+    qputenv("LANG", QByteArrayLiteral("en_US.UTF-8"));
+    QLocale::setDefault(QLocale(QLocale::English, QLocale::UnitedStates));
+}
+
+} // namespace
+
 int main(int argc, char *argv[])
 {
+    if (requestsGallery(argc, argv)) {
+        pinGalleryEnvironment();
+    }
     QApplication application(argc, argv);
     QCoreApplication::setApplicationName(QStringLiteral("qtwidgetsidentities"));
     QCoreApplication::setApplicationVersion(QStringLiteral("0.1"));

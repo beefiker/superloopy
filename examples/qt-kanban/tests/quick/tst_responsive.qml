@@ -311,4 +311,202 @@ TestCase {
         verify(content.y + content.height + Theme.cardPadding
                <= card.height + 0.5)
     }
+
+    function test_two_hundred_percent_header_stacks_without_overlap() {
+        Theme.baseFontPixelSize = 26
+        const view = createView(900)
+        const header = findChild(view, "kanbanHeader")
+        const identity = findChild(view, "headerIdentity")
+        const title = findChild(view, "headerTitle")
+        const date = findChild(view, "headerDate")
+        const search = findChild(view, "searchField")
+        const filter = findChild(view, "priorityFilter")
+        const collaborators = findChild(view, "collaboratorCluster")
+        const newTask = findChild(view, "newTaskButton")
+
+        for (const item of [header, identity, title, date, search, filter,
+                           collaborators, newTask])
+            verify(item)
+
+        tryVerify(function() { return header.height >= header.implicitHeight })
+        verify(header.stacked)
+
+        const controls = [identity, search, filter, collaborators, newTask]
+        for (const item of controls) {
+            const origin = item.mapToItem(header, 0, 0)
+            verify(origin.x >= header.leftPadding - 0.5,
+                   item.objectName + " begins outside the header")
+            verify(origin.y >= header.topPadding - 0.5,
+                   item.objectName + " begins above the header")
+            verify(origin.x + item.width
+                   <= header.width - header.rightPadding + 0.5,
+                   item.objectName + " exceeds the header width")
+            verify(origin.y + item.height
+                   <= header.height - header.bottomPadding + 0.5,
+                   item.objectName + " exceeds the header height")
+        }
+
+        function intersects(first, second) {
+            const a = first.mapToItem(header, 0, 0)
+            const b = second.mapToItem(header, 0, 0)
+            return a.x < b.x + second.width && a.x + first.width > b.x
+                    && a.y < b.y + second.height
+                    && a.y + first.height > b.y
+        }
+
+        verify(!intersects(identity, search))
+        verify(!intersects(identity, newTask))
+        verify(!intersects(search, filter))
+        verify(!intersects(filter, collaborators))
+        verify(!intersects(collaborators, newTask))
+
+        for (const label of [title, date]) {
+            const origin = label.mapToItem(header, 0, 0)
+            verify(origin.y + label.height
+                   <= header.height - header.bottomPadding + 0.5,
+                   label.objectName + " is clipped")
+        }
+    }
+
+    function test_normal_width_header_remains_one_row() {
+        const view = createView(1300)
+        const header = findChild(view, "kanbanHeader")
+        const identity = findChild(view, "headerIdentity")
+        const search = findChild(view, "searchField")
+        const newTask = findChild(view, "newTaskButton")
+        verify(header)
+        verify(identity)
+        verify(search)
+        verify(newTask)
+        verify(!header.stacked)
+        const identityCenter = identity.mapToItem(header, 0, 0).y
+                               + identity.height / 2
+        const searchCenter = search.mapToItem(header, 0, 0).y
+                             + search.height / 2
+        const newTaskCenter = newTask.mapToItem(header, 0, 0).y
+                              + newTask.height / 2
+        verify(Math.abs(identityCenter - searchCenter) <= 0.5)
+        verify(Math.abs(searchCenter - newTaskCenter) <= 0.5)
+    }
+
+    function test_nineteen_point_five_header_stacks_from_measured_width() {
+        Theme.baseFontPixelSize = 19.5
+        const view = createView(900)
+        const header = findChild(view, "kanbanHeader")
+        const identity = findChild(view, "headerIdentity")
+        const search = findChild(view, "searchField")
+        const filter = findChild(view, "priorityFilter")
+        const collaborators = findChild(view, "collaboratorCluster")
+        const newTask = findChild(view, "newTaskButton")
+        for (const item of [header, identity, search, filter,
+                           collaborators, newTask])
+            verify(item)
+
+        const requiredWidth = Math.max(176, identity.implicitWidth)
+                              + Math.max(176, search.implicitWidth)
+                              + Math.max(128, filter.implicitWidth)
+                              + collaborators.implicitWidth
+                              + newTask.implicitWidth
+                              + Theme.space3 * 4
+        verify(requiredWidth > header.availableWidth,
+               "The 19.5 px fixture must cross the measured one-row boundary")
+        verify(Math.abs(header.singleRowRequiredWidth - requiredWidth) <= 0.5)
+        verify(header.stacked,
+               "Header did not stack at its measured one-row boundary")
+
+        const identityOrigin = identity.mapToItem(header, 0, 0)
+        const searchOrigin = search.mapToItem(header, 0, 0)
+        verify(searchOrigin.y >= identityOrigin.y + identity.height,
+               "Measured stacked rows overlap")
+        for (const item of [identity, search, filter, collaborators, newTask]) {
+            const origin = item.mapToItem(header, 0, 0)
+            verify(origin.x >= header.leftPadding - 0.5)
+            verify(origin.x + item.width
+                   <= header.width - header.rightPadding + 0.5,
+                   item.objectName + " exceeds the 19.5 px header")
+            verify(origin.y + item.height
+                   <= header.height - header.bottomPadding + 0.5,
+                   item.objectName + " exceeds the 19.5 px header height")
+        }
+
+        view.width = 1300
+        waitForRendering(view)
+        verify(header.singleRowRequiredWidth <= header.availableWidth + 0.5,
+               "The wide 19.5 px fixture must fit one row")
+        verify(!header.stacked,
+               "Header stayed stacked after its measured content fit")
+    }
+
+    function test_measured_header_handles_long_content_in_rtl_data() {
+        return [
+            { "tag": "ltr", "rightToLeft": false },
+            { "tag": "rtl", "rightToLeft": true }
+        ]
+    }
+
+    function test_measured_header_handles_long_content_in_rtl(data) {
+        const view = createTemporaryObject(viewComponent, testCase, {
+            "width": 900,
+            "rightToLeft": data.rightToLeft
+        })
+        verify(view)
+        waitForRendering(view)
+        const header = findChild(view, "kanbanHeader")
+        const title = findChild(view, "headerTitle")
+        const search = findChild(view, "searchField")
+        const filter = findChild(view, "priorityFilter")
+        const collaborators = findChild(view, "collaboratorCluster")
+        const newTask = findChild(view, "newTaskButton")
+        for (const item of [header, title, search, filter,
+                           collaborators, newTask])
+            verify(item)
+
+        title.text = "출시 계획 및 작업 관리 보드"
+        search.placeholderText = "작업 제목과 담당자 검색"
+        filter.model = ["모든 우선순위", "높음", "보통", "낮음"]
+        newTask.text = "새로운 작업 만들기"
+        waitForRendering(view)
+
+        verify(header.singleRowRequiredWidth > header.availableWidth + 0.5)
+        verify(header.stacked)
+        for (const item of [search, filter, collaborators, newTask]) {
+            const origin = item.mapToItem(header, 0, 0)
+            verify(origin.x >= header.leftPadding - 0.5,
+                   item.objectName + " begins outside long-content header")
+            verify(origin.x + item.width
+                   <= header.width - header.rightPadding + 0.5,
+                   item.objectName + " exceeds long-content header")
+            verify(origin.y + item.height
+                   <= header.height - header.bottomPadding + 0.5,
+                   item.objectName + " exceeds long-content header height")
+        }
+    }
+
+    function test_card_focus_ring_fits_first_clipping_ancestor() {
+        const view = createView(1300)
+        const card = findChild(view, "taskCard-task-define-goals")
+        const interaction = findChild(card, "cardInteraction")
+        const ring = findChild(card, "focusRing")
+        verify(card)
+        verify(interaction)
+        verify(ring)
+
+        interaction.forceActiveFocus(Qt.TabFocusReason)
+        verify(interaction.activeFocus)
+
+        let clippingAncestor = ring.parent
+        while (clippingAncestor && !clippingAncestor.clip)
+            clippingAncestor = clippingAncestor.parent
+        verify(clippingAncestor, "Focus ring has no clipping ancestor")
+
+        const origin = ring.mapToItem(clippingAncestor, 0, 0)
+        verify(origin.x >= -0.5,
+               "Focus ring is clipped on the leading edge: " + origin.x)
+        verify(origin.y >= -0.5,
+               "Focus ring is clipped on the top edge: " + origin.y)
+        verify(origin.x + ring.width <= clippingAncestor.width + 0.5,
+               "Focus ring is clipped on the trailing edge")
+        verify(origin.y + ring.height <= clippingAncestor.height + 0.5,
+               "Focus ring is clipped on the bottom edge")
+    }
 }

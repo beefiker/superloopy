@@ -20,6 +20,7 @@ Item {
 
     function showStatus(message) {
         statusToast.text = message
+        statusToast.Accessible.announce(message, Accessible.Polite)
         statusTimer.restart()
     }
 
@@ -31,10 +32,10 @@ Item {
         })
     }
 
-    function openDetailsFrom(invoker) {
+    function openDetailsFrom(taskId, invoker) {
         if (drawerPersistent || TaskStore.selectedTaskId.length === 0)
             return
-        overlayDetailDrawer.openFrom(invoker)
+        overlayDetailDrawer.openFrom(taskId, invoker)
     }
 
     function openNewTask(columnId, invoker) {
@@ -73,6 +74,7 @@ Item {
             Layout.minimumWidth: 0
 
             KanbanHeader {
+                id: kanbanHeader
                 objectName: "kanbanHeader"
                 Layout.fillWidth: true
                 onNewTaskRequested: invoker =>
@@ -87,7 +89,7 @@ Item {
                 Layout.fillHeight: true
                 onTaskActivated: (taskId, invoker) => {
                     if (TaskStore.selectedTaskId === taskId)
-                        root.openDetailsFrom(invoker)
+                        root.openDetailsFrom(taskId, invoker)
                 }
                 onAddTaskRequested: (columnId, invoker) =>
                                     root.openNewTask(columnId, invoker)
@@ -117,6 +119,7 @@ Item {
         id: overlayDetailDrawer
         objectName: "overlayDetailDrawer"
         property Item invokingItem: null
+        property string invokingTaskId: ""
 
         parent: Overlay.overlay
         edge: root.rightToLeft ? Qt.LeftEdge : Qt.RightEdge
@@ -147,7 +150,8 @@ Item {
             }
         }
 
-        function openFrom(invoker) {
+        function openFrom(taskId, invoker) {
+            invokingTaskId = taskId
             invokingItem = invoker
             open()
         }
@@ -155,8 +159,18 @@ Item {
         onOpened: overlayDetailContent.focusFirst()
         onClosed: {
             const item = invokingItem
+            const taskId = invokingTaskId
             invokingItem = null
-            root.restoreFocus(item)
+            invokingTaskId = ""
+            Qt.callLater(function() {
+                if (taskId.length > 0 && boardView.focusTask(taskId))
+                    return
+                if (item) {
+                    item.forceActiveFocus(Qt.TabFocusReason)
+                    return
+                }
+                kanbanHeader.focusNewTask()
+            })
         }
 
         Overlay.modal: Rectangle {

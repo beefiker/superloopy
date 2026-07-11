@@ -129,6 +129,24 @@ bool SignalBenchWindow::renderGallery(const QString &directory, QString *error)
 
     hide();
 
+    if (!validateGalleryArtifacts(directory, error)) {
+        return false;
+    }
+    if (hasUnexpectedHorizontalScrollbars()) {
+        if (error) {
+            *error = tr("An unexpected horizontal scrollbar is visible");
+        }
+        return false;
+    }
+    if (error) {
+        error->clear();
+    }
+    return true;
+}
+
+bool SignalBenchWindow::validateGalleryArtifacts(const QString &directory, QString *error)
+{
+    const QDir requested(directory);
     const QStringList actual = requested.entryList(
         {QStringLiteral("*.png")}, QDir::Files, QDir::Name);
     if (actual != galleryFileNames()) {
@@ -137,6 +155,7 @@ bool SignalBenchWindow::renderGallery(const QString &directory, QString *error)
         }
         return false;
     }
+
     for (const QString &fileName : actual) {
         const QImage image(requested.filePath(fileName));
         if (image.size() != QSize(1280, 800)) {
@@ -145,13 +164,23 @@ bool SignalBenchWindow::renderGallery(const QString &directory, QString *error)
             }
             return false;
         }
-    }
-    if (hasUnexpectedHorizontalScrollbars()) {
-        if (error) {
-            *error = tr("An unexpected horizontal scrollbar is visible");
+        const QImage pixels = image.convertToFormat(QImage::Format_ARGB32);
+        for (int y = 0; y < pixels.height(); ++y) {
+            const auto *row = reinterpret_cast<const QRgb *>(pixels.constScanLine(y));
+            for (int x = 0; x < pixels.width(); ++x) {
+                if (qAlpha(row[x]) != 255) {
+                    if (error) {
+                        *error = tr("Gallery image has non-opaque alpha: %1 at %2,%3")
+                                     .arg(fileName)
+                                     .arg(x)
+                                     .arg(y);
+                    }
+                    return false;
+                }
+            }
         }
-        return false;
     }
+
     if (error) {
         error->clear();
     }

@@ -151,6 +151,27 @@ IdentityTheme themeFor(Identity identity)
     return theme;
 }
 
+QPalette identityPalette(Identity identity, const QPalette &source)
+{
+    const IdentityTheme theme = themeFor(identity);
+    QPalette palette(source);
+    for (const QPalette::ColorGroup group : {
+             QPalette::Active, QPalette::Inactive, QPalette::Disabled}) {
+        const bool active = group == QPalette::Active;
+        const bool disabled = group == QPalette::Disabled;
+        palette.setColor(group, QPalette::Window, theme.canvas);
+        palette.setColor(group, QPalette::Base, theme.surface);
+        palette.setColor(group, QPalette::Button, theme.panel);
+        palette.setColor(group, QPalette::Text, disabled ? theme.muted : theme.text);
+        palette.setColor(group, QPalette::PlaceholderText, theme.muted);
+        palette.setColor(group, QPalette::Highlight, active ? theme.accent : theme.muted);
+        palette.setColor(group, QPalette::Accent, active ? theme.focus : theme.muted);
+        palette.setColor(group, QPalette::Mid, theme.grid);
+        palette.setColor(group, QPalette::Link, active ? theme.trace : theme.muted);
+    }
+    return palette;
+}
+
 SessionModel::SessionModel(QObject *parent)
     : QObject(parent)
     , m_presets(this)
@@ -222,7 +243,10 @@ QItemSelectionModel *SessionModel::presetSelection()
 QByteArray SessionModel::snapshot(const QList<int> &dialValues) const
 {
     QByteArray snapshot("preset=");
-    snapshot += QByteArray::number(m_presetSelection.currentIndex().row());
+    const QModelIndexList selectedRows = m_presetSelection.selectedRows();
+    snapshot += selectedRows.isEmpty()
+        ? QByteArrayLiteral("none")
+        : QByteArray::number(selectedRows.constFirst().row());
     snapshot += ";bands=";
     for (int row = 0; row < m_bands.rowCount(); ++row) {
         for (int column = 0; column < m_bands.columnCount(); ++column) {

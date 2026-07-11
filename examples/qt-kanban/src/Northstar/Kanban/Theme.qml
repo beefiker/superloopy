@@ -7,7 +7,11 @@ QtObject {
     readonly property color surface: "#FFFFFF"
     readonly property color sidebar: "#13202D"
     readonly property color sidebarActive: "#263748"
+    readonly property color sidebarPressed: "#314355"
+    readonly property color sidebarHover: "#1D2C3A"
     readonly property color sidebarFocus: "#93C5FD"
+    readonly property color sidebarMutedText: "#AAB6C2"
+    readonly property color sidebarSectionText: "#91A0AF"
     readonly property color ink: "#17212B"
     readonly property color muted: "#647184"
     readonly property color border: "#DCE3EA"
@@ -15,6 +19,8 @@ QtObject {
     readonly property color controlBorder: "#8796A8"
     readonly property color cobalt: "#2563EB"
     readonly property color cobaltSoft: "#E8F0FF"
+    readonly property color primaryHover: "#2F6FF0"
+    readonly property color primaryPressed: "#1D4ED8"
     // DESIGN.md token `onCobalt`; `on<Name>` is reserved for QML signal handlers.
     readonly property color cobaltContent: "#FFFFFF"
     readonly property color focus: "#1D4ED8"
@@ -26,12 +32,16 @@ QtObject {
     readonly property color coralInk: "#9F2F24"
     readonly property color neutralSoft: "#EEF2F6"
     readonly property color neutralInk: "#445163"
+    readonly property color avatarBlue: "#DCE8FF"
+    readonly property color avatarSlate: "#E4EBF2"
+    readonly property color avatarLavender: "#EEE8F7"
     readonly property color sidebarText: "#F4F7FA"
     readonly property color hover: "#EDF3FF"
     readonly property color pressed: "#D8E5FF"
     readonly property color disabledSurface: "#E8EDF2"
     readonly property color disabledInk: "#7A8796"
     readonly property color scrim: "#6617212B"
+    readonly property color clear: "transparent"
 
     // Typography scales from the inherited application font.
     // qmllint disable missing-property
@@ -73,6 +83,7 @@ QtObject {
     readonly property int columnMinimumWidth: 244
     readonly property int columnMaximumWidth: 280
     readonly property int cardPadding: 14
+    readonly property int focusGutter: 4
     readonly property int sidebarWide: 224
     readonly property int sidebarCompact: 72
     readonly property int drawerWidth: 300

@@ -9,7 +9,16 @@ Control {
 
     signal newTaskRequested(Item invoker)
 
-    implicitHeight: 104
+    readonly property real singleRowRequiredWidth:
+        Math.max(176, headerIdentity.implicitWidth)
+        + Math.max(176, searchField.implicitWidth)
+        + Math.max(128, priorityFilter.implicitWidth)
+        + collaboratorCluster.implicitWidth
+        + newTaskButton.implicitWidth
+        + Theme.space3 * 4
+    readonly property bool stacked: singleRowRequiredWidth > availableWidth + 0.5
+    implicitHeight: Math.max(104, headerLayout.implicitHeight
+                             + topPadding + bottomPadding)
     leftPadding: Theme.space6
     rightPadding: Theme.space6
     topPadding: Theme.space4
@@ -25,18 +34,33 @@ Control {
     palette.mid: Theme.borderStrong
     palette.dark: Theme.ink
 
+    function focusNewTask() {
+        newTaskButton.forceActiveFocus(Qt.TabFocusReason)
+        return newTaskButton.activeFocus
+    }
+
     background: Rectangle {
         color: Theme.surface
         border.color: Theme.border
         border.width: Theme.borderWidth
     }
 
-    contentItem: RowLayout {
-        spacing: Theme.space3
+    contentItem: GridLayout {
+        id: headerLayout
+
+        columns: 5
+        columnSpacing: Theme.space3
+        rowSpacing: Theme.space3
 
         ColumnLayout {
+            id: headerIdentity
+            objectName: "headerIdentity"
+            Layout.row: 0
+            Layout.column: 0
+            Layout.columnSpan: root.stacked ? 4 : 1
             Layout.fillWidth: true
-            Layout.minimumWidth: 176
+            Layout.minimumWidth: root.stacked ? 0 : 176
+            Layout.alignment: Qt.AlignVCenter
             spacing: Theme.space1
 
             Label {
@@ -60,8 +84,16 @@ Control {
         TextField {
             id: searchField
             objectName: "searchField"
-            Layout.minimumHeight: 40
-            Layout.preferredWidth: Math.max(176, Math.min(236, root.width * 0.22))
+            Layout.row: root.stacked ? 1 : 0
+            Layout.column: root.stacked ? 0 : 1
+            Layout.columnSpan: root.stacked ? 2 : 1
+            Layout.fillWidth: root.stacked
+            Layout.minimumHeight: Math.max(40, implicitHeight)
+            Layout.minimumWidth: 176
+            Layout.preferredWidth: root.stacked ? 280
+                                                : Math.max(176, Math.min(236,
+                                                                         root.width * 0.22))
+            Layout.alignment: Qt.AlignVCenter
             placeholderText: qsTr("Search tasks")
             text: TaskStore.query
             selectByMouse: true
@@ -82,8 +114,12 @@ Control {
         ComboBox {
             id: priorityFilter
             objectName: "priorityFilter"
-            Layout.minimumHeight: 40
-            Layout.preferredWidth: 128
+            Layout.row: root.stacked ? 1 : 0
+            Layout.column: 2
+            Layout.minimumHeight: Math.max(40, implicitHeight)
+            Layout.minimumWidth: 128
+            Layout.preferredWidth: Math.max(128, implicitWidth)
+            Layout.alignment: Qt.AlignVCenter
             model: [qsTr("All"), qsTr("High"), qsTr("Medium"), qsTr("Low")]
             currentIndex: {
                 const normalizedFilter = TaskStore.priorityFilter.toLowerCase()
@@ -108,6 +144,11 @@ Control {
         }
 
         RowLayout {
+            id: collaboratorCluster
+            objectName: "collaboratorCluster"
+            Layout.row: root.stacked ? 1 : 0
+            Layout.column: 3
+            Layout.alignment: Qt.AlignVCenter
             spacing: -Theme.space1
 
             Repeater {
@@ -119,20 +160,26 @@ Control {
                     required property string modelData
                     required property int index
 
+                    objectName: "collaboratorAvatar-" + index
                     Layout.preferredWidth: 30
                     Layout.preferredHeight: 30
                     radius: 15
-                    color: index === 0 ? "#DCE8FF"
-                                       : index === 1 ? "#E7F5ED" : "#FDECE9"
+                    color: index === 0 ? Theme.avatarBlue
+                                       : index === 1 ? Theme.avatarSlate
+                                                     : Theme.avatarLavender
                     border.color: Theme.surface
                     border.width: 2
+                    Accessible.ignored: true
 
                     Label {
+                        objectName: "collaboratorAvatarLabel-"
+                                    + collaboratorAvatar.index
                         anchors.centerIn: parent
                         text: collaboratorAvatar.modelData
                         color: Theme.ink
                         font.pixelSize: Theme.metaFontPixelSize
                         font.weight: Theme.sectionFontWeight
+                        Accessible.ignored: true
                     }
                 }
             }
@@ -141,7 +188,10 @@ Control {
         Button {
             id: newTaskButton
             objectName: "newTaskButton"
-            Layout.minimumHeight: 40
+            Layout.row: 0
+            Layout.column: 4
+            Layout.minimumHeight: Math.max(40, implicitHeight)
+            Layout.alignment: Qt.AlignVCenter
             text: qsTr("New task")
             icon.source: Qt.resolvedUrl("assets/icons/add.svg")
             icon.color: Theme.cobaltContent
@@ -155,11 +205,11 @@ Control {
 
             background: Rectangle {
                 color: newTaskButton.enabled
-                       ? newTaskButton.down ? "#1D4ED8"
-                       : newTaskButton.hovered ? "#2F6FF0" : Theme.cobalt
+                       ? newTaskButton.down ? Theme.primaryPressed
+                       : newTaskButton.hovered ? Theme.primaryHover : Theme.cobalt
                        : Theme.disabledSurface
                 radius: Theme.controlRadius
-                border.color: newTaskButton.visualFocus ? Theme.focus : "transparent"
+                border.color: newTaskButton.visualFocus ? Theme.focus : Theme.clear
                 border.width: newTaskButton.visualFocus ? 2 : 0
             }
         }

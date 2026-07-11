@@ -43,8 +43,8 @@ Total: 100 points.
 | --- | --- | --- |
 | `.agents/plugins/marketplace.json` | `test/plugin.test.js`, audit coverage. | Must expose the root Superloopy plugin as an installable Codex marketplace entry. |
 | `.claude-plugin/marketplace.json` | Audit coverage. | Must expose superloopy as an installable Claude Code marketplace plugin pointing at this repo root. |
-| `.claude-plugin/plugin.json` | Audit coverage; Claude plugin load. | Must declare the Claude plugin (name, skills, agents, hooks/hooks.json) so one repo installs on Claude Code. |
-| `.codex-plugin/plugin.json` | `test/plugin.test.js`, doctor plugin manifest check. | Must expose `./skills/` and the packaged Superloopy hook files, including opt-in Stop. |
+| `.claude-plugin/plugin.json` | Audit coverage; Claude plugin load. | Must remain a metadata-only descriptor while repository conventions expose skills, agents, and hooks/hooks.json to Claude Code. |
+| `.codex-plugin/plugin.json` | `test/plugin.test.js`, doctor plugin manifest check. | Must expose `./skills/`, the packaged Superloopy hook files including opt-in Stop, and packaged interface assets. |
 | `.codex/agents/franky.toml` | `test/docs.test.js`, audit coverage. | Must define the bounded Superloopy executor role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
 | `.codex/agents/jinbe.toml` | `test/docs.test.js`, audit coverage. | Must define the Superloopy gate-review role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
 | `.codex/agents/nami.toml` | `test/cli.test.js`, `test/doctor.test.js`, audit coverage. | Must define the read-only navigator role, advisory fast model defaults, return absolute paths, and write no evidence receipt; installed via SUPERLOOPY_AGENT_NAMES and matched by a SubagentStop matcher. |
@@ -60,7 +60,7 @@ Total: 100 points.
 | `.github/assets/usopp.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
 | `.github/assets/zoro.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
 | `.github/workflows/test.yml` | Cross-platform test CI and GitHub Actions. | Must run `node --test` (no shell glob) across the ubuntu/windows/macos × Node 20/22 matrix with SHA-pinned actions and no runtime side effects. |
-| `.gitignore` | Doctor runtime-boundary ignored samples and installed-cache docs coverage. | `.superloopy/`, logs, coverage, dependencies, OS noise, Codex marketplace metadata, and generated Astro output must stay out of source control. |
+| `.gitignore` | Doctor runtime-boundary ignored samples and installed-cache docs coverage. | `.superloopy/`, logs, coverage, dependencies, OS noise, Codex marketplace metadata, `build/`, `docs/superpowers/plans/`, `docs/superpowers/specs/`, and generated Astro output must stay out of source control. |
 | `DESIGN.md` | Static landing-page design token contract. | Must keep the web preview's reference-inspired colors, typography, spacing, component states, motion, and depth explicit before UI edits. |
 | `LICENSE` | Audit coverage and reviewability check. | Must remain a source file with no runtime implementation content. |
 | `README.es.md` | `test/docs.test.js`, audit coverage. | Must provide the Spanish locale and align managed Codex materialization, compatibility, caching, and restart behavior with the root README. |
@@ -75,6 +75,7 @@ Total: 100 points.
 | `agents/robin.md` | Audit coverage. | Must define the read-only Claude auditor subagent, the SUPERLOOPY_AUDIT receipt, and a read-only tools allowlist. |
 | `agents/usopp.md` | Audit coverage. | Must define the Claude QA subagent and the SUPERLOOPY_EVIDENCE receipt. |
 | `agents/zoro.md` | Audit coverage. | Must define the Claude code-review subagent and the SUPERLOOPY_EVIDENCE receipt. |
+| `assets/superloopy.svg` | `test/plugin.test.js`, audit coverage. | Must remain the original packaged SVG resolved by both Codex plugin interface asset fields. |
 | `docs/superloopy-claude-validation.md` | Audit coverage and reviewability check. | Must give a runnable Claude Code validation checklist covering install, components, the SubagentStop receipt/agent_type/env-var/steering linchpins, a full loop, and degrade-safety. |
 | `docs/superloopy-crew-lines.md` | `test/docs.test.js`, audit coverage. | Must record the precedent pattern, no-copied-quotes rule, terminal-only behavior, and presentation-only authority boundary. |
 | `docs/superloopy-design-audit.md` | `src/design-audit.js`, `test/doctor.test.js`. | Must keep required decision rows with reason, effect, and guard. |

@@ -24,7 +24,7 @@ Use `--identity rack` to start in Hardware Rack, `--window-size 1000x680` to exe
 - Content uses the inherited platform UI font. Numeric readouts use the platform fixed-width system font; no font or raster asset is bundled.
 - Color is never the only state cue. Labels, outlines, position, or indicator form must carry the same meaning.
 - Focus and selection are separate. Keyboard focus always has a visible outer indicator; selection remains visible when focus moves.
-- State precedence is: disabled, pressed, keyboard focus, selected or checked, hover, normal.
+- State precedence is: disabled, inactive, pressed, keyboard focus, selected or checked, hover, normal. Custom painters derive the effective `QPalette` color group from resolved Qt state before reading branded semantic roles.
 - Layout uses device-independent coordinates and Qt layouts. Long English, Korean, RTL text, emoji, and enlarged fonts must not clip primary controls.
 - Horizontal scrolling is not part of the designed surface. Tables resize their columns to the available width.
 
@@ -80,7 +80,7 @@ These names and values map directly to `IdentityTheme`. Colors use opaque sRGB h
 
 ## State Token Mapping
 
-QSS applies `canvas`, `surface`, `panel`, `text`, `muted`, `accent`, `focus`, and `grid` to supported stock-widget chrome inside the content root. Hover borders use `accent`; keyboard-focus borders use `focus`; disabled labels use `muted` over `canvas`. Delegate selection mixes `accent` into the row background at 16% in Precision and 28% in Rack, while disabled rows mix `canvas` into the resolved background at 60%. Custom-painted widgets consume the same semantic roles in C++.
+QSS applies `canvas`, `surface`, `panel`, `text`, `muted`, `accent`, `focus`, and `grid` to supported stock-widget chrome inside the content root. Hover borders use `accent`; keyboard-focus borders use `focus`; disabled labels use `muted` over `canvas`. Delegate selection mixes `accent` into the row background at 16% in Precision and 28% in Rack, while disabled rows mix `canvas` into the resolved background at 60%. Identity tokens are mapped onto Active, Inactive, and Disabled `QPalette` roles at picker, table, and dial boundaries. Custom painters choose the effective group from resolved Qt state and read the supplied palette roles directly, so caller overrides remain authoritative.
 
 ## Geometry Tokens
 
@@ -116,9 +116,11 @@ QSS applies `canvas`, `surface`, `panel`, `text`, `muted`, `accent`, `focus`, an
 
 Identity switching rebuilds only the picker subtree. A real switch preserves model and action pointers, selection, current index, per-pixel scroll value, picker focus intent, active band editor, splitter sizes, dial values, and the byte-identical session snapshot. Reapplying the active identity is a no-op.
 
+Preset activation and serialization use the shared selection model's selected row, not its independently movable current index. With no selected row, the action and button are disabled, the status strip explicitly reports that no preset is selected, and activation emits no domain signal. The gallery's Normal and Focused states intentionally retain only a current index; Selected and Disabled add selection.
+
 ## Deterministic Gallery
 
-Gallery rendering uses fixed fixture data, a 1280 x 800 client surface, Qt 6.11.1, DPR 1, `en_US.UTF-8` locale, the pinned Fusion style, and no animation. Native captures continue to use the platform style. The gallery produces exactly:
+Gallery rendering uses fixed fixture data, a 1280 x 800 client surface, Qt 6.11.1, the offscreen QPA backend, DPR 1, 96 DPI, `en_US.UTF-8` locale, the pinned Fusion style, software rendering, and no animation. The executable pins those values before constructing `QApplication` only when `--gallery` is present, so caller scale, style, locale, or platform environment does not alter the same-host artifact. Native captures continue to use the platform style. The gallery produces exactly:
 
 - `precision_normal.png`
 - `precision_focused.png`
@@ -129,4 +131,4 @@ Gallery rendering uses fixed fixture data, a 1280 x 800 client surface, Qt 6.11.
 - `rack_selected.png`
 - `rack_disabled.png`
 
-Generation fails on a missing or extra PNG, a size other than 1280 x 800, a write failure, or a visible horizontal scrollbar with a positive range. These files prove deterministic client pixels only; they do not replace Qt Test, native macOS capture, or accessibility inspection.
+Generation fails on a missing or extra PNG, a size other than 1280 x 800, any pixel whose alpha is not 255, a write failure, or a visible horizontal scrollbar with a positive range. These files prove deterministic client pixels on the pinned host/font stack only; they do not replace Qt Test, native macOS capture, or accessibility inspection.

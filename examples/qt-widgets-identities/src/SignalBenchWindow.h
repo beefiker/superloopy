@@ -35,6 +35,8 @@ public:
 
     void activateCurrentPreset();
     bool writeGallery(const QString &directory, QString *error = nullptr);
+    static bool validateGalleryArtifacts(const QString &directory,
+                                         QString *error = nullptr);
     bool hasUnexpectedHorizontalScrollbars() const;
     static QStringList galleryFileNames();
 
@@ -50,7 +52,8 @@ private:
     void applyTabOrder();
     void connectPicker(QAbstractItemView *picker);
     bool renderGallery(const QString &directory, QString *error);
-    QString currentPresetName() const;
+    QString selectedPresetName() const;
+    void updatePresetSelectionState();
 
     Identity m_identity = Identity::Precision;
     SessionModel *m_session = nullptr;

@@ -51,6 +51,8 @@ Dialog {
         validationAttempted = true
         if (!titleValid) {
             titleField.forceActiveFocus(Qt.TabFocusReason)
+            titleField.Accessible.announce(validationLabel.text,
+                                            Accessible.Assertive)
             return
         }
 
@@ -252,10 +254,10 @@ Dialog {
 
             background: Rectangle {
                 color: !createButton.enabled ? Theme.disabledSurface
-                       : createButton.down ? Theme.focus
-                       : createButton.hovered ? "#2F6FF0" : Theme.cobalt
+                       : createButton.down ? Theme.primaryPressed
+                       : createButton.hovered ? Theme.primaryHover : Theme.cobalt
                 radius: Theme.controlRadius
-                border.color: createButton.visualFocus ? Theme.focus : "transparent"
+                border.color: createButton.visualFocus ? Theme.focus : Theme.clear
                 border.width: createButton.visualFocus ? 2 : 0
             }
 
