@@ -66,6 +66,16 @@ The loop skill is the default guardrail. A complete leading `loopy` token starts
 
 `superloopy-slides` generated this **[live multilingual deck →](https://fileloom-slides.pages.dev)** — a zero-dependency single-file HTML presentation on a fixed 16:9 stage in English · 한국어 · 中文 · 日本語 · Español. It passed real-browser visual-QA (standalone, phone letterbox, and iframe embed) recorded under `.superloopy/evidence/slides/`.
 
+## Qt Kanban Demo
+
+The [Northstar Qt Kanban demo](examples/qt-kanban/) is a runnable Qt Quick acceptance fixture built through the `superloopy-frontend` Qt route. With Qt 6.11.1, CMake, and Ninja available, configure, build, and launch it from the repository root:
+
+```bash
+qt-cmake -S examples/qt-kanban -B build/qt-kanban -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build/qt-kanban --parallel
+build/qt-kanban/src/app/qtkanban --window-size 1600x1000
+```
+
 ## The crew
 
 For bigger work, Superloopy ships six optional subagents — each owns one lane. Claude Code uses the plugin-bundled `agents/*.md`. On Codex, bootstrap, `superloopy install`, and `superloopy agents install` materialize personal TOMLs under `$CODEX_HOME/agents`; model routing is resolved during that installation step.
