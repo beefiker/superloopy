@@ -3,6 +3,7 @@
 #include <QColor>
 #include <QDial>
 #include <QItemSelectionModel>
+#include <QPalette>
 #include <QStandardItemModel>
 #include <QStyledItemDelegate>
 #include <QWidget>
@@ -63,6 +64,7 @@ struct IdentityTheme {
 };
 
 IdentityTheme themeFor(Identity identity);
+QPalette identityPalette(Identity identity, const QPalette &source);
 
 class SessionModel final : public QObject {
     Q_OBJECT

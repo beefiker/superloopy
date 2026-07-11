@@ -3,6 +3,7 @@
 #include <QFontDatabase>
 #include <QHeaderView>
 #include <QListView>
+#include <QPalette>
 #include <QPainter>
 #include <QPainterPath>
 #include <QStyle>
@@ -29,6 +30,16 @@ QString presetTitle(const QModelIndex &index)
 {
     const QString title = index.data(SessionModel::TitleRole).toString();
     return title.isEmpty() ? index.data(Qt::DisplayRole).toString() : title;
+}
+
+QPalette::ColorGroup colorGroupFor(QStyle::State state)
+{
+    if (!state.testFlag(QStyle::State_Enabled)) {
+        return QPalette::Disabled;
+    }
+    return state.testFlag(QStyle::State_Active)
+        ? QPalette::Active
+        : QPalette::Inactive;
 }
 
 } // namespace
@@ -80,6 +91,8 @@ void BandDelegate::paint(QPainter *painter,
     const bool selected = resolved.state.testFlag(QStyle::State_Selected);
     const bool focused = resolved.state.testFlag(QStyle::State_HasFocus);
     const bool enabled = resolved.state.testFlag(QStyle::State_Enabled);
+    const QPalette::ColorGroup colorGroup = colorGroupFor(resolved.state);
+    const QPalette &palette = resolved.palette;
     const bool preset = index.data(SessionModel::TitleRole).isValid();
     const QRect rowRect = resolved.rect.adjusted(
         m_identity == Identity::Rack ? 4 : 0,
@@ -89,22 +102,24 @@ void BandDelegate::paint(QPainter *painter,
 
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing, m_identity == Identity::Rack);
-    QColor background = m_identity == Identity::Rack ? theme.panel : theme.surface;
+    QColor background = palette.color(
+        colorGroup, m_identity == Identity::Rack ? QPalette::Button : QPalette::Base);
     if (selected) {
-        background = mixed(theme.accent, background, m_identity == Identity::Rack ? 28 : 16);
+        background = mixed(palette.color(colorGroup, QPalette::Highlight), background,
+                           m_identity == Identity::Rack ? 28 : 16);
     }
     if (!enabled) {
-        background = mixed(theme.canvas, background, 60);
+        background = mixed(palette.color(colorGroup, QPalette::Window), background, 60);
     }
     if (m_identity == Identity::Rack) {
-        painter->setPen(QPen(theme.grid));
+        painter->setPen(QPen(palette.color(colorGroup, QPalette::Mid)));
     } else {
         painter->setPen(Qt::NoPen);
     }
     painter->setBrush(background);
     painter->drawRoundedRect(rowRect, theme.radius, theme.radius);
     if (m_identity == Identity::Rack && selected) {
-        painter->setPen(QPen(enabled ? theme.accent : theme.muted, 2));
+        painter->setPen(QPen(palette.color(colorGroup, QPalette::Highlight), 2));
         painter->setBrush(Qt::NoBrush);
         painter->drawRoundedRect(
             rowRect.adjusted(1, 1, -1, -1), theme.radius, theme.radius);
@@ -113,10 +128,10 @@ void BandDelegate::paint(QPainter *painter,
     if (m_identity == Identity::Precision && selected) {
         const QRect marker = QStyle::visualRect(
             resolved.direction, rowRect, QRect(rowRect.left(), rowRect.top(), 3, rowRect.height()));
-        painter->fillRect(marker, enabled ? theme.accent : theme.muted);
+        painter->fillRect(marker, palette.color(colorGroup, QPalette::Highlight));
     }
 
-    const QColor foreground = enabled ? theme.text : theme.muted;
+    const QColor foreground = palette.color(colorGroup, QPalette::Text);
     const int horizontalPad = m_identity == Identity::Rack ? 13 : 10;
     QRect textRect = rowRect.adjusted(horizontalPad, 0, -horizontalPad, 0);
     const int alignment = Qt::AlignVCenter
@@ -152,7 +167,7 @@ void BandDelegate::paint(QPainter *painter,
             QFont detailFont = resolved.font;
             detailFont.setPointSizeF(qMax(8.0, detailFont.pointSizeF() - 1.0));
             painter->setFont(detailFont);
-            painter->setPen(theme.muted);
+            painter->setPen(palette.color(colorGroup, QPalette::PlaceholderText));
             const QString visibleSubtitle = QFontMetrics(detailFont).elidedText(
                 subtitle, elideMode, copyRect.width());
             painter->drawText(QRect(copyRect.left(), copyRect.top() + titleHeight - 6,
@@ -160,7 +175,9 @@ void BandDelegate::paint(QPainter *painter,
                               alignment, visibleSubtitle);
         }
         painter->setFont(titleFont);
-        painter->setPen(!enabled ? theme.muted : (selected ? theme.focus : theme.muted));
+        painter->setPen(selected
+                            ? palette.color(colorGroup, QPalette::Accent)
+                            : palette.color(colorGroup, QPalette::PlaceholderText));
         painter->drawText(statusRect, Qt::AlignCenter, status);
     } else {
         QFont valueFont = resolved.font;
@@ -179,7 +196,7 @@ void BandDelegate::paint(QPainter *painter,
     }
 
     if (focused) {
-        QPen focusPen(theme.focus, 2);
+        QPen focusPen(palette.color(colorGroup, QPalette::Accent), 2);
         if (m_identity == Identity::Precision) {
             focusPen.setStyle(Qt::DashLine);
         }
@@ -321,6 +338,7 @@ void ResponseGraph::paintEvent(QPaintEvent *)
 SignalDial::SignalDial(const QString &accessibleName, QWidget *parent)
     : QDial(parent)
 {
+    setPalette(identityPalette(m_identity, palette()));
     setAccessibleName(accessibleName);
     setAccessibleDescription(
         QStringLiteral("Adjusts a Signal Bench audio value"));
@@ -344,6 +362,7 @@ void SignalDial::setIdentity(Identity identity)
         return;
     }
     m_identity = identity;
+    setPalette(identityPalette(m_identity, palette()));
     update();
 }
 
@@ -351,12 +370,10 @@ void SignalDial::paintEvent(QPaintEvent *)
 {
     QStyleOptionSlider option;
     initStyleOption(&option);
-    const auto theme = themeFor(m_identity);
+    const QPalette::ColorGroup colorGroup = colorGroupFor(option.state);
+    const QPalette &palette = option.palette;
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    if (!option.state.testFlag(QStyle::State_Enabled)) {
-        painter.setOpacity(0.46);
-    }
     const qreal side = qMin(width(), height()) - 16.0;
     const QRectF dialRect((width() - side) / 2.0, (height() - side) / 2.0,
                           side, side);
@@ -366,22 +383,24 @@ void SignalDial::paintEvent(QPaintEvent *)
     const qreal sweep = 270.0 * ratio;
 
     if (m_identity == Identity::Precision) {
-        painter.setPen(QPen(theme.grid, 5, Qt::SolidLine, Qt::RoundCap));
+        painter.setPen(QPen(palette.color(colorGroup, QPalette::Mid),
+                            5, Qt::SolidLine, Qt::RoundCap));
         painter.drawArc(dialRect.adjusted(7, 7, -7, -7),
                         static_cast<int>(-45 * 16), static_cast<int>(-270 * 16));
-        painter.setPen(QPen(theme.accent, 5, Qt::SolidLine, Qt::RoundCap));
+        painter.setPen(QPen(palette.color(colorGroup, QPalette::Highlight),
+                            5, Qt::SolidLine, Qt::RoundCap));
         painter.drawArc(dialRect.adjusted(7, 7, -7, -7),
                         static_cast<int>(-225 * 16), static_cast<int>(sweep * 16));
-        painter.setPen(theme.text);
+        painter.setPen(palette.color(colorGroup, QPalette::Text));
         painter.setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
         painter.drawText(dialRect, Qt::AlignCenter,
                          QStringLiteral("%1").arg(value(), value() >= 0 ? 3 : 0));
     } else {
-        painter.setPen(QPen(theme.canvas, 3));
-        painter.setBrush(theme.surface);
+        painter.setPen(QPen(palette.color(colorGroup, QPalette::Window), 3));
+        painter.setBrush(palette.color(colorGroup, QPalette::Base));
         painter.drawEllipse(dialRect.adjusted(3, 3, -3, -3));
-        painter.setPen(QPen(theme.grid, 2));
-        painter.setBrush(theme.panel);
+        painter.setPen(QPen(palette.color(colorGroup, QPalette::Mid), 2));
+        painter.setBrush(palette.color(colorGroup, QPalette::Button));
         painter.drawEllipse(dialRect.adjusted(11, 11, -11, -11));
         constexpr qreal pi = 3.14159265358979323846;
         const qreal angle = (startAngle + 270.0 * ratio) * pi / 180.0;
@@ -389,15 +408,16 @@ void SignalDial::paintEvent(QPaintEvent *)
         const qreal pointerRadius = side * 0.27;
         const QPointF tip(center.x() + std::cos(angle) * pointerRadius,
                           center.y() + std::sin(angle) * pointerRadius);
-        painter.setPen(QPen(theme.accent, 4, Qt::SolidLine, Qt::RoundCap));
+        painter.setPen(QPen(palette.color(colorGroup, QPalette::Highlight),
+                            4, Qt::SolidLine, Qt::RoundCap));
         painter.drawLine(center, tip);
         painter.setPen(Qt::NoPen);
-        painter.setBrush(theme.trace);
+        painter.setBrush(palette.color(colorGroup, QPalette::Link));
         painter.drawEllipse(center, 3.5, 3.5);
     }
 
     if (option.state.testFlag(QStyle::State_HasFocus)) {
-        painter.setPen(QPen(theme.focus, 2,
+        painter.setPen(QPen(palette.color(colorGroup, QPalette::Accent), 2,
                             m_identity == Identity::Precision ? Qt::DashLine : Qt::SolidLine));
         painter.setBrush(Qt::NoBrush);
         painter.drawEllipse(dialRect.adjusted(1, 1, -1, -1));
@@ -435,6 +455,7 @@ QAbstractItemView *createPresetPicker(Identity identity,
     view->setObjectName(identity == Identity::Precision
                             ? QStringLiteral("PrecisionPresetPicker")
                             : QStringLiteral("RackPresetPicker"));
+    view->setPalette(identityPalette(identity, view->palette()));
     view->setModel(model);
     QItemSelectionModel *temporarySelection = view->selectionModel();
     view->setSelectionModel(selection);
@@ -453,9 +474,6 @@ QAbstractItemView *createPresetPicker(Identity identity,
     view->setAccessibleName(QStringLiteral("Signal Bench presets"));
     view->setAccessibleDescription(
         QStringLiteral("Choose a shared audio preset and press Enter to activate it"));
-    if (selection->currentIndex().isValid()) {
-        view->setCurrentIndex(selection->currentIndex());
-    }
     return view;
 }
 

@@ -9,13 +9,18 @@
 #include <QComboBox>
 #include <QDir>
 #include <QFontMetrics>
+#include <QFile>
+#include <QFileInfo>
 #include <QImage>
 #include <QItemSelectionModel>
+#include <QLabel>
 #include <QListView>
 #include <QLineEdit>
 #include <QPainter>
 #include <QPersistentModelIndex>
 #include <QPointer>
+#include <QProcess>
+#include <QProcessEnvironment>
 #include <QPushButton>
 #include <QScrollBar>
 #include <QSignalSpy>
@@ -36,20 +41,90 @@ private slots:
     void identityConstitutionsDifferBeyondPalette();
     void pickerFactoryCreatesDistinctStructures();
     void pickerFactorySharesModelAndSelection();
+    void noSelectionDisablesPresetActivation();
     void identitySwitchRoundTripPreservesState();
     void identitySwitchRestoresTabOrder();
     void sameIdentitySwitchIsNoOp();
     void delegateMetricsFollowIdentity();
+    void delegatePaintUsesActiveInactiveAndDisabledGroups();
+    void dialPaintUsesActiveInactiveAndDisabledGroups();
+    void identityPaletteIsAppliedAtWidgetBoundaries();
     void enlargedTextAndRtlRemainRenderable();
     void presetActivationUsesSharedActionExactlyOnce();
     void identitySwitchPreservesBandEditor();
     void dialKeyboardAndAccessibilitySurviveSwitch();
     void graphAccessibilityIsInformational();
     void galleryWritesExactMatrix();
+    void galleryValidatorRejectsTransparentPixels();
+    void galleryCliIgnoresConflictingCallerEnvironment();
     void galleryFailureRestoresWindowState();
     void galleryIgnoresCallerState();
     void minimumSizeHasNoUnexpectedHorizontalScrollbars();
 };
+
+namespace {
+
+QString signalBenchExecutable()
+{
+    QString fileName = QStringLiteral("qtwidgetsidentities");
+#ifdef Q_OS_WIN
+    fileName += QStringLiteral(".exe");
+#endif
+    return QDir(QCoreApplication::applicationDirPath()).filePath(fileName);
+}
+
+QString runGalleryProcess(const QString &executable,
+                          const QString &directory,
+                          const QProcessEnvironment &environment,
+                          bool joinedOption = false)
+{
+    QProcess process;
+    process.setProcessEnvironment(environment);
+    process.setProgram(executable);
+    process.setArguments(joinedOption
+                             ? QStringList{QStringLiteral("--gallery=%1").arg(directory)}
+                             : QStringList{QStringLiteral("--gallery"), directory});
+    process.start();
+    if (!process.waitForStarted()) {
+        return QStringLiteral("Could not start gallery process: %1").arg(process.errorString());
+    }
+    if (!process.waitForFinished(30000)) {
+        process.kill();
+        process.waitForFinished();
+        return QStringLiteral("Gallery process timed out");
+    }
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+        return QStringLiteral("Gallery process failed (%1): %2")
+            .arg(process.exitCode())
+            .arg(QString::fromUtf8(process.readAllStandardError()));
+    }
+    return {};
+}
+
+QImage renderDelegate(BandDelegate *delegate,
+                      QStyleOptionViewItem option,
+                      const QModelIndex &index)
+{
+    QImage image(option.rect.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    option.rect.moveTopLeft(QPoint());
+    QPainter painter(&image);
+    delegate->paint(&painter, option, index);
+    painter.end();
+    return image;
+}
+
+QImage renderWidget(QWidget *widget)
+{
+    QImage image(widget->size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    widget->render(&painter);
+    painter.end();
+    return image;
+}
+
+} // namespace
 
 void SignalBenchTest::identityConstitutionsDifferBeyondPalette()
 {
@@ -94,6 +169,47 @@ void SignalBenchTest::pickerFactorySharesModelAndSelection()
         QVERIFY(selection);
         QCOMPARE(selection->model(), session.presetModel());
     }
+}
+
+void SignalBenchTest::noSelectionDisablesPresetActivation()
+{
+    SignalBenchWindow window;
+    auto *selection = window.sessionModel()->presetSelection();
+    auto *button = window.findChild<QPushButton *>();
+    auto *status = window.findChild<QLabel *>(QStringLiteral("StatusLabel"));
+    const QModelIndex current = window.sessionModel()->presetModel()->index(2, 0);
+    QVERIFY(selection);
+    QVERIFY(button);
+    QVERIFY(status);
+
+    selection->clearSelection();
+    selection->setCurrentIndex(current, QItemSelectionModel::NoUpdate);
+    QCOMPARE(selection->selectedRows().size(), 0);
+    QCOMPARE(selection->currentIndex(), current);
+    QVERIFY(!window.presetAction()->isEnabled());
+    QVERIFY(!button->isEnabled());
+    QVERIFY(status->text().contains(QStringLiteral("No preset selected")));
+    QVERIFY(window.sessionSnapshot().startsWith(QByteArray("preset=none;")));
+
+    QSignalSpy activated(&window, &SignalBenchWindow::presetActivated);
+    window.activateCurrentPreset();
+    QCOMPARE(activated.count(), 0);
+
+    const QByteArray snapshot = window.sessionSnapshot();
+    QVERIFY(window.setIdentity(Identity::Rack));
+    QCOMPARE(selection->selectedRows().size(), 0);
+    QCOMPARE(selection->currentIndex(), current);
+    QCOMPARE(window.sessionSnapshot(), snapshot);
+    QVERIFY(!window.presetAction()->isEnabled());
+
+    selection->select(current, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    QVERIFY(selection->isSelected(current));
+    QVERIFY(window.presetAction()->isEnabled());
+    QVERIFY(button->isEnabled());
+    QVERIFY(status->text().contains(QStringLiteral("Night Console selected")));
+    QVERIFY(window.sessionSnapshot().startsWith(QByteArray("preset=2;")));
+    window.activateCurrentPreset();
+    QCOMPARE(activated.count(), 1);
 }
 
 void SignalBenchTest::identitySwitchRoundTripPreservesState()
@@ -207,7 +323,8 @@ void SignalBenchTest::delegateMetricsFollowIdentity()
     QStyleOptionViewItem option;
     option.rect = QRect(0, 0, 460, 80);
     option.direction = Qt::RightToLeft;
-    option.state = QStyle::State_Enabled | QStyle::State_Selected | QStyle::State_HasFocus;
+    option.state = QStyle::State_Enabled | QStyle::State_Active
+        | QStyle::State_Selected | QStyle::State_HasFocus;
 
     BandDelegate delegate(Identity::Precision);
     QCOMPARE(delegate.sizeHint(option, bandIndex).height(), 34);
@@ -233,6 +350,109 @@ void SignalBenchTest::delegateMetricsFollowIdentity()
     QVERIFY(image != before);
     delegate.setIdentity(Identity::Rack);
     QVERIFY(delegate.sizeHint(enlarged, koreanPreset).height() >= requiredTextHeight);
+}
+
+void SignalBenchTest::delegatePaintUsesActiveInactiveAndDisabledGroups()
+{
+    SessionModel session;
+    BandDelegate delegate(Identity::Precision);
+    const QModelIndex index = session.presetModel()->index(2, 0);
+    QStyleOptionViewItem option;
+    option.rect = QRect(0, 0, 320, 60);
+    option.font = QApplication::font();
+    option.fontMetrics = QFontMetrics(option.font);
+    option.palette = QApplication::palette();
+    const QColor activeHighlight(QStringLiteral("#ff1744"));
+    const QColor inactiveHighlight(QStringLiteral("#00c853"));
+    const QColor disabledHighlight(QStringLiteral("#304ffe"));
+    option.palette.setColor(QPalette::Active, QPalette::Highlight, activeHighlight);
+    option.palette.setColor(QPalette::Inactive, QPalette::Highlight, inactiveHighlight);
+    option.palette.setColor(QPalette::Disabled, QPalette::Highlight, disabledHighlight);
+
+    option.state = QStyle::State_Enabled | QStyle::State_Active
+        | QStyle::State_Selected;
+    const QImage active = renderDelegate(&delegate, option, index);
+    QCOMPARE(active.pixelColor(1, active.height() / 2), activeHighlight);
+    option.state &= ~QStyle::State_Active;
+    const QImage inactive = renderDelegate(&delegate, option, index);
+    QCOMPARE(inactive.pixelColor(1, inactive.height() / 2), inactiveHighlight);
+    QVERIFY(active != inactive);
+
+    option.state = QStyle::State_Active | QStyle::State_Selected;
+    const QImage disabledActive = renderDelegate(&delegate, option, index);
+    QCOMPARE(disabledActive.pixelColor(1, disabledActive.height() / 2), disabledHighlight);
+    option.state &= ~QStyle::State_Active;
+    const QImage disabledInactive = renderDelegate(&delegate, option, index);
+    QCOMPARE(disabledActive, disabledInactive);
+    QVERIFY(disabledActive != inactive);
+}
+
+void SignalBenchTest::dialPaintUsesActiveInactiveAndDisabledGroups()
+{
+    SignalBenchWindow window;
+    QVERIFY(window.setIdentity(Identity::Rack));
+    window.resize(1100, 700);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    window.activateWindow();
+    QTRY_VERIFY(window.isActiveWindow());
+    SignalDial *dial = window.dials().constFirst();
+    QPalette palette = dial->palette();
+    const QColor activeLink(QStringLiteral("#ff1744"));
+    const QColor inactiveLink(QStringLiteral("#00c853"));
+    const QColor disabledLink(QStringLiteral("#304ffe"));
+    palette.setColor(QPalette::Active, QPalette::Link, activeLink);
+    palette.setColor(QPalette::Inactive, QPalette::Link, inactiveLink);
+    palette.setColor(QPalette::Disabled, QPalette::Link, disabledLink);
+    dial->setPalette(palette);
+    dial->clearFocus();
+    QApplication::processEvents();
+    const QImage active = renderWidget(dial);
+    const QPoint center(dial->width() / 2, dial->height() / 2);
+    QCOMPARE(active.pixelColor(center), activeLink);
+
+    QWidget blocker;
+    blocker.resize(120, 80);
+    blocker.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&blocker));
+    blocker.activateWindow();
+    QTRY_VERIFY(blocker.isActiveWindow());
+    QApplication::processEvents();
+    const QImage inactive = renderWidget(dial);
+    QCOMPARE(inactive.pixelColor(center), inactiveLink);
+    QVERIFY(active != inactive);
+
+    dial->setEnabled(false);
+    QApplication::processEvents();
+    const QImage disabledInactive = renderWidget(dial);
+    QCOMPARE(disabledInactive.pixelColor(center), disabledLink);
+    window.activateWindow();
+    QTRY_VERIFY(window.isActiveWindow());
+    QApplication::processEvents();
+    const QImage disabledActive = renderWidget(dial);
+    QCOMPARE(disabledActive, disabledInactive);
+}
+
+void SignalBenchTest::identityPaletteIsAppliedAtWidgetBoundaries()
+{
+    SignalBenchWindow window;
+    for (const Identity identity : {Identity::Precision, Identity::Rack}) {
+        if (window.identity() != identity) {
+            QVERIFY(window.setIdentity(identity));
+        }
+        const auto theme = themeFor(identity);
+        const QList<QWidget *> paintedWidgets = {
+            window.pickerView(), window.bandTable(), window.dials().constFirst()};
+        for (QWidget *widget : paintedWidgets) {
+            const QPalette palette = widget->palette();
+            QCOMPARE(palette.color(QPalette::Active, QPalette::Highlight), theme.accent);
+            QCOMPARE(palette.color(QPalette::Inactive, QPalette::Highlight), theme.muted);
+            QCOMPARE(palette.color(QPalette::Disabled, QPalette::Highlight), theme.muted);
+            QCOMPARE(palette.color(QPalette::Active, QPalette::Link), theme.trace);
+            QCOMPARE(palette.color(QPalette::Inactive, QPalette::Link), theme.muted);
+            QCOMPARE(palette.color(QPalette::Disabled, QPalette::Text), theme.muted);
+        }
+    }
 }
 
 void SignalBenchTest::enlargedTextAndRtlRemainRenderable()
@@ -421,6 +641,74 @@ void SignalBenchTest::galleryWritesExactMatrix()
         QVERIFY(normal != disabled);
     }
     QVERIFY(!window.hasUnexpectedHorizontalScrollbars());
+}
+
+void SignalBenchTest::galleryValidatorRejectsTransparentPixels()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const QStringList fileNames = SignalBenchWindow::galleryFileNames();
+    for (const QString &fileName : fileNames) {
+        QImage image(QSize(1280, 800), QImage::Format_ARGB32);
+        image.fill(qRgba(31, 37, 44, 255));
+        QVERIFY2(image.save(QDir(directory.path()).filePath(fileName), "PNG"),
+                 qPrintable(fileName));
+    }
+    const QString transparentPath = QDir(directory.path()).filePath(fileNames.constFirst());
+    QImage transparent(transparentPath);
+    transparent.setPixelColor(0, 0, QColor(31, 37, 44, 254));
+    QVERIFY(transparent.save(transparentPath, "PNG"));
+
+    QString error;
+    QVERIFY(!SignalBenchWindow::validateGalleryArtifacts(directory.path(), &error));
+    QVERIFY2(error.contains(QStringLiteral("alpha"), Qt::CaseInsensitive), qPrintable(error));
+
+    transparent.setPixelColor(0, 0, QColor(31, 37, 44, 255));
+    QVERIFY(transparent.save(transparentPath, "PNG"));
+    QVERIFY2(SignalBenchWindow::validateGalleryArtifacts(directory.path(), &error),
+             qPrintable(error));
+    QVERIFY(error.isEmpty());
+}
+
+void SignalBenchTest::galleryCliIgnoresConflictingCallerEnvironment()
+{
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    const QString executable = signalBenchExecutable();
+    QVERIFY2(QFileInfo::exists(executable), qPrintable(executable));
+    const QString baselinePath = QDir(root.path()).filePath(QStringLiteral("baseline"));
+    const QString hostilePath = QDir(root.path()).filePath(QStringLiteral("hostile"));
+
+    QProcessEnvironment baseline = QProcessEnvironment::systemEnvironment();
+    baseline.insert(QStringLiteral("QT_QPA_PLATFORM"), QStringLiteral("offscreen"));
+    baseline.insert(QStringLiteral("QT_SCALE_FACTOR"), QStringLiteral("1"));
+    baseline.insert(QStringLiteral("QT_SCREEN_SCALE_FACTORS"), QStringLiteral("1"));
+    baseline.insert(QStringLiteral("QT_FONT_DPI"), QStringLiteral("96"));
+    baseline.insert(QStringLiteral("QT_STYLE_OVERRIDE"), QStringLiteral("Fusion"));
+    baseline.insert(QStringLiteral("LC_ALL"), QStringLiteral("en_US.UTF-8"));
+    baseline.insert(QStringLiteral("LANG"), QStringLiteral("en_US.UTF-8"));
+
+    QProcessEnvironment hostile = baseline;
+    hostile.insert(QStringLiteral("QT_QPA_PLATFORM"), QStringLiteral("signalbench-invalid-platform"));
+    hostile.insert(QStringLiteral("QT_SCALE_FACTOR"), QStringLiteral("2"));
+    hostile.insert(QStringLiteral("QT_SCREEN_SCALE_FACTORS"), QStringLiteral("2"));
+    hostile.insert(QStringLiteral("QT_FONT_DPI"), QStringLiteral("192"));
+    hostile.insert(QStringLiteral("QT_STYLE_OVERRIDE"), QStringLiteral("Windows"));
+    hostile.insert(QStringLiteral("LC_ALL"), QStringLiteral("C"));
+    hostile.insert(QStringLiteral("LANG"), QStringLiteral("C"));
+
+    QString error = runGalleryProcess(executable, baselinePath, baseline);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    error = runGalleryProcess(executable, hostilePath, hostile, true);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+
+    for (const QString &fileName : SignalBenchWindow::galleryFileNames()) {
+        QFile baselineFile(QDir(baselinePath).filePath(fileName));
+        QFile hostileFile(QDir(hostilePath).filePath(fileName));
+        QVERIFY2(baselineFile.open(QIODevice::ReadOnly), qPrintable(baselineFile.fileName()));
+        QVERIFY2(hostileFile.open(QIODevice::ReadOnly), qPrintable(hostileFile.fileName()));
+        QCOMPARE(hostileFile.readAll(), baselineFile.readAll());
+    }
 }
 
 void SignalBenchTest::galleryFailureRestoresWindowState()

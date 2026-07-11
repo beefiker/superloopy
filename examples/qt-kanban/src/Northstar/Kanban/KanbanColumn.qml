@@ -19,12 +19,75 @@ Item {
 
     objectName: "column-" + columnId
 
+    component CardDelegate: Item {
+        id: cardDelegate
+
+        required property var modelData
+        property var dragCoordinator: null
+        readonly property string delegateTaskId: modelData.id
+
+        signal activated(string taskId, Item invoker)
+
+        implicitHeight: taskCard.implicitHeight + Theme.focusGutter * 2
+        height: implicitHeight
+
+        function focusTask() {
+            return taskCard.focusInteraction()
+        }
+
+        TaskCard {
+            id: taskCard
+
+            x: Theme.focusGutter
+            y: Theme.focusGutter
+            width: cardDelegate.width - Theme.focusGutter * 2
+            taskId: cardDelegate.modelData.id
+            dragCoordinator: cardDelegate.dragCoordinator
+            onActivated: (taskId, invoker) =>
+                         cardDelegate.activated(taskId, invoker)
+        }
+    }
+
     function refreshVisibleTasks() {
         visibleTasks = TaskStore.visibleInColumn(columnId)
     }
 
     function droppedTaskId(source) {
         return source ? source.taskId : ""
+    }
+
+    function revealDelegate(delegate) {
+        const viewport = cardScroll.contentItem as Flickable
+        if (!viewport)
+            return
+
+        const origin = delegate.mapToItem(viewport.contentItem, 0, 0)
+        const delegateTop = origin.y
+        const delegateBottom = delegateTop + delegate.height
+        const viewportTop = viewport.contentY
+        const viewportBottom = viewportTop + viewport.height
+        let nextContentY = viewportTop
+
+        if (delegateTop < viewportTop)
+            nextContentY = delegateTop
+        else if (delegateBottom > viewportBottom)
+            nextContentY = delegateBottom - viewport.height
+
+        const maximumContentY = Math.max(0, viewport.contentHeight
+                                            - viewport.height)
+        viewport.contentY = Math.max(0, Math.min(maximumContentY,
+                                                 nextContentY))
+    }
+
+    function focusTask(taskId) {
+        for (let index = 0; index < taskRepeater.count; ++index) {
+            const delegate = taskRepeater.itemAt(index) as CardDelegate
+            if (delegate && delegate.delegateTaskId === taskId) {
+                revealDelegate(delegate)
+                return delegate.focusTask()
+            }
+        }
+        return false
     }
 
     onColumnIdChanged: refreshVisibleTasks()
@@ -124,13 +187,11 @@ Item {
                 spacing: Theme.space3
 
                 Repeater {
+                    id: taskRepeater
                     model: root.visibleTasks
 
-                    delegate: TaskCard {
-                        required property var modelData
-
+                    delegate: CardDelegate {
                         width: cardScroll.availableWidth
-                        taskId: modelData.id
                         dragCoordinator: root.dragCoordinator
                         onActivated: (activatedTaskId, invoker) => {
                             TaskStore.selectTask(activatedTaskId)
@@ -160,7 +221,7 @@ Item {
 
                     background: Rectangle {
                         color: addTaskButton.down ? Theme.pressed
-                               : addTaskButton.hovered ? Theme.hover : "transparent"
+                               : addTaskButton.hovered ? Theme.hover : Theme.clear
                         radius: Theme.controlRadius
                         border.color: addTaskButton.visualFocus ? Theme.focus : Theme.border
                         border.width: addTaskButton.visualFocus ? 2 : Theme.borderWidth

@@ -159,35 +159,35 @@ test("frontend discovery rows publish routed web and Qt evidence", async () => {
   const locales = [
     {
       file: "README.md",
-      invocation: "You explicitly invoke Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend`, or start a visual task with a leading `loopy`/`루피`. Plain UI mentions do not activate it.",
+      invocation: "You explicitly invoke Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend` for a web frontend or Qt desktop GUI task, or start one with a leading `loopy`/`루피`. Non-web/non-Qt visual work and plain UI mentions do not activate it.",
       webEvidence: /for web,.*browser evidence/i,
       qtEvidence: /for Qt,.*native rendered-application evidence/i,
       scopedPreflight: /for web, the anti-slop pre-flight[^|]*for Qt, the Qt pre-flight/i
     },
     {
       file: "README.ko.md",
-      invocation: "Codex에서 `$superloopy:superloopy-frontend`, Claude Code에서 `/superloopy:superloopy-frontend`를 직접 호출하거나, 선행 `loopy`/`루피`로 시각 작업을 시작할 때. UI를 언급하기만 해서는 켜지지 않습니다.",
+      invocation: "웹 프런트엔드 또는 Qt 데스크톱 GUI 작업에 Codex의 `$superloopy:superloopy-frontend`나 Claude Code의 `/superloopy:superloopy-frontend`를 직접 호출하거나, 그런 작업을 선행 `loopy`/`루피`로 시작할 때. 웹/Qt 이외의 시각 작업과 단순한 UI 언급으로는 켜지지 않습니다.",
       webEvidence: /웹.*브라우저.*근거/u,
       qtEvidence: /Qt.*네이티브.*애플리케이션.*렌더링.*근거/u,
       scopedPreflight: /웹은 anti-slop pre-flight[^|]*Qt는 Qt pre-flight/u
     },
     {
       file: "README.ja.md",
-      invocation: "Codex で `$superloopy:superloopy-frontend`、Claude Code で `/superloopy:superloopy-frontend` を明示的に呼び出すか、先頭の `loopy`/`루피` で視覚タスクを始めるとき。UI への単なる言及では起動しません。",
+      invocation: "Web フロントエンドまたは Qt デスクトップ GUI の作業で Codex の `$superloopy:superloopy-frontend` または Claude Code の `/superloopy:superloopy-frontend` を明示的に呼び出すか、その作業を先頭の `loopy`/`루피` で始めるとき。Web/Qt 以外の視覚タスクや UI への単なる言及では起動しません。",
       webEvidence: /Web.*ブラウザー.*証拠/u,
       qtEvidence: /Qt.*ネイティブアプリ.*レンダリング.*証拠/u,
       scopedPreflight: /Web は anti-slop の事前チェック[^|]*Qt は Qt の事前チェック/u
     },
     {
       file: "README.zh-CN.md",
-      invocation: "在 Codex 中显式调用 `$superloopy:superloopy-frontend`，或在 Claude Code 中调用 `/superloopy:superloopy-frontend`，也可用开头的 `loopy`/`루피` 启动可视化任务。仅提到 UI 不会激活它。",
+      invocation: "为 Web 前端或 Qt 桌面 GUI 任务在 Codex 中显式调用 `$superloopy:superloopy-frontend`，或在 Claude Code 中调用 `/superloopy:superloopy-frontend`，也可用开头的 `loopy`/`루피` 启动此类任务。非 Web/Qt 可视化工作以及仅提到 UI 都不会激活它。",
       webEvidence: /Web.*浏览器证据/u,
       qtEvidence: /Qt.*原生应用渲染证据/u,
       scopedPreflight: /Web 使用 anti-slop 预检[^|]*Qt 使用 Qt 预检/u
     },
     {
       file: "README.es.md",
-      invocation: "Invocas `$superloopy:superloopy-frontend` en Codex o `/superloopy:superloopy-frontend` en Claude Code, o inicias una tarea visual con `loopy`/`루피` al principio. Una simple mención de UI no la activa.",
+      invocation: "Para una tarea de frontend web o GUI de escritorio Qt, invocas `$superloopy:superloopy-frontend` en Codex o `/superloopy:superloopy-frontend` en Claude Code, o inicias ese tipo de tarea con `loopy`/`루피` al principio. El trabajo visual que no sea web/Qt y la simple mención de UI no la activan.",
       webEvidence: /para web,.*evidencia del navegador/i,
       qtEvidence: /para Qt,.*aplicación nativa renderizada/i,
       scopedPreflight: /para web, la comprobación anti-slop previa[^|]*para Qt, la comprobación previa de Qt/i
@@ -234,7 +234,8 @@ test("English and Korean READMEs publish the runnable Qt Kanban demo", async () 
 test("frontend agent metadata keeps explicit activation and routed rendered evidence", async () => {
   const agent = await readFile("skills/superloopy-frontend/agents/openai.yaml", "utf8");
 
-  assert.match(agent, /only after explicit invocation or an explicit route from an active `loopy`\/`루피` task/u);
+  assert.match(agent, /only for a web frontend or Qt desktop GUI task after explicit invocation or an explicit route from an active `loopy`\/`루피` task/iu);
+  assert.match(agent, /do not use it for non-web\/non-Qt visual deliverables/iu);
   assert.match(agent, /real-browser rendered-surface evidence for web/i);
   assert.match(agent, /native rendered-application evidence for Qt/i);
   assert.doesNotMatch(agent, /auto-activat|when in doubt|plain UI mention|frontend vocabulary/i);

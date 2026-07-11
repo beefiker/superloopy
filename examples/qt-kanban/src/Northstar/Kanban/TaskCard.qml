@@ -73,6 +73,11 @@ FocusScope {
         activated(taskId, interaction)
     }
 
+    function focusInteraction() {
+        interaction.forceActiveFocus(Qt.TabFocusReason)
+        return interaction.activeFocus
+    }
+
     DragHandler {
         id: dragHandler
         objectName: "cardDragHandler"
@@ -115,12 +120,12 @@ FocusScope {
         id: focusRing
         objectName: "focusRing"
         anchors.fill: parent
-        anchors.margins: -4
+        anchors.margins: -Theme.focusGutter
         z: -2
         visible: interaction.visualFocus || opacity > 0
         opacity: interaction.visualFocus ? 1 : 0
-        color: "transparent"
-        radius: Theme.cardRadius + 4
+        color: Theme.clear
+        radius: Theme.cardRadius + Theme.focusGutter
         border.color: Theme.focus
         border.width: 2
         Accessible.ignored: true
@@ -144,6 +149,8 @@ FocusScope {
         Accessible.name: root.task ? root.task.title : ""
         Accessible.description: root.accessibleDescription(root.task)
         Accessible.role: Accessible.Button
+        Accessible.selectable: true
+        Accessible.selected: root.selected
         Accessible.onPressAction: root.activate()
         onClicked: root.activate()
         Keys.onReturnPressed: event => {
@@ -296,6 +303,7 @@ FocusScope {
                         color: root.enabled ? Theme.neutralInk : Theme.disabledInk
                         font.pixelSize: Theme.metaFontPixelSize
                         font.weight: Theme.sectionFontWeight
+                        Accessible.ignored: true
                     }
                 }
             }
@@ -308,7 +316,7 @@ FocusScope {
         anchors.fill: parent
         z: 2
         visible: root.selected && root.enabled && !root.dragging
-        color: "transparent"
+        color: Theme.clear
         radius: Theme.cardRadius
         border.color: Theme.cobalt
         border.width: 2

@@ -378,6 +378,109 @@ TestCase {
         tryVerify(function() { return cardInteraction.activeFocus })
     }
 
+    function test_moved_overlay_task_restores_focus_to_recreated_card() {
+        const view = createView(1300)
+        const originalCard = findChild(view, "taskCard-task-define-goals")
+        const originalInteraction = findChild(originalCard, "cardInteraction")
+        const drawer = findChild(view, "overlayDetailDrawer")
+        verify(originalInteraction)
+        verify(drawer)
+
+        originalInteraction.forceActiveFocus(Qt.TabFocusReason)
+        keyClick(Qt.Key_Return)
+        tryVerify(function() { return drawer.opened })
+
+        const moveControl = findChild(drawer, "moveToColumn")
+        verify(moveControl)
+        moveControl.activated(1)
+        tryCompare(TaskStore.taskById("task-define-goals"), "columnId", "ready")
+
+        drawer.close()
+        tryVerify(function() { return !drawer.opened })
+        let movedCard = null
+        tryVerify(function() {
+            movedCard = findChild(view, "taskCard-task-define-goals")
+            return movedCard !== null && movedCard !== originalCard
+        })
+        const movedInteraction = findChild(movedCard, "cardInteraction")
+        verify(movedInteraction)
+        tryVerify(function() { return movedInteraction.activeFocus })
+    }
+
+    function test_compact_move_reveals_focused_card_data() {
+        return [
+            { "tag": "ltr", "rightToLeft": false },
+            { "tag": "rtl", "rightToLeft": true }
+        ]
+    }
+
+    function test_compact_move_reveals_focused_card(data) {
+        const view = createTemporaryObject(viewComponent, testCase, {
+            "width": 900,
+            "height": 640,
+            "rightToLeft": data.rightToLeft
+        })
+        verify(view)
+        waitForRendering(view)
+
+        const taskId = TaskStore.addTask(
+                    "Viewport focus task with a deliberately wrapping title",
+                    "backlog", "Low")
+        verify(taskId.length > 0)
+        const originalCard = findChild(view, "taskCard-" + taskId)
+        const originalInteraction = findChild(originalCard, "cardInteraction")
+        const drawer = findChild(view, "overlayDetailDrawer")
+        const board = findChild(view, "boardView")
+        verify(originalCard)
+        verify(originalInteraction)
+        verify(drawer)
+        verify(board)
+
+        originalInteraction.forceActiveFocus(Qt.TabFocusReason)
+        keyClick(Qt.Key_Return)
+        tryVerify(function() { return drawer.opened })
+        const moveControl = findChild(drawer, "moveToColumn")
+        verify(moveControl)
+        moveControl.activated(3)
+        tryCompare(TaskStore.taskById(taskId), "columnId", "review")
+
+        drawer.close()
+        tryVerify(function() { return !drawer.opened })
+        let movedCard = null
+        tryVerify(function() {
+            movedCard = findChild(view, "taskCard-" + taskId)
+            return movedCard !== null && movedCard !== originalCard
+        })
+        const movedInteraction = findChild(movedCard, "cardInteraction")
+        const focusRing = findChild(movedCard, "focusRing")
+        verify(movedInteraction)
+        verify(focusRing)
+        tryVerify(function() { return movedInteraction.activeFocus })
+        tryVerify(function() { return focusRing.opacity > 0.99 })
+
+        function verifyInside(item, viewport, label) {
+            const origin = item.mapToItem(viewport, 0, 0)
+            verify(origin.x >= -0.5, label + " begins left of viewport")
+            verify(origin.y >= -0.5, label + " begins above viewport")
+            verify(origin.x + item.width <= viewport.width + 0.5,
+                   label + " exceeds viewport width")
+            verify(origin.y + item.height <= viewport.height + 0.5,
+                   label + " exceeds viewport height")
+        }
+
+        verifyInside(focusRing, board, "focus ring in board")
+        verifyInside(movedInteraction, board, "interaction in board")
+
+        let verticalViewport = focusRing.parent
+        while (verticalViewport && !verticalViewport.clip)
+            verticalViewport = verticalViewport.parent
+        verify(verticalViewport)
+        verifyInside(focusRing, verticalViewport,
+                     "focus ring in column viewport")
+        verifyInside(movedInteraction, verticalViewport,
+                     "interaction in column viewport")
+    }
+
     function test_modal_dialog_keeps_tab_focus_inside() {
         const view = createView(1300)
         const dialog = findChild(view, "newTaskDialog")

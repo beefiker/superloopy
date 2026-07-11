@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -12,7 +12,7 @@ const activationContract = `## Activation
 
 Open your reply with \`SUPERLOOPY FRONTEND ENABLED\`. If another active Superloopy mode mandates its own first line, print that first and this marker on the next line.
 
-**Explicit activation only.** Engage when the user invokes \`$superloopy:superloopy-frontend\` in Codex or \`/superloopy:superloopy-frontend\` in Claude Code, begins a visual task with a leading \`loopy\` or \`루피\`, or an already-active Superloopy loop explicitly assigns a visual subtask to this skill. A plain mention of UI, frontend, CSS, layout, responsiveness, or a visible symptom is not authorization to activate this workflow. Diagnose ownership first; backend, API, data, concurrency, infrastructure, and non-visual work stay with their primary workflow unless a visual deliverable is separately requested.
+**Explicit activation only.** Engage when the user invokes \`$superloopy:superloopy-frontend\` in Codex or \`/superloopy:superloopy-frontend\` in Claude Code for a web frontend or Qt desktop GUI task, begins such a task with a leading \`loopy\` or \`루피\`, or an already-active Superloopy loop explicitly assigns a web frontend, Qt Widgets, Qt Quick/QML, or mixed web/Qt subtask to this skill. A plain mention of UI, frontend, CSS, layout, responsiveness, Qt, QML, Widgets, or a visible symptom is not authorization to activate this workflow. Non-web/non-Qt visual deliverables and backend, API, data, concurrency, or infrastructure work stay with their primary workflows.
 `;
 
 async function read(path) {
@@ -31,8 +31,12 @@ test("frontend contract reader normalizes platform line endings", async (context
 
 test("frontend skill routes web and Qt only after explicit activation", async () => {
   const skill = await read(`${root}/SKILL.md`);
+  const frontmatter = skill.match(/^---\n([\s\S]*?)\n---/u)?.[1] ?? "";
   const activation = skill.match(/## Activation\n[\s\S]*?(?=\n## )/)?.[0];
   assert.equal(activation, activationContract, "the activation section must remain byte-for-byte unchanged");
+  assert.match(frontmatter, /web frontend.*Qt Widgets.*Qt Quick\/QML.*mixed web\/Qt/is);
+  assert.match(frontmatter, /non-web\/non-Qt visual deliverables/i);
+  assert.doesNotMatch(frontmatter, /other visual-deliverable/i);
   assert.match(skill, /Explicit activation only/i);
   assert.match(skill, /web.*Qt Widgets.*Qt Quick\/QML.*mixed/is);
   for (const name of ["web", "qt", "qt-widgets", "qt-quick", "qt-qa"]) {
@@ -128,6 +132,37 @@ test("Qt Quick and QA references enforce native validation", async () => {
   assert.match(qa, /offscreen.*not.*native/is);
   assert.match(qa, /Lighthouse.*not.*Qt.*proof/is);
   assert.match(qa, /screenshot.*guidance.*verdict/is);
+});
+
+test("Qt Quick Kanban component colors come from Theme tokens", async () => {
+  const qmlRoot = "examples/qt-kanban/src/Northstar/Kanban";
+  const qmlFiles = (await readdir(qmlRoot))
+    .filter((file) => file.endsWith(".qml") && file !== "Theme.qml")
+    .sort();
+  assert.ok(qmlFiles.length > 0, "Qt Quick Kanban QML inventory is empty");
+  for (const file of qmlFiles) {
+    const source = await read(`${qmlRoot}/${file}`);
+    assert.doesNotMatch(
+      source,
+      /#[0-9a-f]{6,8}|["']transparent["']/iu,
+      `${file} contains a raw color instead of a Theme token`,
+    );
+  }
+
+  const dialog = await read(`${qmlRoot}/NewTaskDialog.qml`);
+  assert.match(
+    dialog,
+    /createButton\.down\s*\?\s*Theme\.primaryPressed/u,
+    "Create must use the semantic primary pressed token",
+  );
+});
+
+test("Qt Quick accessibility probe cannot chain its own update handler", async () => {
+  const harness = await read("examples/qt-kanban/tests/quick/tst_qtkanban.cpp");
+  assert.match(
+    harness,
+    /void start\(\)\s*\{\s*if \(s_instance == this\)\s*return;/su,
+  );
 });
 
 test("Qt QA treats deterministic galleries as conditional client-pixel evidence", async () => {

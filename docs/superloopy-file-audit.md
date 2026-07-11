@@ -14,8 +14,8 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | --- | --- | --- |
 | `.agents/plugins/marketplace.json` | Repo-local Codex marketplace entry that exposes the root Superloopy plugin as `superloopy@beefiker`. | Uses Codex marketplace metadata only; points at this plugin root without vendoring external code. |
 | `.claude-plugin/marketplace.json` | Claude Code marketplace entry exposing superloopy from this repo root. | Uses Claude marketplace metadata only; no external assets. |
-| `.claude-plugin/plugin.json` | Claude Code plugin manifest: skills/agents/hooks entries plus metadata for a one-repo Claude install. | Uses the Claude plugin shape only; Superloopy-native, no vendored code. |
-| `.codex-plugin/plugin.json` | Local plugin metadata, hook registration, skill entry, and default Superloopy prompt. | Uses Codex plugin shape only; no external assets. |
+| `.claude-plugin/plugin.json` | Metadata-only Claude Code plugin descriptor for a one-repo install; skills, agents, and hooks load through repository conventions. | Uses the Claude plugin metadata shape only; Superloopy-native, no vendored code. |
+| `.codex-plugin/plugin.json` | Local plugin metadata, hook registration, skill entry, default Superloopy prompt, and interface asset paths. | Uses the Codex plugin shape and a repository-owned SVG; no external assets. |
 | `.codex/agents/franky.toml` | Project-scoped Codex executor agent for one criterion or independent slice. | Superloopy-native handoff, evidence receipt, and advisory model policy only. |
 | `.codex/agents/jinbe.toml` | Project-scoped Codex gate reviewer for final evidence integration. | Uses Superloopy evidence, review, QA, audit, criteria coverage, and advisory model policy as the authority. |
 | `.codex/agents/nami.toml` | Read-only codebase-navigator agent for subagent-driven work; locates files and code and returns absolute paths, writing no evidence receipt. | Superloopy-native read-only search contract with fast advisory model defaults; no product edits and no host coupling. |
@@ -31,7 +31,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `.github/assets/usopp.png` | README crew-card image for the usopp QA agent. | Documentation image only; no executable plugin logic. |
 | `.github/assets/zoro.png` | README crew-card image for the zoro reviewer agent. | Documentation image only; no executable plugin logic. |
 | `.github/workflows/test.yml` | GitHub Actions workflow that runs the `node --test` suite on an OS (ubuntu/windows/macos) × Node (20/22) matrix for every push and PR. | Uses SHA-pinned Actions and Node's own test discovery (no shell glob) so the same suite runs identically on every platform; read-only, no runtime plugin logic. |
-| `.gitignore` | Keeps runtime state, logs, coverage, dependencies, and generated Astro build output out of source control. | Superloopy runtime ignore set plus web build artifacts only. |
+| `.gitignore` | Keeps runtime state, logs, coverage, dependencies, root `build/`, Superpowers plan/spec docs, and generated Astro build output out of source control. | Superloopy runtime ignore set plus root builds, local Superpowers planning artifacts, and web build artifacts. |
 | `DESIGN.md` | Static landing-page design token contract: reference-inspired editorial colors, typography, spacing, component states, motion, and depth for the Superloopy web preview. | Web presentation design contract only; no plugin runtime behavior and no vendored external design system. |
 | `LICENSE` | MIT license for this repo. | Standard license text. |
 | `README.es.md` | Spanish public product overview and managed Codex model-lifecycle summary. | Documentation-only locale surface; mirrors the root install and routing behavior without adding runtime logic. |
@@ -46,6 +46,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `agents/robin.md` | Claude-format read-only evidence auditor subagent. | Superloopy-native role; read-only via tools allowlist, advisory model alias, no vendored code. |
 | `agents/usopp.md` | Claude-format QA subagent. | Superloopy-native role; advisory model alias, ported prose, no vendored code. |
 | `agents/zoro.md` | Claude-format skeptical code-review subagent. | Superloopy-native role; advisory model alias, ported prose, no vendored code. |
+| `assets/superloopy.svg` | Packaged Superloopy composer and plugin logo. | Original repository-owned vector mark; no external artwork or runtime logic. |
 | `docs/superloopy-claude-validation.md` | Live validation checklist for the Claude Code dual-host port: install, component load, the four empirical linchpins, a full loop, and degrade-safety confirmation. | Superloopy-native operator doc; no runtime logic or vendored code. |
 | `docs/superloopy-crew-lines.md` | Crew-line precedent, policy, and runtime contract for presentation-only handoff flavor. | Keeps lines Superloopy-original and non-authoritative beside mechanical evidence state. |
 | `docs/superloopy-design-audit.md` | Doctor-verified decision matrix for naming, compatibility, model resolution, and threshold records. | Records Superloopy decisions with concrete source/test guards, not source-project lineage. |

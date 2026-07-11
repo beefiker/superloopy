@@ -113,9 +113,9 @@ Control {
 
                 background: Rectangle {
                     color: closeButton.down ? Theme.pressed
-                           : closeButton.hovered ? Theme.hover : "transparent"
+                           : closeButton.hovered ? Theme.hover : Theme.clear
                     radius: Theme.controlRadius
-                    border.color: closeButton.visualFocus ? Theme.focus : "transparent"
+                    border.color: closeButton.visualFocus ? Theme.focus : Theme.clear
                     border.width: closeButton.visualFocus ? 2 : 0
                 }
             }

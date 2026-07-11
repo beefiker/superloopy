@@ -147,6 +147,41 @@ Flickable {
         settleDrag(canceledTaskId)
     }
 
+    function revealColumn(column) {
+        const origin = column.mapToItem(root.contentItem, 0, 0)
+        const columnStart = origin.x
+        const columnEnd = columnStart + column.width
+        let nextContentX = contentX
+
+        if (columnStart < contentX)
+            nextContentX = columnStart
+        else if (columnEnd > contentX + width)
+            nextContentX = columnEnd - width
+
+        const maximumContentX = Math.max(0, contentWidth - width)
+        nextContentX = Math.max(0, Math.min(maximumContentX, nextContentX))
+        _settingContentX = true
+        contentX = nextContentX
+        _settingContentX = false
+        _trackingLogicalStart = Math.abs(contentX
+                                         - logicalStartForGeometry()) < 0.5
+    }
+
+    function focusTask(taskId) {
+        const task = TaskStore.taskById(taskId)
+        if (!task)
+            return false
+
+        for (let index = 0; index < columnRepeater.count; ++index) {
+            const column = columnRepeater.itemAt(index) as KanbanColumn
+            if (column && column.columnId === task.columnId) {
+                revealColumn(column)
+                return column.focusTask(taskId)
+            }
+        }
+        return false
+    }
+
     clip: true
     interactive: !dragActive
     contentWidth: Math.max(width, boardContentWidth)
@@ -167,6 +202,7 @@ Flickable {
         spacing: Theme.boardGutter
 
         Repeater {
+            id: columnRepeater
             model: root.columnDefinitions
 
             delegate: KanbanColumn {

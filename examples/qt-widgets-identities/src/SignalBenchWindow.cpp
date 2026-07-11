@@ -243,15 +243,17 @@ SignalBenchWindow::SignalBenchWindow(QWidget *parent)
     });
     connect(m_activateButton, &QPushButton::clicked, m_presetAction, &QAction::trigger);
     connect(m_presetAction, &QAction::triggered, this, [this] {
-        const QString presetName = currentPresetName();
+        const QString presetName = selectedPresetName();
+        if (presetName.isEmpty()) {
+            return;
+        }
         m_statusLabel->setText(tr("Active · %1 · snapshot stable").arg(presetName));
         emit presetActivated(presetName);
     });
-    connect(m_session->presetSelection(), &QItemSelectionModel::currentChanged,
-            this, [this](const QModelIndex &, const QModelIndex &) {
-                m_statusLabel->setText(tr("Ready · %1 selected").arg(currentPresetName()));
-            });
+    connect(m_session->presetSelection(), &QItemSelectionModel::selectionChanged,
+            this, [this] { updatePresetSelectionState(); });
     connectPicker(m_picker);
+    updatePresetSelectionState();
 
     applyTabOrder();
     m_splitter->setSizes({250, 720, 250});
@@ -301,7 +303,6 @@ bool SignalBenchWindow::setIdentity(Identity identity)
     if (current.isValid()) {
         m_session->presetSelection()->setCurrentIndex(
             current, QItemSelectionModel::NoUpdate);
-        m_picker->setCurrentIndex(current);
     }
     if (topAnchor.isValid()) {
         m_picker->scrollTo(topAnchor, QAbstractItemView::PositionAtTop);
@@ -367,7 +368,9 @@ QByteArray SignalBenchWindow::sessionSnapshot() const
 
 void SignalBenchWindow::activateCurrentPreset()
 {
-    m_presetAction->trigger();
+    if (m_presetAction->isEnabled()) {
+        m_presetAction->trigger();
+    }
 }
 
 bool SignalBenchWindow::eventFilter(QObject *watched, QEvent *event)
@@ -401,8 +404,10 @@ void SignalBenchWindow::applyIdentityPresentation()
     m_precisionAction->setChecked(m_identity == Identity::Precision);
     m_rackAction->setChecked(m_identity == Identity::Rack);
     m_graph->setIdentity(m_identity);
+    m_bandTable->setPalette(identityPalette(m_identity, m_bandTable->palette()));
     for (SignalDial *dial : m_dials) {
         dial->setIdentity(m_identity);
+        dial->setPalette(identityPalette(m_identity, dial->palette()));
         dial->updateGeometry();
     }
     if (auto *delegate = qobject_cast<BandDelegate *>(m_bandTable->itemDelegate())) {
@@ -413,6 +418,7 @@ void SignalBenchWindow::applyIdentityPresentation()
     m_bandTable->doItemsLayout();
     m_bandTable->viewport()->update();
     if (m_picker) {
+        m_picker->setPalette(identityPalette(m_identity, m_picker->palette()));
         m_picker->updateGeometry();
         m_picker->doItemsLayout();
         m_picker->viewport()->update();
@@ -444,14 +450,30 @@ void SignalBenchWindow::connectPicker(QAbstractItemView *picker)
     picker->viewport()->installEventFilter(this);
 }
 
-QString SignalBenchWindow::currentPresetName() const
+QString SignalBenchWindow::selectedPresetName() const
 {
-    const QModelIndex current = m_session->presetSelection()->currentIndex();
-    QString name = current.data(SessionModel::TitleRole).toString();
+    const QModelIndexList selectedRows = m_session->presetSelection()->selectedRows();
+    if (selectedRows.isEmpty()) {
+        return {};
+    }
+    const QModelIndex selected = selectedRows.constFirst();
+    QString name = selected.data(SessionModel::TitleRole).toString();
     if (name.isEmpty()) {
-        name = current.data(Qt::DisplayRole).toString();
+        name = selected.data(Qt::DisplayRole).toString();
     }
     return name;
+}
+
+void SignalBenchWindow::updatePresetSelectionState()
+{
+    const QString presetName = selectedPresetName();
+    const bool hasSelection = !presetName.isEmpty();
+    m_presetAction->setEnabled(hasSelection);
+    m_activateButton->setEnabled(hasSelection);
+    m_statusLabel->setText(
+        hasSelection
+            ? tr("Ready · %1 selected").arg(presetName)
+            : tr("Ready · No preset selected"));
 }
 
 } // namespace SignalBench

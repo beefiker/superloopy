@@ -29,6 +29,7 @@ TestCase {
         TaskStore.reset()
         Theme.baseFontPixelSize = defaultBaseFontPixelSize
         Theme.motionEnabled = true
+        accessibilityProbe.resetAnnouncements()
     }
 
     function cleanup() {
@@ -93,9 +94,24 @@ TestCase {
             findChild(card, "selectionOutline"),
             findChild(card, "highPriorityEdge"),
             findChild(card, "priorityBadge"),
-            findChild(card, "assigneeAvatar")
+            findChild(card, "assigneeAvatar"),
+            findChild(card, "assigneeInitials")
         ]
         for (const decoration of decorations) {
+            verify(decoration)
+            verify(decoration.Accessible.ignored,
+                   decoration.objectName + " is not explicitly ignored")
+        }
+
+        const shellDecorations = [
+            findChild(view, "workspaceMark"),
+            findChild(view, "workspaceInitial"),
+            findChild(view, "teamAvatar-0"),
+            findChild(view, "teamAvatarLabel-0"),
+            findChild(view, "collaboratorAvatar-0"),
+            findChild(view, "collaboratorAvatarLabel-0")
+        ]
+        for (const decoration of shellDecorations) {
             verify(decoration)
             verify(decoration.Accessible.ignored,
                    decoration.objectName + " is not explicitly ignored")
@@ -117,5 +133,53 @@ TestCase {
 
         verify(accessibilityProbe.press(accessibleControl))
         compare(TaskStore.selectedTaskId, "task-build-landing")
+    }
+
+    function test_card_selection_state_matches_store_selection() {
+        const view = createView()
+        const first = interaction(view, "task-define-goals")
+        const second = interaction(view, "task-finalize-messaging")
+
+        verify(accessibilityProbe.selectable(first))
+        verify(!accessibilityProbe.selected(first))
+        verify(accessibilityProbe.selectable(second))
+        verify(!accessibilityProbe.selected(second))
+
+        verify(TaskStore.selectTask("task-define-goals"))
+        tryVerify(function() { return accessibilityProbe.selected(first) })
+        verify(!accessibilityProbe.selected(second))
+
+        verify(TaskStore.selectTask("task-finalize-messaging"))
+        tryVerify(function() { return !accessibilityProbe.selected(first) })
+        verify(accessibilityProbe.selected(second))
+    }
+
+    function test_unavailable_destination_announces_polite_status() {
+        const view = createView()
+        const timeline = findChild(view, "timelineButton")
+        verify(timeline)
+
+        timeline.clicked()
+        tryCompare(accessibilityProbe, "announcementCount", 1)
+        compare(accessibilityProbe.lastAnnouncement,
+                "Timeline is not available in this demo")
+        compare(accessibilityProbe.lastPoliteness,
+                accessibilityProbe.politePoliteness)
+    }
+
+    function test_blank_task_title_announces_assertive_validation() {
+        const view = createView()
+        const dialog = findChild(view, "newTaskDialog")
+        const invoker = findChild(view, "newTaskButton")
+        verify(dialog)
+        verify(invoker)
+
+        dialog.openFrom(invoker)
+        tryVerify(function() { return dialog.opened })
+        dialog.submit()
+        tryCompare(accessibilityProbe, "announcementCount", 1)
+        compare(accessibilityProbe.lastAnnouncement, "Enter a task title")
+        compare(accessibilityProbe.lastPoliteness,
+                accessibilityProbe.assertivePoliteness)
     }
 }

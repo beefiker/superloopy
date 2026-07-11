@@ -1,6 +1,6 @@
 ---
 name: superloopy-frontend
-description: Use only after explicit Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend` invocation, a visual task started with a leading `loopy` or `루피`, or an active Superloopy loop explicitly routing a web UI, Qt Widgets, Qt Quick/QML, or other visual-deliverable subtask here. Do not activate from UI, frontend, Qt, QML, Widgets, or other semantic vocabulary alone.
+description: Use only after explicit Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend` invocation for a web frontend or Qt desktop GUI task, such a task started with a leading `loopy` or `루피`, or an active Superloopy loop explicitly routing a web frontend, Qt Widgets, Qt Quick/QML, or mixed web/Qt subtask here. Do not activate from UI, frontend, Qt, QML, Widgets, or other semantic vocabulary alone, or for non-web/non-Qt visual deliverables.
 ---
 
 # Superloopy Frontend
@@ -9,7 +9,7 @@ description: Use only after explicit Codex `$superloopy:superloopy-frontend` or 
 
 Open your reply with `SUPERLOOPY FRONTEND ENABLED`. If another active Superloopy mode mandates its own first line, print that first and this marker on the next line.
 
-**Explicit activation only.** Engage when the user invokes `$superloopy:superloopy-frontend` in Codex or `/superloopy:superloopy-frontend` in Claude Code, begins a visual task with a leading `loopy` or `루피`, or an already-active Superloopy loop explicitly assigns a visual subtask to this skill. A plain mention of UI, frontend, CSS, layout, responsiveness, or a visible symptom is not authorization to activate this workflow. Diagnose ownership first; backend, API, data, concurrency, infrastructure, and non-visual work stay with their primary workflow unless a visual deliverable is separately requested.
+**Explicit activation only.** Engage when the user invokes `$superloopy:superloopy-frontend` in Codex or `/superloopy:superloopy-frontend` in Claude Code for a web frontend or Qt desktop GUI task, begins such a task with a leading `loopy` or `루피`, or an already-active Superloopy loop explicitly assigns a web frontend, Qt Widgets, Qt Quick/QML, or mixed web/Qt subtask to this skill. A plain mention of UI, frontend, CSS, layout, responsiveness, Qt, QML, Widgets, or a visible symptom is not authorization to activate this workflow. Non-web/non-Qt visual deliverables and backend, API, data, concurrency, or infrastructure work stay with their primary workflows.
 
 ## Inspect and route
 

@@ -43,9 +43,10 @@ Control {
         background: Rectangle {
             radius: Theme.controlRadius
             color: action.selected ? Theme.sidebarActive
-                                   : action.down ? "#314355"
-                                   : action.hovered ? "#1D2C3A" : "transparent"
-            border.color: action.visualFocus ? Theme.sidebarFocus : "transparent"
+                                   : action.down ? Theme.sidebarPressed
+                                   : action.hovered ? Theme.sidebarHover
+                                   : Theme.clear
+            border.color: action.visualFocus ? Theme.sidebarFocus : Theme.clear
             border.width: action.visualFocus ? 2 : 0
         }
     }
@@ -59,17 +60,21 @@ Control {
             spacing: Theme.space3
 
             Rectangle {
+                objectName: "workspaceMark"
                 Layout.preferredWidth: 38
                 Layout.preferredHeight: 38
                 radius: Theme.controlRadius
                 color: Theme.cobalt
+                Accessible.ignored: true
 
                 Label {
+                    objectName: "workspaceInitial"
                     anchors.centerIn: parent
                     text: "N"
                     color: Theme.cobaltContent
                     font.pixelSize: Theme.sectionFontPixelSize
                     font.weight: Theme.sectionFontWeight
+                    Accessible.ignored: true
                 }
             }
 
@@ -87,7 +92,7 @@ Control {
 
                 Label {
                     text: qsTr("Launch workspace")
-                    color: "#AAB6C2"
+                    color: Theme.sidebarMutedText
                     font.pixelSize: Theme.metaFontPixelSize
                     font.weight: Theme.metaFontWeight
                 }
@@ -128,7 +133,7 @@ Control {
             visible: !root.compact
             Layout.leftMargin: Theme.space3
             text: qsTr("TEAM")
-            color: "#91A0AF"
+            color: Theme.sidebarSectionText
             font.pixelSize: Theme.metaFontPixelSize
             font.weight: Theme.metaFontWeight
         }
@@ -148,20 +153,25 @@ Control {
                     required property string modelData
                     required property int index
 
+                    objectName: "teamAvatar-" + index
                     Layout.preferredWidth: root.compact ? 22 : 30
                     Layout.preferredHeight: root.compact ? 22 : 30
                     radius: width / 2
-                    color: index === 0 ? "#DCE8FF"
-                                       : index === 1 ? "#E7F5ED" : "#FDECE9"
+                    color: index === 0 ? Theme.avatarBlue
+                                       : index === 1 ? Theme.avatarSlate
+                                                     : Theme.avatarLavender
                     border.color: Theme.sidebar
                     border.width: 2
+                    Accessible.ignored: true
 
                     Label {
+                        objectName: "teamAvatarLabel-" + teamAvatar.index
                         anchors.centerIn: parent
                         text: teamAvatar.modelData
                         color: Theme.ink
                         font.pixelSize: Theme.metaFontPixelSize
                         font.weight: Theme.sectionFontWeight
+                        Accessible.ignored: true
                     }
                 }
             }

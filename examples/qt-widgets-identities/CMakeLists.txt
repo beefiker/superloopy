@@ -60,6 +60,7 @@ target_link_libraries(tst_signalbench PRIVATE
     Qt6::Test
     signalbench_ui
 )
+add_dependencies(tst_signalbench qtwidgetsidentities)
 
 enable_testing()
 
