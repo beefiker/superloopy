@@ -12,6 +12,7 @@ Cool-paper planning desk. Dense information remains breathable through hairline 
 | `surface` | `#FFFFFF` | cards, header, drawer |
 | `sidebar` | `#13202D` | navigation chrome |
 | `sidebarActive` | `#263748` | selected navigation item |
+| `sidebarFocus` | `#93C5FD` | keyboard focus on dark navigation |
 | `ink` | `#17212B` | primary text |
 | `muted` | `#647184` | secondary text |
 | `border` | `#DCE3EA` | hairlines and card borders |
@@ -58,7 +59,7 @@ At 1560 px and wider, show the 224 px sidebar and persistent 300 px detail drawe
 - New task dialog: title, column, priority, default Create action, cancel action, contained focus, and validation.
 - Icon family: local monochrome SVGs at 16 and 20 px, 1.75 px stroke, round caps/joins, and consistent optical bounds. Controls tint icons from Theme tokens and expose accessible names. Do not mix Unicode symbol icons, emoji, or unrelated icon styles.
 
-Every interactive control implements normal, hover where available, pressed, keyboard-focus, disabled, and selected/checked states as applicable. Focus and selection are distinct: selection uses the cobalt outline; keyboard focus adds an outer `focus` ring with a 2 px gap. State precedence is disabled, drag, keyboard focus, selected, pressed, hover, normal. Custom card interaction exposes accessible button semantics and Enter/Space activation.
+Every interactive control implements normal, hover where available, pressed, keyboard-focus, disabled, and selected/checked states as applicable. Focus and selection are distinct: selection uses the cobalt outline; keyboard focus adds an outer `focus` ring with a 2 px gap, while the dark sidebar uses `sidebarFocus` for at least 3:1 non-text contrast. State precedence is disabled, drag, keyboard focus, selected, pressed, hover, normal. Custom card interaction exposes accessible button semantics and Enter/Space activation.
 
 ## Motion
 

@@ -26,6 +26,11 @@ TestCase {
 
     function init() {
         TaskStore.reset()
+        Theme.motionEnabled = true
+    }
+
+    function cleanup() {
+        Theme.motionEnabled = true
     }
 
     function createCard(taskId, width) {
@@ -164,6 +169,75 @@ TestCase {
         tryVerify(function() { return keyboardInteraction.visualFocus })
         compare(keyboardCard.visualState, "keyboardFocus")
         verify(keyboardFocusRing.visible)
+    }
+
+    function test_feedback_animations_follow_motion_token() {
+        const focusCard = createCard("task-define-goals")
+        const focusInteraction = findChild(focusCard, "cardInteraction")
+        const focusRing = findChild(focusCard, "focusRing")
+        verify(focusInteraction)
+        verify(focusRing)
+        compare(focusRing.opacity, 0)
+
+        focusInteraction.forceActiveFocus(Qt.TabFocusReason)
+        tryVerify(function() { return focusInteraction.visualFocus })
+        verify(focusRing.opacity < 1)
+        tryCompare(focusRing, "opacity", 1, 500)
+
+        const pressCard = createCard("task-audience-research")
+        const pressInteraction = findChild(pressCard, "cardInteraction")
+        const pressSurface = pressInteraction.background
+        compare(pressSurface.color, Theme.surface)
+        mousePress(pressInteraction, pressInteraction.width / 2,
+                   pressInteraction.height / 2, Qt.LeftButton)
+        compare(pressCard.visualState, "pressed")
+        verify(pressSurface.color !== Theme.pressed)
+        tryCompare(pressSurface, "color", Theme.pressed, 500)
+        mouseRelease(pressInteraction, pressInteraction.width / 2,
+                     pressInteraction.height / 2, Qt.LeftButton)
+
+        Theme.motionEnabled = false
+        const immediateCard = createCard("task-finalize-messaging")
+        const immediateInteraction = findChild(immediateCard,
+                                               "cardInteraction")
+        const immediateRing = findChild(immediateCard, "focusRing")
+        immediateInteraction.forceActiveFocus(Qt.TabFocusReason)
+        tryVerify(function() { return immediateInteraction.visualFocus })
+        compare(immediateRing.opacity, 1)
+
+        const immediatePressCard = createCard("task-design-system")
+        const immediatePressInteraction = findChild(immediatePressCard,
+                                                    "cardInteraction")
+        mousePress(immediatePressInteraction,
+                   immediatePressInteraction.width / 2,
+                   immediatePressInteraction.height / 2, Qt.LeftButton)
+        compare(immediatePressCard.visualState, "pressed")
+        compare(immediatePressInteraction.background.color, Theme.pressed)
+        mouseRelease(immediatePressInteraction,
+                     immediatePressInteraction.width / 2,
+                     immediatePressInteraction.height / 2, Qt.LeftButton)
+    }
+
+    function test_drag_transition_follows_motion_setting() {
+        const card = createCard("task-define-goals")
+        compare(card.scale, 1)
+        compare(card.opacity, 1)
+
+        card.dragging = true
+        compare(card.visualState, "dragging")
+        verify(card.scale > 0.98)
+        verify(card.opacity > 0.55)
+        tryCompare(card, "scale", 0.98, 600)
+        tryCompare(card, "opacity", 0.55, 600)
+
+        card.dragging = false
+        tryCompare(card, "scale", 1, 600)
+        tryCompare(card, "opacity", 1, 600)
+
+        Theme.motionEnabled = false
+        card.dragging = true
+        compare(card.scale, 0.98)
+        compare(card.opacity, 0.55)
     }
 
     function test_selected_outline_yields_to_drag_and_disabled_states() {

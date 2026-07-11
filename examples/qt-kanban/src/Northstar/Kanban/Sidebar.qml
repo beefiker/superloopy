@@ -45,7 +45,7 @@ Control {
             color: action.selected ? Theme.sidebarActive
                                    : action.down ? "#314355"
                                    : action.hovered ? "#1D2C3A" : "transparent"
-            border.color: action.visualFocus ? Theme.focus : "transparent"
+            border.color: action.visualFocus ? Theme.sidebarFocus : "transparent"
             border.width: action.visualFocus ? 2 : 0
         }
     }

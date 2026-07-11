@@ -29,6 +29,23 @@ FocusScope {
     objectName: "taskCard-" + taskId
     implicitWidth: Theme.columnMinimumWidth
     implicitHeight: interaction.implicitHeight
+    scale: dragging ? 0.98 : 1
+    opacity: dragging ? 0.55 : 1
+    transformOrigin: Item.Center
+
+    Behavior on scale {
+        NumberAnimation {
+            duration: Theme.transitionDuration
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    Behavior on opacity {
+        NumberAnimation {
+            duration: Theme.transitionDuration
+            easing.type: Easing.OutCubic
+        }
+    }
 
     function initials(name) {
         const parts = name.trim().split(/\s+/)
@@ -69,11 +86,16 @@ FocusScope {
                 root.dragging = true
                 root.dragCoordinator.beginDrag(root.taskId, root,
                                                centroid.scenePosition)
-            } else if (root.dragging) {
-                root.dragCoordinator.updateDrag(centroid.scenePosition)
-                root.dragCoordinator.finishDrag()
-                root.dragging = false
             }
+        }
+
+        onGrabChanged: (transition, point) => {
+            if (!root.dragCoordinator || !root.dragging
+                    || transition !== PointerDevice.UngrabExclusive)
+                return
+            root.dragCoordinator.updateDrag(point.scenePosition)
+            root.dragging = false
+            root.dragCoordinator.finishDrag()
         }
 
         onCentroidChanged: {
@@ -95,12 +117,20 @@ FocusScope {
         anchors.fill: parent
         anchors.margins: -4
         z: -2
-        visible: interaction.visualFocus
+        visible: interaction.visualFocus || opacity > 0
+        opacity: interaction.visualFocus ? 1 : 0
         color: "transparent"
         radius: Theme.cardRadius + 4
         border.color: Theme.focus
         border.width: 2
         Accessible.ignored: true
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Theme.feedbackDuration
+                easing.type: Easing.OutCubic
+            }
+        }
     }
 
     Button {
@@ -136,6 +166,13 @@ FocusScope {
             radius: Theme.cardRadius
             border.color: Theme.border
             border.width: Theme.borderWidth
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: Theme.feedbackDuration
+                    easing.type: Easing.OutCubic
+                }
+            }
         }
 
         contentItem: ColumnLayout {

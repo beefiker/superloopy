@@ -24,6 +24,7 @@ TestCase {
         compare(Theme.surface.toString(), "#ffffff")
         compare(Theme.sidebar.toString(), "#13202d")
         compare(Theme.sidebarActive.toString(), "#263748")
+        compare(Theme.sidebarFocus.toString(), "#93c5fd")
         compare(Theme.ink.toString(), "#17212b")
         compare(Theme.muted.toString(), "#647184")
         compare(Theme.border.toString(), "#dce3ea")
@@ -48,6 +49,30 @@ TestCase {
         compare(Theme.disabledInk.toString(), "#7a8796")
         compare(Theme.scrim.toString(), "#6617212b")
         verify(Theme.focus.toString() !== Theme.cobalt.toString())
+    }
+
+    function relativeLuminance(color) {
+        function linear(channel) {
+            return channel <= 0.04045 ? channel / 12.92
+                                     : Math.pow((channel + 0.055) / 1.055, 2.4)
+        }
+
+        return 0.2126 * linear(color.r)
+                + 0.7152 * linear(color.g)
+                + 0.0722 * linear(color.b)
+    }
+
+    function contrastRatio(first, second) {
+        const firstLuminance = relativeLuminance(first)
+        const secondLuminance = relativeLuminance(second)
+        const lighter = Math.max(firstLuminance, secondLuminance)
+        const darker = Math.min(firstLuminance, secondLuminance)
+        return (lighter + 0.05) / (darker + 0.05)
+    }
+
+    function test_sidebar_focus_meets_non_text_contrast() {
+        verify(contrastRatio(Theme.sidebarFocus, Theme.sidebar) >= 3)
+        verify(contrastRatio(Theme.sidebarFocus, Theme.sidebarActive) >= 3)
     }
 
     function test_spacing_geometry_and_breakpoints() {
