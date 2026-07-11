@@ -1,6 +1,6 @@
 {
   "name": "superloopy",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Lightweight loop harness with strict evidence gates.",
   "homepage": "https://github.com/beefiker/superloopy#readme",
   "repository": "https://github.com/beefiker/superloopy",
@@ -42,7 +42,7 @@
     ],
     "brandColor": "#2563EB",
     "screenshots": [],
-    "composerIcon": "./web/assets/luffy.svg",
-    "logo": "./web/assets/luffy.svg"
+    "composerIcon": "./assets/superloopy.svg",
+    "logo": "./assets/superloopy.svg"
   }
 }
