@@ -48,7 +48,16 @@ int main(int argc, char *argv[])
     bool heightOk = false;
     const int initialWidth = sizeMatch.captured(1).toInt(&widthOk);
     const int initialHeight = sizeMatch.captured(2).toInt(&heightOk);
-    if (!widthOk || !heightOk || initialWidth < 900 || initialHeight < 640) {
+    if (!widthOk || !heightOk) {
+        qCritical().noquote()
+            << QStringLiteral(
+                   "Window size components are outside the supported integer "
+                   "range; received %1.")
+                   .arg(requestedSize);
+        return EXIT_FAILURE;
+    }
+
+    if (initialWidth < 900 || initialHeight < 640) {
         qCritical().noquote()
             << QStringLiteral("Window size must be at least 900x640; received %1.")
                    .arg(requestedSize);

@@ -136,8 +136,12 @@ TestCase {
 
         verify(boardButton.checkable)
         verify(boardButton.checked)
+        compare(boardButton.palette.brightText.toString(),
+                Theme.sidebarText.toString())
         verify(!timelineButton.checkable)
         verify(!timelineButton.checked)
+        compare(timelineButton.palette.buttonText.toString(),
+                Theme.sidebarText.toString())
     }
 
     function test_sidebar_unavailable_destinations_share_one_status_surface() {
