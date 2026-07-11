@@ -36,6 +36,12 @@ Exercise every applicable row with both behavior checks and visual inspection:
 
 Record a reason for every non-applicable state. Test keyboard, pointer, touch when supported, and assistive-technology actions against the same semantic outcome; interrupt motion and asynchronous state changes before also checking their settled state.
 
+## Deterministic branded gallery
+
+For a custom-painted or multi-identity Widgets surface with broad reusable presentation changes, add a deterministic client-pixel gallery; do not impose it on an ordinary native-adaptive change. Pin stable fixtures, component/window dimensions, Qt version, base style, locale, DPR, graphics backend, applicable states, themes or identities, and stable filenames. Generate the declared component-by-identity-by-state matrix, check its expected artifact count, and fail on clipping, overflow, or an unexpected scrollbar; retain the gallery as a CI artifact when CI supports it.
+
+Keep Qt Test behavior and accessibility checks beside the gallery. An offscreen gallery is not native or accessibility evidence and cannot replace the real-target capture below. Exact pixel equality in a frozen equivalent environment may prove unchanged pixels; it does not prove visual quality, interaction correctness, or cross-platform parity.
+
 ## Capture contract
 
 Capture the real target application built from the candidate revision in the named platform, style, theme, graphics backend, locale, and DPR. Wait for fonts, data, layout, transitions, and scene-graph presentation to settle, then show the exercised state rather than a replica or isolated mock.

@@ -57,6 +57,23 @@ test("Qt common and Widgets references preserve native ownership", async () => {
   assert.match(widgets, /paint.*hit.test.*keyboard.*accessibility/is);
 });
 
+test("Qt Widgets branded identities stay differentiated and behavior-neutral", async () => {
+  const widgets = await read(reference("qt-widgets"));
+  const branded = widgets.match(/## Branded and multi-identity systems\n[\s\S]*?(?=\n## )/)?.[0];
+  assert.ok(branded, "missing branded and multi-identity contract");
+  assert.match(branded, /only when.*product.*owns/is);
+  assert.match(branded, /ordinary native-adaptive.*must not.*skin manager.*gallery/is);
+  assert.match(branded, /identity constitution.*signature.*hierarchy.*geometry.*depth.*state grammar.*prohibited.*extend/is);
+  assert.match(branded, /differ only by palette.*themes.*not.*identities.*multiple meaningful.*non-color/is);
+  assert.match(branded, /QSS.*stock widget chrome/is);
+  assert.match(branded, /QStyledItemDelegate.*model\/view rows.*sizeHint.*editing.*editorEvent/is);
+  assert.match(branded, /QPainter.*non-item.*custom.*data geometry/is);
+  assert.match(branded, /view factor(?:y|ies).*structure/is);
+  assert.match(branded, /shared models.*controllers.*host widgets.*delegates.*data.*commands.*serialization.*input.*keyboard.*accessibility actions/is);
+  assert.match(branded, /identity-specific presentation.*state.*geometry.*styling.*painting.*structure.*must not.*per-identity behavior/is);
+  assert.match(branded, /legacy-equivalent.*idempotent.*focus.*selection.*scroll.*updateGeometry.*layout/is);
+});
+
 test("Qt Quick and QA references enforce native validation", async () => {
   const quick = await read(reference("qt-quick"));
   const qa = await read(reference("qt-qa"));
@@ -87,4 +104,16 @@ test("Qt Quick and QA references enforce native validation", async () => {
   assert.match(qa, /offscreen.*not.*native/is);
   assert.match(qa, /Lighthouse.*not.*Qt.*proof/is);
   assert.match(qa, /screenshot.*guidance.*verdict/is);
+});
+
+test("Qt QA treats deterministic galleries as conditional client-pixel evidence", async () => {
+  const qa = await read(reference("qt-qa"));
+  const gallery = qa.match(/## Deterministic branded gallery\n[\s\S]*?(?=\n## )/)?.[0];
+  assert.ok(gallery, "missing deterministic branded gallery contract");
+  assert.match(gallery, /custom-painted.*multi-identity Widgets.*broad reusable presentation/is);
+  assert.match(gallery, /do not impose.*ordinary native-adaptive/is);
+  assert.match(gallery, /stable.*fixtures.*dimensions.*states.*themes.*filenames/is);
+  assert.match(gallery, /expected artifact count.*clipping.*overflow/is);
+  assert.match(gallery, /offscreen gallery.*not.*native.*accessibility/is);
+  assert.match(gallery, /exact pixel equality.*unchanged pixels.*not.*visual quality/is);
 });
