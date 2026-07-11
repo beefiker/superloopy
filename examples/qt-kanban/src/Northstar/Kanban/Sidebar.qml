@@ -37,6 +37,7 @@ Control {
         icon.height: 20
         icon.color: Theme.sidebarText
         palette.buttonText: Theme.sidebarText
+        palette.brightText: Theme.sidebarText
         Accessible.name: text
 
         background: Rectangle {

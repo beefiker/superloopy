@@ -35,3 +35,17 @@ set_tests_properties(qtkanban.invalid-size PROPERTIES
     TIMEOUT 10
     WILL_FAIL TRUE
 )
+
+add_test(
+    NAME qtkanban.invalid-range
+    COMMAND ${CMAKE_COMMAND} -E env
+        QT_QPA_PLATFORM=offscreen
+        $<TARGET_FILE:qtkanban>
+        --window-size 999999999999x700
+        --quit-after-ready
+)
+set_tests_properties(qtkanban.invalid-range PROPERTIES
+    PASS_REGULAR_EXPRESSION
+        "Window size components are outside the supported integer range"
+    TIMEOUT 10
+)
