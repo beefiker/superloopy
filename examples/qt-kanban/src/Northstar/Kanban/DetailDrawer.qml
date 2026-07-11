@@ -24,6 +24,16 @@ Control {
     implicitWidth: Theme.drawerWidth
     padding: Theme.space5
     Accessible.name: qsTr("Task details")
+    palette.window: Theme.surface
+    palette.windowText: Theme.ink
+    palette.base: Theme.surface
+    palette.text: Theme.ink
+    palette.button: Theme.surface
+    palette.buttonText: Theme.ink
+    palette.highlight: Theme.cobalt
+    palette.highlightedText: Theme.cobaltContent
+    palette.mid: Theme.borderStrong
+    palette.dark: Theme.ink
 
     function columnName(columnId) {
         if (columnId === "backlog")
@@ -287,6 +297,8 @@ Control {
                             qsTr("In progress"), qsTr("Review")]
                     currentIndex: root.selectedColumnIndex
                     enabled: root.hasTask
+                    palette.buttonText: enabled ? Theme.ink : Theme.disabledInk
+                    palette.dark: enabled ? Theme.ink : Theme.disabledInk
                     Accessible.name: accessibleName
                     focusPolicy: Qt.StrongFocus
                     onActivated: index => {
@@ -316,6 +328,7 @@ Control {
                         Layout.fillWidth: true
                         text: qsTr("Previous")
                         enabled: root.selectedColumnIndex > 0
+                        palette.buttonText: enabled ? Theme.ink : Theme.disabledInk
                         Accessible.name: qsTr("Move task to previous column")
                         focusPolicy: Qt.StrongFocus
                         onClicked: TaskStore.moveSelectedAdjacent(-1)
@@ -343,6 +356,7 @@ Control {
                         enabled: root.selectedColumnIndex >= 0
                                  && root.selectedColumnIndex
                                     < TaskStore.columnOrder.length - 1
+                        palette.buttonText: enabled ? Theme.ink : Theme.disabledInk
                         Accessible.name: qsTr("Move task to next column")
                         focusPolicy: Qt.StrongFocus
                         onClicked: TaskStore.moveSelectedAdjacent(1)

@@ -26,6 +26,16 @@ Dialog {
     padding: Theme.space6
     title: qsTr("New task")
     closePolicy: Popup.CloseOnEscape
+    palette.window: Theme.surface
+    palette.windowText: Theme.ink
+    palette.base: Theme.surface
+    palette.text: Theme.ink
+    palette.button: Theme.surface
+    palette.buttonText: Theme.ink
+    palette.highlight: Theme.cobalt
+    palette.highlightedText: Theme.cobaltContent
+    palette.mid: Theme.borderStrong
+    palette.dark: Theme.ink
 
     function openFrom(invoker) {
         invokingItem = invoker
