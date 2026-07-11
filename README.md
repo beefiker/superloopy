@@ -48,7 +48,7 @@ Superloopy keeps the command layer small. Skills carry the specialist workflow: 
 | `superloopy-doctor` | You diagnose install, wrapper, plugin cache, hook/bootstrap, agent, Codex/Claude Code host wiring, or stale-version problems. | A read-only health report with wrapper/cache/version evidence, failing checks, and the exact repair command to run only if approved. |
 | `superloopy-research` | You ask for `loopy research`, deep research, exhaustive investigation, or a cited report. | Research axes, expansion waves, a claim ledger, verification notes, and a cited synthesis artifact. |
 | `superloopy-clone` | You ask for `loopy clone`, authorized website cloning, rebuilding, migration, or pixel-focused page recovery. | Browser captures, page topology, design tokens, asset inventory, implementation notes, build output, and visual QA evidence. |
-| `superloopy-frontend` | You explicitly invoke Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend`, or start a visual task with a leading `loopy`/`루피`. Plain UI mentions do not activate it. | A DESIGN.md token contract, an anti-slop pre-flight result, and a real-browser visual-QA evidence artifact. |
+| `superloopy-frontend` | You explicitly invoke Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend` for a web frontend or Qt desktop GUI task, or start one with a leading `loopy`/`루피`. Non-web/non-Qt visual work and plain UI mentions do not activate it. | A DESIGN.md token contract; for web, the anti-slop pre-flight and browser evidence; for Qt, the Qt pre-flight and native rendered-application evidence. |
 | `humanize-korean` | Use when Korean users ask to remove AI tone, fix 번역투, or make Korean text sound human without changing facts. | Writes `final.md`, `summary.md`, and `audit.json`; in Superloopy loops it records evidence under `.superloopy/evidence/humanize-korean/`. |
 | `superloopy-slides` | You ask for slides, a presentation, a deck, or a PPT/PPTX-to-web conversion. | A zero-dependency single-file HTML deck on a fixed 16:9 stage, three style previews to pick from, and a rendered-screenshot visual-QA artifact under `.superloopy/evidence/slides/`. |
 
@@ -65,6 +65,20 @@ The loop skill is the default guardrail. A complete leading `loopy` token starts
 [![Fileloom intro deck built with superloopy-slides](.github/assets/slides-demo-reference.png)](https://fileloom-slides.pages.dev)
 
 `superloopy-slides` generated this **[live multilingual deck →](https://fileloom-slides.pages.dev)** — a zero-dependency single-file HTML presentation on a fixed 16:9 stage in English · 한국어 · 中文 · 日本語 · Español. It passed real-browser visual-QA (standalone, phone letterbox, and iframe embed) recorded under `.superloopy/evidence/slides/`.
+
+## Qt Kanban Demo
+
+The [Northstar Qt Kanban demo](examples/qt-kanban/) is a runnable Qt Quick acceptance fixture built through the `superloopy-frontend` Qt route. With Qt 6.11.1, CMake, and Ninja available, configure, build, and launch it from the repository root:
+
+```bash
+qt-cmake -S examples/qt-kanban -B build/qt-kanban -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build/qt-kanban --parallel
+build/qt-kanban/src/app/qtkanban --window-size 1600x1000
+
+# macOS: verify the exported native accessibility contract
+examples/qt-kanban/scripts/audit-macos-accessibility.sh \
+  build/qt-kanban/src/app/qtkanban
+```
 
 ## The crew
 

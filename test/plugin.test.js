@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import test from "node:test";
+
+import { resolveSpawnInvocation } from "../src/spawn-command.js";
 
 async function readSkill(name) {
   const path = `skills/${name}/SKILL.md`;
@@ -40,6 +43,47 @@ test("plugin manifest exposes Superloopy skills and packaged opt-in hooks", asyn
   assert.equal(sessionStart.hooks.SessionStart[0].hooks[0].timeout, 30);
   const consolidated = JSON.parse(await readFile("hooks/hooks.json", "utf8"));
   assert.equal(consolidated.hooks.SessionStart[0].hooks[0].timeout, 30);
+});
+
+test("plugin interface assets resolve inside the npm package", async () => {
+  const plugin = JSON.parse(await readFile(".codex-plugin/plugin.json", "utf8"));
+  const assetPaths = [plugin.interface.composerIcon, plugin.interface.logo];
+
+  assert.equal(new Set(assetPaths).size, 1, "composerIcon and logo must use one canonical asset");
+  for (const assetPath of assetPaths) {
+    assert.match(assetPath, /^\.\/[a-z0-9_./-]+\.svg$/iu);
+    assert.doesNotMatch(assetPath, /(?:^|\/)\.\.(?:\/|$)/u);
+    assert.equal(existsSync(assetPath), true, `missing plugin interface asset: ${assetPath}`);
+  }
+
+  const packArgs = ["pack", "--dry-run", "--json", "--ignore-scripts"];
+  assert.deepEqual(resolveSpawnInvocation("npm", packArgs, "win32"), {
+    command: "cmd.exe",
+    args: ["/d", "/s", "/c", "npm.cmd", ...packArgs]
+  });
+  const invocation = resolveSpawnInvocation("npm", packArgs);
+  const packed = spawnSync(invocation.command, invocation.args, {
+    encoding: "utf8"
+  });
+  assert.equal(packed.status, 0, packed.stderr || packed.stdout);
+  const files = new Set(JSON.parse(packed.stdout)[0].files.map((file) => file.path));
+  assert.equal(files.has(assetPaths[0].replace(/^\.\//u, "")), true, "interface asset missing from npm pack");
+});
+
+test("plugin audit docs describe convention discovery and current ignore scope", async () => {
+  const audit = await readFile("docs/superloopy-file-audit.md", "utf8");
+  const golden = await readFile("docs/superloopy-loop-golden-set.md", "utf8");
+  const auditClaudeRow = audit.split("\n").find((line) => line.startsWith("| `.claude-plugin/plugin.json` |"));
+  const goldenClaudeRow = golden.split("\n").find((line) => line.startsWith("| `.claude-plugin/plugin.json` |"));
+  const auditIgnoreRow = audit.split("\n").find((line) => line.startsWith("| `.gitignore` |"));
+  const goldenIgnoreRow = golden.split("\n").find((line) => line.startsWith("| `.gitignore` |"));
+
+  assert.match(auditClaudeRow, /metadata-only.*convention/i);
+  assert.match(goldenClaudeRow, /metadata-only.*convention/i);
+  assert.doesNotMatch(auditClaudeRow, /skills\/agents\/hooks entries/i);
+  assert.match(auditIgnoreRow, /Superpowers.*plan.*spec/i);
+  assert.match(auditIgnoreRow, /root `build\/`/i);
+  assert.match(goldenIgnoreRow, /`build\/`.*docs\/superpowers\/plans\/.*docs\/superpowers\/specs\//i);
 });
 
 test("package metadata names author and GitHub topics", async () => {
@@ -158,6 +202,7 @@ test("doctor skill stays Superloopy-native instead of LazyCodex-style source dri
 
 test("plugin packages the Superloopy frontend skill with explicit activation and gates", async () => {
   const frontend = await readSkill("superloopy-frontend");
+  const web = await readFile("skills/superloopy-frontend/references/web.md", "utf8");
 
   assert.match(frontend.frontmatter, /^name: superloopy-frontend$/m);
   assert.match(frontend.frontmatter, /^description: Use only after explicit/m);
@@ -169,11 +214,22 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
   assert.match(frontend.content, /SUPERLOOPY FRONTEND ENABLED/);
   assert.match(frontend.content, /\/superloopy:superloopy-frontend/);
   assert.match(frontend.content, /DESIGN\.md/);
-  assert.match(frontend.content, /anti-slop/i);
-  assert.match(frontend.content, /real-browser visual evidence/i);
+  assert.match(frontend.content, /real rendered-surface evidence/i);
   assert.match(frontend.content, /VISUAL_QA\.md/);
   assert.match(frontend.content, /SUPERLOOPY_EVIDENCE/);
   assert.match(frontend.content, /\.superloopy\/evidence\/frontend/);
+  for (const name of ["web", "qt", "qt-widgets", "qt-quick", "qt-qa"]) {
+    assert.match(frontend.content, new RegExp(`\\]\\(references/${name}\\.md\\)`));
+  }
+
+  assert.match(web, /anti-slop/i);
+  assert.match(web, /real-browser visual evidence/i);
+  assert.match(web, /390.*768.*1280/s);
+  assert.match(web, /CSS variables/i);
+  assert.match(web, /ds-compliance\.mjs/);
+  assert.match(web, /Lighthouse/);
+  assert.match(web, /Completion checklist/i);
+  assert.match(web, /surface renders correctly in a real browser/i);
 
   const antiSlop = await readFile("skills/superloopy-frontend/references/anti-slop.md", "utf8");
   assert.match(antiSlop, /Pre-Flight checklist/i);

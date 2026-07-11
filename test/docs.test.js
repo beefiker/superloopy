@@ -155,6 +155,157 @@ test("README lists the packaged Superloopy skills and their jobs", async () => {
   assert.match(await readFile("README.ko.md", "utf8"), /guidance alias는 상태를 바꾸지 않습니다/);
 });
 
+test("frontend discovery rows publish routed web and Qt evidence", async () => {
+  const locales = [
+    {
+      file: "README.md",
+      invocation: "You explicitly invoke Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend` for a web frontend or Qt desktop GUI task, or start one with a leading `loopy`/`루피`. Non-web/non-Qt visual work and plain UI mentions do not activate it.",
+      webEvidence: /for web,.*browser evidence/i,
+      qtEvidence: /for Qt,.*native rendered-application evidence/i,
+      scopedPreflight: /for web, the anti-slop pre-flight[^|]*for Qt, the Qt pre-flight/i
+    },
+    {
+      file: "README.ko.md",
+      invocation: "웹 프런트엔드 또는 Qt 데스크톱 GUI 작업에 Codex의 `$superloopy:superloopy-frontend`나 Claude Code의 `/superloopy:superloopy-frontend`를 직접 호출하거나, 그런 작업을 선행 `loopy`/`루피`로 시작할 때. 웹/Qt 이외의 시각 작업과 단순한 UI 언급으로는 켜지지 않습니다.",
+      webEvidence: /웹.*브라우저.*근거/u,
+      qtEvidence: /Qt.*네이티브.*애플리케이션.*렌더링.*근거/u,
+      scopedPreflight: /웹은 anti-slop pre-flight[^|]*Qt는 Qt pre-flight/u
+    },
+    {
+      file: "README.ja.md",
+      invocation: "Web フロントエンドまたは Qt デスクトップ GUI の作業で Codex の `$superloopy:superloopy-frontend` または Claude Code の `/superloopy:superloopy-frontend` を明示的に呼び出すか、その作業を先頭の `loopy`/`루피` で始めるとき。Web/Qt 以外の視覚タスクや UI への単なる言及では起動しません。",
+      webEvidence: /Web.*ブラウザー.*証拠/u,
+      qtEvidence: /Qt.*ネイティブアプリ.*レンダリング.*証拠/u,
+      scopedPreflight: /Web は anti-slop の事前チェック[^|]*Qt は Qt の事前チェック/u
+    },
+    {
+      file: "README.zh-CN.md",
+      invocation: "为 Web 前端或 Qt 桌面 GUI 任务在 Codex 中显式调用 `$superloopy:superloopy-frontend`，或在 Claude Code 中调用 `/superloopy:superloopy-frontend`，也可用开头的 `loopy`/`루피` 启动此类任务。非 Web/Qt 可视化工作以及仅提到 UI 都不会激活它。",
+      webEvidence: /Web.*浏览器证据/u,
+      qtEvidence: /Qt.*原生应用渲染证据/u,
+      scopedPreflight: /Web 使用 anti-slop 预检[^|]*Qt 使用 Qt 预检/u
+    },
+    {
+      file: "README.es.md",
+      invocation: "Para una tarea de frontend web o GUI de escritorio Qt, invocas `$superloopy:superloopy-frontend` en Codex o `/superloopy:superloopy-frontend` en Claude Code, o inicias ese tipo de tarea con `loopy`/`루피` al principio. El trabajo visual que no sea web/Qt y la simple mención de UI no la activan.",
+      webEvidence: /para web,.*evidencia del navegador/i,
+      qtEvidence: /para Qt,.*aplicación nativa renderizada/i,
+      scopedPreflight: /para web, la comprobación anti-slop previa[^|]*para Qt, la comprobación previa de Qt/i
+    }
+  ];
+
+  for (const { file, invocation, webEvidence, qtEvidence, scopedPreflight } of locales) {
+    const content = await readFile(file, "utf8");
+    const row = content.split("\n").find((line) => line.startsWith("| `superloopy-frontend` |"));
+    assert.ok(row, `${file} is missing the superloopy-frontend row`);
+    const cells = row.split("|").map((cell) => cell.trim());
+    assert.equal(cells[2], invocation, `${file} must preserve its complete localized invocation cell`);
+    assert.match(row, /\$superloopy:superloopy-frontend/);
+    assert.match(row, /\/superloopy:superloopy-frontend/);
+    assert.match(row, /loopy.*루피/u);
+    assert.match(row, webEvidence);
+    assert.match(row, qtEvidence);
+    assert.match(row, scopedPreflight, `${file} must scope anti-slop to web and Qt pre-flight to Qt`);
+    assert.doesNotMatch(row, /for web[^|]*browser evidence for web|for Qt[^|]*evidence for Qt|para web[^|]*evidencia del navegador para web|para Qt[^|]*aplicación nativa renderizada para Qt/i);
+    assert.equal(row.match(/\$superloopy:superloopy-frontend/g)?.length, 1, `${file} must preserve the Codex invocation once`);
+    assert.equal(row.match(/\/superloopy:superloopy-frontend/g)?.length, 1, `${file} must preserve the Claude invocation once`);
+  }
+});
+
+test("English and Korean READMEs publish the runnable Qt Kanban demo", async () => {
+  const readmes = [
+    await readFile("README.md", "utf8"),
+    await readFile("README.ko.md", "utf8")
+  ];
+  const commands = [
+    "qt-cmake -S examples/qt-kanban -B build/qt-kanban -G Ninja -DCMAKE_BUILD_TYPE=Release",
+    "cmake --build build/qt-kanban --parallel",
+    "build/qt-kanban/src/app/qtkanban --window-size 1600x1000"
+  ];
+
+  for (const readme of readmes) {
+    assert.match(readme, /\]\(examples\/qt-kanban\/?\)/);
+    for (const command of commands) {
+      assert.ok(readme.includes(command), `README must publish: ${command}`);
+    }
+  }
+});
+
+test("frontend agent metadata keeps explicit activation and routed rendered evidence", async () => {
+  const agent = await readFile("skills/superloopy-frontend/agents/openai.yaml", "utf8");
+
+  assert.match(agent, /only for a web frontend or Qt desktop GUI task after explicit invocation or an explicit route from an active `loopy`\/`루피` task/iu);
+  assert.match(agent, /do not use it for non-web\/non-Qt visual deliverables/iu);
+  assert.match(agent, /real-browser rendered-surface evidence for web/i);
+  assert.match(agent, /native rendered-application evidence for Qt/i);
+  assert.doesNotMatch(agent, /auto-activat|when in doubt|plain UI mention|frontend vocabulary/i);
+});
+
+test("frontend audit inventories cover each routed reference and contract test once", async () => {
+  const designAudit = await readFile("docs/superloopy-design-audit.md", "utf8");
+  const fileAudit = await readFile("docs/superloopy-file-audit.md", "utf8");
+  const golden = await readFile("docs/superloopy-loop-golden-set.md", "utf8");
+  const routedFiles = [
+    {
+      path: "skills/superloopy-frontend/references/web.md",
+      fileProvenance: /original prose/iu,
+      goldenProvenance: /Original-prose contract/u
+    },
+    {
+      path: "skills/superloopy-frontend/references/qt.md",
+      fileProvenance: /original prose/iu,
+      goldenProvenance: /Original-prose contract/u,
+      officialSource: "https://doc.qt.io/qt-6/qguiapplication.html"
+    },
+    {
+      path: "skills/superloopy-frontend/references/qt-widgets.md",
+      fileProvenance: /original prose/iu,
+      goldenProvenance: /Original-prose contract/u,
+      officialSource: "https://doc.qt.io/qt-6/qstyle.html"
+    },
+    {
+      path: "skills/superloopy-frontend/references/qt-quick.md",
+      fileProvenance: /original prose/iu,
+      goldenProvenance: /Original-prose contract/u,
+      officialSource: "https://doc.qt.io/qt-6/qtquickcontrols-styles.html"
+    },
+    {
+      path: "skills/superloopy-frontend/references/qt-qa.md",
+      fileProvenance: /original prose/iu,
+      goldenProvenance: /Original-prose contract/u,
+      officialSource: "https://doc.qt.io/qt-6/qttest-best-practices.html"
+    },
+    {
+      path: "test/frontend-qt-contract.test.js",
+      fileProvenance: /Superloopy-native test/u,
+      goldenProvenance: /node --test test\/frontend-qt-contract\.test\.js/u
+    }
+  ];
+
+  const designRows = designAudit.split("\n").filter((line) => line.startsWith("| `frontend-quality-skill` |"));
+  assert.equal(designRows.length, 1, "frontend-quality-skill must have one exact design-audit row");
+  const designRow = designRows[0];
+
+  for (const { path, fileProvenance, goldenProvenance, officialSource } of routedFiles) {
+    assert.ok(designRow.includes(`\`${path}\``), `${path} must occur in the frontend-quality-skill decision row`);
+
+    const fileRows = fileAudit.split("\n").filter((line) => line.startsWith(`| \`${path}\` |`));
+    const goldenRows = golden.split("\n").filter((line) => line.startsWith(`| \`${path}\` |`));
+    assert.equal(fileRows.length, 1, `${path} must have one exact file-audit row`);
+    assert.equal(goldenRows.length, 1, `${path} must have one exact golden-set row`);
+    assert.match(fileRows[0], fileProvenance, `${path} file-audit row must state its provenance`);
+    assert.match(goldenRows[0], goldenProvenance, `${path} golden-set row must state its provenance`);
+
+    if (officialSource) {
+      assert.ok(fileRows[0].includes(officialSource), `${path} file-audit row must link its official Qt source`);
+      assert.ok(goldenRows[0].includes(officialSource), `${path} golden-set row must link its official Qt source`);
+    }
+  }
+
+  assert.match(designRow, /browser evidence for web.*native rendered-application evidence for Qt/iu);
+  assert.match(designRow, /original prose.*official Qt documentation/iu);
+});
+
 test("public docs describe loose prompt triggers as guidance-only", async () => {
   const readme = await readFile("README.md", "utf8");
   const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");

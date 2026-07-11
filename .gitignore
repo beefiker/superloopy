@@ -4,6 +4,9 @@ node_modules/
 .claude/scheduled_tasks.lock
 .wrangler/
 coverage/
+build/
+docs/superpowers/plans/
+docs/superpowers/specs/
 *.log
 .codex-marketplace-install.json
 site/.astro/
