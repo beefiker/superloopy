@@ -44,6 +44,19 @@ test("frontend skill routes web and Qt only after explicit activation", async ()
   assert.doesNotMatch(skill, /Auto-activate|When in doubt/i);
 });
 
+test("web route excludes Qt discovery and references", async () => {
+  const skill = await read(`${root}/SKILL.md`);
+  const routing = skill.match(/## Inspect and route\n[\s\S]*?(?=\n## )/)?.[0];
+  assert.ok(routing, "missing inspect-and-route contract");
+  const webRow = routing.split("\n").find((line) => line.startsWith("| web UI |"));
+  assert.equal(webRow, "| web UI | [`references/web.md`](references/web.md) |");
+  assert.match(routing, /For a Qt route, also resolve the minimum Qt version\./u);
+  assert.doesNotMatch(routing, /requested surface, existing stack, minimum Qt version/u);
+
+  const web = await read(reference("web"));
+  assert.doesNotMatch(web, /\b(?:QML|QStyle|QWidget|Qt Test|Qt Quick|Qt Widgets|qmllint)\b/iu);
+});
+
 test("web route preserves browser-only gates", async () => {
   const web = await read(reference("web"));
   for (const pattern of [/anti-slop/i, /390.*768.*1280/s, /ds-compliance\.mjs/, /Lighthouse/, /real browser/i]) {
