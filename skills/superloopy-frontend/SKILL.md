@@ -13,7 +13,7 @@ Open your reply with `SUPERLOOPY FRONTEND ENABLED`. If another active Superloopy
 
 ## Inspect and route
 
-Resolve the requested surface, existing stack, minimum Qt version, target platform, existing styling or tokens, and available validation. Ask one question only when a material ambiguity would change the route or result. Load the smallest route-specific set:
+Resolve the requested surface, existing stack, target platform, existing styling or tokens, and available validation. For a Qt route, also resolve the minimum Qt version. Ask one question only when a material ambiguity would change the route or result. Load the smallest route-specific set:
 
 | Requested surface | Load |
 | --- | --- |
