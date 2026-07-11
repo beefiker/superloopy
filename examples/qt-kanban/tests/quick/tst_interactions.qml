@@ -230,6 +230,42 @@ TestCase {
                    "review")
     }
 
+    function test_light_surface_controls_use_application_content_colors() {
+        const view = createView(1600)
+        const filter = findChild(view, "priorityFilter")
+        const details = findChild(view, "persistentDetailDrawer")
+        const moveControl = findChild(details, "moveToColumn")
+        const previousButton = findChild(details, "movePreviousButton")
+        const nextButton = findChild(details, "moveNextButton")
+        const dialog = findChild(view, "newTaskDialog")
+        const columnCombo = findChild(dialog, "newTaskColumn")
+        const priorityCombo = findChild(dialog, "newTaskPriority")
+        const cancelButton = findChild(dialog, "newTaskCancelButton")
+
+        verify(filter)
+        verify(moveControl)
+        verify(previousButton.enabled)
+        verify(nextButton.enabled)
+        verify(columnCombo)
+        verify(priorityCombo)
+        verify(cancelButton)
+
+        const lightControls = [filter, moveControl, columnCombo,
+                               priorityCombo, cancelButton,
+                               previousButton, nextButton]
+        for (const control of lightControls)
+            compare(control.palette.buttonText.toString(),
+                    Theme.ink.toString(), control.objectName)
+
+        const comboBoxes = [filter, moveControl, columnCombo, priorityCombo]
+        for (const comboBox of comboBoxes) {
+            compare(comboBox.palette.text.toString(), Theme.ink.toString(),
+                    comboBox.objectName)
+            compare(comboBox.palette.dark.toString(), Theme.ink.toString(),
+                    comboBox.objectName)
+        }
+    }
+
     function test_new_task_validates_blank_title_and_enter_creates() {
         failOnWarning(/Binding loop detected/)
         const view = createView(1300)

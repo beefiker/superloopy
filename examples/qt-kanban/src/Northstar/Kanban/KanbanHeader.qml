@@ -14,6 +14,16 @@ Control {
     rightPadding: Theme.space6
     topPadding: Theme.space4
     bottomPadding: Theme.space4
+    palette.window: Theme.surface
+    palette.windowText: Theme.ink
+    palette.base: Theme.surface
+    palette.text: Theme.ink
+    palette.button: Theme.surface
+    palette.buttonText: Theme.ink
+    palette.highlight: Theme.cobalt
+    palette.highlightedText: Theme.cobaltContent
+    palette.mid: Theme.borderStrong
+    palette.dark: Theme.ink
 
     background: Rectangle {
         color: Theme.surface
