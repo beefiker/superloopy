@@ -25,6 +25,9 @@ Load the *smallest* set that covers the request and state which you loaded in on
 - **A named brand or a mood** ("like Stripe", "premium", "dev-tool dark", "editorial") → `references/design/_INDEX.md`, then load the ONE matching brand teardown and let its tokens drive DESIGN.md. ~47 brands are bundled; for a brand not listed, extract it on-demand per `references/design-system.md`.
 - **Visually-important build (page/screen from intent)** → `references/image-first.md` (secure a visual target before coding, deep-analyze to a spec, then implement).
 - **Creating or extending a design system / tokens** → `references/design-system.md` (the 7-section DESIGN.md schema and how to author loopy-native brand token sets).
+- **An actual platform or organizational design-system contract** (an existing package, embedded host surface, explicit adoption request, or policy requirement) → `references/system-map.md` (preserve the stack, verify the maintained official implementation, and ask before adding a dependency). A merely Microsoft-like or GitHub-like mood stays on the named-brand route above.
+- **Scroll-driven or pointer-physics motion** (pin, scrub, stagger, parallax, magnetic hover) → `references/motion.md` (driver ownership, responsive measurement, reduced-motion-safe starting templates, and interactive browser proof).
+- **Redesigning a living site** → `references/redesign.md` (mode detection, before-state evidence, preservation rules, and risk-ordered modernization).
 - **Measuring quality (compliance + performance)** → `references/perfection.md` (the design-system compliance script + the real-browser Lighthouse protocol).
 
 Loading nothing produces generic slop; loading everything dilutes the signal. Load deliberately — at most one brand teardown at a time (they encode opposing systems).
@@ -45,6 +48,8 @@ Before generating, emit a one-line **Design Read**: `Reading this as: <page kind
 - `DESIGN_VARIANCE` (1-10): layout boldness. Above ~4, avoid the centered hero and symmetric three-card row.
 - `MOTION_INTENSITY` (1-10): if you claim motion, motion must be shown (implemented, not described).
 - `VISUAL_DENSITY` (1-10): low = generous whitespace; high = line separators, mono numerals, no cards.
+
+Dial guidance is heuristic, never authority. Explicit user intent wins first, then the existing interface and an approved visual target; audience, accessibility, performance, and platform constraints narrow the remaining choices. Do not assign fixed numeric presets from a page label such as “marketing,” “premium,” or “editorial.” Record the evidence behind each value in the Design Read, and lower motion whenever the scope cannot support verified implementation.
 
 ## Phase 2 — Build against the contract
 
