@@ -1,60 +1,82 @@
-# Official Design-System Map
+# Official Design-System Contract Map
 
-The brand teardowns in `references/design/` answer "what should this *look* like." This file answers the prior question: **does an official component package already own this look?** When a brief reads as one of the platforms below, hand-rolling its visual language is its own slop tell — the honest move is to install the official package and let it carry components, tokens, and accessibility, while DESIGN.md records what was adopted.
+Use this reference only when the work has an **actual platform contract**: the repository already depends on a system, the UI runs inside a host that requires one, the user explicitly requests adoption, or an organization or public-service policy names it. Visual resemblance is not a contract. “Microsoft-like,” “GitHub-like,” or “Material-inspired” without one of those signals stays on the brand/mood route.
 
-## Routing table (brief → official package)
+## Decision sequence
 
-| Brief reads as… | Reach for | Why |
+1. Inspect `package.json`, lockfiles, imports, component directories, and DESIGN.md. Preserve the existing stack and its working accessibility behavior.
+2. Identify the contract owner: existing dependency, embedded host, explicit user choice, or documented policy. Record that evidence in DESIGN.md.
+3. Verify the current official documentation, maintenance status, framework/version support, license, and migration guidance. Package recommendations drift.
+4. If the required package is missing, explain the impact and get **explicit approval before installing** it. Never run an install command merely because a brief resembles a brand.
+5. Keep **one primary appearance owner per surface**. Migration shells and low-level utilities may coexist behind explicit boundaries, but two competing component systems must not style the same subtree.
+6. Validate labels, semantics, keyboard behavior, focus, contrast, and application states locally. An official system provides primitives; it does not make the application accessible automatically.
+
+## Contract map
+
+| Verified contract | Maintained official route | Notes |
 | --- | --- | --- |
-| Microsoft-style / enterprise SaaS product UI | `@fluentui/react-components` (or `@fluentui/web-components`) | Official Fluent, Microsoft tokens, accessibility solved upstream |
-| Google-ish / Material-flavored product | `@material/web` + Material 3 tokens | Official, theme-able via Material Theming |
-| IBM-style B2B / enterprise analytics | `@carbon/react` + `@carbon/styles` | Official Carbon, mature data-density patterns |
-| Shopify admin surface | Polaris (`polaris.js` web components / Polaris React) | Required for Shopify app UI |
-| Atlassian / Jira-style product | `@atlaskit/*` + `@atlaskit/tokens` | Official Atlassian design system |
-| GitHub-style devtool or community page | `@primer/css`; `@primer/react-brand` for marketing | Official Primer; Brand variant covers marketing surfaces |
-| UK public-sector service | `govuk-frontend` | Regulatorily expected |
-| US public-sector / trust-first | `uswds` | Same |
-| Fast local-business / agency MVP | Bootstrap 5.3 | Boring, fast, works |
-| Accessible React foundation you theme yourself | `@radix-ui/themes` | Primitives plus a polished theme layer |
-| Modern SaaS where you own the components | shadcn/ui (`npx shadcn@latest add …`) | You own the code — but never ship its default state |
-| Indie / small-team modern SaaS or marketing | Tailwind v4 utilities | The default when no platform above applies |
+| Microsoft product surface or existing Fluent app | `@fluentui/react-components` or `@fluentui/web-components` | Choose the implementation matching the existing framework. |
+| Existing Material Web application | `@material/web` + Material 3 tokens | The official repository currently says **maintenance mode pending new maintainers**. Do not select it for new work without re-checking status and alternatives: https://github.com/material-components/material-web |
+| Framework-specific Material application | The maintained official implementation for that framework | Verify the framework route instead of assuming `@material/web` is the universal answer. |
+| IBM product or existing Carbon app | `@carbon/react` + `@carbon/styles` | Preserve Carbon tokens and data-density patterns already in use. |
+| Shopify admin/app surface | Polaris web components (`polaris.js`) | Follow the current surface-specific guidance: https://shopify.dev/docs/api/polaris/ |
+| Atlassian product or existing Atlaskit app | `@atlaskit/*` + `@atlaskit/tokens` | Install only the components the surface needs. |
+| GitHub product surface in an existing Primer React app | `@primer/react` | Use the official product UI components and preserve the app's current package/version. |
+| GitHub product surface using Primer CSS | `@primer/css` | Keep the CSS route when the project does not use Primer React. |
+| GitHub marketing or brand surface | `@primer/react-brand` | Use the brand package only for supported marketing work. “GitHub-like” styling alone is not enough to adopt Primer. |
+| GOV.UK service governed by GOV.UK guidance | `govuk-frontend` | Confirm the service standard and required supported versions. |
+| US federal surface governed by USWDS guidance | `uswds` | Confirm agency policy and project requirements. |
 
-## Honesty rules
+## Foundations are not platform contracts
 
-- **Official system exists → install the official package.** Do not recreate its CSS by hand; a hand-rolled Fluent lookalike is a simplified lookalike, exactly what zoro's drift review flags.
-- **Do not import a system's tokens and then override most of them.** If the brief demands that much deviation, the brief was not that system — pick the honest foundation instead.
-- **One system per project.** Never mix Fluent with Carbon, or shadcn/ui components inside a Material tree. This is the component-library instance of the anti-slop one-system lock.
-- **DESIGN.md still gates.** Record the adopted system and its theme values as the token source in DESIGN.md; custom-authored layers on top remain subject to the ds-compliance script and the anti-slop pre-flight.
+Bootstrap, Radix Themes, shadcn/ui, and Tailwind are possible foundations, not automatic answers to a visual adjective. Keep the repository’s current foundation unless the user approves a migration. In particular, shadcn/ui can use Tailwind and Radix/Base primitives internally; that is compatible layering, not multiple competing appearance owners.
 
-## When the brief is an aesthetic, not a system
+| Need after stack inspection | Candidate |
+| --- | --- |
+| Existing Bootstrap product or explicitly speed-first approved build | Bootstrap 5.3 |
+| Accessible React primitives with an owned theme | `@radix-ui/themes` or project-selected primitives |
+| Source-owned React components in an existing compatible stack | shadcn/ui |
+| Utilities in a project already using or explicitly adopting them | Tailwind |
 
-Glassmorphism, bento grids, brutalism, editorial/magazine, dark-tech terminal, aurora/mesh gradients, and kinetic typography have **no official package**. Build them with native CSS (plus the project's existing utility layer) and label the implementation honestly — borrowed inspiration is fine, pretending a trend is an official system is not.
+## Aesthetic directions
 
-- **Apple Liquid Glass is Apple-platform material.** There is no official `liquid-glass.css` for the web; a `backdrop-filter` + layered-border build is a *labeled approximation*, and it must ship a solid-fill fallback under `prefers-reduced-transparency`.
+Glassmorphism, bento grids, brutalism, editorial layouts, dark-tech terminals, aurora gradients, and kinetic typography have no official component package. Implement them with the existing styling layer and label borrowed inspiration honestly.
 
-## Install commands (reality anchors)
+Apple Liquid Glass is an Apple-platform material. A web build using `backdrop-filter`, layered borders, and highlights is a labeled approximation. Start with a readable solid fill, enhance only when transparency support is available, and honor `prefers-reduced-transparency` where the browser implements it; that experimental query cannot be the only fallback.
+
+## Commands are proposals, not authorization
+
+After approval, output only the command that matches the verified route and package manager. Re-check official setup instructions first; examples include:
 
 ```bash
-npm install @fluentui/react-components        # Fluent UI React (v9)
-npm install @material/web                     # Material Web (Material 3)
-npm install @carbon/react @carbon/styles      # IBM Carbon
-npm install @atlaskit/tokens                  # Atlassian (plus per-component packages)
-npm install @primer/css                       # GitHub Primer (product)
-npm install @primer/react-brand               # GitHub Primer (marketing)
-npm install govuk-frontend                    # GOV.UK Frontend
-npm install uswds                             # US Web Design System
-npm install bootstrap                         # Bootstrap 5.3
-npm install @radix-ui/themes                  # Radix Themes
-npx shadcn@latest init                        # shadcn/ui (then `add button card …`)
+npm install @fluentui/react-components
+npm install @carbon/react @carbon/styles
+npm install @atlaskit/tokens
+npm install @primer/react
+npm install @primer/css
+npm install @primer/react-brand
+npm install govuk-frontend
+npm install uswds
+npm install bootstrap
+npm install @radix-ui/themes
+npx shadcn@latest init
 ```
 
-Before importing any of these, check `package.json` first and output the install command when the package is missing — never assume a dependency exists. (These are project dependencies for the *user's* build; nothing here is ever added to Superloopy's own dependency-free `package.json`.)
+These are dependencies of the user’s project, never Superloopy itself. Do not add one without approval, and do not replace an existing equivalent merely to match this table.
 
-## Canonical documentation (consult before reinventing)
+## Primary documentation
 
-- Fluent: https://fluent2.microsoft.design/ · Material: https://m3.material.io/develop/web
-- Carbon: https://carbondesignsystem.com/ · Polaris: https://polaris-react.shopify.com/
-- Atlassian: https://atlassian.design/ · Primer: https://primer.style/
-- GOV.UK: https://design-system.service.gov.uk/ · USWDS: https://designsystem.digital.gov/
-- Radix Themes: https://www.radix-ui.com/themes/docs · shadcn/ui: https://ui.shadcn.com/docs
-- Apple materials (for the approximation caveat): https://developer.apple.com/design/human-interface-guidelines/materials
+- Fluent: https://fluent2.microsoft.design/
+- Material: https://m3.material.io/develop/web
+- Carbon: https://carbondesignsystem.com/
+- Polaris: https://shopify.dev/docs/api/polaris/
+- Atlassian: https://atlassian.design/
+- Primer product React: https://primer.style/product/getting-started/react/
+- Primer brand React: https://primer.style/brand/getting-started/esm/
+- GOV.UK: https://design-system.service.gov.uk/
+- USWDS: https://designsystem.digital.gov/
+- Radix Themes: https://www.radix-ui.com/themes/docs
+- shadcn/ui: https://ui.shadcn.com/docs
+- Apple materials: https://developer.apple.com/design/human-interface-guidelines/materials
+
+Selected contract-map ideas were adapted under MIT from Taste Skill; see `references/upstream-notice.md`.

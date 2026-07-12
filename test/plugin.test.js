@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import test from "node:test";
+
+import { resolveSpawnInvocation } from "../src/spawn-command.js";
 
 async function readSkill(name) {
   const path = `skills/${name}/SKILL.md`;
@@ -40,6 +43,51 @@ test("plugin manifest exposes Superloopy skills and packaged opt-in hooks", asyn
   assert.equal(sessionStart.hooks.SessionStart[0].hooks[0].timeout, 30);
   const consolidated = JSON.parse(await readFile("hooks/hooks.json", "utf8"));
   assert.equal(consolidated.hooks.SessionStart[0].hooks[0].timeout, 30);
+});
+
+test("plugin interface assets resolve inside the npm package", async () => {
+  const plugin = JSON.parse(await readFile(".codex-plugin/plugin.json", "utf8"));
+  const assetPaths = [plugin.interface.composerIcon, plugin.interface.logo];
+
+  assert.equal(new Set(assetPaths).size, 1, "composerIcon and logo must use one canonical asset");
+  for (const assetPath of assetPaths) {
+    assert.match(assetPath, /^\.\/[a-z0-9_./-]+\.svg$/iu);
+    assert.doesNotMatch(assetPath, /(?:^|\/)\.\.(?:\/|$)/u);
+    assert.equal(existsSync(assetPath), true, `missing plugin interface asset: ${assetPath}`);
+  }
+
+  const packArgs = ["pack", "--dry-run", "--json", "--ignore-scripts"];
+  assert.deepEqual(resolveSpawnInvocation("npm", packArgs, "win32"), {
+    command: "cmd.exe",
+    args: ["/d", "/s", "/c", "npm.cmd", ...packArgs]
+  });
+  const invocation = resolveSpawnInvocation("npm", packArgs);
+  const packed = spawnSync(invocation.command, invocation.args, {
+    encoding: "utf8"
+  });
+  assert.equal(packed.status, 0, packed.stderr || packed.stdout);
+  const files = new Set(JSON.parse(packed.stdout)[0].files.map((file) => file.path));
+  assert.equal(files.has(assetPaths[0].replace(/^\.\//u, "")), true, "interface asset missing from npm pack");
+  for (const reference of ["motion.md", "redesign.md", "system-map.md", "upstream-notice.md"]) {
+    const path = `skills/superloopy-frontend/references/${reference}`;
+    assert.equal(files.has(path), true, `frontend reference missing from npm pack: ${path}`);
+  }
+});
+
+test("plugin audit docs describe convention discovery and current ignore scope", async () => {
+  const audit = await readFile("docs/superloopy-file-audit.md", "utf8");
+  const golden = await readFile("docs/superloopy-loop-golden-set.md", "utf8");
+  const auditClaudeRow = audit.split("\n").find((line) => line.startsWith("| `.claude-plugin/plugin.json` |"));
+  const goldenClaudeRow = golden.split("\n").find((line) => line.startsWith("| `.claude-plugin/plugin.json` |"));
+  const auditIgnoreRow = audit.split("\n").find((line) => line.startsWith("| `.gitignore` |"));
+  const goldenIgnoreRow = golden.split("\n").find((line) => line.startsWith("| `.gitignore` |"));
+
+  assert.match(auditClaudeRow, /metadata-only.*convention/i);
+  assert.match(goldenClaudeRow, /metadata-only.*convention/i);
+  assert.doesNotMatch(auditClaudeRow, /skills\/agents\/hooks entries/i);
+  assert.match(auditIgnoreRow, /Superpowers.*plan.*spec/i);
+  assert.match(auditIgnoreRow, /root `build\/`/i);
+  assert.match(goldenIgnoreRow, /`build\/`.*docs\/superpowers\/plans\/.*docs\/superpowers\/specs\//i);
 });
 
 test("package metadata names author and GitHub topics", async () => {
@@ -158,6 +206,7 @@ test("doctor skill stays Superloopy-native instead of LazyCodex-style source dri
 
 test("plugin packages the Superloopy frontend skill with explicit activation and gates", async () => {
   const frontend = await readSkill("superloopy-frontend");
+  const web = await readFile("skills/superloopy-frontend/references/web.md", "utf8");
 
   assert.match(frontend.frontmatter, /^name: superloopy-frontend$/m);
   assert.match(frontend.frontmatter, /^description: Use only after explicit/m);
@@ -169,11 +218,22 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
   assert.match(frontend.content, /SUPERLOOPY FRONTEND ENABLED/);
   assert.match(frontend.content, /\/superloopy:superloopy-frontend/);
   assert.match(frontend.content, /DESIGN\.md/);
-  assert.match(frontend.content, /anti-slop/i);
-  assert.match(frontend.content, /real-browser visual evidence/i);
+  assert.match(frontend.content, /real rendered-surface evidence/i);
   assert.match(frontend.content, /VISUAL_QA\.md/);
   assert.match(frontend.content, /SUPERLOOPY_EVIDENCE/);
   assert.match(frontend.content, /\.superloopy\/evidence\/frontend/);
+  for (const name of ["web", "qt", "qt-widgets", "qt-quick", "qt-qa"]) {
+    assert.match(frontend.content, new RegExp(`\\]\\(references/${name}\\.md\\)`));
+  }
+
+  assert.match(web, /anti-slop/i);
+  assert.match(web, /real-browser visual evidence/i);
+  assert.match(web, /390.*768.*1280/s);
+  assert.match(web, /CSS variables/i);
+  assert.match(web, /ds-compliance\.mjs/);
+  assert.match(web, /Lighthouse/);
+  assert.match(web, /Completion checklist/i);
+  assert.match(web, /surface renders correctly in a real browser/i);
 
   const antiSlop = await readFile("skills/superloopy-frontend/references/anti-slop.md", "utf8");
   assert.match(antiSlop, /Pre-Flight checklist/i);
@@ -191,41 +251,66 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
   assert.doesNotMatch(promptHook, /statusMessage/);
 });
 
-test("frontend skill routes system-map, motion, and redesign references with dial inference", async () => {
+test("web route lazily loads system, motion, and redesign context without widening Qt routing", async () => {
   const frontend = await readSkill("superloopy-frontend");
+  const web = await readFile("skills/superloopy-frontend/references/web.md", "utf8");
 
-  // Router: the three context references are lazily loadable, never inlined.
-  assert.match(frontend.content, /references\/system-map\.md/);
-  assert.match(frontend.content, /references\/motion\.md/);
-  assert.match(frontend.content, /references\/redesign\.md/);
-  assert.match(frontend.content, /one system per project/i);
+  for (const name of ["system-map", "motion", "redesign"]) {
+    assert.match(web, new RegExp(`references/${name}\\.md`));
+    assert.doesNotMatch(frontend.content, new RegExp(`references/${name}\\.md`));
+  }
+  assert.match(web, /dial guidance is heuristic/i);
+  assert.match(web, /user intent.*existing interface.*visual target/is);
+  assert.doesNotMatch(web, /marketing.*default.*MOTION.*6-8/is);
+});
 
-  // Phase 1: dial values trace to the Design Read via the inference table.
-  assert.match(frontend.content, /dial inference/i);
-  assert.match(frontend.content, /trust-first \/ public-sector \/ regulated/);
-
+test("system routing preserves the stack and requires approval before dependencies", async () => {
   const systemMap = await readFile("skills/superloopy-frontend/references/system-map.md", "utf8");
-  assert.match(systemMap, /official package/i);
-  assert.match(systemMap, /One system per project/);
-  assert.match(systemMap, /govuk-frontend/);
-  assert.match(systemMap, /labeled approximation|labeled as approximation/i);
-  assert.match(systemMap, /dependency-free `package\.json`/);
 
+  assert.match(systemMap, /actual platform contract/i);
+  assert.match(systemMap, /preserve the existing stack/i);
+  assert.match(systemMap, /explicit approval before installing/i);
+  assert.match(systemMap, /one primary appearance owner per surface/i);
+  assert.match(systemMap, /maintenance mode/i);
+  assert.match(systemMap, /shopify\.dev\/docs\/api\/polaris/);
+  assert.match(systemMap, /@primer\/react.*product UI/is);
+  assert.match(systemMap, /@primer\/react-brand.*marketing/is);
+  assert.doesNotMatch(systemMap, /accessibility solved upstream/i);
+  assert.doesNotMatch(systemMap, /one system per project/i);
+});
+
+test("motion templates recompute travel and retain static reduced-motion layouts", async () => {
   const motion = await readFile("skills/superloopy-frontend/references/motion.md", "utf8");
-  assert.match(motion, /window\.addEventListener\("scroll"/);
-  assert.match(motion, /useMotionValue/);
-  assert.match(motion, /start: "top top"/);
-  assert.match(motion, /useReducedMotion|prefers-reduced-motion/);
-  assert.match(motion, /ctx\.revert\(\)/);
-  assert.doesNotMatch(motion, /framer-motion"/); // imports come from motion/react, legacy alias only mentioned as such
+  const sticky = motion.match(/## Template 1[\s\S]*?(?=\n## Template 2)/u)?.[0] ?? "";
+  const horizontal = motion.match(/## Template 2[\s\S]*?(?=\n## Template 3)/u)?.[0] ?? "";
 
+  for (const template of [sticky, horizontal]) {
+    assert.match(template, /gsap\.matchMedia\(\)/);
+    assert.match(template, /prefers-reduced-motion: no-preference/);
+    assert.doesNotMatch(template, /useReducedMotion/);
+  }
+  assert.doesNotMatch(sticky, /sticky top-0/);
+  assert.match(horizontal, /clientWidth/);
+  assert.match(horizontal, /x:\s*\(\)\s*=>/);
+  assert.match(horizontal, /end:\s*\(\)\s*=>/);
+  assert.doesNotMatch(horizontal, /window\.innerWidth/);
+  assert.match(motion, /starting templates.*real-browser/is);
+});
+
+test("redesign evidence and Taste Skill provenance remain explicit", async () => {
   const redesign = await readFile("skills/superloopy-frontend/references/redesign.md", "utf8");
-  assert.match(redesign, /Greenfield/);
-  assert.match(redesign, /Preserve/);
-  assert.match(redesign, /Overhaul/);
-  assert.match(redesign, /REDESIGN_AUDIT\.md/);
-  assert.match(redesign, /Never change silently/i);
-  assert.match(redesign, /form field names or order/i);
+  const noticePath = "skills/superloopy-frontend/references/upstream-notice.md";
+  assert.equal(existsSync(noticePath), true, "missing packaged Taste Skill attribution notice");
+  const notice = await readFile(noticePath, "utf8");
+  const audit = await readFile("docs/superloopy-design-audit.md", "utf8");
+
+  assert.match(redesign, /unavailable.*unverified.*never guessed/is);
+  assert.match(redesign, /form field names.*field order.*analytics.*autofill/is);
+  assert.match(notice, /Leonxlnx\/taste-skill/);
+  assert.match(notice, /Copyright \(c\) 2026 Leonxlnx/);
+  assert.match(notice, /permission notice shall be included/i);
+  assert.match(audit, /frontend-context-routing.*adapted.*Taste Skill/is);
+  assert.doesNotMatch(audit, /frontend-context-routing.*All prose is independently authored/is);
 });
 
 test("clone skill preserves exact extraction pipeline and crew dispatch guardrails", async () => {
