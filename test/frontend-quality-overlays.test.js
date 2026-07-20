@@ -20,6 +20,8 @@ test("frontend quality overlays are claim-triggered and independent from target 
   assert.match(skill, /references\/layout\.md/u);
   assert.match(skill, /references\/motion-core\.md/u);
   assert.match(skill, /layout.*placement.*scroll.*overflow.*reflow.*adaptation/is);
+  assert.match(skill, /information hierarchy.*content exposure.*disclosure.*spatial presentation.*references\/layout\.md/is);
+  assert.match(skill, /behavioral-only.*label.*shared UX.*not.*layout/is);
   assert.match(skill, /motion.*transition.*gesture.*haptic/is);
   assert.match(skill, /smallest applicable union|smallest applicable set/iu);
   assert.ok(targetRows.every((line) => !/references\/(?:layout|motion-core)\.md/u.test(line)));
@@ -43,7 +45,12 @@ test("layout overlay defines proportional cross-platform spatial ownership witho
   assert.match(layout, /only.*affected.*(?:case|boundary)|unaffected.*N\/A/is);
   assert.match(layout, /semantic.*task context.*not.*exact.*(?:object|offset)/is);
   assert.match(layout, /target-derived.*change point/is);
+  assert.match(layout, /always visible.*summary.*on demand.*omitted/is);
+  assert.match(layout, /disclosure label.*predictable.*expanded state/is);
+  assert.match(layout, /collaps.*expand.*focus.*context.*state/is);
+  assert.match(layout, /actual target.*collapsed.*expanded.*affected bounds.*inputs/is);
   assert.doesNotMatch(layout, /320\s*\/\s*375\s*\/\s*768|1024\s*\/\s*1440/u);
+  assert.doesNotMatch(layout, /(?:exactly|at most|no more than) \d+ (?:items|controls)|universal whitespace|Web-only (?:accordion|drawer)/iu);
   assert.doesNotMatch(layout, /issue\s*#?28/iu);
 });
 
@@ -146,5 +153,20 @@ test("StyleGallery remains an independent research reference with bounded proven
   for (const path of [reference("layout"), reference("motion-core"), "test/frontend-quality-overlays.test.js"]) {
     assert.equal(fileAudit.split("\n").filter((line) => line.startsWith(`| \`${path}\` |`)).length, 1);
     assert.equal(golden.split("\n").filter((line) => line.startsWith(`| \`${path}\` |`)).length, 1);
+  }
+});
+
+test("audits assign resource, hierarchy, and exposure responsibilities to existing contracts", async () => {
+  const designAudit = await read("docs/superloopy-design-audit.md");
+  const fileAudit = await read("docs/superloopy-file-audit.md");
+  const golden = await read("docs/superloopy-loop-golden-set.md");
+  const row = (content, path) => content.split("\n").find((line) => line.startsWith(`| \`${path}\` |`)) ?? "";
+  assert.match(designAudit, /frontend-quality-skill.*resource identity.*reset provenance.*information hierarchy.*proportional disclosure/is);
+  for (const content of [fileAudit, golden]) {
+    assert.match(row(content, `${root}/SKILL.md`), /information hierarchy.*spatial disclosure/is);
+    assert.match(row(content, reference("ux")), /resource identity.*reset provenance.*proportional disclosure/is);
+    assert.match(row(content, reference("layout")), /exposure mode.*collapsed.*expanded/is);
+    assert.match(row(content, "test/frontend-ux-contract.test.js"), /resource identity.*reset.*information hierarchy/is);
+    assert.match(row(content, "test/frontend-quality-overlays.test.js"), /exposure.*audit responsibilit/is);
   }
 });

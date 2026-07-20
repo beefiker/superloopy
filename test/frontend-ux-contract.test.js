@@ -189,6 +189,19 @@ test("shared input and motion rules cover editable text, IME, and reduced motion
   assert.match(mobile, /reduced motion|animation scale/iu);
 });
 
+test("shared UX keeps resource identity and lifecycle transitions attributable", async () => {
+  const ux = await read(reference("ux"));
+  for (const pattern of [/lifecycle verbs?.*distinct semantic transitions?/is, /canonical resource.*working copy.*last[- ]saved.*active resource.*dirty.*pending.*visible.*attributable/is, /copy.*identity change.*disclos/is, /product contract.*portability.*stable logical identifier.*owned-root-relative locator/is, /absolute locator.*owner.*explicit reason.*relink.*recovery/is]) assert.match(ux, pattern);
+});
+test("shared UX distinguishes revert and reset provenance", async () => {
+  const ux = await read(reference("ux"));
+  for (const pattern of [/Revert.*current(?: or |\/)inherited defaults.*versioned factory defaults.*distinct.*baseline.*scope/is, /reset values.*read.*real owner.*not.*duplicated UI literals/is, /proof.*non-default.*inherited.*changed[- ]default.*dirty.*Undo.*save.*apply.*restart.*relocation.*applicable/is]) assert.match(ux, pattern);
+});
+test("shared UX gives each task-bearing region purpose and proportional disclosure", async () => {
+  const ux = await read(reference("ux"));
+  for (const pattern of [/task-bearing region.*affordance.*distinct user-recognizable.*job.*outcome.*decision.*information gain.*parent.*siblings/is, /redundant.*unsupported.*merge.*relabel.*truthful output.*omit/is, /task criticality.*frequency.*consequence.*urgency.*actionability/is, /essential state.*blockers.*errors.*recovery.*next action.*in context/is, /simultaneous.*dense.*comparison.*monitoring.*expert work.*requires/is, /Advanced.*More.*not.*mechanical.*ban/is]) assert.match(ux, pattern);
+});
+
 test("narrow nonvisual changes do not require design or visual artifacts", async () => {
   const ux = await read(reference("ux"));
   const web = await read(reference("web"));

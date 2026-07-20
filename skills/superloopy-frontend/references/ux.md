@@ -115,9 +115,21 @@ Separate application defaults, user preferences, system-owned preferences, docum
 
 Every durability claim names its boundary: same view, revisit, restart, process recreation, supported upgrade, device transfer, or durable account state. Do not turn a toolkit API into a promise about reinstall or cross-device survival. A migration is explicit, idempotent where required, and scoped to supported version, package, and distribution channel. Prove old-to-new behavior with representative stored data and failure recovery.
 
+## Resource identity, lifecycle, and reset provenance
+
+Map lifecycle verbs to distinct semantic transitions in the product model. For each displayed operation such as Save, Save As, Apply, Revert, or Reset, name its source state, destination identity, durable or runtime owner, and resulting dirty or pending state rather than assuming the label fixes the behavior. Keep the canonical resource, editable working copy, last-saved resource, active resource, and dirty or pending state visible and attributable whenever their difference changes the next action, loss risk, or runtime result. A copy or identity change discloses the resulting identity and whether the canonical, saved, or active resource changed.
+
+When the product contract requires portability, preserve a stable logical identifier or an owned-root-relative locator. An absolute locator remains valid when the actual platform, provider, or integration owner requires it; record the explicit reason and resolution boundary, then provide a relink or recovery path when it no longer resolves. A copy-based workflow remains valid when its identity and lifecycle effects are truthful.
+
+Revert, current/inherited defaults, and versioned factory defaults are distinct authoritative baselines with named scopes and owners. Reset values are read from the real owner when the operation runs, not from duplicated UI literals; describing a duplicate as authoritative does not transfer ownership. Proof covers non-default values, inherited and changed-default values, dirty state, Undo, save and apply, restart, and relocation only where each case is applicable; record an inapplicable case and reason instead of fabricating a transition.
+
 ## Information architecture, content, and recovery
 
 Information architecture (IA) uses stable grouping and terminology, a visible location, clear entry and exit, an evident next step, task-oriented labels, meaningful headings and links, and one clear primary action where the task has one. Remove duplicate commands whose semantic result and context are the same; distinguish commands whose owners or consequences differ.
+
+For every task-bearing region or affordance, name a distinct user-recognizable job, outcome, decision, or information gain relative to its parent and siblings. When that purpose is redundant or unsupported, merge it, relabel it, render it as truthful output, or omit it instead of retaining a control merely to make the surface look complete.
+
+Prioritize content by task criticality, frequency, consequence or urgency, and actionability. Keep essential state, blockers or errors, recovery, and the next action in context. Simultaneous dense presentation for comparison, monitoring, or expert work remains valid when the task requires concurrent visibility. Labels such as Advanced and More are not a mechanical ban or permission: their disclosed purpose, content, state, and consequence must remain predictable.
 
 When a product advertises the same job through multiple frontends, shells, skins, or platform clients, maintain a capability reachability matrix across those supported surfaces. Each material capability must be reachable on each surface where it applies, intentionally handed off through a clear transition with return path and preserved context/state, or marked not applicable with a concrete product or platform reason. Visual parity is not required, but a newer or alternate surface must not silently strand settings, recovery, account, or core-task capabilities that users are told it supports.
 
