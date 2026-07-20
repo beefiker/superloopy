@@ -68,7 +68,7 @@ The loop skill is the default guardrail. A complete leading `loopy` token starts
 
 ## Qt Kanban Demo
 
-The [Northstar Qt Kanban demo](examples/qt-kanban/) is a runnable Qt Quick acceptance fixture built through the `superloopy-frontend` Qt route. With Qt 6.11.1, CMake, and Ninja available, configure, build, and launch it from the repository root:
+The [Northstar Qt Kanban demo](examples/qt-kanban/) is a runnable Qt Quick prototype acceptance fixture built through the `superloopy-frontend` Qt route, not production-editor proof. Board, search, filters, cards, drawers, and task creation are exercised; Timeline and Inbox are visibly passive demo-only context, Settings and Help are absent, and persistence and Undo remain out of scope. With Qt 6.11.1, CMake, and Ninja available, configure, build, and launch it from the repository root:
 
 ```bash
 qt-cmake -S examples/qt-kanban -B build/qt-kanban -G Ninja -DCMAKE_BUILD_TYPE=Release

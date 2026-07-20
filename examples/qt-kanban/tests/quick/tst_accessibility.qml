@@ -75,11 +75,7 @@ TestCase {
     function test_icon_only_controls_are_named_and_decoration_is_ignored() {
         const view = createView(1000)
         const namedControls = [
-            ["boardButton", "Board"],
-            ["timelineButton", "Timeline"],
-            ["inboxButton", "Inbox"],
-            ["settingsButton", "Settings"],
-            ["helpButton", "Help"]
+            ["boardButton", "Board"]
         ]
 
         for (const definition of namedControls) {
@@ -154,17 +150,26 @@ TestCase {
         verify(accessibilityProbe.selected(second))
     }
 
-    function test_unavailable_destination_announces_polite_status() {
+    function test_demo_context_is_static_and_does_not_announce_success() {
         const view = createView()
-        const timeline = findChild(view, "timelineButton")
-        verify(timeline)
+        const demoItems = [
+            [findChild(view, "timelineDemoItem"), "Timeline — demo only"],
+            [findChild(view, "inboxDemoItem"), "Inbox — demo only"]
+        ]
 
-        timeline.clicked()
-        tryCompare(accessibilityProbe, "announcementCount", 1)
-        compare(accessibilityProbe.lastAnnouncement,
-                "Timeline is not available in this demo")
-        compare(accessibilityProbe.lastPoliteness,
-                accessibilityProbe.politePoliteness)
+        for (const definition of demoItems) {
+            const item = definition[0]
+            verify(item)
+            compare(accessibilityProbe.name(item), definition[1])
+            verify(accessibilityProbe.role(item)
+                   !== accessibilityProbe.buttonRole)
+            verify(!accessibilityProbe.hasPressAction(item))
+            verify(!accessibilityProbe.press(item))
+        }
+
+        compare(accessibilityProbe.announcementCount, 0)
+        compare(findChild(view, "settingsButton"), null)
+        compare(findChild(view, "helpButton"), null)
     }
 
     function test_blank_task_title_announces_assertive_validation() {

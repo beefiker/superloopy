@@ -626,7 +626,6 @@ TestCase {
         tryVerify(function() { return start.activeFocus })
 
         const forwardOwners = [
-            "timelineButton", "inboxButton", "settingsButton", "helpButton",
             "searchField", "priorityFilter", "newTaskButton",
             "taskCard-task-define-goals",
             "taskCard-task-audience-research",

@@ -218,6 +218,27 @@ test("English and Korean READMEs publish the runnable Qt Kanban demo", async () 
   }
 });
 
+test("Qt Kanban docs publish the prototype acceptance boundary", async () => {
+  const design = await readFile("examples/qt-kanban/DESIGN.md", "utf8");
+  const english = await readFile("README.md", "utf8");
+  const korean = await readFile("README.ko.md", "utf8");
+  const audit = await readFile("docs/superloopy-file-audit.md", "utf8");
+  const golden = await readFile("docs/superloopy-loop-golden-set.md", "utf8");
+
+  assert.match(design, /prototype acceptance fixture.*not production-editor proof/is);
+  assert.match(design, /Timeline.*Inbox.*passive.*demo-only/is);
+  assert.match(design, /Settings.*Help.*absent/is);
+  assert.match(design, /persistence.*Undo.*out of scope/is);
+  assert.match(english, /prototype acceptance fixture.*not production-editor proof/is);
+  assert.match(english, /persistence.*Undo.*out of scope/is);
+  assert.match(korean, /프로토타입 인수 검증 픽스처.*프로덕션 편집기.*증명하지/is);
+  assert.match(korean, /영속성.*Undo.*범위 밖/is);
+  assert.match(audit, /Sidebar\.qml.*passive demo-only Timeline\/Inbox/is);
+  assert.match(golden, /Sidebar\.qml.*passive demo-only Timeline\/Inbox/is);
+  assert.doesNotMatch(audit, /assets\/icons\/(?:help|settings)\.svg/u);
+  assert.doesNotMatch(golden, /assets\/icons\/(?:help|settings)\.svg/u);
+});
+
 test("frontend agent metadata keeps explicit screen-based routing and claim-shaped evidence", async () => {
   const agent = await readFile("skills/superloopy-frontend/agents/openai.yaml", "utf8");
 

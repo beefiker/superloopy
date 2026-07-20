@@ -4,6 +4,10 @@
 
 Cool-paper planning desk. Dense information remains breathable through hairline structure, precise alignment, and tonal separation. Cobalt marks selection and action; coral and green are semantic only. No gradients, glow, glass, oversized pills, or decorative shadows.
 
+## Acceptance Boundary
+
+This is a prototype acceptance fixture, not production-editor proof. Board is the only sidebar destination and remains fully functional. Timeline and Inbox are passive demo-only context with static-text accessibility semantics; they do not accept pointer, keyboard, shortcut, or accessibility press actions and do not announce success. Settings and Help are absent because this fixture has no meaningful implementation for them. Persistence and Undo remain out of scope: task mutations live only in the deterministic in-memory store and must not be presented as surviving an application restart.
+
 ## Color
 
 | Token | Value | Role |
@@ -61,13 +65,13 @@ At 1560 px and wider, show the 224 px sidebar and persistent 300 px detail drawe
 
 ## Components and States
 
-- Sidebar: workspace identity, Board/Timeline/Inbox navigation, team initials, settings, and help. Only Board is functional; other entries show a restrained status message and make a polite accessibility announcement.
+- Sidebar: workspace identity, functional Board navigation, passive demo-only Timeline/Inbox context, and team initials. The passive entries remain visible but are not buttons, focus stops, or destinations.
 - Header: board title, date range, search, priority filter, collaborators, and cobalt New task action.
 - Column: title, store-derived count, fixed full-width stage accent, drop target, task stack, and Add task affordance. The accent communicates workflow stage, never fake progress.
 - Card: variable-height title/content, priority, due date, comments/checklist, assignee initials, selected outline, keyboard focus, and drag state. Cards, columns, header controls, drawer, and dialog expose stable `objectName` values for tests.
 - Detail drawer: selected task title, status, assignee, due date, checklist, activity, and close action.
 - New task dialog: title, column, priority, default Create action, cancel action, contained focus, and assertively announced validation.
-- Icon family: local monochrome SVGs at 16 and 20 px, 1.75 px stroke, round caps/joins, and consistent optical bounds. Controls tint icons from Theme tokens and expose accessible names. Do not mix Unicode symbol icons, emoji, or unrelated icon styles.
+- Icon family: local monochrome SVGs at 16 and 20 px, 1.75 px stroke, round caps/joins, and consistent optical bounds. Interactive controls tint icons from Theme tokens and expose accessible names; passive demo icons are decorative children of one named static-text item. Do not mix Unicode symbol icons, emoji, or unrelated icon styles.
 
 Every interactive control implements normal, hover where available, pressed, keyboard-focus, disabled, and selected/checked states as applicable. Primary actions use `primaryHover` and `primaryPressed`; `focus` is reserved for keyboard focus. Focus and selection are distinct: selection uses the cobalt outline; keyboard focus adds an outer `focus` ring with a 2 px gap inside a reserved clipping-safe gutter, while the dark sidebar uses `sidebarFocus` for at least 3:1 non-text contrast. State precedence is disabled, drag, keyboard focus, selected, pressed, hover, normal. Custom card interaction exposes accessible button semantics, selectable/selected state, and Enter/Space activation. Decorative avatar and initial glyphs are ignored by accessibility because equivalent names already belong to their controls or card descriptions.
 

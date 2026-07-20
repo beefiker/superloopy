@@ -8,7 +8,6 @@ Control {
     id: root
 
     property bool compact: false
-    signal unavailableDestinationRequested(string message)
 
     padding: Theme.space3
 
@@ -48,6 +47,95 @@ Control {
                                    : Theme.clear
             border.color: action.visualFocus ? Theme.sidebarFocus : Theme.clear
             border.width: action.visualFocus ? 2 : 0
+        }
+    }
+
+    component PassiveDemoItem: Item {
+        id: demoItem
+
+        required property string title
+        required property url iconSource
+        readonly property string demoOnlyLabel: qsTr("Demo only")
+        readonly property string accessibleLabel: qsTr("%1 — demo only").arg(title)
+
+        implicitWidth: root.compact ? 48 : wideContent.implicitWidth + 2 * Theme.space3
+        implicitHeight: root.compact ? 48 : 42
+        Layout.minimumWidth: 0
+        activeFocusOnTab: false
+        Accessible.role: Accessible.StaticText
+        Accessible.name: accessibleLabel
+
+        RowLayout {
+            id: wideContent
+
+            anchors.fill: parent
+            anchors.leftMargin: Theme.space3
+            anchors.rightMargin: Theme.space3
+            visible: !root.compact
+            spacing: Theme.space3
+
+            Image {
+                Layout.preferredWidth: 20
+                Layout.preferredHeight: 20
+                source: demoItem.iconSource
+                sourceSize.width: 20
+                sourceSize.height: 20
+                opacity: 0.72
+                Accessible.ignored: true
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 0
+
+                Label {
+                    Layout.fillWidth: true
+                    text: demoItem.title
+                    color: Theme.sidebarText
+                    font.pixelSize: Theme.bodyFontPixelSize
+                    font.weight: Theme.bodyFontWeight
+                    elide: Text.ElideRight
+                    Accessible.ignored: true
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    text: demoItem.demoOnlyLabel
+                    color: Theme.sidebarMutedText
+                    font.pixelSize: Theme.metaFontPixelSize
+                    font.weight: Theme.metaFontWeight
+                    elide: Text.ElideRight
+                    Accessible.ignored: true
+                }
+            }
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            visible: root.compact
+            spacing: 0
+
+            Image {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: 20
+                Layout.preferredHeight: 20
+                source: demoItem.iconSource
+                sourceSize.width: 20
+                sourceSize.height: 20
+                opacity: 0.72
+                Accessible.ignored: true
+            }
+
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Demo")
+                color: Theme.sidebarMutedText
+                font.pixelSize: Theme.metaFontPixelSize
+                font.weight: Theme.metaFontWeight
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                Accessible.ignored: true
+            }
         }
     }
 
@@ -107,22 +195,18 @@ Control {
             selected: true
         }
 
-        SidebarAction {
-            objectName: "timelineButton"
+        PassiveDemoItem {
+            objectName: "timelineDemoItem"
             Layout.fillWidth: true
-            text: qsTr("Timeline")
-            icon.source: Qt.resolvedUrl("assets/icons/timeline.svg")
-            onClicked: root.unavailableDestinationRequested(
-                           qsTr("Timeline is not available in this demo"))
+            title: qsTr("Timeline")
+            iconSource: Qt.resolvedUrl("assets/icons/timeline.svg")
         }
 
-        SidebarAction {
-            objectName: "inboxButton"
+        PassiveDemoItem {
+            objectName: "inboxDemoItem"
             Layout.fillWidth: true
-            text: qsTr("Inbox")
-            icon.source: Qt.resolvedUrl("assets/icons/inbox.svg")
-            onClicked: root.unavailableDestinationRequested(
-                           qsTr("Inbox is not available in this demo"))
+            title: qsTr("Inbox")
+            iconSource: Qt.resolvedUrl("assets/icons/inbox.svg")
         }
 
         Item {
@@ -177,22 +261,5 @@ Control {
             }
         }
 
-        SidebarAction {
-            objectName: "settingsButton"
-            Layout.fillWidth: true
-            text: qsTr("Settings")
-            icon.source: Qt.resolvedUrl("assets/icons/settings.svg")
-            onClicked: root.unavailableDestinationRequested(
-                           qsTr("Settings are not available in this demo"))
-        }
-
-        SidebarAction {
-            objectName: "helpButton"
-            Layout.fillWidth: true
-            text: qsTr("Help")
-            icon.source: Qt.resolvedUrl("assets/icons/help.svg")
-            onClicked: root.unavailableDestinationRequested(
-                           qsTr("Help is not available in this demo"))
-        }
     }
 }
