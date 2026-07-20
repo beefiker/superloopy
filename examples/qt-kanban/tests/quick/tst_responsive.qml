@@ -125,6 +125,33 @@ TestCase {
         }
     }
 
+    function test_compact_demo_items_render_distinct_titles_and_status() {
+        const view = createTemporaryObject(
+                       viewComponent,
+                       testCase.Window.window.contentItem,
+                       { "width": 1000 })
+        verify(view)
+        waitForRendering(view)
+
+        const definitions = [
+            ["timelineCompactTitle", "timelineCompactStatus", "Timeline"],
+            ["inboxCompactTitle", "inboxCompactStatus", "Inbox"]
+        ]
+
+        for (const definition of definitions) {
+            const title = findChild(view, definition[0])
+            const status = findChild(view, definition[1])
+            verify(title, definition[0] + " must be rendered")
+            verify(status, definition[1] + " must be rendered")
+            verify(title.visible, definition[0] + " must be visible")
+            verify(status.visible, definition[1] + " must be visible")
+            compare(title.text, definition[2])
+            compare(status.text, "Demo only")
+            verify(!title.truncated,
+                   definition[0] + " must show its full distinct title")
+        }
+    }
+
     function test_board_navigation_exposes_current_checked_state() {
         const view = createView(1000)
         const boardButton = findChild(view, "boardButton")

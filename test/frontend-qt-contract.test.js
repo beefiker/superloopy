@@ -161,8 +161,18 @@ test("Qt Quick Kanban exposes one real sidebar destination and passive demo cont
   const sidebar = await read("examples/qt-kanban/src/Northstar/Kanban/Sidebar.qml");
   const view = await read("examples/qt-kanban/src/Northstar/Kanban/KanbanView.qml");
   const module = await read("examples/qt-kanban/src/Northstar/Kanban/CMakeLists.txt");
+  const passive = sidebar.match(
+    /    component PassiveDemoItem:\s*Item \{[\s\S]*?(?=\n    contentItem:)/u,
+  )?.[0];
 
-  assert.match(sidebar, /component PassiveDemoItem:\s*Item/u);
+  assert.ok(passive, "missing PassiveDemoItem component");
+  assert.match(passive, /objectName:\s*demoItem\.compactObjectPrefix \+ "CompactTitle"/u);
+  assert.match(passive, /objectName:\s*demoItem\.compactObjectPrefix \+ "CompactStatus"/u);
+  assert.doesNotMatch(
+    passive,
+    /\b(?:AbstractButton|Button|MouseArea|PointerHandler|TapHandler|HoverHandler|DragHandler|WheelHandler|Shortcut)\b|(?:Keys\.)?on(?:Clicked|DoubleClicked|Tapped|Pressed|Released|Activated|Triggered|ShortcutOverride)\s*:/u,
+    "passive demo context must not acquire an action path",
+  );
   assert.match(
     sidebar,
     /objectName:\s*"boardButton"[\s\S]*?text:\s*qsTr\("Board"\)[\s\S]*?selected:\s*true/u,
