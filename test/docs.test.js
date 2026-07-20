@@ -229,12 +229,27 @@ test("Qt Kanban docs publish the prototype acceptance boundary", async () => {
   assert.match(design, /Timeline.*Inbox.*passive.*demo-only/is);
   assert.match(design, /Settings.*Help.*absent/is);
   assert.match(design, /persistence.*Undo.*out of scope/is);
+  assert.match(
+    design,
+    /Board.*return to Board overview.*clear.*selected task.*detail.*close.*overlay.*Board.*focus/is,
+  );
   assert.match(english, /prototype acceptance fixture.*not production-editor proof/is);
   assert.match(english, /persistence.*Undo.*out of scope/is);
   assert.match(korean, /프로토타입 인수 검증 픽스처.*프로덕션 편집기.*증명하지/is);
   assert.match(korean, /영속성.*Undo.*범위 밖/is);
   assert.match(audit, /Sidebar\.qml.*passive demo-only Timeline\/Inbox/is);
   assert.match(golden, /Sidebar\.qml.*passive demo-only Timeline\/Inbox/is);
+  assert.match(
+    golden,
+    /KanbanView\.qml.*Board.*clear.*selection.*close.*overlay.*focus/is,
+  );
+  for (const icon of ["inbox", "timeline"]) {
+    const row = audit.split("\n").find((line) =>
+      line.startsWith(`| \`examples/qt-kanban/src/Northstar/Kanban/assets/icons/${icon}.svg\` |`));
+    assert.ok(row, `missing ${icon} icon audit row`);
+    assert.match(row, /passive demo-context asset/i);
+    assert.doesNotMatch(row, /navigation asset/i);
+  }
   assert.doesNotMatch(audit, /assets\/icons\/(?:help|settings)\.svg/u);
   assert.doesNotMatch(golden, /assets\/icons\/(?:help|settings)\.svg/u);
 });

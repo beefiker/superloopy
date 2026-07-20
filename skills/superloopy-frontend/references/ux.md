@@ -38,7 +38,8 @@ For early design, record semantic intent and intended owner. Before production p
 - An enabled production affordance performs its advertised semantic outcome. Calling a handler, showing a toast or spinner, or reaching a mock adapter is not completion.
 - A real failed operation is honest only when it avoids false success, reports the resulting state, and offers a recovery or next step.
 - Simulated prototype capabilities may be enabled and coherent, but they cannot satisfy production or native acceptance until reclassified and proved against the real owner.
-- Deferred work is normally omitted. A stable top-level information architecture may keep an honestly unavailable destination only when product or platform convention makes that location meaningful.
+- A deferred future capability is normally omitted and has no operable affordance. Its availability is `N/A`, an applicability marker and not a third availability value, and its verification remains `unverified`.
+- A stable top-level information architecture may retain an honestly unavailable signpost when product or platform convention makes that location meaningful. Record and render that signpost as a separate passive output capability with `production` fidelity and `enabled` availability, then classify its evidence independently as `proven` or `unverified`. It is never the deferred navigation affordance itself and must not be a button, link, or focus action.
 - A temporarily unavailable state requires a real prerequisite, an accessible reason, and a useful next step. It is not a placeholder for permanently missing work.
 - Decoration has no action, focus stop, interactive role, or misleading hover/pressed treatment.
 - An editable-looking control must support edit, validate, commit, and cancel behavior. A permanent read-only value appears as output or is clearly read-only in appearance and semantics.

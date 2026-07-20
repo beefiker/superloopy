@@ -37,6 +37,16 @@ Item {
         newTaskDialog.openFrom(invoker)
     }
 
+    function returnToBoardOverview(invoker) {
+        TaskStore.clearSelection()
+        if (overlayDetailDrawer.opened) {
+            overlayDetailDrawer.boardReturnInvoker = invoker
+            overlayDetailDrawer.close()
+            return
+        }
+        restoreFocus(invoker)
+    }
+
     onDrawerPersistentChanged: {
         if (drawerPersistent && overlayDetailDrawer.opened)
             overlayDetailDrawer.close()
@@ -58,6 +68,7 @@ Item {
             Layout.minimumWidth: root.sidebarWidth
             Layout.maximumWidth: root.sidebarWidth
             Layout.fillHeight: true
+            onBoardRequested: invoker => root.returnToBoardOverview(invoker)
         }
 
         ColumnLayout {
@@ -113,6 +124,7 @@ Item {
         objectName: "overlayDetailDrawer"
         property Item invokingItem: null
         property string invokingTaskId: ""
+        property Item boardReturnInvoker: null
 
         parent: Overlay.overlay
         edge: root.rightToLeft ? Qt.LeftEdge : Qt.RightEdge
@@ -153,9 +165,15 @@ Item {
         onClosed: {
             const item = invokingItem
             const taskId = invokingTaskId
+            const boardInvoker = boardReturnInvoker
             invokingItem = null
             invokingTaskId = ""
+            boardReturnInvoker = null
             Qt.callLater(function() {
+                if (boardInvoker) {
+                    boardInvoker.forceActiveFocus(Qt.TabFocusReason)
+                    return
+                }
                 if (taskId.length > 0 && boardView.focusTask(taskId))
                     return
                 if (item) {

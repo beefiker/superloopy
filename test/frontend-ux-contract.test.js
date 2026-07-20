@@ -114,6 +114,14 @@ test("shared UX contract scales ceremony and keeps capability claims truthful", 
   assert.match(ux, /failed operation.*resulting state.*recovery/is);
   assert.match(ux, /simulated.*cannot.*production.*native acceptance/is);
   assert.match(ux, /deferred.*normally omitted.*stable top-level.*honestly unavailable/is);
+  assert.match(
+    ux,
+    /deferred future capability.*no operable affordance.*availability.*N\/A.*applicability marker.*not a third availability value.*verification.*unverified/is,
+  );
+  assert.match(
+    ux,
+    /stable top-level.*signpost.*separate passive output capability.*production.*enabled.*independently.*proven.*unverified.*never.*deferred navigation affordance.*button.*link.*focus action/is,
+  );
   assert.match(ux, /temporarily unavailable.*prerequisite.*accessible reason.*next step/is);
   assert.match(ux, /editable-looking.*edit.*validate.*commit.*cancel/is);
   assert.match(ux, /read-only.*output.*clearly read-only/is);

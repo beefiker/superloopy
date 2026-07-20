@@ -178,6 +178,22 @@ test("Qt Quick Kanban exposes one real sidebar destination and passive demo cont
     /objectName:\s*"boardButton"[\s\S]*?text:\s*qsTr\("Board"\)[\s\S]*?selected:\s*true/u,
     "Board must remain the real selected navigation action",
   );
+  assert.match(sidebar, /signal boardRequested\(Item invoker\)/u);
+  assert.match(
+    sidebar,
+    /id:\s*boardButton[\s\S]*?onClicked:\s*root\.boardRequested\(boardButton\)/u,
+    "Board must emit its real sidebar action",
+  );
+  assert.match(
+    view,
+    /function returnToBoardOverview\(invoker\)[\s\S]*?TaskStore\.clearSelection\(\)[\s\S]*?overlayDetailDrawer[\s\S]*?close\(\)[\s\S]*?restoreFocus/su,
+    "Board command must clear detail state, close overlays, and restore focus",
+  );
+  assert.match(
+    view,
+    /onBoardRequested:\s*invoker\s*=>\s*root\.returnToBoardOverview\(invoker\)/u,
+    "KanbanView must handle the real Sidebar Board signal",
+  );
   assert.match(
     sidebar,
     /objectName:\s*"timelineDemoItem"[\s\S]*?title:\s*qsTr\("Timeline"\)/u,
