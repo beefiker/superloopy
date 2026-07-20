@@ -14,6 +14,7 @@ Item {
     required property string title
     required property color accent
     property var dragCoordinator: null
+    property var focusAdjacentControl: null
     property var visibleTasks: []
     readonly property int visibleCount: visibleTasks.length
 
@@ -24,6 +25,7 @@ Item {
 
         required property var modelData
         property var dragCoordinator: null
+        property var focusAdjacentControl: null
         readonly property string delegateTaskId: modelData.id
 
         signal activated(string taskId, Item invoker)
@@ -43,6 +45,7 @@ Item {
             width: cardDelegate.width - Theme.focusGutter * 2
             taskId: cardDelegate.modelData.id
             dragCoordinator: cardDelegate.dragCoordinator
+            focusAdjacentControl: cardDelegate.focusAdjacentControl
             onActivated: (taskId, invoker) =>
                          cardDelegate.activated(taskId, invoker)
         }
@@ -88,6 +91,12 @@ Item {
             }
         }
         return false
+    }
+
+    function focusAddTask() {
+        revealDelegate(addTaskButton)
+        addTaskButton.forceActiveFocus(Qt.TabFocusReason)
+        return addTaskButton.activeFocus
     }
 
     onColumnIdChanged: refreshVisibleTasks()
@@ -193,6 +202,7 @@ Item {
                     delegate: CardDelegate {
                         width: cardScroll.availableWidth
                         dragCoordinator: root.dragCoordinator
+                        focusAdjacentControl: root.focusAdjacentControl
                         onActivated: (activatedTaskId, invoker) => {
                             TaskStore.selectTask(activatedTaskId)
                             root.taskActivated(activatedTaskId, invoker)
@@ -210,6 +220,16 @@ Item {
                     font.pixelSize: Theme.bodyFontPixelSize
                     font.weight: Theme.labelFontWeight
                     onClicked: root.addTaskRequested(root.columnId, addTaskButton)
+                    Keys.onTabPressed: event => {
+                        event.accepted = root.focusAdjacentControl
+                                         && root.focusAdjacentControl(
+                                             addTaskButton.objectName, 1)
+                    }
+                    Keys.onBacktabPressed: event => {
+                        event.accepted = root.focusAdjacentControl
+                                         && root.focusAdjacentControl(
+                                             addTaskButton.objectName, -1)
+                    }
 
                     contentItem: Label {
                         text: addTaskButton.text

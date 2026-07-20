@@ -6,7 +6,7 @@ Use this after the shared UX contract for native, custom, or hybrid desktop UI. 
 
 Keep system or platform chrome as the default. Custom chrome is a platform integration project, not a visual upgrade:
 
-- Windows transfers caption hit testing, resize, snap, system menu, accessibility, high contrast, and window-state responsibilities to the application when it customizes the frame.
+- Windows supported titlebar customization may extend content into the titlebar while system caption buttons are retained; record which hit-test regions and drag behavior the application owns and which caption, snap, accessibility, and window-state behavior remains system-owned. A fully custom non-client frame transfers caption hit testing, resize, snap, system menu, caption-button semantics, accessibility, high contrast, and window-state responsibilities to the application.
 - GNOME commonly uses application-owned header bars and client-side decoration, but the supported compositor and session still determine behavior.
 - KDE commonly leaves decoration to the compositor; do not copy GNOME ownership assumptions.
 - Apple APIs may customize supported titlebar regions while retaining native window behavior. Preserve traffic-light controls, full screen, tabs, accessibility, and system interaction.
@@ -21,6 +21,6 @@ Handle bootstrap and dependency failures before the main surface depends on them
 
 ## Desktop evidence
 
-Prove the packaged lifecycle on each claimed target: install or unpack, first run, permission prompts, core journey, restart, supported update, and recovery. Exercise supported mouse, keyboard, IME, screen reader, scaling, high-contrast/theme, and multi-window paths according to risk. Inspect the native accessibility tree and packaged lifecycle; browser screenshots or offscreen widget renders cannot substitute for either.
+Keep a **minimum regression floor** on each changed target: configure/build or package as applicable, launch, the affected core journey, and its closest regression path. Add install or unpack, first run, permission prompts, restart, supported update, and recovery only when that lifecycle is affected, explicitly claimed, release-critical, or selected by risk. Exercise supported mouse, keyboard, IME, screen reader, scaling, high-contrast/theme, and multi-window paths according to the same risk model. Inspect the native accessibility tree and packaged lifecycle when those claims apply; browser screenshots or offscreen widget renders cannot substitute for either.
 
 For custom chrome, capture real native behavior for move, resize, snap/tile, maximize, minimize, close, full screen, system menu, focus, and accessibility on the named OS/session. Mark unsupported environments explicitly instead of presenting one universal desktop checklist.

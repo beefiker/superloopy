@@ -1,4 +1,7 @@
 interface:
   display_name: "Superloopy Frontend"
-  short_description: "Explicit screen-based application UI routing"
-  default_prompt: "Use Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend` only after explicit invocation or an explicit route from an active leading `loopy`/`루피` screen-based application-UI task. Route supported public Web, desktop, mobile/tablet, embedded/hybrid, Qt, custom-rendered, and mixed targets through shared UX plus applicable platform/composition contracts; plain UI/platform/framework vocabulary must remain inert. Exclude TV, wearable, XR, game UI, TUI, non-interactive visual deliverables, and backend/API/data/infrastructure work. Require claim-shaped public-browser, native target/shell, renderer, and independent mixed-target evidence."
+  short_description: "Explicit cross-platform application UI workflow"
+  default_prompt: "Use `$superloopy:superloopy-frontend` only after explicit invocation for browser-hosted or interactive content-led Web, desktop, mobile/tablet, embedded/hybrid, Qt, custom-rendered, or mixed application UI; exclude TV, wearable, XR, automotive, game UI, TUI, static media/document artifacts, and non-UI work, and require proportional evidence per owner and target."
+
+policy:
+  allow_implicit_invocation: false

@@ -9,7 +9,10 @@ Item {
     objectName: "kanbanView"
 
     property bool rightToLeft: Qt.locale().textDirection === Qt.RightToLeft
+    readonly property bool compactSidebarFitsText:
+        Theme.baseFontPixelSize <= 13 && !sidebar.requiresWideLayout
     readonly property int sidebarWidth: width < Theme.compactSidebarBreakpoint
+                                        && compactSidebarFitsText
                                         ? Theme.sidebarCompact : Theme.sidebarWide
     readonly property bool drawerPersistent: width >= Theme.persistentDrawerBreakpoint
     readonly property bool drawerOverlay: !drawerPersistent
@@ -38,13 +41,16 @@ Item {
     }
 
     function returnToBoardOverview(invoker) {
-        TaskStore.clearSelection()
         if (overlayDetailDrawer.opened) {
-            overlayDetailDrawer.boardReturnInvoker = invoker
+            overlayDetailDrawer.returnFocusToBoard = true
             overlayDetailDrawer.close()
             return
         }
-        restoreFocus(invoker)
+        TaskStore.clearSelection()
+        if (invoker)
+            restoreFocus(invoker)
+        else
+            sidebar.focusBoard()
     }
 
     onDrawerPersistentChanged: {
@@ -62,6 +68,7 @@ Item {
         spacing: 0
 
         Sidebar {
+            id: sidebar
             objectName: "sidebar"
             compact: root.sidebarWidth === Theme.sidebarCompact
             Layout.preferredWidth: root.sidebarWidth
@@ -81,6 +88,12 @@ Item {
                 id: kanbanHeader
                 objectName: "kanbanHeader"
                 Layout.fillWidth: true
+                focusNextControl: function() {
+                    return boardView.focusFirstTask()
+                }
+                focusPreviousControl: function() {
+                    return sidebar.focusBoard()
+                }
                 onNewTaskRequested: invoker =>
                                     root.openNewTask("backlog", invoker)
             }
@@ -89,6 +102,13 @@ Item {
                 id: boardView
                 objectName: "boardView"
                 rightToLeft: root.rightToLeft
+                focusBeforeTasks: function() {
+                    return kanbanHeader.focusNewTask()
+                }
+                focusAfterTasks: function() {
+                    return root.drawerPersistent
+                           ? persistentDetailDrawer.focusFirst() : false
+                }
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 onTaskActivated: (taskId, invoker) => {
@@ -114,6 +134,9 @@ Item {
                 objectName: "persistentDetailDrawer"
                 anchors.fill: parent
                 closeVisible: true
+                focusPreviousControl: function() {
+                    return boardView.focusLastControl()
+                }
                 onCloseRequested: TaskStore.clearSelection()
             }
         }
@@ -124,7 +147,7 @@ Item {
         objectName: "overlayDetailDrawer"
         property Item invokingItem: null
         property string invokingTaskId: ""
-        property Item boardReturnInvoker: null
+        property bool returnFocusToBoard: false
 
         parent: Overlay.overlay
         edge: root.rightToLeft ? Qt.LeftEdge : Qt.RightEdge
@@ -165,13 +188,15 @@ Item {
         onClosed: {
             const item = invokingItem
             const taskId = invokingTaskId
-            const boardInvoker = boardReturnInvoker
+            const shouldReturnToBoard = returnFocusToBoard
             invokingItem = null
             invokingTaskId = ""
-            boardReturnInvoker = null
+            returnFocusToBoard = false
+            if (shouldReturnToBoard)
+                TaskStore.clearSelection()
             Qt.callLater(function() {
-                if (boardInvoker) {
-                    boardInvoker.forceActiveFocus(Qt.TabFocusReason)
+                if (shouldReturnToBoard) {
+                    sidebar.focusBoard()
                     return
                 }
                 if (taskId.length > 0 && boardView.focusTask(taskId))
@@ -200,6 +225,8 @@ Item {
             closeVisible: true
             trapFocus: true
             onCloseRequested: overlayDetailDrawer.close()
+            onBoardOverviewRequested: invoker =>
+                                      root.returnToBoardOverview(invoker)
         }
     }
 
