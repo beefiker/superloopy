@@ -68,7 +68,7 @@ test("plugin interface assets resolve inside the npm package", async () => {
   assert.equal(packed.status, 0, packed.stderr || packed.stdout);
   const files = new Set(JSON.parse(packed.stdout)[0].files.map((file) => file.path));
   assert.equal(files.has(assetPaths[0].replace(/^\.\//u, "")), true, "interface asset missing from npm pack");
-  for (const reference of ["motion.md", "redesign.md", "system-map.md", "upstream-notice.md"]) {
+  for (const reference of ["desktop.md", "hybrid.md", "mobile.md", "motion.md", "redesign.md", "renderer.md", "system-map.md", "upstream-notice.md", "ux.md"]) {
     const path = `skills/superloopy-frontend/references/${reference}`;
     assert.equal(files.has(path), true, `frontend reference missing from npm pack: ${path}`);
   }
@@ -222,7 +222,7 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
   assert.match(frontend.content, /VISUAL_QA\.md/);
   assert.match(frontend.content, /SUPERLOOPY_EVIDENCE/);
   assert.match(frontend.content, /\.superloopy\/evidence\/frontend/);
-  for (const name of ["web", "qt", "qt-widgets", "qt-quick", "qt-qa"]) {
+  for (const name of ["ux", "desktop", "mobile", "hybrid", "renderer", "web", "qt", "qt-widgets", "qt-quick", "qt-qa"]) {
     assert.match(frontend.content, new RegExp(`\\]\\(references/${name}\\.md\\)`));
   }
 
