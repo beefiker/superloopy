@@ -176,6 +176,43 @@ test("desktop, mobile, hybrid, and renderer references own distinct proof", asyn
   assert.match(renderer, /screenshot.*pixel similarity.*not.*promotion|not.*promot.*screenshot.*pixel similarity/is);
 });
 
+test("web delivery classes keep browser, renderer, and shell proof separate", async () => {
+  const web = await read(reference("web"));
+  const publicDom = web.match(/### Public DOM\/document Web[\s\S]*?(?=\n### )/u)?.[0] ?? "";
+  const publicCanvas = web.match(/### Public canvas\/custom-rendered Web[\s\S]*?(?=\n### )/u)?.[0] ?? "";
+  const embedded = web.match(/### Embedded client Web[\s\S]*?(?=\n## )/u)?.[0] ?? "";
+
+  assert.match(web, /classify.*deployed surface.*before.*Web checklist/is);
+
+  assert.match(publicDom, /production build.*real browser/is);
+  assert.match(publicDom, /interaction.*responsive.*390.*768.*1280/is);
+  assert.match(publicDom, /accessibility.*performance/is);
+  assert.match(publicDom, /SEO.*crawlable public surface/is);
+
+  assert.match(publicCanvas, /references\/renderer\.md/u);
+  assert.match(publicCanvas, /semantics.*accessibility.*text.*input/is);
+  assert.match(publicCanvas, /crawlability.*separately prove/is);
+  assert.match(publicCanvas, /canvas screenshot.*insufficient/is);
+
+  assert.match(embedded, /references\/(?:desktop|mobile)\.md.*references\/hybrid\.md/is);
+  assert.match(embedded, /shell proof.*ownership.*lifecycle.*permissions.*accessibility.*menus.*windowing.*packaging/is);
+  assert.match(embedded, /client proof.*cannot substitute.*shell proof/is);
+});
+
+test("web perfection applies SEO only to separately deployed crawlable public surfaces", async () => {
+  const web = await read(reference("web"));
+  const perfection = await read(reference("perfection"));
+
+  for (const contract of [web, perfection]) {
+    assert.match(contract, /SEO.*separately deployed crawlable public surface/is);
+    assert.match(contract, /HTML\/CSS.*WebView.*canvas.*embedded browser engine.*(?:does not|never).*SEO/is);
+  }
+
+  assert.match(perfection, /Lighthouse.*categor(?:y|ies).*deployed surface/is);
+  assert.match(perfection, /SEO.*N\/A.*reason.*no.*crawlable public surface/is);
+  assert.match(perfection, /performance.*accessibility.*best practices.*applicable/is);
+});
+
 test("new UX references and contract test are inventoried as original Superloopy work", async () => {
   const designAudit = await read("docs/superloopy-design-audit.md");
   const fileAudit = await read("docs/superloopy-file-audit.md");

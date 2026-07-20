@@ -17,18 +17,38 @@ A page is done only when both hold:
 
 A beautiful page that ships a broken layout has failed; a fast page that looks like a template has failed. Both win or neither does.
 
+## Delivery classes and proof ownership
+
+Classify the deployed surface before selecting a Web checklist. Web implementation technology does not decide who owns semantics, native behavior, packaging, or crawlability.
+
+### Public DOM/document Web
+
+Load this Web route with the shared UX contract. Validate the production build in a real browser: interaction and responsive behavior at 390 / 768 / 1280 px, the browser accessibility tree, and performance on the deployed surface. Include SEO evidence only when this is a separately deployed crawlable public surface; otherwise record SEO as not applicable with the reason.
+
+### Public canvas/custom-rendered Web
+
+Also load `references/renderer.md`. Separately prove semantics, accessibility, text and input behavior, focus/selection/IME, scaling, and performance through the renderer that owns them. Treat crawlability as a capability to separately prove for the deployed public surface. A canvas screenshot is insufficient evidence for behavior, semantics, text input, or crawlability.
+
+### Embedded client Web
+
+Load the applicable `references/desktop.md` or `references/mobile.md`, then `references/hybrid.md`. Browser-side client evidence covers only the client. Require shell proof for native ownership, lifecycle, permissions, accessibility, menus, windowing, and packaging on the actual target; client proof cannot substitute for shell proof.
+
+SEO applies only to a separately deployed crawlable public surface. HTML/CSS, WebView, canvas, or an embedded browser engine never makes SEO applicable by itself.
+
 ## Reference loading
 
 Load the *smallest* set that covers the request and state which you loaded in one sentence:
 
 - **Always, for web UI work** → `references/anti-slop.md` (named-default bans, countable rules, consistency locks, the pre-flight checklist).
+- **Public canvas/custom-rendered Web** → `references/renderer.md` in addition to this route; keep semantic, text/input, performance, and crawlability proof with the renderer owner.
+- **Embedded client Web** → the applicable `references/desktop.md` or `references/mobile.md`, plus `references/hybrid.md`; keep native-shell proof separate from client proof.
 - **A named brand or a mood** ("like Stripe", "premium", "dev-tool dark", "editorial") → `references/design/_INDEX.md`, then load the ONE matching brand teardown and let its tokens drive DESIGN.md. ~47 brands are bundled; for a brand not listed, extract it on-demand per `references/design-system.md`.
 - **Visually-important build (page/screen from intent)** → `references/image-first.md` (secure a visual target before coding, deep-analyze to a spec, then implement).
 - **Creating or extending a design system / tokens** → `references/design-system.md` (the 7-section DESIGN.md schema and how to author loopy-native brand token sets).
 - **An actual platform or organizational design-system contract** (an existing package, embedded host surface, explicit adoption request, or policy requirement) → `references/system-map.md` (preserve the stack, verify the maintained official implementation, and ask before adding a dependency). A merely Microsoft-like or GitHub-like mood stays on the named-brand route above.
 - **Scroll-driven or pointer-physics motion** (pin, scrub, stagger, parallax, magnetic hover) → `references/motion.md` (driver ownership, responsive measurement, reduced-motion-safe starting templates, and interactive browser proof).
 - **Redesigning a living site** → `references/redesign.md` (mode detection, before-state evidence, preservation rules, and risk-ordered modernization).
-- **Measuring quality (compliance + performance)** → `references/perfection.md` (the design-system compliance script + the real-browser Lighthouse protocol).
+- **Measuring quality (tokens + deployed quality)** → `references/perfection.md` (the partial color/spacing token lint plus surface-selected Lighthouse categories).
 
 Loading nothing produces generic slop; loading everything dilutes the signal. Load deliberately — at most one brand teardown at a time (they encode opposing systems).
 
@@ -68,7 +88,7 @@ Role routing is not guaranteed, so judge each lane by delivered evidence, not th
 
 ## Phase 3 — Visual-QA evidence gate
 
-For any served web-app implementation or validation plan, explicitly name the production build, design compliance, real-browser state capture at 390 / 768 / 1280 px, and Lighthouse gates; include React Doctor only when the repository uses React.
+For any served web-app implementation or validation plan, explicitly name the production build, design compliance scope (only the partial color/spacing token lint), real-browser state capture at 390 / 768 / 1280 px, and applicable Lighthouse categories; include React Doctor only when the repository uses React. For an embedded client, capture the client in its production-equivalent engine and add the independently owned shell proof from the delivery-class contract above.
 
 A build that compiles is not verified. Before declaring done, capture real-browser evidence and write `VISUAL_QA.md` under the evidence root:
 
@@ -82,12 +102,12 @@ This is the frontend instance of Superloopy's evidence gate: a "looks done" clai
 
 ## Phase 4 — Measured quality gate
 
-Make quality objective, not subjective (`references/perfection.md`). Two layers, both producing evidence:
+Make quality objective, not subjective (`references/perfection.md`). Two layers produce evidence for different claims:
 
-- **Design System Compliance (runnable, no deps)** — `superloopy loop prove -- node skills/superloopy-frontend/scripts/ds-compliance.mjs DESIGN.md <built files…>`. Exits non-zero on undeclared hex or off-scale spacing. This is the part loopy hard-gates itself.
-- **Lighthouse (real browser)** — via `npx` against a production build (never the CLI headless-shell or dev server), high floor across performance/accessibility/best-practices/SEO, mobile + desktop, median of 3-5 runs; for React, `npx react-doctor`. Record a `PERF.md` artifact. Never weaken UX to win the number (see the anti-gaming list).
+- **Partial color/spacing token lint (runnable, no deps)** — `superloopy loop prove -- node skills/superloopy-frontend/scripts/ds-compliance.mjs DESIGN.md <built files…>`. `ds-compliance.mjs` is the compatibility filename. It exits non-zero on undeclared hex or off-scale spacing, but makes no claim about typography, components, semantics, accessibility, or overall system adoption.
+- **Lighthouse (real browser, when applicable)** — use `npx` against a production build (never the CLI headless-shell or dev server), select performance/accessibility/best-practices and SEO categories by deployed surface, run mobile + desktop where representative, and take the median of 3-5 runs. Include SEO only for a separately deployed crawlable public surface. For React, use `npx react-doctor` only when the repository uses React. Record a `PERF.md` artifact and never weaken UX to win the number.
 
-Scale Phase 4 to the project: always run Layer 1; run Lighthouse when the deliverable is a real, served app.
+Scale Phase 4 to the claims: run the token lint on applicable built source, then use Lighthouse only where its production-browser measurements represent the deployed surface. Record a reason for every omitted category or substituted target-native check.
 
 ## Evidence contract
 
@@ -99,6 +119,10 @@ Scale Phase 4 to the project: always run Layer 1; run Lighthouse when the delive
 
 - A DESIGN.md token contract exists and every written value traces to it.
 - The anti-slop pre-flight passed with no unticked box.
-- The surface renders correctly in a real browser at 390/768/1280 with all states handled.
+- The delivery class is named, and evidence is attributable to each browser, renderer, client, and shell owner in scope.
+- For public DOM/document Web, the surface renders correctly in a real browser from a production build at 390/768/1280 with interactions, states, accessibility, and performance checked.
+- Public canvas/custom-rendered Web has renderer evidence for semantics, text/input, accessibility, performance, and separately assessed crawlability.
+- Embedded client Web has production-equivalent client evidence plus actual-target shell evidence for lifecycle, native services, accessibility, window/menu behavior, and packaging.
+- SEO is proven for a separately deployed crawlable public surface or recorded as N/A with a reason.
 - No UX was weakened to pass a check.
 - `VISUAL_QA.md` exists and the final Superloopy evidence record points at it.

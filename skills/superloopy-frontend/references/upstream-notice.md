@@ -1,11 +1,11 @@
 # Taste Skill Upstream Notice
 
-Selected dial-inference, design-system selection, motion-template, and redesign-audit mechanisms in this frontend skill were adapted from `Leonxlnx/taste-skill`.
+Selected dial-inference, design-system selection, motion-template, and redesign-audit mechanisms in the optional adapted Web references were adapted from `Leonxlnx/taste-skill`.
 
 - Source repository: https://github.com/Leonxlnx/taste-skill
 - Source file at adaptation time: `skills/taste-skill/SKILL.md`
 - Source license: MIT, copyright 2026 Leonxlnx
-- Superloopy boundary: the Web/Qt router, evidence gates, dependency-approval rule, corrected responsive/reduced-motion templates, and audit integration are maintained here. No upstream runtime dependency is installed.
+- Superloopy boundary: the shared UX, platform, and composition router is Superloopy-native, as are its cross-platform evidence ownership rules. The optional adapted Web references retain their attribution here; Superloopy maintains the evidence gates, dependency-approval rule, corrected responsive/reduced-motion templates, and audit integration. No upstream runtime dependency is installed.
 
 The upstream copyright and permission notice is retained below because substantial tables and code-template mechanisms were adapted.
 
