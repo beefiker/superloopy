@@ -55,6 +55,7 @@ Control {
 
         required property string title
         required property url iconSource
+        required property string compactObjectPrefix
         readonly property string demoOnlyLabel: qsTr("Demo only")
         readonly property string accessibleLabel: qsTr("%1 — demo only").arg(title)
 
@@ -117,23 +118,38 @@ Control {
 
             Image {
                 Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: 20
-                Layout.preferredHeight: 20
+                Layout.preferredWidth: 16
+                Layout.preferredHeight: 16
                 source: demoItem.iconSource
-                sourceSize.width: 20
-                sourceSize.height: 20
+                sourceSize.width: 16
+                sourceSize.height: 16
                 opacity: 0.72
                 Accessible.ignored: true
             }
 
-            Label {
+            Text {
+                objectName: demoItem.compactObjectPrefix + "CompactTitle"
                 Layout.fillWidth: true
-                text: qsTr("Demo")
+                text: demoItem.title
+                color: Theme.sidebarText
+                font.pixelSize: Theme.metaFontPixelSize
+                font.weight: Theme.sectionFontWeight
+                fontSizeMode: Text.HorizontalFit
+                minimumPixelSize: Theme.metaFontPixelSize * 8 / 11
+                horizontalAlignment: Text.AlignHCenter
+                Accessible.ignored: true
+            }
+
+            Text {
+                objectName: demoItem.compactObjectPrefix + "CompactStatus"
+                Layout.fillWidth: true
+                text: demoItem.demoOnlyLabel
                 color: Theme.sidebarMutedText
                 font.pixelSize: Theme.metaFontPixelSize
                 font.weight: Theme.metaFontWeight
+                fontSizeMode: Text.HorizontalFit
+                minimumPixelSize: Theme.metaFontPixelSize * 8 / 11
                 horizontalAlignment: Text.AlignHCenter
-                elide: Text.ElideRight
                 Accessible.ignored: true
             }
         }
@@ -200,6 +216,7 @@ Control {
             Layout.fillWidth: true
             title: qsTr("Timeline")
             iconSource: Qt.resolvedUrl("assets/icons/timeline.svg")
+            compactObjectPrefix: "timeline"
         }
 
         PassiveDemoItem {
@@ -207,6 +224,7 @@ Control {
             Layout.fillWidth: true
             title: qsTr("Inbox")
             iconSource: Qt.resolvedUrl("assets/icons/inbox.svg")
+            compactObjectPrefix: "inbox"
         }
 
         Item {
