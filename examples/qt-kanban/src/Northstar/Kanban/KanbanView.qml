@@ -18,12 +18,6 @@ Item {
     LayoutMirroring.enabled: rightToLeft
     LayoutMirroring.childrenInherit: true
 
-    function showStatus(message) {
-        statusToast.text = message
-        statusToast.Accessible.announce(message, Accessible.Polite)
-        statusTimer.restart()
-    }
-
     function restoreFocus(item) {
         if (!item)
             return
@@ -64,7 +58,6 @@ Item {
             Layout.minimumWidth: root.sidebarWidth
             Layout.maximumWidth: root.sidebarWidth
             Layout.fillHeight: true
-            onUnavailableDestinationRequested: message => root.showStatus(message)
         }
 
         ColumnLayout {
@@ -208,30 +201,4 @@ Item {
         onActivated: TaskStore.moveSelectedAdjacent(root.rightToLeft ? -1 : 1)
     }
 
-    Label {
-        id: statusToast
-        objectName: "statusToast"
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: Theme.space5
-        z: 10
-        visible: text.length > 0
-        padding: Theme.space3
-        color: Theme.sidebarText
-        font.pixelSize: Theme.labelFontPixelSize
-        font.weight: Theme.labelFontWeight
-
-        background: Rectangle {
-            color: Theme.sidebarActive
-            radius: Theme.controlRadius
-            border.color: Theme.borderStrong
-            border.width: Theme.borderWidth
-        }
-    }
-
-    Timer {
-        id: statusTimer
-        interval: 2400
-        onTriggered: statusToast.text = ""
-    }
 }

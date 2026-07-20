@@ -157,6 +157,38 @@ test("Qt Quick Kanban component colors come from Theme tokens", async () => {
   );
 });
 
+test("Qt Quick Kanban exposes one real sidebar destination and passive demo context", async () => {
+  const sidebar = await read("examples/qt-kanban/src/Northstar/Kanban/Sidebar.qml");
+  const view = await read("examples/qt-kanban/src/Northstar/Kanban/KanbanView.qml");
+  const module = await read("examples/qt-kanban/src/Northstar/Kanban/CMakeLists.txt");
+
+  assert.match(sidebar, /component PassiveDemoItem:\s*Item/u);
+  assert.match(
+    sidebar,
+    /objectName:\s*"boardButton"[\s\S]*?text:\s*qsTr\("Board"\)[\s\S]*?selected:\s*true/u,
+    "Board must remain the real selected navigation action",
+  );
+  assert.match(
+    sidebar,
+    /objectName:\s*"timelineDemoItem"[\s\S]*?title:\s*qsTr\("Timeline"\)/u,
+  );
+  assert.match(
+    sidebar,
+    /objectName:\s*"inboxDemoItem"[\s\S]*?title:\s*qsTr\("Inbox"\)/u,
+  );
+  assert.match(sidebar, /demoOnlyLabel:\s*qsTr\("Demo only"\)/u);
+  assert.match(sidebar, /Accessible\.role:\s*Accessible\.StaticText/u);
+  assert.doesNotMatch(
+    sidebar,
+    /unavailableDestinationRequested|timelineButton|inboxButton|settingsButton|helpButton|not available in this demo/u,
+  );
+  assert.doesNotMatch(
+    view,
+    /showStatus|statusToast|statusTimer|onUnavailableDestinationRequested/u,
+  );
+  assert.doesNotMatch(module, /assets\/icons\/(?:settings|help)\.svg/u);
+});
+
 test("Qt Quick accessibility probe cannot chain its own update handler", async () => {
   const harness = await read("examples/qt-kanban/tests/quick/tst_qtkanban.cpp");
   assert.match(

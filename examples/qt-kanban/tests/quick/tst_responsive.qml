@@ -110,11 +110,9 @@ TestCase {
 
         const content = [
             findChild(view, "boardButton"),
-            findChild(view, "timelineButton"),
-            findChild(view, "inboxButton"),
-            findChild(view, "teamCluster"),
-            findChild(view, "settingsButton"),
-            findChild(view, "helpButton")
+            findChild(view, "timelineDemoItem"),
+            findChild(view, "inboxDemoItem"),
+            findChild(view, "teamCluster")
         ]
 
         for (const item of content) {
@@ -130,17 +128,11 @@ TestCase {
     function test_board_navigation_exposes_current_checked_state() {
         const view = createView(1000)
         const boardButton = findChild(view, "boardButton")
-        const timelineButton = findChild(view, "timelineButton")
         verify(boardButton)
-        verify(timelineButton)
 
         verify(boardButton.checkable)
         verify(boardButton.checked)
         compare(boardButton.palette.brightText.toString(),
-                Theme.sidebarText.toString())
-        verify(!timelineButton.checkable)
-        verify(!timelineButton.checked)
-        compare(timelineButton.palette.buttonText.toString(),
                 Theme.sidebarText.toString())
 
         boardButton.forceActiveFocus(Qt.TabFocusReason)
@@ -148,20 +140,28 @@ TestCase {
         compare(boardButton.background.border.color, Theme.sidebarFocus)
     }
 
-    function test_sidebar_unavailable_destinations_share_one_status_surface() {
+    function test_sidebar_demo_context_is_visible_and_passive() {
         const view = createView(1300)
-        const timeline = findChild(view, "timelineButton")
-        const inbox = findChild(view, "inboxButton")
-        const status = findChild(view, "statusToast")
-        verify(timeline)
-        verify(inbox)
-        verify(status)
+        const demoItems = [
+            [findChild(view, "timelineDemoItem"), "Timeline"],
+            [findChild(view, "inboxDemoItem"), "Inbox"]
+        ]
 
-        timeline.clicked()
-        compare(status.text, "Timeline is not available in this demo")
+        for (const definition of demoItems) {
+            const item = definition[0]
+            verify(item)
+            verify(item.width > 0 && item.height > 0,
+                   item.objectName + " must retain visible layout space")
+            verify(item.opacity > 0,
+                   item.objectName + " must not hide its demo context")
+            compare(item.title, definition[1])
+            compare(item.demoOnlyLabel, "Demo only")
+            verify(!item.activeFocusOnTab)
+        }
 
-        inbox.clicked()
-        compare(status.text, "Inbox is not available in this demo")
+        compare(findChild(view, "settingsButton"), null)
+        compare(findChild(view, "helpButton"), null)
+        compare(findChild(view, "statusToast"), null)
     }
 
     function test_rtl_mirrors_shell_columns_and_directional_controls() {
