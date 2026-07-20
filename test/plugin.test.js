@@ -251,6 +251,24 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
   assert.doesNotMatch(promptHook, /statusMessage/);
 });
 
+test("frontend web evidence calls the compatibility scanner a partial token lint", async () => {
+  const web = await readFile("skills/superloopy-frontend/references/web.md", "utf8");
+  const upstream = await readFile("skills/superloopy-frontend/references/upstream-notice.md", "utf8");
+  const scanner = await readFile("skills/superloopy-frontend/scripts/ds-compliance.mjs", "utf8");
+  const designAudit = await readFile("docs/superloopy-design-audit.md", "utf8");
+  const fileAudit = await readFile("docs/superloopy-file-audit.md", "utf8");
+  const golden = await readFile("docs/superloopy-loop-golden-set.md", "utf8");
+
+  for (const contract of [web, scanner, designAudit, fileAudit, golden]) {
+    assert.match(contract, /partial color\/spacing token lint/i);
+    assert.doesNotMatch(contract, /(?:full|complete) design-system compliance/i);
+  }
+  assert.match(web, /ds-compliance\.mjs.*compatibility filename/is);
+  assert.match(scanner, /Compatibility filename/is);
+  assert.match(upstream, /optional adapted Web references/is);
+  assert.match(upstream, /shared UX.*platform.*composition.*Superloopy-native/is);
+});
+
 test("web route lazily loads system, motion, and redesign context without widening Qt routing", async () => {
   const frontend = await readSkill("superloopy-frontend");
   const web = await readFile("skills/superloopy-frontend/references/web.md", "utf8");

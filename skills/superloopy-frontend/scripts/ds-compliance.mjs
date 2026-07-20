@@ -1,8 +1,7 @@
 #!/usr/bin/env node
-// Dependency-free Design System Compliance gate for the Superloopy frontend skill.
-// Turns "is the UI on-system?" into a measurable pass/fail: it flags raw hex colors
-// not declared in DESIGN.md and off-scale spacing (px not on the base unit) — the
-// "Lighthouse 100 but 14 undeclared hex codes" failure that reads as AI slop.
+// Compatibility filename for the dependency-free partial color/spacing token lint.
+// It flags raw hex colors not declared in DESIGN.md and off-scale spacing (px not
+// on the base unit); it makes no broader typography, component, or accessibility claim.
 //
 // Exits non-zero when violations exist, so it drops straight into the loop:
 //   superloopy loop prove -- node skills/superloopy-frontend/scripts/ds-compliance.mjs DESIGN.md src/**/*.css
