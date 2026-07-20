@@ -159,27 +159,27 @@ test("frontend discovery rows publish explicit screen-based scope and claim-shap
   const locales = [
     {
       file: "README.md",
-      invocation: "You explicitly invoke Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend` for supported screen-based application UI across public Web, desktop, mobile/tablet, embedded/hybrid clients, Qt, or mixed targets, or start that work with a leading `loopy`/`루피`. Plain UI, platform, or framework terms do not activate it, and specialized surfaces outside that scope stay excluded.",
+      invocation: "You explicitly invoke Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend` for supported screen-based application UI across public Web, desktop, mobile/tablet, embedded/hybrid clients, custom-rendered UI, Qt, or mixed targets, or start that work with a leading `loopy`/`루피`. Plain UI, platform, or framework terms do not activate it, and specialized surfaces outside that scope stay excluded.",
       evidence: "One shared UX contract plus platform/composition routes; proof follows the claim: public-browser, native target/shell, and renderer evidence stay distinct, while mixed targets require independent evidence per target."
     },
     {
       file: "README.ko.md",
-      invocation: "지원되는 화면 기반 애플리케이션 UI(공개 웹, 데스크톱, 모바일/태블릿, 임베디드/하이브리드 클라이언트, Qt, 혼합 타깃) 작업에 Codex의 `$superloopy:superloopy-frontend`나 Claude Code의 `/superloopy:superloopy-frontend`를 직접 호출하거나, 해당 작업을 선행 `loopy`/`루피`로 시작할 때만. 단순한 UI·플랫폼·프레임워크 용어로는 켜지지 않으며 범위 밖의 특수 화면은 제외됩니다.",
+      invocation: "지원되는 화면 기반 애플리케이션 UI(공개 웹, 데스크톱, 모바일/태블릿, 임베디드/하이브리드 클라이언트, 커스텀 렌더링 UI, Qt, 혼합 타깃) 작업에 Codex의 `$superloopy:superloopy-frontend`나 Claude Code의 `/superloopy:superloopy-frontend`를 직접 호출하거나, 해당 작업을 선행 `loopy`/`루피`로 시작할 때만. 단순한 UI·플랫폼·프레임워크 용어로는 켜지지 않으며 범위 밖의 특수 화면은 제외됩니다.",
       evidence: "하나의 공통 UX 계약에 플랫폼/컴포지션 경로를 더하고, 주장에 맞춰 공개 웹의 브라우저, 네이티브 타깃/셸, 렌더러 근거를 구분합니다. 혼합 타깃은 타깃별 독립 근거가 필요합니다."
     },
     {
       file: "README.ja.md",
-      invocation: "対応範囲の画面ベースのアプリ UI（公開 Web、デスクトップ、モバイル/タブレット、組み込み/ハイブリッドクライアント、Qt、混在ターゲット）の作業で Codex の `$superloopy:superloopy-frontend` または Claude Code の `/superloopy:superloopy-frontend` を明示的に呼び出すか、その作業を先頭の `loopy`/`루피` で始める場合だけ。UI・プラットフォーム・フレームワークの単なる用語では起動せず、範囲外の特殊画面は除外します。",
+      invocation: "対応範囲の画面ベースのアプリ UI（公開 Web、デスクトップ、モバイル/タブレット、組み込み/ハイブリッドクライアント、カスタムレンダリング UI、Qt、混在ターゲット）の作業で Codex の `$superloopy:superloopy-frontend` または Claude Code の `/superloopy:superloopy-frontend` を明示的に呼び出すか、その作業を先頭の `loopy`/`루피` で始める場合だけ。UI・プラットフォーム・フレームワークの単なる用語では起動せず、範囲外の特殊画面は除外します。",
       evidence: "1 つの共通 UX 契約にプラットフォーム/コンポジションの経路を加え、主張に応じて公開 Web のブラウザー、ネイティブのターゲット/シェル、レンダラーの証拠を分けます。混在ターゲットではターゲットごとの独立した証拠が必要です。"
     },
     {
       file: "README.zh-CN.md",
-      invocation: "仅在处理受支持的基于屏幕的应用 UI（公开 Web、桌面、移动设备/平板、嵌入式/混合客户端、Qt 或混合目标）时，在 Codex 中显式调用 `$superloopy:superloopy-frontend`，或在 Claude Code 中调用 `/superloopy:superloopy-frontend`，也可用开头的 `loopy`/`루피` 启动该工作。仅出现 UI、平台或框架词汇不会激活它，范围外的专用界面仍被排除。",
+      invocation: "仅在处理受支持的基于屏幕的应用 UI（公开 Web、桌面、移动设备/平板、嵌入式/混合客户端、自定义渲染 UI、Qt 或混合目标）时，在 Codex 中显式调用 `$superloopy:superloopy-frontend`，或在 Claude Code 中调用 `/superloopy:superloopy-frontend`，也可用开头的 `loopy`/`루피` 启动该工作。仅出现 UI、平台或框架词汇不会激活它，范围外的专用界面仍被排除。",
       evidence: "采用一份共享 UX 契约，并叠加平台/界面构成路径；证据随声明而定：公开 Web 的浏览器、原生目标/外壳和渲染器证据彼此区分，混合目标还需为每个目标提供独立证据。"
     },
     {
       file: "README.es.md",
-      invocation: "Solo para interfaces de aplicaciones en pantalla dentro del alcance —web pública, escritorio, móvil/tableta, clientes embebidos/híbridos, Qt o destinos mixtos—, invocas explícitamente `$superloopy:superloopy-frontend` en Codex o `/superloopy:superloopy-frontend` en Claude Code, o inicias ese trabajo con `loopy`/`루피` al principio. La mera terminología de UI, plataforma o framework no la activa y las superficies especializadas fuera del alcance quedan excluidas.",
+      invocation: "Solo para interfaces de aplicaciones en pantalla dentro del alcance —web pública, escritorio, móvil/tableta, clientes embebidos/híbridos, UI con renderizado personalizado, Qt o destinos mixtos—, invocas explícitamente `$superloopy:superloopy-frontend` en Codex o `/superloopy:superloopy-frontend` en Claude Code, o inicias ese trabajo con `loopy`/`루피` al principio. La mera terminología de UI, plataforma o framework no la activa y las superficies especializadas fuera del alcance quedan excluidas.",
       evidence: "Un contrato de UX compartido más rutas de plataforma/composición; la prueba sigue a la afirmación: se distinguen la evidencia del navegador público, la del destino/shell nativo y la del motor de renderizado, y los destinos mixtos requieren evidencia independiente por destino."
     }
   ];
@@ -305,6 +305,8 @@ test("frontend audit inventories cover each routed reference and contract test o
   assert.equal(skillGoldenRows.length, 1, "frontend SKILL.md must have one exact golden-set row");
   assert.equal(agentGoldenRows.length, 1, "frontend agent metadata must have one exact golden-set row");
   assert.match(skillGoldenRows[0], /shared UX.*platform\/composition routes.*preserved Qt specialization.*independent evidence/iu);
+  assert.match(skillGoldenRows[0], /original Superloopy prose/iu);
+  assert.match(skillGoldenRows[0], /no vendored runtime dependenc(?:y|ies)/iu);
   assert.match(agentGoldenRows[0], /explicit screen-based application-UI discovery.*plain UI\/platform\/framework vocabulary inert.*unsupported specialized surfaces excluded/iu);
 });
 
