@@ -121,6 +121,8 @@ Map lifecycle verbs to distinct semantic transitions in the product model. For e
 
 When the product contract requires portability, preserve a stable logical identifier or an owned-root-relative locator. An absolute locator remains valid when the actual platform, provider, or integration owner requires it; record the explicit reason and resolution boundary, then provide a relink or recovery path when it no longer resolves. A copy-based workflow remains valid when its identity and lifecycle effects are truthful.
 
+For the user intent, prefer the shortest truthful transition. When the current owner can safely update or reload the original, do not require an unnecessary import, copy, and apply round trip. When a staged copy/apply flow is required by the real owner or boundary, expose the reason and name the original identity; preserve or reconcile it, then provide an apply or save-back path or an equivalently explicit commit path.
+
 Revert, current/inherited defaults, and versioned factory defaults are distinct authoritative baselines with named scopes and owners. Reset values are read from the real owner when the operation runs, not from duplicated UI literals; describing a duplicate as authoritative does not transfer ownership. Proof covers non-default values, inherited and changed-default values, dirty state, Undo, save and apply, restart, and relocation only where each case is applicable; record an inapplicable case and reason instead of fabricating a transition.
 
 ## Information architecture, content, and recovery
