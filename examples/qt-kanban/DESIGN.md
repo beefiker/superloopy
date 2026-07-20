@@ -6,7 +6,7 @@ Cool-paper planning desk. Dense information remains breathable through hairline 
 
 ## Acceptance Boundary
 
-This is a prototype acceptance fixture, not production-editor proof. Board is the only sidebar destination and remains fully functional. Timeline and Inbox are passive demo-only context with static-text accessibility semantics; they do not accept pointer, keyboard, shortcut, or accessibility press actions and do not announce success. Settings and Help are absent because this fixture has no meaningful implementation for them. Persistence and Undo remain out of scope: task mutations live only in the deterministic in-memory store and must not be presented as surviving an application restart.
+This is a prototype acceptance fixture, not production-editor proof. Board is the only sidebar destination and remains fully functional: its idempotent return to Board overview command clears selected task and detail state, closes overlay detail when open, leaves Board visible and current, and restores focus to Board. Timeline and Inbox are passive demo-only context with static-text accessibility semantics; they do not accept pointer, keyboard, shortcut, or accessibility press actions and do not announce success. Settings and Help are absent because this fixture has no meaningful implementation for them. Persistence and Undo remain out of scope: task mutations live only in the deterministic in-memory store and must not be presented as surviving an application restart.
 
 ## Color
 
@@ -65,7 +65,7 @@ At 1560 px and wider, show the 224 px sidebar and persistent 300 px detail drawe
 
 ## Components and States
 
-- Sidebar: workspace identity, functional Board navigation, passive demo-only Timeline/Inbox context, and team initials. The passive entries remain visible but are not buttons, focus stops, or destinations.
+- Sidebar: workspace identity, a functional Board return-to-overview command, passive demo-only Timeline/Inbox context, and team initials. Board clears task/detail selection, closes overlay detail, keeps the board current, and restores its own focus; the passive entries remain visible but are not buttons, focus stops, or destinations.
 - Header: board title, date range, search, priority filter, collaborators, and cobalt New task action.
 - Column: title, store-derived count, fixed full-width stage accent, drop target, task stack, and Add task affordance. The accent communicates workflow stage, never fake progress.
 - Card: variable-height title/content, priority, due date, comments/checklist, assignee initials, selected outline, keyboard focus, and drag state. Cards, columns, header controls, drawer, and dialog expose stable `objectName` values for tests.

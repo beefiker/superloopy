@@ -9,6 +9,8 @@ Control {
 
     property bool compact: false
 
+    signal boardRequested(Item invoker)
+
     padding: Theme.space3
 
     background: Rectangle {
@@ -204,11 +206,13 @@ Control {
         }
 
         SidebarAction {
+            id: boardButton
             objectName: "boardButton"
             Layout.fillWidth: true
             text: qsTr("Board")
             icon.source: Qt.resolvedUrl("assets/icons/board.svg")
             selected: true
+            onClicked: root.boardRequested(boardButton)
         }
 
         PassiveDemoItem {

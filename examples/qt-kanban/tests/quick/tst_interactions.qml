@@ -204,6 +204,38 @@ TestCase {
                 "Define launch goals")
     }
 
+    function test_board_action_returns_from_overlay_details_to_overview() {
+        const view = createView(1300)
+        const boardButton = findChild(view, "boardButton")
+        const board = findChild(view, "boardView")
+        const overlayDrawer = findChild(view, "overlayDetailDrawer")
+        const card = findChild(view, "taskCard-task-define-goals")
+        const interaction = findChild(card, "cardInteraction")
+
+        verify(boardButton)
+        verify(board)
+        verify(overlayDrawer)
+        verify(interaction)
+
+        interaction.forceActiveFocus(Qt.TabFocusReason)
+        keyClick(Qt.Key_Return)
+        tryVerify(function() { return overlayDrawer.opened })
+        compare(TaskStore.selectedTaskId, "task-define-goals")
+
+        boardButton.clicked()
+        tryVerify(function() { return !overlayDrawer.opened })
+        compare(TaskStore.selectedTaskId, "")
+        verify(board.visible)
+        verify(boardButton.checked)
+        tryVerify(function() { return boardButton.activeFocus })
+
+        boardButton.clicked()
+        compare(TaskStore.selectedTaskId, "")
+        verify(board.visible)
+        verify(boardButton.checked)
+        tryVerify(function() { return boardButton.activeFocus })
+    }
+
     function test_move_to_control_and_adjacent_shortcuts() {
         const view = createView(1600)
         const details = findChild(view, "persistentDetailDrawer")
