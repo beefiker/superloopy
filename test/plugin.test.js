@@ -245,6 +245,14 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
   const metadata = await readFile("skills/superloopy-frontend/agents/openai.yaml", "utf8");
   assert.match(metadata, /\$superloopy:superloopy-frontend/);
   assert.match(metadata, /\/superloopy:superloopy-frontend/);
+  assert.match(metadata, /short_description: "Explicit screen-based application UI routing"/u);
+  assert.match(metadata, /only after explicit invocation or an explicit route from an active leading `loopy`\/`루피` screen-based application-UI task/iu);
+  assert.match(metadata, /public Web, desktop, mobile\/tablet, embedded\/hybrid, Qt, custom-rendered, and mixed targets/iu);
+  assert.match(metadata, /plain UI\/platform\/framework vocabulary must remain inert/iu);
+  assert.match(metadata, /Exclude TV, wearable, XR, game UI, TUI, non-interactive visual deliverables, and backend\/API\/data\/infrastructure work/iu);
+  assert.match(metadata, /claim-shaped public-browser, native target\/shell, renderer, and independent mixed-target evidence/iu);
+  assert.equal(metadata.match(/\$superloopy:superloopy-frontend/g)?.length, 1);
+  assert.equal(metadata.match(/\/superloopy:superloopy-frontend/g)?.length, 1);
   assert.doesNotMatch(metadata, /any UI\/visual work/i);
 
   const promptHook = await readFile("hooks/user-prompt-submit.json", "utf8");
