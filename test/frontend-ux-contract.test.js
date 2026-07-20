@@ -191,7 +191,7 @@ test("shared input and motion rules cover editable text, IME, and reduced motion
 
 test("shared UX keeps resource identity and lifecycle transitions attributable", async () => {
   const ux = await read(reference("ux"));
-  for (const pattern of [/lifecycle verbs?.*distinct semantic transitions?/is, /canonical resource.*working copy.*last[- ]saved.*active resource.*dirty.*pending.*visible.*attributable/is, /copy.*identity change.*disclos/is, /product contract.*portability.*stable logical identifier.*owned-root-relative locator/is, /absolute locator.*owner.*explicit reason.*relink.*recovery/is]) assert.match(ux, pattern);
+  for (const pattern of [/lifecycle verbs?.*distinct semantic transitions?/is, /canonical resource.*working copy.*last[- ]saved.*active resource.*dirty.*pending.*visible.*attributable/is, /copy.*identity change.*disclos/is, /product contract.*portability.*stable logical identifier.*owned-root-relative locator/is, /absolute locator remains valid.*actual platform.*provider.*integration owner.*requires.*explicit reason.*resolution boundary.*relink.*recovery/is, /copy-based workflow remains valid.*identity.*lifecycle effects.*truthful/is, /user intent.*shortest.*truthful.*transition/is, /current owner.*safely.*update.*reload.*original.*(?:do not|does not).*require.*import.*copy.*apply.*round trip/is, /staged copy.*apply.*real owner.*boundary.*reason.*original identity.*preserv.*reconcil.*apply.*save-back.*explicit.*commit path/is]) assert.match(ux, pattern);
 });
 test("shared UX distinguishes revert and reset provenance", async () => {
   const ux = await read(reference("ux"));
