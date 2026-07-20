@@ -12,7 +12,7 @@ const activationContract = `## Activation
 
 Open your reply with \`SUPERLOOPY FRONTEND ENABLED\`. If another active Superloopy mode mandates its own first line, print that first and this marker on the next line.
 
-**Explicit activation only.** Engage when the user invokes \`$superloopy:superloopy-frontend\` in Codex or \`/superloopy:superloopy-frontend\` in Claude Code for a web frontend or Qt desktop GUI task, begins such a task with a leading \`loopy\` or \`루피\`, or an already-active Superloopy loop explicitly assigns a web frontend, Qt Widgets, Qt Quick/QML, or mixed web/Qt subtask to this skill. A plain mention of UI, frontend, CSS, layout, responsiveness, Qt, QML, Widgets, or a visible symptom is not authorization to activate this workflow. Non-web/non-Qt visual deliverables and backend, API, data, concurrency, or infrastructure work stay with their primary workflows.
+**Explicit activation only.** Engage when the user invokes \`$superloopy:superloopy-frontend\` in Codex or \`/superloopy:superloopy-frontend\` in Claude Code for a supported screen-based application UI task, begins such a task with a leading \`loopy\` or \`루피\`, or an already-active Superloopy loop explicitly routes that task here. A plain mention of UI, frontend, desktop, mobile, SwiftUI, Tauri, Flutter, Qt, QML, Widgets, or a visible symptom is not authorization to activate this workflow. TV, wearable, XR, game UI, TUI, non-interactive visual deliverables, and backend, API, data, concurrency, or infrastructure work stay with their primary workflows.
 `;
 
 async function read(path) {
@@ -29,33 +29,33 @@ test("frontend contract reader normalizes platform line endings", async (context
   assert.equal(await read(path), "## Activation\n\nBody\n");
 });
 
-test("frontend skill routes web and Qt only after explicit activation", async () => {
+test("frontend skill preserves explicit activation while routing Qt through shared desktop UX", async () => {
   const skill = await read(`${root}/SKILL.md`);
   const frontmatter = skill.match(/^---\n([\s\S]*?)\n---/u)?.[1] ?? "";
   const activation = skill.match(/## Activation\n[\s\S]*?(?=\n## )/)?.[0];
   assert.equal(activation, activationContract, "the activation section must remain byte-for-byte unchanged");
-  assert.match(frontmatter, /web frontend.*Qt Widgets.*Qt Quick\/QML.*mixed web\/Qt/is);
-  assert.match(frontmatter, /non-web\/non-Qt visual deliverables/i);
+  assert.match(frontmatter, /screen-based application UI/is);
+  assert.match(frontmatter, /public web.*desktop.*mobile\/tablet.*embedded\/hybrid.*Qt.*custom-rendered.*mixed/is);
+  assert.match(frontmatter, /TV.*wearable.*XR.*game UI.*TUI/is);
   assert.doesNotMatch(frontmatter, /other visual-deliverable/i);
   assert.match(skill, /Explicit activation only/i);
-  assert.match(skill, /web.*Qt Widgets.*Qt Quick\/QML.*mixed/is);
-  for (const name of ["web", "qt", "qt-widgets", "qt-quick", "qt-qa"]) {
+  assert.match(skill, /public DOM.*Qt Widgets.*Qt Quick\/QML.*mixed/is);
+  for (const name of ["ux", "desktop", "mobile", "hybrid", "renderer", "web", "qt", "qt-widgets", "qt-quick", "qt-qa"]) {
     assert.match(skill, new RegExp(`references/${name}\\.md`));
   }
-  assert.match(skill, /mixed web UI and Qt.*references\/web\.md.*references\/qt\.md.*relevant one or both.*references\/qt-widgets\.md.*references\/qt-quick\.md.*references\/qt-qa\.md/is);
-  assert.match(skill, /mixed web\/Qt.*gates and evidence independently for each surface/is);
-  assert.match(skill, /web proof cannot substitute for Qt proof.*Qt proof cannot substitute for web proof/is);
+  assert.match(skill, /mixed or multi-target.*union.*shared UX.*once.*independent.*evidence/is);
+  assert.match(skill, /Qt Widgets.*references\/ux\.md.*references\/desktop\.md.*references\/qt\.md.*references\/qt-widgets\.md.*references\/qt-qa\.md/is);
+  assert.match(skill, /Qt Quick\/QML.*references\/ux\.md.*references\/desktop\.md.*references\/qt\.md.*references\/qt-quick\.md.*references\/qt-qa\.md/is);
   assert.doesNotMatch(skill, /Auto-activate|When in doubt/i);
 });
 
-test("web route excludes Qt discovery and references", async () => {
+test("public DOM web route excludes Qt specialization", async () => {
   const skill = await read(`${root}/SKILL.md`);
   const routing = skill.match(/## Inspect and route\n[\s\S]*?(?=\n## )/)?.[0];
   assert.ok(routing, "missing inspect-and-route contract");
-  const webRow = routing.split("\n").find((line) => line.startsWith("| web UI |"));
-  assert.equal(webRow, "| web UI | [`references/web.md`](references/web.md) |");
+  const webRow = routing.split("\n").find((line) => line.startsWith("| Public DOM/document Web |"));
+  assert.equal(webRow, "| Public DOM/document Web | [`references/ux.md`](references/ux.md) + [`references/web.md`](references/web.md) |");
   assert.match(routing, /For a Qt route, also resolve the minimum Qt version\./u);
-  assert.doesNotMatch(routing, /requested surface, existing stack, minimum Qt version/u);
 
   const web = await read(reference("web"));
   assert.doesNotMatch(web, /\b(?:QML|QStyle|QWidget|Qt Test|Qt Quick|Qt Widgets|qmllint)\b/iu);
