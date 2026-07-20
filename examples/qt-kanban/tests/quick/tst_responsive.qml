@@ -149,7 +149,29 @@ TestCase {
             compare(status.text, "Demo only")
             verify(!title.truncated,
                    definition[0] + " must show its full distinct title")
+            verify(title.fontInfo.pixelSize + 0.5
+                   >= Theme.metaFontPixelSize,
+                   definition[0] + " must not shrink below the requested size")
+            verify(status.fontInfo.pixelSize + 0.5
+                   >= Theme.metaFontPixelSize,
+                   definition[1] + " must not shrink below the requested size")
         }
+    }
+
+    function test_default_scale_word_wrapping_reflows_before_three_lines() {
+        const view = createView(1000)
+        const sidebar = findChild(view, "sidebar")
+        const timeline = findChild(view, "timelineDemoItem")
+        verify(sidebar)
+        verify(timeline)
+        verify(sidebar.compact)
+
+        timeline.title = "Wide Wide Wide"
+        waitForRendering(view)
+
+        verify(!sidebar.compact,
+               "A three-line compact translation must reflow wide")
+        compare(view.sidebarWidth, 224)
     }
 
     function test_board_navigation_exposes_current_checked_state() {
@@ -337,6 +359,121 @@ TestCase {
         verify(content)
         verify(content.y + content.height + Theme.cardPadding
                <= card.height + 0.5)
+    }
+
+    function test_passive_demo_copy_scales_and_wraps_data() {
+        return [
+            { "tag": "default-long-reflows-wide", "viewWidth": 1000,
+              "scale": 1.0, "labelSuffix": "Wide",
+              "expectedCompact": false, "expectedSidebarWidth": 224 },
+            { "tag": "wide-135", "viewWidth": 1300, "scale": 1.35,
+              "labelSuffix": "Wide", "expectedCompact": false,
+              "expectedSidebarWidth": 224 },
+            { "tag": "wide-200", "viewWidth": 1300, "scale": 2.0,
+              "labelSuffix": "Wide", "expectedCompact": false,
+              "expectedSidebarWidth": 224 },
+            { "tag": "minimum-135-reflows-wide", "viewWidth": 1000,
+              "scale": 1.35, "labelSuffix": "Wide",
+              "expectedCompact": false, "expectedSidebarWidth": 224 },
+            { "tag": "minimum-200-reflows-wide", "viewWidth": 1000,
+              "scale": 2.0,
+              "labelSuffix": "Wide", "expectedCompact": false,
+              "expectedSidebarWidth": 224 }
+        ]
+    }
+
+    function test_passive_demo_copy_scales_and_wraps(data) {
+        Theme.baseFontPixelSize = 13 * data.scale
+        const view = createView(data.viewWidth)
+        const sidebar = findChild(view, "sidebar")
+        verify(sidebar)
+        const definitions = [
+            {
+                "item": findChild(view, "timelineDemoItem"),
+                "prefix": "timeline",
+                "title": "Zeitachsenplanung für internationale Produkte",
+                "status": "Nur für Demonstrationszwecke verfügbar"
+            },
+            {
+                "item": findChild(view, "inboxDemoItem"),
+                "prefix": "inbox",
+                "title": "팀 전체의 읽지 않은 메시지와 검토 요청",
+                "status": "현재 데모에서만 제공됩니다"
+            }
+        ]
+
+        for (const definition of definitions) {
+            verify(definition.item)
+            definition.item.title = definition.title
+            definition.item.demoOnlyLabel = definition.status
+        }
+        waitForRendering(view)
+        compare(sidebar.compact, data.expectedCompact)
+        compare(view.sidebarWidth, data.expectedSidebarWidth)
+
+        for (const definition of definitions) {
+            const title = findChild(
+                            view,
+                            definition.prefix + data.labelSuffix + "Title")
+            const status = findChild(
+                             view,
+                             definition.prefix + data.labelSuffix + "Status")
+            verify(title, "The localized title must have a stable test name")
+            verify(status, "The localized status must have a stable test name")
+            compare(title.text, definition.title)
+            compare(status.text, definition.status)
+            compare(definition.item.Accessible.name,
+                    definition.title + " — " + definition.status)
+            verify(!title.truncated,
+                   title.objectName + " truncates localized copy")
+            verify(!status.truncated,
+                   status.objectName + " truncates localized copy")
+            const requestedTitleSize = data.labelSuffix === "Wide"
+                                       ? Theme.bodyFontPixelSize
+                                       : Theme.metaFontPixelSize
+            verify(title.fontInfo.pixelSize + 0.5 >= requestedTitleSize,
+                   title.objectName + " shrinks below the requested text scale")
+            verify(status.fontInfo.pixelSize + 0.5
+                   >= Theme.metaFontPixelSize,
+                   status.objectName + " shrinks below the requested text scale")
+            verify(title.height + 0.5 >= title.contentHeight,
+                   title.objectName + " clips scaled localized copy")
+            verify(status.height + 0.5 >= status.contentHeight,
+                   status.objectName + " clips scaled localized copy")
+            verify(definition.item.height + 0.5
+                   >= definition.item.implicitHeight,
+                   definition.item.objectName + " clips its content")
+
+            for (const label of [title, status]) {
+                const origin = label.mapToItem(definition.item, 0, 0)
+                verify(origin.x >= -0.5,
+                       label.objectName + " begins outside its item")
+                verify(origin.y >= -0.5,
+                       label.objectName + " begins above its item")
+                verify(origin.x + label.width
+                       <= definition.item.width + 0.5,
+                       label.objectName + " exceeds its item width")
+                verify(origin.y + label.height
+                       <= definition.item.height + 0.5,
+                       label.objectName + " exceeds its item height")
+            }
+        }
+
+        const team = findChild(view, "teamCluster")
+        verify(team)
+        for (const item of [definitions[0].item, definitions[1].item, team]) {
+            const origin = item.mapToItem(sidebar, 0, 0)
+            verify(origin.y >= sidebar.topPadding - 0.5,
+                   item.objectName + " begins above the sidebar")
+            verify(origin.y + item.height
+                   <= sidebar.height - sidebar.bottomPadding + 0.5,
+                   item.objectName + " exceeds the sidebar height")
+        }
+        const timelineOrigin = definitions[0].item.mapToItem(sidebar, 0, 0)
+        const inboxOrigin = definitions[1].item.mapToItem(sidebar, 0, 0)
+        verify(timelineOrigin.y + definitions[0].item.height
+               <= inboxOrigin.y + 0.5,
+               "Localized passive items overlap")
     }
 
     function test_two_hundred_percent_header_stacks_without_overlap() {

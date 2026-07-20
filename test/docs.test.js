@@ -26,6 +26,64 @@ test("public docs describe guide, trace, report, and check evidence surfaces", a
   assert.match(audit, /src\/report\.js.*Evidence Summary section/is);
 });
 
+test("gate notes document proportional owner-and-claim surface evidence", async () => {
+  const notes = await readFile("docs/superloopy-gate-notes.md", "utf8");
+
+  assert.match(notes, /scoped row.*exactly one concrete target and one affected owner/is);
+  assert.match(notes, /target.*owner.*claims.*scopeReason.*all-or-nothing/is);
+  assert.match(notes, /target.*object.*id.*platform.*environment/is);
+  assert.match(notes, /id.*stable portable slug.*lowercase ASCII.*single hyphens/is);
+  assert.match(notes, /aggregate tokens.*`all`.*`any`.*`every`.*`multi`.*`multiple`.*`cross`.*`universal`.*`supported`.*`targets`.*`devices`.*`platforms`.*`browsers`/is);
+  assert.match(notes, /short ID.*`desktop`.*`mobile`.*`web`.*syntactically valid.*concrete `environment`/is);
+  assert.match(notes, /platform.*one lowercase alphanumeric symbolic platform ID/is);
+  assert.match(notes, /environment.*exact runtime.*device.*browser build.*host OS/is);
+  assert.match(notes, /browser.*native.*hybrid.*renderer.*cli.*tui.*http.*data/is);
+  assert.match(notes, /interaction.*visual.*accessibility.*target.*package-lifecycle.*renderer.*http.*data/is);
+  assert.match(notes, /hybrid.*client.*shell.*bridge/is);
+  assert.match(notes, /complete accepted artifact-kind vocabulary.*cli-transcript.*renderer-trace/is);
+  assert.match(notes, /Scoped owner\/claim proof minimums/);
+  assert.match(notes, /structured target description never substitutes for a `device-report`/i);
+  assert.match(notes, /Within `surfaceEvidence`.*each scoped `target\.id` \+ `owner` pair.*only once.*different scoped pairs.*same resolved artifact path/is);
+  assert.match(notes, /`adversarialCases`.*`contractCoverage`.*do not declare their own `target` or `owner`.*inherit the relevant surface slice/is);
+  assert.match(notes, /same `contractRef`.*direct artifact-only coverage.*fail closed/is);
+  assert.match(notes, /"artifactRefs".*"surfaceEvidence".*"target".*"id".*"platform".*"environment"/is);
+  assert.match(notes, /all four.*target.*owner.*claims.*scopeReason.*absent.*unscoped/is);
+  assert.match(notes, /Review exact normalized `browser` or `gui`.*image-only/is);
+  assert.match(notes, /Matrix exact normalized `browser`.*`gui`.*`web`.*automation plus image/is);
+  assert.match(notes, /Matrix exact normalized `native`.*`desktop`.*`tui`.*screenshot\/image, PTY, or app-automation/is);
+  assert.match(notes, /legacy unscoped literal contracts retain their former meaning/is);
+  assert.match(notes, /mechanical minimum.*truth of the declared scope/is);
+
+  for (const kind of [
+    "cli-transcript", "log", "failure-mode-test", "browser-automation", "screenshot", "image", "http-dump",
+    "data-diff", "cli-replay", "pty-capture", "app-automation-transcript", "client-automation-transcript",
+    "api-package-test-report", "accessibility-tree", "device-report", "package-lifecycle-report", "renderer-trace"
+  ]) {
+    assert.ok(notes.includes(`\`${kind}\``), `gate notes must list accepted artifact kind ${kind}`);
+  }
+});
+
+test("frontend context references preserve authority and approval boundaries", async () => {
+  const designIndex = await readFile("skills/superloopy-frontend/references/design/_INDEX.md", "utf8");
+  const redesign = await readFile("skills/superloopy-frontend/references/redesign.md", "utf8");
+  const systemMap = await readFile("skills/superloopy-frontend/references/system-map.md", "utf8");
+  const fileAudit = await readFile("docs/superloopy-file-audit.md", "utf8");
+  const golden = await readFile("docs/superloopy-loop-golden-set.md", "utf8");
+
+  assert.match(designIndex, /scoped reference input.*never as automatic token authority/is);
+  assert.match(designIndex, /current design source remains authoritative.*DESIGN\.md.*synchronized scoped mapping\/receipt/is);
+  assert.match(redesign, /Information architecture stays by default/is);
+  assert.match(redesign, /broken IA.*actually in scope.*explicitly approved/is);
+  assert.match(systemMap, /implementation was requested.*execute the one verified package-manager command/is);
+  assert.match(systemMap, /advice only.*present that one command without running it/is);
+  assert.match(systemMap, /verify lockfile\/package resolution, imports\/build integration/is);
+  for (const audit of [fileAudit, golden]) {
+    assert.match(audit, /Qt Widgets.*Qt Quick.*mixed (?:Qt )?WebAssembly.*browser.*renderer/is);
+    assert.match(audit, /information architecture stays by default.*explicitly approved|IA by default.*explicitly approved/is);
+    assert.match(audit, /(?:implementation request.*one verified package-manager command|one verified package-manager command.*implementation request).*advice-only|advice only.*one verified package-manager command/is);
+  }
+});
+
 test("public docs describe doctor checks", async () => {
   const readme = await readFile("README.md", "utf8");
   const audit = await readFile("docs/superloopy-file-audit.md", "utf8");
@@ -159,28 +217,28 @@ test("frontend discovery rows publish explicit screen-based scope and claim-shap
   const locales = [
     {
       file: "README.md",
-      invocation: "You explicitly invoke Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend` for supported screen-based application UI across public Web, desktop, mobile/tablet, embedded/hybrid clients, custom-rendered UI, Qt, or mixed targets, or start that work with a leading `loopy`/`루피`. Plain UI, platform, or framework terms do not activate it, and specialized surfaces outside that scope stay excluded.",
-      evidence: "One shared UX contract plus platform/composition routes; proof follows the claim: public-browser, native target/shell, and renderer evidence stay distinct, while mixed targets require independent evidence per target."
+      invocation: "You explicitly invoke Codex `$superloopy:superloopy-frontend` or Claude Code `/superloopy:superloopy-frontend` for supported screen-based application UI across browser-hosted Web (public, authenticated, private/internal, installed PWA, or extension), interactive deployed content-led Web (campaign, publication, or landing experiences with a user journey), desktop, mobile/tablet, embedded/hybrid clients, custom-rendered UI, Qt, or mixed targets, or start that work with a leading `loopy`/`루피`. Plain UI, platform, or framework terms do not activate it; TV, wearable, XR, automotive, game UI, TUI, static media/document artifacts, and non-UI work stay excluded.",
+      evidence: "One shared UX contract plus platform/composition routes. Evidence is proportional to changed claims and independently covers each browser, native target/shell, renderer, and mixed target. Standalone runs retain run-scoped receipts; active loops bind them to the goal and criterion."
     },
     {
       file: "README.ko.md",
-      invocation: "지원되는 화면 기반 애플리케이션 UI(공개 웹, 데스크톱, 모바일/태블릿, 임베디드/하이브리드 클라이언트, 커스텀 렌더링 UI, Qt, 혼합 타깃) 작업에 Codex의 `$superloopy:superloopy-frontend`나 Claude Code의 `/superloopy:superloopy-frontend`를 직접 호출하거나, 해당 작업을 선행 `loopy`/`루피`로 시작할 때만. 단순한 UI·플랫폼·프레임워크 용어로는 켜지지 않으며 범위 밖의 특수 화면은 제외됩니다.",
-      evidence: "하나의 공통 UX 계약에 플랫폼/컴포지션 경로를 더하고, 주장에 맞춰 공개 웹의 브라우저, 네이티브 타깃/셸, 렌더러 근거를 구분합니다. 혼합 타깃은 타깃별 독립 근거가 필요합니다."
+      invocation: "지원되는 화면 기반 애플리케이션 UI(공개·인증·비공개/내부용·설치형 PWA/확장을 포함한 브라우저 호스팅 웹, 사용자 여정이 있는 인터랙티브 배포형 콘텐츠 중심 웹(캠페인·출판·랜딩 경험 등), 데스크톱, 모바일/태블릿, 임베디드/하이브리드 클라이언트, 커스텀 렌더링 UI, Qt, 혼합 타깃) 작업에 Codex의 `$superloopy:superloopy-frontend`나 Claude Code의 `/superloopy:superloopy-frontend`를 직접 호출하거나, 해당 작업을 선행 `loopy`/`루피`로 시작할 때만. 단순한 UI·플랫폼·프레임워크 용어로는 켜지지 않으며 TV·웨어러블·XR·자동차·게임 UI·TUI·정적 미디어/문서 결과물·비 UI 작업은 제외됩니다.",
+      evidence: "하나의 공통 UX 계약에 플랫폼/컴포지션 경로를 더합니다. 근거는 변경한 주장에 비례하며 브라우저, 네이티브 타깃/셸, 렌더러, 혼합 타깃의 각 소유자를 독립적으로 검증합니다. 독립 실행에서는 실행별 영수증을 보존하고 활성 루프에서는 goal과 criterion에 연결합니다."
     },
     {
       file: "README.ja.md",
-      invocation: "対応範囲の画面ベースのアプリ UI（公開 Web、デスクトップ、モバイル/タブレット、組み込み/ハイブリッドクライアント、カスタムレンダリング UI、Qt、混在ターゲット）の作業で Codex の `$superloopy:superloopy-frontend` または Claude Code の `/superloopy:superloopy-frontend` を明示的に呼び出すか、その作業を先頭の `loopy`/`루피` で始める場合だけ。UI・プラットフォーム・フレームワークの単なる用語では起動せず、範囲外の特殊画面は除外します。",
-      evidence: "1 つの共通 UX 契約にプラットフォーム/コンポジションの経路を加え、主張に応じて公開 Web のブラウザー、ネイティブのターゲット/シェル、レンダラーの証拠を分けます。混在ターゲットではターゲットごとの独立した証拠が必要です。"
+      invocation: "対応範囲の画面ベースのアプリ UI（公開・認証済み・非公開/社内向け・インストール型 PWA/拡張機能を含むブラウザーホスト Web、ユーザージャーニーを備えたインタラクティブなデプロイ済みコンテンツ主導 Web（キャンペーン、出版、ランディング体験など）、デスクトップ、モバイル/タブレット、組み込み/ハイブリッドクライアント、カスタムレンダリング UI、Qt、混在ターゲット）の作業で Codex の `$superloopy:superloopy-frontend` または Claude Code の `/superloopy:superloopy-frontend` を明示的に呼び出すか、その作業を先頭の `loopy`/`루피` で始める場合だけ。単なる UI・プラットフォーム・フレームワーク用語では起動せず、TV、ウェアラブル、XR、自動車、ゲーム UI、TUI、静的なメディア/文書成果物、非 UI 作業は除外します。",
+      evidence: "1 つの共通 UX 契約にプラットフォーム/コンポジション経路を加えます。証拠は変更した主張に比例し、ブラウザー、ネイティブのターゲット/シェル、レンダラー、混在ターゲットの各所有者を独立して検証します。単独実行では実行単位の証跡を保持し、アクティブなループでは goal と criterion に関連付けます。"
     },
     {
       file: "README.zh-CN.md",
-      invocation: "仅在处理受支持的基于屏幕的应用 UI（公开 Web、桌面、移动设备/平板、嵌入式/混合客户端、自定义渲染 UI、Qt 或混合目标）时，在 Codex 中显式调用 `$superloopy:superloopy-frontend`，或在 Claude Code 中调用 `/superloopy:superloopy-frontend`，也可用开头的 `loopy`/`루피` 启动该工作。仅出现 UI、平台或框架词汇不会激活它，范围外的专用界面仍被排除。",
-      evidence: "采用一份共享 UX 契约，并叠加平台/界面构成路径；证据随声明而定：公开 Web 的浏览器、原生目标/外壳和渲染器证据彼此区分，混合目标还需为每个目标提供独立证据。"
+      invocation: "仅在处理受支持的基于屏幕的应用 UI（浏览器托管 Web，包括公开、需认证、私有/内部、已安装 PWA 或扩展；具有用户旅程的已部署交互式内容型 Web，例如营销活动、出版物或着陆页体验；以及桌面、移动设备/平板、嵌入式/混合客户端、自定义渲染 UI、Qt 或混合目标）时，在 Codex 中显式调用 `$superloopy:superloopy-frontend`，或在 Claude Code 中调用 `/superloopy:superloopy-frontend`，也可用开头的 `loopy`/`루피` 启动该工作。仅出现 UI、平台或框架词汇不会激活它；TV、可穿戴设备、XR、汽车、游戏 UI、TUI、静态媒体/文档产物和非 UI 工作仍被排除。",
+      evidence: "采用一份共享 UX 契约，并叠加平台/界面构成路径。证据与变更声明成比例，并分别验证浏览器、原生目标/外壳、渲染器和每个混合目标。独立运行保留按次划分的证据；活动循环则把证据绑定到 goal 和 criterion。"
     },
     {
       file: "README.es.md",
-      invocation: "Solo para interfaces de aplicaciones en pantalla dentro del alcance —web pública, escritorio, móvil/tableta, clientes embebidos/híbridos, UI con renderizado personalizado, Qt o destinos mixtos—, invocas explícitamente `$superloopy:superloopy-frontend` en Codex o `/superloopy:superloopy-frontend` en Claude Code, o inicias ese trabajo con `loopy`/`루피` al principio. La mera terminología de UI, plataforma o framework no la activa y las superficies especializadas fuera del alcance quedan excluidas.",
-      evidence: "Un contrato de UX compartido más rutas de plataforma/composición; la prueba sigue a la afirmación: se distinguen la evidencia del navegador público, la del destino/shell nativo y la del motor de renderizado, y los destinos mixtos requieren evidencia independiente por destino."
+      invocation: "Solo para interfaces de aplicaciones en pantalla dentro del alcance —Web alojada en navegador (pública, autenticada, privada/interna, PWA instalada o extensión), Web interactiva de contenido ya desplegada (campañas, publicaciones o experiencias de landing con un recorrido de usuario), escritorio, móvil/tableta, clientes embebidos/híbridos, UI con renderizado personalizado, Qt o destinos mixtos—, invocas explícitamente `$superloopy:superloopy-frontend` en Codex o `/superloopy:superloopy-frontend` en Claude Code, o inicias ese trabajo con `loopy`/`루피` al principio. La mera terminología de UI, plataforma o framework no la activa; se excluyen TV, wearables, XR, automoción, UI de juegos, TUI, artefactos estáticos de medios/documentos y trabajo que no sea de UI.",
+      evidence: "Un contrato de UX compartido más rutas de plataforma/composición. La evidencia es proporcional a las afirmaciones modificadas y verifica por separado cada navegador, destino/shell nativo, renderizador y destino mixto. Las ejecuciones independientes conservan recibos por ejecución; los bucles activos los vinculan al goal y criterion."
     }
   ];
 
@@ -257,14 +315,14 @@ test("Qt Kanban docs publish the prototype acceptance boundary", async () => {
 test("frontend agent metadata keeps explicit screen-based routing and claim-shaped evidence", async () => {
   const agent = await readFile("skills/superloopy-frontend/agents/openai.yaml", "utf8");
 
-  assert.match(agent, /short_description: "Explicit screen-based application UI routing"/u);
-  assert.match(agent, /only after explicit invocation or an explicit route from an active leading `loopy`\/`루피` screen-based application-UI task/iu);
-  assert.match(agent, /public Web, desktop, mobile\/tablet, embedded\/hybrid, Qt, custom-rendered, and mixed targets/iu);
-  assert.match(agent, /plain UI\/platform\/framework vocabulary must remain inert/iu);
-  assert.match(agent, /Exclude TV, wearable, XR, game UI, TUI, non-interactive visual deliverables, and backend\/API\/data\/infrastructure work/iu);
-  assert.match(agent, /claim-shaped public-browser, native target\/shell, renderer, and independent mixed-target evidence/iu);
+  assert.match(agent, /short_description: "Explicit cross-platform application UI workflow"/u);
+  assert.match(agent, /Use `\$superloopy:superloopy-frontend` only after explicit invocation/iu);
+  assert.match(agent, /browser-hosted or interactive content-led Web, desktop, mobile\/tablet, embedded\/hybrid, Qt, custom-rendered, or mixed application UI/iu);
+  assert.match(agent, /exclude TV, wearable, XR, automotive, game UI, TUI, static media\/document artifacts, and non-UI work/iu);
+  assert.match(agent, /proportional evidence per owner and target/iu);
+  assert.match(agent, /allow_implicit_invocation: false/u);
   assert.equal(agent.match(/\$superloopy:superloopy-frontend/g)?.length, 1);
-  assert.equal(agent.match(/\/superloopy:superloopy-frontend/g)?.length, 1);
+  assert.equal(agent.match(/\/superloopy:superloopy-frontend/g)?.length ?? 0, 0);
   assert.doesNotMatch(agent, /auto-activat|when in doubt|plain UI mention|frontend vocabulary/i);
 });
 
@@ -306,6 +364,16 @@ test("frontend audit inventories cover each routed reference and contract test o
       path: "test/frontend-qt-contract.test.js",
       fileProvenance: /Superloopy-native test/u,
       goldenProvenance: /node --test test\/frontend-qt-contract\.test\.js/u
+    },
+    {
+      path: "test/frontend-routing-scenarios.test.js",
+      fileProvenance: /Superloopy-native regression test/u,
+      goldenProvenance: /node --test test\/frontend-routing-scenarios\.test\.js/u
+    },
+    {
+      path: "skills/superloopy-frontend/scripts/evidence-root.mjs",
+      fileProvenance: /Superloopy-native Node-built-in helper/u,
+      goldenProvenance: /test\/frontend-routing-scenarios\.test\.js/u
     }
   ];
 
@@ -329,10 +397,16 @@ test("frontend audit inventories cover each routed reference and contract test o
     }
   }
 
-  assert.match(designRow, /one shared UX contract.*platform and composition routes/iu);
-  assert.match(designRow, /public Web, desktop, mobile\/tablet, embedded\/hybrid, custom-rendered, Qt, and mixed surfaces/iu);
+  assert.match(designRow, /one shared UX contract.*exact platform and composition routes/iu);
+  assert.match(designRow, /browser-hosted public\/authenticated\/private Web.*interactive deployed content-led Web.*PWA\/extensions.*desktop.*mobile\/tablet.*embedded\/hybrid.*custom-rendered.*Qt.*mixed surfaces/iu);
+  assert.match(designRow, /current-state and affected-user evidence.*capability availability.*enabled\/visible\/invocable\/feedback state.*async\/auth\/offline\/conflict.*recovery paths/iu);
+  assert.match(designRow, /scales design, visual, accessibility, package, and real-target artifacts.*changed claims/iu);
   assert.match(designRow, /mixed targets.*independent.*renderer.*shell.*package.*target evidence/iu);
-  assert.match(designRow, /existing deep Qt specialization.*official Qt documentation/iu);
+  assert.match(designRow, /standalone runs.*run-scoped receipts.*active loops.*goal and criterion/iu);
+  assert.match(designRow, /Native, hybrid, and custom-rendered claims cannot pass on screenshots alone/iu);
+  assert.match(designRow, /SEO applies when the current Web target is crawlable and public.*native or embedded.*distinct public Web deployment/iu);
+  assert.match(designRow, /Qt specialization.*desktop and mobile\/tablet.*official Qt documentation/iu);
+  assert.match(designRow, /dependency-free helper.*portable run roots.*path escape.*symlink.*duplicate-root.*empty-artifact evidence/iu);
   assert.match(designRow, /shared UX and platform\/composition contracts.*original prose.*Superloopy/iu);
   assert.match(designRow, /no external runtime dependencies.*vendored/iu);
 
@@ -340,10 +414,11 @@ test("frontend audit inventories cover each routed reference and contract test o
   const agentGoldenRows = golden.split("\n").filter((line) => line.startsWith("| `skills/superloopy-frontend/agents/openai.yaml` |"));
   assert.equal(skillGoldenRows.length, 1, "frontend SKILL.md must have one exact golden-set row");
   assert.equal(agentGoldenRows.length, 1, "frontend agent metadata must have one exact golden-set row");
-  assert.match(skillGoldenRows[0], /shared UX.*platform\/composition routes.*preserved Qt specialization.*independent evidence/iu);
+  assert.match(skillGoldenRows[0], /shared UX.*target-specific platform\/composition routes.*Qt specialization.*desktop and mobile\/tablet.*independent proportional evidence/iu);
+  assert.match(skillGoldenRows[0], /standalone receipts.*without invented loop state/iu);
   assert.match(skillGoldenRows[0], /original Superloopy prose/iu);
   assert.match(skillGoldenRows[0], /no vendored runtime dependenc(?:y|ies)/iu);
-  assert.match(agentGoldenRows[0], /explicit screen-based application-UI discovery.*plain UI\/platform\/framework vocabulary inert.*unsupported specialized surfaces excluded/iu);
+  assert.match(agentGoldenRows[0], /explicit-only discovery metadata.*cross-platform application-UI workflow.*unsupported specialized surfaces.*proportional owner\/target evidence/iu);
 });
 
 test("public docs describe loose prompt triggers as guidance-only", async () => {

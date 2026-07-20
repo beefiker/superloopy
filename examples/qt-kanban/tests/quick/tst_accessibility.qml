@@ -153,8 +153,8 @@ TestCase {
     function test_demo_context_is_static_and_does_not_announce_success() {
         const view = createView()
         const demoItems = [
-            [findChild(view, "timelineDemoItem"), "Timeline — demo only"],
-            [findChild(view, "inboxDemoItem"), "Inbox — demo only"]
+            [findChild(view, "timelineDemoItem"), "Timeline — Demo only"],
+            [findChild(view, "inboxDemoItem"), "Inbox — Demo only"]
         ]
 
         for (const definition of demoItems) {

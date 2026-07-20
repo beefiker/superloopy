@@ -8,13 +8,69 @@ Control {
     id: root
 
     property bool compact: false
+    readonly property real compactLabelLineWidth:
+        Theme.sidebarCompact - 2 * padding
+    readonly property bool requiresWideLayout:
+        timelineCompactTitleProbe.lineCount > 2
+        || timelineCompactStatusProbe.lineCount > 2
+        || inboxCompactTitleProbe.lineCount > 2
+        || inboxCompactStatusProbe.lineCount > 2
 
     signal boardRequested(Item invoker)
+
+    function focusBoard() {
+        boardButton.forceActiveFocus(Qt.TabFocusReason)
+        return boardButton.activeFocus
+    }
 
     padding: Theme.space3
 
     background: Rectangle {
         color: Theme.sidebar
+    }
+
+    Text {
+        id: timelineCompactTitleProbe
+        visible: false
+        width: root.compactLabelLineWidth
+        font.pixelSize: Theme.metaFontPixelSize
+        font.weight: Theme.sectionFontWeight
+        wrapMode: Text.Wrap
+        text: timelineDemoItem.title
+        Accessible.ignored: true
+    }
+
+    Text {
+        id: timelineCompactStatusProbe
+        visible: false
+        width: root.compactLabelLineWidth
+        font.pixelSize: Theme.metaFontPixelSize
+        font.weight: Theme.metaFontWeight
+        wrapMode: Text.Wrap
+        text: timelineDemoItem.demoOnlyLabel
+        Accessible.ignored: true
+    }
+
+    Text {
+        id: inboxCompactTitleProbe
+        visible: false
+        width: root.compactLabelLineWidth
+        font.pixelSize: Theme.metaFontPixelSize
+        font.weight: Theme.sectionFontWeight
+        wrapMode: Text.Wrap
+        text: inboxDemoItem.title
+        Accessible.ignored: true
+    }
+
+    Text {
+        id: inboxCompactStatusProbe
+        visible: false
+        width: root.compactLabelLineWidth
+        font.pixelSize: Theme.metaFontPixelSize
+        font.weight: Theme.metaFontWeight
+        wrapMode: Text.Wrap
+        text: inboxDemoItem.demoOnlyLabel
+        Accessible.ignored: true
     }
 
     component SidebarAction: Button {
@@ -58,11 +114,17 @@ Control {
         required property string title
         required property url iconSource
         required property string compactObjectPrefix
-        readonly property string demoOnlyLabel: qsTr("Demo only")
-        readonly property string accessibleLabel: qsTr("%1 — demo only").arg(title)
+        property string demoOnlyLabel: qsTr("Demo only")
+        readonly property string accessibleLabel: qsTr("%1 — %2")
+                                                  .arg(title)
+                                                  .arg(demoOnlyLabel)
 
         implicitWidth: root.compact ? 48 : wideContent.implicitWidth + 2 * Theme.space3
-        implicitHeight: root.compact ? 48 : 42
+        implicitHeight: root.compact
+                        ? Math.max(48, compactContent.implicitHeight
+                                       + 2 * Theme.space1)
+                        : Math.max(42, wideContent.implicitHeight
+                                       + 2 * Theme.space1)
         Layout.minimumWidth: 0
         activeFocusOnTab: false
         Accessible.role: Accessible.StaticText
@@ -74,6 +136,8 @@ Control {
             anchors.fill: parent
             anchors.leftMargin: Theme.space3
             anchors.rightMargin: Theme.space3
+            anchors.topMargin: Theme.space1
+            anchors.bottomMargin: Theme.space1
             visible: !root.compact
             spacing: Theme.space3
 
@@ -92,29 +156,34 @@ Control {
                 spacing: 0
 
                 Label {
+                    objectName: demoItem.compactObjectPrefix + "WideTitle"
                     Layout.fillWidth: true
                     text: demoItem.title
                     color: Theme.sidebarText
                     font.pixelSize: Theme.bodyFontPixelSize
                     font.weight: Theme.bodyFontWeight
-                    elide: Text.ElideRight
+                    wrapMode: Text.Wrap
                     Accessible.ignored: true
                 }
 
                 Label {
+                    objectName: demoItem.compactObjectPrefix + "WideStatus"
                     Layout.fillWidth: true
                     text: demoItem.demoOnlyLabel
                     color: Theme.sidebarMutedText
                     font.pixelSize: Theme.metaFontPixelSize
                     font.weight: Theme.metaFontWeight
-                    elide: Text.ElideRight
+                    wrapMode: Text.Wrap
                     Accessible.ignored: true
                 }
             }
         }
 
         ColumnLayout {
+            id: compactContent
             anchors.fill: parent
+            anchors.topMargin: Theme.space1
+            anchors.bottomMargin: Theme.space1
             visible: root.compact
             spacing: 0
 
@@ -136,8 +205,7 @@ Control {
                 color: Theme.sidebarText
                 font.pixelSize: Theme.metaFontPixelSize
                 font.weight: Theme.sectionFontWeight
-                fontSizeMode: Text.HorizontalFit
-                minimumPixelSize: Theme.metaFontPixelSize * 8 / 11
+                wrapMode: Text.Wrap
                 horizontalAlignment: Text.AlignHCenter
                 Accessible.ignored: true
             }
@@ -149,8 +217,7 @@ Control {
                 color: Theme.sidebarMutedText
                 font.pixelSize: Theme.metaFontPixelSize
                 font.weight: Theme.metaFontWeight
-                fontSizeMode: Text.HorizontalFit
-                minimumPixelSize: Theme.metaFontPixelSize * 8 / 11
+                wrapMode: Text.Wrap
                 horizontalAlignment: Text.AlignHCenter
                 Accessible.ignored: true
             }
@@ -216,6 +283,7 @@ Control {
         }
 
         PassiveDemoItem {
+            id: timelineDemoItem
             objectName: "timelineDemoItem"
             Layout.fillWidth: true
             title: qsTr("Timeline")
@@ -224,6 +292,7 @@ Control {
         }
 
         PassiveDemoItem {
+            id: inboxDemoItem
             objectName: "inboxDemoItem"
             Layout.fillWidth: true
             title: qsTr("Inbox")

@@ -10,6 +10,8 @@ Flickable {
     signal addTaskRequested(string columnId, Item invoker)
 
     property bool rightToLeft: false
+    property var focusBeforeTasks: null
+    property var focusAfterTasks: null
     property bool _viewportInitialized: false
     property bool _viewportUpdateScheduled: false
     property bool _trackingLogicalStart: true
@@ -182,6 +184,61 @@ Flickable {
         return false
     }
 
+    function focusFirstTask() {
+        if (columnDefinitions.length === 0)
+            return false
+
+        const firstColumn = columnDefinitions[0]
+        const tasks = TaskStore.visibleInColumn(firstColumn.key)
+        return tasks.length > 0
+               ? focusTask(tasks[0].id)
+               : focusBoardControl("addTask-" + firstColumn.key)
+    }
+
+    function focusLastControl() {
+        if (columnDefinitions.length === 0)
+            return false
+        return focusBoardControl("addTask-"
+                                 + columnDefinitions[columnDefinitions.length - 1].key)
+    }
+
+    function focusBoardControl(controlId) {
+        const addTaskPrefix = "addTask-"
+        if (controlId.indexOf(addTaskPrefix) !== 0)
+            return focusTask(controlId)
+
+        const columnId = controlId.slice(addTaskPrefix.length)
+        for (let index = 0; index < columnRepeater.count; ++index) {
+            const column = columnRepeater.itemAt(index) as KanbanColumn
+            if (column && column.columnId === columnId) {
+                revealColumn(column)
+                return column.focusAddTask()
+            }
+        }
+        return false
+    }
+
+    function focusAdjacentTask(controlId, direction) {
+        const orderedControlIds = []
+        for (const definition of columnDefinitions) {
+            const tasks = TaskStore.visibleInColumn(definition.key)
+            for (const task of tasks)
+                orderedControlIds.push(task.id)
+            orderedControlIds.push("addTask-" + definition.key)
+        }
+
+        const currentIndex = orderedControlIds.indexOf(controlId)
+        const targetIndex = currentIndex + direction
+        if (currentIndex >= 0 && targetIndex >= 0
+                && targetIndex < orderedControlIds.length)
+            return focusBoardControl(orderedControlIds[targetIndex])
+        if (direction < 0 && focusBeforeTasks)
+            return focusBeforeTasks()
+        if (direction > 0 && focusAfterTasks)
+            return focusAfterTasks()
+        return false
+    }
+
     clip: true
     interactive: !dragActive
     contentWidth: Math.max(width, boardContentWidth)
@@ -216,6 +273,9 @@ Flickable {
                 title: modelData.title
                 accent: modelData.accent
                 dragCoordinator: root
+                focusAdjacentControl: (taskId, direction) =>
+                                        root.focusAdjacentTask(taskId,
+                                                               direction)
                 onTaskActivated: (taskId, invoker) =>
                                  root.taskActivated(taskId, invoker)
                 onAddTaskRequested: (columnId, invoker) =>

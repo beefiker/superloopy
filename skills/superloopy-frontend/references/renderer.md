@@ -16,9 +16,9 @@ Map pointer, touch, keyboard, stylus, controller, and accessibility actions only
 
 ## Scaling and performance
 
-Test device-pixel ratio, zoom, text scaling, resize, orientation, safe areas, large content, reduced motion, contrast/theme changes, and capture/compositing paths. Measure frame pacing, input latency, memory, startup, and power only when those claims matter; a fast synthetic scene does not prove a real journey.
+Build a **target-applicable scaling matrix** from device-pixel ratio (DPR), zoom, text scaling, resize/window class, orientation, safe areas/insets, large content, reduced motion, contrast/theme changes, and capture/compositing paths. Test orientation and safe areas only when the named target supports or exposes them, and record the rest as not applicable rather than simulating a foreign platform. Measure frame pacing, input latency, memory, startup, and power only when those claims matter; a fast synthetic scene does not prove a real journey.
 
-Crawlability is a separate capability to prove for a separately deployed public surface. Canvas, WebAssembly, engine output, or a hidden DOM fallback does not become indexable by declaration.
+Crawlability is a separate capability to prove when the current renderer target is deployed as crawlable public Web. For native or embedded current targets, assess it only on a distinct public Web deployment. Canvas, WebAssembly, engine output, or a hidden DOM fallback does not become indexable by declaration.
 
 ## Renderer evidence
 
