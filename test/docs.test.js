@@ -43,7 +43,7 @@ test("gate notes document proportional owner-and-claim surface evidence", async 
   assert.match(notes, /complete accepted artifact-kind vocabulary.*cli-transcript.*renderer-trace/is);
   assert.match(notes, /Scoped owner\/claim proof minimums/);
   assert.match(notes, /structured target description never substitutes for a `device-report`/i);
-  assert.match(notes, /Within `surfaceEvidence`.*each scoped `target\.id` \+ `owner` pair.*only once.*different scoped pairs.*same resolved artifact path/is);
+  assert.match(notes, /Within `surfaceEvidence`.*each scoped `target\.id` \+ `target\.platform` \+ `owner` slice.*only once.*different scoped slices.*same resolved artifact path/is);
   assert.match(notes, /`adversarialCases`.*`contractCoverage`.*do not declare their own `target` or `owner`.*inherit the relevant surface slice/is);
   assert.match(notes, /same `contractRef`.*direct artifact-only coverage.*fail closed/is);
   assert.match(notes, /"artifactRefs".*"surfaceEvidence".*"target".*"id".*"platform".*"environment"/is);
