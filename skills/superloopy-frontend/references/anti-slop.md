@@ -4,6 +4,15 @@ Use this visual-direction check for marketing, editorial, campaign, greenfield p
 
 For authenticated, private, or internal product Web, preserve the existing design system and product conventions first. Apply only checks relevant to the changed visual claim. This contract does not require imagery, layout-family variety, or font replacement for a workflow screen, dense tool, settings form, accessibility fix, or narrow nonvisual change.
 
+## Non-waivable core
+
+Proportionality selects which rows apply; it does not make waivers free. Whenever this contract is selected at all, these minimums hold and no row below is eligible for a bare `N/A`:
+
+- **Honest assets:** div-based mock UI presented as a real product capture, unauthorized marks, and invented metrics or testimonials are defects at any scope.
+- **No shipped placeholders:** accidental placeholder names, brands, or filler copy in shipped strings are defects at any scope.
+- **Named waiver authority:** every `N/A`, override, or kept default cites the specific authority that justifies it — the approved criterion, brand rule, source text, or file. "Not selected by risk" with no named authority does not close a row.
+- **Grounded impact records:** a `Design impact: unchanged`, `Layout impact: unchanged`, or `Motion impact: unchanged` record is valid only when the change introduces no new visible string, style, composition, or motion; otherwise the relevant rows apply and are answered with evidence.
+
 ## Named-default bans
 
 For a generated visual direction, each check names a common default and a deliberate replacement. An existing brand, approved target, organizational system, or user requirement is authority and must be recorded as the override.
@@ -47,6 +56,7 @@ For generated campaign directions, review ungrounded hero version labels, sectio
 
 ## Pre-flight checklist
 
+- [ ] Non-waivable core holds: honest assets, no shipped placeholders, named waiver authority, grounded impact records.
 - [ ] Scope is marketing, editorial, campaign, or an explicit new visual direction; otherwise only relevant rows were applied.
 - [ ] Existing brand, design-system, platform, and product conventions remain authoritative.
 - [ ] Named defaults have evidence-backed decisions or recorded overrides.
