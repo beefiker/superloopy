@@ -67,6 +67,16 @@ TestCase {
         return owner
     }
 
+    function verifyItemInside(item, viewport, label) {
+        const origin = item.mapToItem(viewport, 0, 0)
+        verify(origin.x >= -0.5, label + " begins left of its viewport")
+        verify(origin.y >= -0.5, label + " begins above its viewport")
+        verify(origin.x + item.width <= viewport.width + 0.5,
+               label + " exceeds its viewport width")
+        verify(origin.y + item.height <= viewport.height + 0.5,
+               label + " exceeds its viewport height")
+    }
+
     function test_columns_bind_store_visible_arrays_and_counts() {
         const view = createView()
         const keys = ["backlog", "ready", "inProgress", "review"]
@@ -202,6 +212,68 @@ TestCase {
         compare(TaskStore.selectedTaskId, "task-define-goals")
         compare(findChild(overlayDrawer, "detailTitle").text,
                 "Define launch goals")
+    }
+
+    function test_board_action_returns_from_overlay_details_to_overview_data() {
+        return [
+            { "tag": "pointer", "method": "pointer" },
+            { "tag": "keyboard", "method": "keyboard" },
+            { "tag": "accessibility", "method": "accessibility" }
+        ]
+    }
+
+    function test_board_action_returns_from_overlay_details_to_overview(data) {
+        const view = createView(1300)
+        const boardButton = findChild(view, "boardButton")
+        const board = findChild(view, "boardView")
+        const overlayDrawer = findChild(view, "overlayDetailDrawer")
+        const card = findChild(view, "taskCard-task-define-goals")
+        const interaction = findChild(card, "cardInteraction")
+
+        verify(boardButton)
+        verify(board)
+        verify(overlayDrawer)
+        verify(interaction)
+
+        interaction.forceActiveFocus(Qt.TabFocusReason)
+        keyClick(Qt.Key_Return)
+        tryVerify(function() { return overlayDrawer.opened })
+        compare(TaskStore.selectedTaskId, "task-define-goals")
+
+        const drawerBoardAction = findChild(overlayDrawer,
+                                            "detailBoardOverviewButton")
+        verify(drawerBoardAction,
+               "The modal must expose a reachable return-to-Board action")
+        if (data.method === "pointer") {
+            mouseClick(drawerBoardAction)
+        } else if (data.method === "keyboard") {
+            compare(namedFocusOwner(testCase.Window.window.activeFocusItem),
+                    "detailCloseButton")
+            keyClick(Qt.Key_Tab)
+            compare(namedFocusOwner(testCase.Window.window.activeFocusItem),
+                    "detailBoardOverviewButton")
+            keyClick(Qt.Key_Space)
+        } else {
+            verify(accessibilityProbe.hasPressAction(drawerBoardAction))
+            verify(accessibilityProbe.press(drawerBoardAction))
+        }
+
+        verify(overlayDrawer.visible,
+               "The animated drawer must remain visible while closing")
+        compare(TaskStore.selectedTaskId, "task-define-goals",
+                "Selection must remain stable during the exit animation")
+
+        tryVerify(function() { return !overlayDrawer.opened })
+        tryCompare(TaskStore, "selectedTaskId", "")
+        verify(board.visible)
+        verify(boardButton.checked)
+        tryVerify(function() { return boardButton.activeFocus })
+
+        keyClick(Qt.Key_Space)
+        compare(TaskStore.selectedTaskId, "")
+        verify(board.visible)
+        verify(boardButton.checked)
+        tryVerify(function() { return boardButton.activeFocus })
     }
 
     function test_move_to_control_and_adjacent_shortcuts() {
@@ -510,6 +582,7 @@ TestCase {
         const drawer = findChild(view, "overlayDetailDrawer")
         const allowedOwners = [
             "detailCloseButton",
+            "detailBoardOverviewButton",
             "moveToColumn",
             "movePreviousButton",
             "moveNextButton"
@@ -540,21 +613,29 @@ TestCase {
                 "detailCloseButton")
 
         const moveControl = findChild(drawer, "moveToColumn")
+        const boardOverviewButton = findChild(drawer,
+                                              "detailBoardOverviewButton")
         const previousButton = findChild(drawer, "movePreviousButton")
         const nextButton = findChild(drawer, "moveNextButton")
+        verify(boardOverviewButton)
         verify(!previousButton.enabled)
         verify(nextButton.enabled)
+        compare(findChild(drawer, "detailCloseButton").KeyNavigation.tab,
+                boardOverviewButton)
+        compare(boardOverviewButton.KeyNavigation.tab, moveControl)
+        compare(moveControl.KeyNavigation.backtab, boardOverviewButton)
         compare(moveControl.KeyNavigation.tab, nextButton)
         compare(nextButton.KeyNavigation.backtab, moveControl)
 
-        const forwardOwners = ["moveToColumn", "moveNextButton",
-                               "detailCloseButton"]
+        const forwardOwners = ["detailBoardOverviewButton", "moveToColumn",
+                               "moveNextButton", "detailCloseButton"]
         for (const owner of forwardOwners) {
             keyClick(Qt.Key_Tab)
             compare(namedFocusOwner(testCase.Window.window.activeFocusItem), owner)
         }
 
         const reverseOwners = ["moveNextButton", "moveToColumn",
+                               "detailBoardOverviewButton",
                                "detailCloseButton"]
         for (const owner of reverseOwners) {
             keyClick(Qt.Key_Backtab)
@@ -576,23 +657,30 @@ TestCase {
                 "detailCloseButton")
 
         const closeButton = findChild(drawer, "detailCloseButton")
+        const boardOverviewButton = findChild(drawer,
+                                              "detailBoardOverviewButton")
         const moveControl = findChild(drawer, "moveToColumn")
         const previousButton = findChild(drawer, "movePreviousButton")
         const nextButton = findChild(drawer, "moveNextButton")
+        verify(boardOverviewButton)
         verify(previousButton.enabled)
         verify(!nextButton.enabled)
         compare(closeButton.KeyNavigation.backtab, previousButton)
+        compare(closeButton.KeyNavigation.tab, boardOverviewButton)
+        compare(boardOverviewButton.KeyNavigation.tab, moveControl)
+        compare(moveControl.KeyNavigation.backtab, boardOverviewButton)
         compare(previousButton.KeyNavigation.tab, closeButton)
         compare(previousButton.KeyNavigation.backtab, moveControl)
 
-        const forwardOwners = ["moveToColumn", "movePreviousButton",
-                               "detailCloseButton"]
+        const forwardOwners = ["detailBoardOverviewButton", "moveToColumn",
+                               "movePreviousButton", "detailCloseButton"]
         for (const owner of forwardOwners) {
             keyClick(Qt.Key_Tab)
             compare(namedFocusOwner(testCase.Window.window.activeFocusItem), owner)
         }
 
         const reverseOwners = ["movePreviousButton", "moveToColumn",
+                               "detailBoardOverviewButton",
                                "detailCloseButton"]
         for (const owner of reverseOwners) {
             keyClick(Qt.Key_Backtab)
@@ -626,47 +714,120 @@ TestCase {
         tryVerify(function() { return start.activeFocus })
 
         const forwardOwners = [
-            "timelineButton", "inboxButton", "settingsButton", "helpButton",
             "searchField", "priorityFilter", "newTaskButton",
             "taskCard-task-define-goals",
             "taskCard-task-audience-research",
             "taskCard-task-localize-launch",
+            "addTask-backlog",
             "taskCard-task-finalize-messaging",
             "taskCard-task-design-system",
             "taskCard-task-email-campaign",
+            "addTask-ready",
             "taskCard-task-build-landing",
             "taskCard-task-integrate-analytics",
             "taskCard-task-mobile-qa",
+            "addTask-inProgress",
             "taskCard-task-demo-video",
             "taskCard-task-go-to-market",
             "taskCard-task-launch-readiness-review",
+            "addTask-review",
             "detailCloseButton", "moveToColumn",
             "movePreviousButton", "moveNextButton"
         ]
-        let forwardIndex = 0
-        while (forwardIndex < forwardOwners.length) {
+        for (const owner of forwardOwners) {
             keyClick(Qt.Key_Tab)
-            const owner = namedFocusPath(
-                            testCase.Window.window.activeFocusItem)
-            if (owner.indexOf("addTask-") === 0)
-                continue
-            compare(owner, forwardOwners[forwardIndex])
-            ++forwardIndex
+            compare(namedFocusPath(testCase.Window.window.activeFocusItem),
+                    owner)
         }
 
         const backwardOwners = forwardOwners.slice(0, -1).reverse()
         backwardOwners.push("boardButton")
         for (const owner of backwardOwners) {
             keyClick(Qt.Key_Backtab)
-            let actualOwner = namedFocusPath(
-                                testCase.Window.window.activeFocusItem)
-            while (actualOwner.indexOf("addTask-") === 0) {
-                keyClick(Qt.Key_Backtab)
-                actualOwner = namedFocusPath(
-                            testCase.Window.window.activeFocusItem)
-            }
-            compare(actualOwner, owner)
+            compare(namedFocusPath(testCase.Window.window.activeFocusItem),
+                    owner)
         }
+    }
+
+    function test_primary_tab_order_keeps_empty_leading_columns() {
+        const view = createView(1600)
+        TaskStore.query = "landing"
+        waitForRendering(view)
+
+        const newTask = findChild(view, "newTaskButton")
+        verify(newTask)
+        newTask.forceActiveFocus(Qt.TabFocusReason)
+        tryVerify(function() { return newTask.activeFocus })
+
+        const forwardOwners = [
+            "addTask-backlog",
+            "addTask-ready",
+            "taskCard-task-build-landing"
+        ]
+        for (const owner of forwardOwners) {
+            keyClick(Qt.Key_Tab)
+            compare(namedFocusPath(testCase.Window.window.activeFocusItem),
+                    owner)
+        }
+    }
+
+    function test_tab_reveals_add_task_below_a_long_column() {
+        const view = createView(900)
+        const board = findChild(view, "boardView")
+        let lastTaskId = ""
+        for (let index = 0; index < 12; ++index) {
+            lastTaskId = TaskStore.addTask("Additional backlog task " + index,
+                                           "backlog", "Low")
+        }
+        waitForRendering(view)
+
+        const lastCard = findChild(view, "taskCard-" + lastTaskId)
+        const lastInteraction = findChild(lastCard, "cardInteraction")
+        const addTask = findChild(view, "addTask-backlog")
+        verify(board)
+        verify(lastInteraction)
+        verify(addTask)
+        verify(board.focusTask(lastTaskId))
+        tryVerify(function() { return lastInteraction.activeFocus })
+
+        keyClick(Qt.Key_Tab)
+        compare(namedFocusPath(testCase.Window.window.activeFocusItem),
+                "addTask-backlog")
+
+        let verticalViewport = addTask.parent
+        while (verticalViewport && !verticalViewport.clip)
+            verticalViewport = verticalViewport.parent
+        verify(verticalViewport)
+        verifyItemInside(addTask, verticalViewport,
+                         "Backlog Add task action")
+    }
+
+    function test_tab_reveals_add_task_in_an_empty_offscreen_column() {
+        const view = createView(900)
+        const board = findChild(view, "boardView")
+        TaskStore.query = "landing"
+        waitForRendering(view)
+
+        const landingCard = findChild(view,
+                                      "taskCard-task-build-landing")
+        const landingInteraction = findChild(landingCard, "cardInteraction")
+        const addInProgress = findChild(view, "addTask-inProgress")
+        const addReview = findChild(view, "addTask-review")
+        verify(board)
+        verify(landingInteraction)
+        verify(addInProgress)
+        verify(addReview)
+        verify(board.focusTask("task-build-landing"))
+        tryVerify(function() { return landingInteraction.activeFocus })
+
+        keyClick(Qt.Key_Tab)
+        compare(namedFocusPath(testCase.Window.window.activeFocusItem),
+                "addTask-inProgress")
+        keyClick(Qt.Key_Tab)
+        compare(namedFocusPath(testCase.Window.window.activeFocusItem),
+                "addTask-review")
+        verifyItemInside(addReview, board,
+                         "Offscreen Review Add task action")
     }
 
     function test_compact_rtl_shortcuts_follow_physical_direction() {
