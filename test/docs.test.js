@@ -320,7 +320,7 @@ test("frontend agent metadata keeps explicit screen-based routing and claim-shap
   assert.match(agent, /browser-hosted or interactive content-led Web, desktop, mobile\/tablet, embedded\/hybrid, Qt, custom-rendered, or mixed application UI/iu);
   assert.match(agent, /exclude TV, wearable, XR, automotive, game UI, TUI, static media\/document artifacts, and non-UI work/iu);
   assert.match(agent, /proportional evidence per owner and target/iu);
-  assert.match(agent, /allow_implicit_invocation: false/u);
+  assert.doesNotMatch(agent, /^policy:/mu);
   assert.equal(agent.match(/\$superloopy:superloopy-frontend/g)?.length, 1);
   assert.equal(agent.match(/\/superloopy:superloopy-frontend/g)?.length ?? 0, 0);
   assert.doesNotMatch(agent, /auto-activat|when in doubt|plain UI mention|frontend vocabulary/i);

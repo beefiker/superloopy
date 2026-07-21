@@ -254,7 +254,7 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
   assert.match(metadata, /browser-hosted or interactive content-led Web, desktop, mobile\/tablet, embedded\/hybrid, Qt, custom-rendered, or mixed application UI/iu);
   assert.match(metadata, /exclude TV, wearable, XR, automotive, game UI, TUI, static media\/document artifacts, and non-UI work/iu);
   assert.match(metadata, /proportional evidence per owner and target/iu);
-  assert.match(metadata, /allow_implicit_invocation: false/u);
+  assert.doesNotMatch(metadata, /^policy:/mu);
   assert.equal(metadata.match(/\$superloopy:superloopy-frontend/g)?.length, 1);
   assert.equal(metadata.match(/\/superloopy:superloopy-frontend/g)?.length ?? 0, 0);
   assert.doesNotMatch(metadata, /any UI\/visual work/i);
