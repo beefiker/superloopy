@@ -147,6 +147,9 @@ test("plugin packages Superloopy research and website-clone skills", async () =>
 
   assert.match(research.frontmatter, /^name: superloopy-research$/m);
   assert.match(research.frontmatter, /loopy research|deep research/i);
+  assert.match(research.frontmatter, /only after explicit Codex `\$superloopy:superloopy-research` or Claude Code `\/superloopy:superloopy-research` invocation/u);
+  assert.match(research.frontmatter, /Do not activate from research, investigate, look-up, summarize, deep-dive, or report vocabulary alone, in any language/u);
+  assert.match(research.content, /\*\*Explicit activation only\.\*\*/u);
   assert.match(research.content, /SUPERLOOPY RESEARCH ENABLED/);
   assert.match(research.content, /EXPAND/);
   assert.match(research.content, /SUPERLOOPY_EVIDENCE/);
@@ -166,6 +169,11 @@ test("plugin packages Superloopy research and website-clone skills", async () =>
     assert.match(metadata, /short_description:/);
     assert.match(metadata, /default_prompt:/);
   }
+
+  const researchMetadata = await readFile("skills/superloopy-research/agents/openai.yaml", "utf8");
+  assert.match(researchMetadata, /only after explicit invocation/u);
+  assert.match(researchMetadata, /not activation and stays with its primary workflow/u);
+  assert.doesNotMatch(researchMetadata, /^policy:/mu);
 });
 
 test("plugin packages the Superloopy doctor skill with read-only install diagnostics", async () => {
