@@ -174,7 +174,7 @@ test("audits assign resource, hierarchy, and exposure responsibilities to existi
     assert.match(row(content, reference("ux")), /resource identity.*reset provenance.*proportional disclosure/is);
     assert.match(row(content, reference("layout")), /exposure mode.*source.*destination.*conditional.*collaps.*expand/is);
     assert.match(row(content, reference("anti-slop")), /unintended.*root.*horizontal.*task-owned.*layout/is);
-    assert.match(row(content, "test/frontend-ux-contract.test.js"), /resource identity.*reset.*information hierarchy/is);
+    assert.match(row(content, "test/frontend-ux-semantics.test.js"), /resource identity.*reset.*information hierarchy/is);
     assert.match(row(content, "test/frontend-quality-overlays.test.js"), /generic disclosure.*horizontal-scroll.*audit responsibilit/is);
   }
 });

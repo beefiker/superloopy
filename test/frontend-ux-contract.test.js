@@ -188,20 +188,6 @@ test("shared input and motion rules cover editable text, IME, and reduced motion
   assert.match(mobile, /IME|input method/u);
   assert.match(mobile, /reduced motion|animation scale/iu);
 });
-test("shared UX keeps resource identity and lifecycle transitions attributable", async () => {
-  const ux = await read(reference("ux"));
-  for (const pattern of [/lifecycle verbs?.*distinct semantic transitions?/is, /canonical resource.*working copy.*last[- ]saved.*active resource.*dirty.*pending.*visible.*attributable/is, /copy.*identity change.*disclos/is, /product contract.*portability.*stable logical identifier.*owned-root-relative locator/is, /absolute locator remains valid.*actual platform.*provider.*integration owner.*requires.*explicit reason.*resolution boundary.*relink.*recovery/is, /copy-based workflow remains valid.*identity.*lifecycle effects.*truthful/is, /each user intent.*shortest.*truthful.*transition/is, /current owner.*safely.*update.*reload.*original.*(?:do not|does not).*require.*import.*modify.*apply.*round trip.*copy.*edit.*apply.*variant/is, /staged copy.*edit.*apply.*real owner.*boundary.*reason.*original identity.*preserv.*reconcil.*apply.*save-back.*explicit.*commit path/is]) assert.match(ux, pattern);
-  for (const pattern of [/(?:^|[.!?]\s+)(?:absolute locators?\b[^.\n]{0,40}(?:are|must be)\s+(?:(?:always|universally)\s+)?(?:banned|forbidden)|(?:(?:always|universally)\s+)?(?:ban|forbid)\b[^.\n]{0,60}absolute locators?\b|never use (?:any\s+)?absolute locators?\b|absolute locators?\b\s+(?:are|must be)\s+never\s+(?:allowed|valid|used))(?!\s+(?:only|for|when|within|on|in|by|where|if|unless|except)\b)/im, /(?:^|[.!?]\s+)(?:copy-based workflows?\b[^.\n]{0,40}(?:are|must be)\s+(?:(?:always|universally)\s+)?(?:banned|forbidden)|(?:(?:always|universally)\s+)?(?:ban|forbid)\b[^.\n]{0,60}copy-based workflows?\b|never use (?:any\s+)?copy-based workflows?\b|copy-based workflows?\b\s+(?:are|must be)\s+never\s+(?:allowed|valid|used))(?!\s+(?:only|for|when|within|on|in|by|where|if|unless|except)\b)/im, /(?:^|[.!?]\s+)when\s+(?:(?:the\s+)?current owner[^.\n]{0,100}(?:can|is able to)\s+safely[^.\n]{0,60}(?:update|reload)[^.\n]{0,60}(?:the\s+)?original|(?:a\s+)?safe direct owner update[^.\n]{0,40}(?:is\s+)?\bpossible\b)[^.\n]{0,100}(?:(?:(?:always|universally|must(?:\s+always)?)\s+(?:require|use|perform)|(?:still\s+)?requires)[^.\n]{0,120}(?:import[^.\n]{0,60}(?:copy|modify|edit)[^.\n]{0,60}apply|(?:import|copy|modify|edit)[^.\n]{0,80}round trip)|[^.\n]{0,120}(?:import[^.\n]{0,60}(?:copy|modify|edit)[^.\n]{0,60}apply|(?:import|copy|modify|edit)[^.\n]{0,80}round trip)[^.\n]{0,40}(?:is|remains)\s+(?:always\s+)?(?:required|mandatory))/im]) assert.doesNotMatch(ux, pattern);
-});
-test("shared UX distinguishes revert and reset provenance", async () => {
-  const ux = await read(reference("ux"));
-  for (const pattern of [/Revert.*current(?: or |\/)inherited defaults.*versioned factory defaults.*distinct.*baseline.*scope/is, /reset values.*read.*real owner.*not.*duplicated UI literals/is, /proof.*non-default.*inherited.*changed[- ]default.*dirty.*Undo.*save.*apply.*restart.*relocation.*applicable/is]) assert.match(ux, pattern);
-});
-test("shared UX gives each task-bearing region purpose and proportional disclosure", async () => {
-  const ux = await read(reference("ux"));
-  for (const pattern of [/within the affected surface or journey.*every task-bearing region.*affordance.*distinct user-recognizable.*job.*outcome.*decision.*information gain.*parent.*siblings/is, /redundant.*unsupported.*merge.*relabel.*truthful output.*omit/is, /task criticality.*frequency.*consequence.*urgency.*actionability/is, /essential state.*blockers.*errors.*recovery.*next action.*in context/is, /simultaneous.*dense.*comparison.*monitoring.*expert work.*requires/is, /Advanced.*More.*not.*mechanical.*ban/is]) assert.match(ux, pattern);
-  for (const pattern of [/(?:^|[.!?]\s+)(?:(?:dense|comparison|monitoring|expert)[^.\n]{0,60}(?:content|work)\b[^.\n]{0,40}(?:(?:must|should)\s+(?:(?:always|universally)\s+)?|(?:is|are)\s+(?:always|universally)\s+)(?:be\s+)?(?:collaps(?:e|ed)\b|hid(?:e|den)\b|mov(?:e|ed)\s+behind disclosure\b)|(?:(?:always|universally)\s+)?(?:collapse|hide)\b[^.\n]{0,80}(?:dense|comparison|monitoring|expert)[^.\n]{0,40}(?:content|work)\b|(?:(?:always|universally)\s+)?move\b[^.\n]{0,80}(?:dense|comparison|monitoring|expert)[^.\n]{0,40}(?:content|work)\b[^.\n]{0,40}behind disclosure\b)(?!\s+(?:only|for|when|within|on|in|by|where|if|unless|except)\b)/im, /(?:^|[.!?]\s+)(?:(?:Advanced(?:\s*(?:and|\/)\s*More)?|More)[^.\n]{0,30}labels?\b[^.\n]{0,30}(?:(?:are|must be|should be)\s+(?:(?:always|universally)\s+)?(?:banned|forbidden|avoided)|(?:must|should)\s+never\s+be\s+used)|(?:(?:always|universally)\s+)?(?:ban|forbid)\b[^.\n]{0,60}(?:Advanced|More)[^.\n]{0,30}labels?\b|never use\b[^.\n]{0,40}(?:Advanced|More)[^.\n]{0,30}labels?\b)(?!\s+(?:only|for|when|within|on|in|by|where|if|unless|except)\b)/im]) assert.doesNotMatch(ux, pattern);
-});
 test("narrow nonvisual changes do not require design or visual artifacts", async () => {
   const ux = await read(reference("ux"));
   const web = await read(reference("web"));
@@ -526,7 +512,7 @@ test("anti-slop is a conditional visual-direction check, not a product-UI mandat
   assert.match(antiSlop, /not.*require.*imagery.*layout-family.*font replacement/is);
 });
 
-test("new UX references and contract test are inventoried as original Superloopy work", async () => {
+test("new UX references and contract tests are inventoried as original Superloopy work", async () => {
   const designAudit = await read("docs/superloopy-design-audit.md");
   const fileAudit = await read("docs/superloopy-file-audit.md");
   const golden = await read("docs/superloopy-loop-golden-set.md");
@@ -537,6 +523,7 @@ test("new UX references and contract test are inventoried as original Superloopy
     reference("hybrid"),
     reference("renderer"),
     "test/frontend-ux-contract.test.js",
+    "test/frontend-ux-semantics.test.js",
   ];
 
   for (const path of paths) {
