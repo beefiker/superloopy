@@ -57,6 +57,17 @@ test("review quality gate accepts one generic target id across distinct platform
   assert.doesNotThrow(() => validateReviewQualityGate(gate, identityArtifactPath));
 });
 
+test("matrix and review gates keep resolved artifacts exclusive across platform slices of one target id", () => {
+  const matrix = matrixGateForSurface("native desktop", SHARED_KINDS, windowsScope());
+  matrix.executorQa.surfaceEvidence.push({ ...linuxRow(matrix.executorQa.surfaceEvidence[0]), artifactRefs: ["proof-0", "proof-3"] });
+  matrix.executorQa.contractCoverage[0].surfaceEvidenceRefs.push("surface-linux");
+  const review = reviewGateForSurface("native desktop", SHARED_KINDS, windowsScope());
+  review.manualQa.surfaceEvidence.push({ ...linuxRow(review.manualQa.surfaceEvidence[0]), artifactRefs: ["proof-0", "proof-3"] });
+
+  assert.throws(() => validateMatrixQualityGate(matrix, identityArtifactPath), /reused across distinct scoped target\/platform\/owner slices/i);
+  assert.throws(() => validateReviewQualityGate(review, identityArtifactPath), /reused across distinct scoped target\/platform\/owner slices/i);
+});
+
 test("matrix and review gates still reject one repeated target id on one platform and owner", () => {
   const matrix = matrixGateForSurface("native desktop", SHARED_KINDS, windowsScope());
   matrix.executorQa.surfaceEvidence.push({ ...linuxRow(matrix.executorQa.surfaceEvidence[0]), target: target("desktop", "windows", "Second Windows 11 workstation") });

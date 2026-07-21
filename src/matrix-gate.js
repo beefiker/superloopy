@@ -242,7 +242,7 @@ function registerScopedEvidence(scope, artifacts, field, seenScopes, artifactSco
   for (const artifact of artifacts) {
     const priorScope = artifactScopes.get(artifact.path);
     if (priorScope !== undefined && priorScope !== scopeKey) {
-      fail(`${field} artifact path ${artifact.path} is reused across distinct scoped target/owner rows.`);
+      fail(`${field} artifact path ${artifact.path} is reused across distinct scoped target/platform/owner slices.`);
     }
     artifactScopes.set(artifact.path, scopeKey);
   }
