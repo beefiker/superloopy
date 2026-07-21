@@ -63,6 +63,7 @@ For Qt-owned non-Web pixels, this checklist replaces the Web anti-slop, browser-
 - [ ] Newer APIs have guards, a fallback, and a testable boundary.
 - [ ] The existing design source remains authoritative; any `DESIGN.md` is either that established source or a synchronized scoped mapping, and app semantics do not freeze the system palette, platform font, native metrics, or accessibility preferences.
 - [ ] Every supported input path (pointer, keyboard, touch, pen, switch, or assistive action as applicable) reaches the same truthful semantic outcome.
+- [ ] User-visible strings pass through `tr()`/`qsTr()` with a translation setup when the target implies more than one locale; a mismatched shipped language records its locale decision.
 - [ ] CJK, RTL, emoji/font fallback, long translations, and enlarged text remain usable.
 - [ ] High-DPI geometry and assets are correct across each target-supported DPR and display transition; unsupported transitions are recorded as not applicable.
 - [ ] Motion preferences and target-native system chrome are preserved or an explicit replacement is fully verified.
