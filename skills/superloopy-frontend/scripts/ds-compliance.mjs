@@ -28,7 +28,7 @@ function normalizeHex(hex) {
 export function parseDesignTokens(designText) {
   const colors = new Set();
   for (const m of designText.matchAll(HEX)) colors.add(normalizeHex(m[0]));
-  const baseMatch = designText.match(/base[^\n]*?\b(\d+)\s*px/i);
+  const baseMatch = designText.match(/\bbase\b[^\n]*?\b(\d+)\s*px/i);
   const base = baseMatch ? Number.parseInt(baseMatch[1], 10) : 4;
   return { colors, base: base > 0 ? base : 4 };
 }
