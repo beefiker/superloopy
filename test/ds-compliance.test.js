@@ -14,6 +14,13 @@ const DESIGN = [
   "- base 4px scale",
 ].join("\n");
 
+test("parseDesignTokens reads the base unit from the base word, not baseline or database prose", () => {
+  const baseline = parseDesignTokens("The baseline is aligned to a 3px sub-grid.\n- base 4px scale\n");
+  const database = parseDesignTokens("The database view uses 7px badges.\n- base 4px scale\n");
+  assert.equal(baseline.base, 4);
+  assert.equal(database.base, 4);
+});
+
 test("parseDesignTokens collects declared colors (normalized) and the base unit", () => {
   const t = parseDesignTokens(DESIGN);
   assert.equal(t.base, 4);
