@@ -57,4 +57,4 @@ For generated campaign directions, review ungrounded hero version labels, sectio
 - [ ] Motion claimed is implemented and respects reduced motion.
 - [ ] Applicable visual values trace to the existing or scoped design contract.
 - [ ] Interactive and operating states required by the shared UX contract are handled.
-- [ ] No horizontal scroll at the target-derived minimum, maximum, breakpoints, zoom, or text scaling; 390 / 768 / 1280 are baseline samples only when selected.
+- [ ] No unintended root/page horizontal overflow at the target-derived minimum, maximum, breakpoints, zoom, or text scaling; 390 / 768 / 1280 are baseline samples only when selected. Intentional task- or content-owned horizontal regions remain valid and follow `layout.md`'s spatial and scroll ownership contract.

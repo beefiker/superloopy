@@ -16,13 +16,14 @@ Record only the fields selected by the changed claim:
 
 - primary task, primary content, supporting content, and the state in which each region exists;
 - each region's exposure mode—`always visible`, `summary`, `on demand`, or `omitted`—and the task condition that selects it;
-- disclosure label, controlling affordance, predictable collapsed and expanded state, and the relationship that remains understandable in either state;
+- disclosure label and controlling affordance when present, the source or summary state, the disclosed or destination state, and the relationship that remains understandable across them. `Always visible` and `omitted` are valid exposure decisions and do not imply a two-state control;
+- collapsed and expanded states only when the selected disclosure mechanism uses collapse and expand. A details route, modal, drill-down, staged flow, or contextual reveal records its own source and destination states instead;
 - semantic/model order, reading order, visual placement, and focus/traversal order, including intentional differences and how relationships remain understandable;
 - layout owner and every scroll owner, plus the region that determines available width, height, and overlay bounds;
 - size constraints, intrinsic or platform-derived minimums and maximums, and which regions may shrink, wrap, clip, scroll, or overflow;
 - fixed, sticky, floating, modal, inspector, frozen-axis, or overlay responsibilities and the content they must not cover;
 - target-derived change points grounded in content and supported bounds rather than copied device widths;
-- each collapse or expand transition and the focus, context, and state it preserves; and
+- each disclosure transition and the focus, context, and state it preserves; and
 - state, selection, focus, scroll, and context that must survive each adaptation. Preserve semantic task context by default, not an exact object identity or pixel offset when content is hidden, reparented, recycled, or resized; require exact preservation only when the product contract makes it meaningful.
 
 A reusable primitive should have one primary spatial responsibility. A shell or composite may coordinate several responsibilities when each child owner and boundary is explicit.
@@ -47,4 +48,4 @@ A virtualized surface preserves logical collection order, stable item identity, 
 
 ## Evidence
 
-Prove the affected spatial claim on the actual target. For affected disclosure, exercise collapsed and expanded states at the affected bounds and inputs. Use rendered captures for visible geometry, interaction evidence for scroll, resize, selection, focus, disclosure, and restoration, accessibility evidence for the semantics claimed, and performance evidence only when performance is claimed or risk-selected. Record the exact target, state, content, bounds, input, result, and limitation; a static screenshot cannot prove traversal or scroll ownership.
+Prove the affected spatial claim on the actual target. For affected disclosure on that actual target, exercise its source or summary state and disclosed or destination state at the affected bounds and inputs. Exercise collapsed and expanded states only when that selected mechanism uses them. Use rendered captures for visible geometry, interaction evidence for scroll, resize, selection, focus, disclosure, and restoration, accessibility evidence for the semantics claimed, and performance evidence only when performance is claimed or risk-selected. Record the exact target, state, content, bounds, input, result, and limitation; a static screenshot cannot prove traversal or scroll ownership.
