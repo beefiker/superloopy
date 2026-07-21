@@ -118,6 +118,17 @@ test("frontend evidence helper creates and verifies portable run-scoped roots", 
     encoding: "utf8"
   });
   assert.notEqual(escaped.status, 0);
+
+  const slidesLane = spawnSync(process.execPath, [helper, "create", "deck-check", "slides"], { cwd: sandbox, encoding: "utf8" });
+  assert.equal(slidesLane.status, 0, slidesLane.stderr);
+  const slidesRoot = slidesLane.stdout.trim();
+  assert.match(slidesRoot, /^\.superloopy\/evidence\/slides\/\d{8}T\d{6}Z-deck-check$/u);
+  await writeFile(join(sandbox, slidesRoot, "VISUAL_QA.md"), "visual qa proof\n", "utf8");
+  const slidesVerified = spawnSync(process.execPath, [helper, "verify", slidesRoot, "VISUAL_QA.md"], { cwd: sandbox, encoding: "utf8" });
+  assert.equal(slidesVerified.status, 0, slidesVerified.stderr);
+  const badLane = spawnSync(process.execPath, [helper, "create", "deck-check", "backend"], { cwd: sandbox, encoding: "utf8" });
+  assert.notEqual(badLane.status, 0);
+  assert.match(badLane.stderr, /lane must be frontend or slides/u);
 });
 
 test("frontend evidence helper rejects symlinked proofs and roots while running through a linked entrypoint", {
