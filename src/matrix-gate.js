@@ -234,9 +234,9 @@ function coveredStatus(value, field) {
 
 function registerScopedEvidence(scope, artifacts, field, seenScopes, artifactScopes) {
   if (!scope.scoped) return;
-  const scopeKey = `${scope.target.id}\u0000${scope.owner}`;
+  const scopeKey = `${scope.target.id}\u0000${scope.target.platform}\u0000${scope.owner}`;
   if (seenScopes.has(scopeKey)) {
-    fail(`${field} duplicates scoped target ${scope.target.id} and owner ${scope.owner}.`);
+    fail(`${field} duplicates scoped target ${scope.target.id} on platform ${scope.target.platform} for owner ${scope.owner}.`);
   }
   seenScopes.add(scopeKey);
   for (const artifact of artifacts) {

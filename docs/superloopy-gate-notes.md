@@ -56,7 +56,7 @@ The validator unions the minimum for every selected claim. A structured target d
 | `http` | `http` | `http-dump`. |
 | `data` | `data` | `data-diff` or `api-package-test-report`. |
 
-Resolved proof is attributable to one scoped target-owner slice. Within `surfaceEvidence`, each scoped `target.id` + `owner` pair may appear only once, and two different scoped pairs may not cite the same resolved artifact path. Duplicate resolved paths are also rejected when `artifactRefs` are declared, even under different artifact IDs. Reusing a path cannot turn one execution into independent target proof. `adversarialCases` and matrix `contractCoverage` do not declare their own `target` or `owner`; they reference artifact IDs and, for matrix coverage, contract-bound surface/adversarial rows. Those references inherit the relevant surface slice instead of creating a second slice. This exclusivity tightening does not reinterpret legacy unscoped literal rows.
+Resolved proof is attributable to one scoped target-owner slice. Within `surfaceEvidence`, each scoped `target.id` + `target.platform` + `owner` slice may appear only once — one generic target ID may recur across distinct platforms — and two different scoped slices may not cite the same resolved artifact path. Duplicate resolved paths are also rejected when `artifactRefs` are declared, even under different artifact IDs. Reusing a path cannot turn one execution into independent target proof. `adversarialCases` and matrix `contractCoverage` do not declare their own `target` or `owner`; they reference artifact IDs and, for matrix coverage, contract-bound surface/adversarial rows. Those references inherit the relevant surface slice instead of creating a second slice. This exclusivity tightening does not reinterpret legacy unscoped literal rows.
 
 Matrix contract coverage must cite a surface or adversarial proof row with the same `contractRef`; direct artifact-only coverage, duplicate proof IDs, empty adversarial artifacts, or proof/scope fields hidden on `not_applicable` rows fail closed. Contract and adversarial references cannot declare a new target-owner slice or override the scoped surface row they cite.
 
@@ -136,7 +136,7 @@ When **all four** scoped fields (`target`, `owner`, `claims`, and `scopeReason`)
 - not-applicable adversarial case rejection
 - structured singular target objects plus proportional owner-and-claim surface evidence
 - invalid/vague/multi-target scope rejection and composite-owner enforcement
-- one scoped surface row per target-owner pair, independent resolved artifacts between different surface slices, and adversarial/coverage references that cannot invent a new slice
+- one scoped surface row per target-platform-owner slice, independent resolved artifacts between different surface slices, and adversarial/coverage references that cannot invent a new slice
 - exact unscoped review/matrix legacy literal compatibility
 - one-time SessionStart bootstrap for the command wrapper and bundled agents
 - quiet default plugin continuation hook registration
