@@ -9,6 +9,9 @@ Control {
 
     signal newTaskRequested(Item invoker)
 
+    property var focusNextControl: null
+    property var focusPreviousControl: null
+
     readonly property real singleRowRequiredWidth:
         Math.max(176, headerIdentity.implicitWidth)
         + Math.max(176, searchField.implicitWidth)
@@ -102,6 +105,11 @@ Control {
             font.pixelSize: Theme.bodyFontPixelSize
             Accessible.name: qsTr("Search tasks")
             onTextEdited: TaskStore.query = text
+            KeyNavigation.tab: priorityFilter
+            Keys.onBacktabPressed: event => {
+                event.accepted = root.focusPreviousControl
+                                 && root.focusPreviousControl()
+            }
 
             background: Rectangle {
                 color: Theme.surface
@@ -129,6 +137,8 @@ Control {
             }
             font.pixelSize: Theme.bodyFontPixelSize
             Accessible.name: qsTr("Priority filter")
+            KeyNavigation.tab: newTaskButton
+            KeyNavigation.backtab: searchField
             onActivated: index => {
                 TaskStore.priorityFilter = index === 1 ? "high"
                                            : index === 2 ? "medium"
@@ -202,6 +212,11 @@ Control {
             palette.buttonText: Theme.cobaltContent
             Accessible.name: text
             onClicked: root.newTaskRequested(newTaskButton)
+            KeyNavigation.backtab: priorityFilter
+            Keys.onTabPressed: event => {
+                event.accepted = root.focusNextControl
+                                 && root.focusNextControl()
+            }
 
             background: Rectangle {
                 color: newTaskButton.enabled

@@ -9,6 +9,7 @@ Control {
 
     property bool closeVisible: true
     property bool trapFocus: false
+    property var focusPreviousControl: null
     readonly property int storeRevision: TaskStore.revision
     readonly property var task: {
         const ignoredRevision = storeRevision
@@ -20,6 +21,7 @@ Control {
                                                 : -1
 
     signal closeRequested()
+    signal boardOverviewRequested(Item invoker)
 
     implicitWidth: Theme.drawerWidth
     padding: Theme.space5
@@ -48,10 +50,19 @@ Control {
     }
 
     function focusFirst() {
-        if (closeButton.visible)
+        if (closeButton.visible) {
             closeButton.forceActiveFocus(Qt.TabFocusReason)
-        else if (moveToColumn.enabled)
+            return closeButton.activeFocus
+        }
+        if (boardOverviewButton.visible) {
+            boardOverviewButton.forceActiveFocus(Qt.TabFocusReason)
+            return boardOverviewButton.activeFocus
+        }
+        if (moveToColumn.enabled) {
             moveToColumn.forceActiveFocus(Qt.TabFocusReason)
+            return moveToColumn.activeFocus
+        }
+        return false
     }
 
     function firstEnabledMoveButton() {
@@ -106,10 +117,16 @@ Control {
                 Accessible.name: text
                 focusPolicy: Qt.StrongFocus
                 onClicked: root.closeRequested()
-                KeyNavigation.tab: root.trapFocus && moveToColumn.enabled
-                                   ? moveToColumn : null
+                KeyNavigation.tab: root.trapFocus ? boardOverviewButton
+                                                  : moveToColumn.enabled
+                                                    ? moveToColumn : null
                 KeyNavigation.backtab: root.trapFocus
                                        ? root.lastEnabledMoveControl() : null
+                Keys.onBacktabPressed: event => {
+                    event.accepted = !root.trapFocus
+                                     && root.focusPreviousControl
+                                     && root.focusPreviousControl()
+                }
 
                 background: Rectangle {
                     color: closeButton.down ? Theme.pressed
@@ -118,6 +135,36 @@ Control {
                     border.color: closeButton.visualFocus ? Theme.focus : Theme.clear
                     border.width: closeButton.visualFocus ? 2 : 0
                 }
+            }
+        }
+
+        Button {
+            id: boardOverviewButton
+            objectName: "detailBoardOverviewButton"
+            visible: root.trapFocus
+            Layout.fillWidth: true
+            text: qsTr("Back to Board")
+            icon.source: Qt.resolvedUrl("assets/icons/board.svg")
+            icon.color: Theme.ink
+            icon.width: 18
+            icon.height: 18
+            palette.buttonText: Theme.ink
+            Accessible.name: text
+            focusPolicy: Qt.StrongFocus
+            onClicked: root.boardOverviewRequested(boardOverviewButton)
+            KeyNavigation.tab: moveToColumn.enabled ? moveToColumn
+                                                    : closeButton
+            KeyNavigation.backtab: closeButton
+
+            background: Rectangle {
+                color: boardOverviewButton.down ? Theme.pressed
+                       : boardOverviewButton.hovered ? Theme.hover
+                                                     : Theme.surface
+                radius: Theme.controlRadius
+                border.color: boardOverviewButton.visualFocus
+                              ? Theme.focus : Theme.controlBorder
+                border.width: boardOverviewButton.visualFocus
+                              ? 2 : Theme.borderWidth
             }
         }
 
@@ -307,7 +354,8 @@ Control {
                                                TaskStore.columnOrder[index])
                     }
                     KeyNavigation.tab: root.firstEnabledMoveButton()
-                    KeyNavigation.backtab: closeButton
+                    KeyNavigation.backtab: root.trapFocus
+                                           ? boardOverviewButton : closeButton
 
                     background: Rectangle {
                         color: moveToColumn.enabled ? Theme.surface : Theme.disabledSurface

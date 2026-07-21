@@ -9,6 +9,7 @@ FocusScope {
 
     required property string taskId
     property var dragCoordinator: null
+    property var focusAdjacentControl: null
     property bool dragging: false
     readonly property int storeRevision: TaskStore.revision
     readonly property var task: {
@@ -162,6 +163,14 @@ FocusScope {
             if (!event.isAutoRepeat)
                 root.activate()
             event.accepted = true
+        }
+        Keys.onTabPressed: event => {
+            event.accepted = root.focusAdjacentControl
+                             && root.focusAdjacentControl(root.taskId, 1)
+        }
+        Keys.onBacktabPressed: event => {
+            event.accepted = root.focusAdjacentControl
+                             && root.focusAdjacentControl(root.taskId, -1)
         }
 
         background: Rectangle {

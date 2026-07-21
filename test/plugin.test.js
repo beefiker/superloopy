@@ -68,10 +68,15 @@ test("plugin interface assets resolve inside the npm package", async () => {
   assert.equal(packed.status, 0, packed.stderr || packed.stdout);
   const files = new Set(JSON.parse(packed.stdout)[0].files.map((file) => file.path));
   assert.equal(files.has(assetPaths[0].replace(/^\.\//u, "")), true, "interface asset missing from npm pack");
-  for (const reference of ["motion.md", "redesign.md", "system-map.md", "upstream-notice.md"]) {
+  for (const reference of ["desktop.md", "hybrid.md", "layout.md", "mobile.md", "motion-core.md", "motion.md", "redesign.md", "renderer.md", "system-map.md", "upstream-notice.md", "ux.md"]) {
     const path = `skills/superloopy-frontend/references/${reference}`;
     assert.equal(files.has(path), true, `frontend reference missing from npm pack: ${path}`);
   }
+  assert.equal(
+    files.has("skills/superloopy-frontend/scripts/evidence-root.mjs"),
+    true,
+    "portable frontend evidence helper missing from npm pack",
+  );
 });
 
 test("plugin audit docs describe convention discovery and current ignore scope", async () => {
@@ -222,7 +227,7 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
   assert.match(frontend.content, /VISUAL_QA\.md/);
   assert.match(frontend.content, /SUPERLOOPY_EVIDENCE/);
   assert.match(frontend.content, /\.superloopy\/evidence\/frontend/);
-  for (const name of ["web", "qt", "qt-widgets", "qt-quick", "qt-qa"]) {
+  for (const name of ["ux", "desktop", "mobile", "hybrid", "renderer", "web", "qt", "qt-widgets", "qt-quick", "qt-qa"]) {
     assert.match(frontend.content, new RegExp(`\\]\\(references/${name}\\.md\\)`));
   }
 
@@ -240,25 +245,54 @@ test("plugin packages the Superloopy frontend skill with explicit activation and
   assert.match(antiSlop, /em-dash/i);
 
   const designSystem = await readFile("skills/superloopy-frontend/references/design-system.md", "utf8");
-  assert.match(designSystem, /7 sections|7-section/i);
+  assert.match(designSystem, /7 sections|7-section|seven-section/i);
 
   const metadata = await readFile("skills/superloopy-frontend/agents/openai.yaml", "utf8");
   assert.match(metadata, /\$superloopy:superloopy-frontend/);
-  assert.match(metadata, /\/superloopy:superloopy-frontend/);
+  assert.match(metadata, /short_description: "Explicit cross-platform application UI workflow"/u);
+  assert.match(metadata, /Use `\$superloopy:superloopy-frontend` only after explicit invocation/iu);
+  assert.match(metadata, /browser-hosted or interactive content-led Web, desktop, mobile\/tablet, embedded\/hybrid, Qt, custom-rendered, or mixed application UI/iu);
+  assert.match(metadata, /exclude TV, wearable, XR, automotive, game UI, TUI, static media\/document artifacts, and non-UI work/iu);
+  assert.match(metadata, /proportional evidence per owner and target/iu);
+  assert.doesNotMatch(metadata, /^policy:/mu);
+  assert.equal(metadata.match(/\$superloopy:superloopy-frontend/g)?.length, 1);
+  assert.equal(metadata.match(/\/superloopy:superloopy-frontend/g)?.length ?? 0, 0);
   assert.doesNotMatch(metadata, /any UI\/visual work/i);
 
   const promptHook = await readFile("hooks/user-prompt-submit.json", "utf8");
   assert.doesNotMatch(promptHook, /statusMessage/);
 });
 
-test("web route lazily loads system, motion, and redesign context without widening Qt routing", async () => {
+test("frontend web evidence calls the compatibility scanner a partial token lint", async () => {
+  const web = await readFile("skills/superloopy-frontend/references/web.md", "utf8");
+  const upstream = await readFile("skills/superloopy-frontend/references/upstream-notice.md", "utf8");
+  const scanner = await readFile("skills/superloopy-frontend/scripts/ds-compliance.mjs", "utf8");
+  const designAudit = await readFile("docs/superloopy-design-audit.md", "utf8");
+  const fileAudit = await readFile("docs/superloopy-file-audit.md", "utf8");
+  const golden = await readFile("docs/superloopy-loop-golden-set.md", "utf8");
+
+  for (const contract of [web, scanner, designAudit, fileAudit, golden]) {
+    assert.match(contract, /partial color\/spacing token lint/i);
+    assert.doesNotMatch(contract, /(?:full|complete) design-system compliance/i);
+  }
+  assert.match(web, /ds-compliance\.mjs.*compatibility filename/is);
+  assert.match(scanner, /Compatibility filename/is);
+  assert.match(upstream, /optional adapted Web references/is);
+  assert.match(upstream, /shared UX.*platform.*composition.*Superloopy-native/is);
+});
+
+test("web route keeps Web specializations lazy while shared motion stays cross-platform", async () => {
   const frontend = await readSkill("superloopy-frontend");
   const web = await readFile("skills/superloopy-frontend/references/web.md", "utf8");
 
-  for (const name of ["system-map", "motion", "redesign"]) {
-    assert.match(web, new RegExp(`references/${name}\\.md`));
-    assert.doesNotMatch(frontend.content, new RegExp(`references/${name}\\.md`));
-  }
+  assert.match(web, /references\/system-map\.md/u);
+  assert.doesNotMatch(frontend.content, /references\/system-map\.md/u);
+  assert.match(web, /references\/redesign\.md/u);
+  assert.match(frontend.content, /references\/redesign\.md.*Web-only.*Web route/is);
+  assert.match(frontend.content, /native.*redesign.*does not inherit.*browser.*SEO.*real-browser/is);
+  assert.match(web, /references\/motion\.md/u);
+  assert.match(frontend.content, /references\/motion-core\.md/u);
+  assert.match(frontend.content, /Web implementation.*references\/motion\.md.*native.*Qt.*do not inherit/is);
   assert.match(web, /dial guidance is heuristic/i);
   assert.match(web, /user intent.*existing interface.*visual target/is);
   assert.doesNotMatch(web, /marketing.*default.*MOTION.*6-8/is);

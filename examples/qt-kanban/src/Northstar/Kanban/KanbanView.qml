@@ -9,7 +9,10 @@ Item {
     objectName: "kanbanView"
 
     property bool rightToLeft: Qt.locale().textDirection === Qt.RightToLeft
+    readonly property bool compactSidebarFitsText:
+        Theme.baseFontPixelSize <= 13 && !sidebar.requiresWideLayout
     readonly property int sidebarWidth: width < Theme.compactSidebarBreakpoint
+                                        && compactSidebarFitsText
                                         ? Theme.sidebarCompact : Theme.sidebarWide
     readonly property bool drawerPersistent: width >= Theme.persistentDrawerBreakpoint
     readonly property bool drawerOverlay: !drawerPersistent
@@ -17,12 +20,6 @@ Item {
 
     LayoutMirroring.enabled: rightToLeft
     LayoutMirroring.childrenInherit: true
-
-    function showStatus(message) {
-        statusToast.text = message
-        statusToast.Accessible.announce(message, Accessible.Polite)
-        statusTimer.restart()
-    }
 
     function restoreFocus(item) {
         if (!item)
@@ -43,6 +40,19 @@ Item {
         newTaskDialog.openFrom(invoker)
     }
 
+    function returnToBoardOverview(invoker) {
+        if (overlayDetailDrawer.opened) {
+            overlayDetailDrawer.returnFocusToBoard = true
+            overlayDetailDrawer.close()
+            return
+        }
+        TaskStore.clearSelection()
+        if (invoker)
+            restoreFocus(invoker)
+        else
+            sidebar.focusBoard()
+    }
+
     onDrawerPersistentChanged: {
         if (drawerPersistent && overlayDetailDrawer.opened)
             overlayDetailDrawer.close()
@@ -58,13 +68,14 @@ Item {
         spacing: 0
 
         Sidebar {
+            id: sidebar
             objectName: "sidebar"
             compact: root.sidebarWidth === Theme.sidebarCompact
             Layout.preferredWidth: root.sidebarWidth
             Layout.minimumWidth: root.sidebarWidth
             Layout.maximumWidth: root.sidebarWidth
             Layout.fillHeight: true
-            onUnavailableDestinationRequested: message => root.showStatus(message)
+            onBoardRequested: invoker => root.returnToBoardOverview(invoker)
         }
 
         ColumnLayout {
@@ -77,6 +88,12 @@ Item {
                 id: kanbanHeader
                 objectName: "kanbanHeader"
                 Layout.fillWidth: true
+                focusNextControl: function() {
+                    return boardView.focusFirstTask()
+                }
+                focusPreviousControl: function() {
+                    return sidebar.focusBoard()
+                }
                 onNewTaskRequested: invoker =>
                                     root.openNewTask("backlog", invoker)
             }
@@ -85,6 +102,13 @@ Item {
                 id: boardView
                 objectName: "boardView"
                 rightToLeft: root.rightToLeft
+                focusBeforeTasks: function() {
+                    return kanbanHeader.focusNewTask()
+                }
+                focusAfterTasks: function() {
+                    return root.drawerPersistent
+                           ? persistentDetailDrawer.focusFirst() : false
+                }
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 onTaskActivated: (taskId, invoker) => {
@@ -110,6 +134,9 @@ Item {
                 objectName: "persistentDetailDrawer"
                 anchors.fill: parent
                 closeVisible: true
+                focusPreviousControl: function() {
+                    return boardView.focusLastControl()
+                }
                 onCloseRequested: TaskStore.clearSelection()
             }
         }
@@ -120,6 +147,7 @@ Item {
         objectName: "overlayDetailDrawer"
         property Item invokingItem: null
         property string invokingTaskId: ""
+        property bool returnFocusToBoard: false
 
         parent: Overlay.overlay
         edge: root.rightToLeft ? Qt.LeftEdge : Qt.RightEdge
@@ -160,9 +188,17 @@ Item {
         onClosed: {
             const item = invokingItem
             const taskId = invokingTaskId
+            const shouldReturnToBoard = returnFocusToBoard
             invokingItem = null
             invokingTaskId = ""
+            returnFocusToBoard = false
+            if (shouldReturnToBoard)
+                TaskStore.clearSelection()
             Qt.callLater(function() {
+                if (shouldReturnToBoard) {
+                    sidebar.focusBoard()
+                    return
+                }
                 if (taskId.length > 0 && boardView.focusTask(taskId))
                     return
                 if (item) {
@@ -189,6 +225,8 @@ Item {
             closeVisible: true
             trapFocus: true
             onCloseRequested: overlayDetailDrawer.close()
+            onBoardOverviewRequested: invoker =>
+                                      root.returnToBoardOverview(invoker)
         }
     }
 
@@ -208,30 +246,4 @@ Item {
         onActivated: TaskStore.moveSelectedAdjacent(root.rightToLeft ? -1 : 1)
     }
 
-    Label {
-        id: statusToast
-        objectName: "statusToast"
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: Theme.space5
-        z: 10
-        visible: text.length > 0
-        padding: Theme.space3
-        color: Theme.sidebarText
-        font.pixelSize: Theme.labelFontPixelSize
-        font.weight: Theme.labelFontWeight
-
-        background: Rectangle {
-            color: Theme.sidebarActive
-            radius: Theme.controlRadius
-            border.color: Theme.borderStrong
-            border.width: Theme.borderWidth
-        }
-    }
-
-    Timer {
-        id: statusTimer
-        interval: 2400
-        onTriggered: statusToast.text = ""
-    }
 }
