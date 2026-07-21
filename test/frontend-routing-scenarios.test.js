@@ -118,6 +118,23 @@ test("frontend evidence helper creates and verifies portable run-scoped roots", 
     encoding: "utf8"
   });
   assert.notEqual(escaped.status, 0);
+});
+
+test("frontend evidence helper rejects symlinked proofs and roots while running through a linked entrypoint", {
+  skip: process.platform === "win32" ? "file symlink creation is not reliably available on Windows CI" : false
+}, async (t) => {
+  const repoRoot = process.cwd();
+  const helper = join(repoRoot, "skills/superloopy-frontend/scripts/evidence-root.mjs");
+  const sandbox = await mkdtemp(join(tmpdir(), "superloopy-frontend-evidence-symlink-"));
+  t.after(() => rm(sandbox, { recursive: true, force: true }));
+
+  const created = spawnSync(process.execPath, [helper, "create", "frontend-check"], {
+    cwd: sandbox,
+    encoding: "utf8"
+  });
+  assert.equal(created.status, 0, created.stderr);
+  const evidenceRoot = created.stdout.trim();
+  await writeFile(join(sandbox, evidenceRoot, "token-lint.txt"), "token lint proof\n", "utf8");
 
   await symlink(join(sandbox, evidenceRoot, "token-lint.txt"), join(sandbox, evidenceRoot, "linked-proof.txt"));
   const linkedProof = spawnSync(process.execPath, [helper, "verify", evidenceRoot, "linked-proof.txt"], {
