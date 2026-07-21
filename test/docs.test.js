@@ -208,6 +208,8 @@ test("README lists the packaged Superloopy skills and their jobs", async () => {
     assert.match(content, /\.superloopy\/evidence/);
     assert.match(content, /\$superloopy:superloopy-frontend/);
     assert.match(content, /\/superloopy:superloopy-frontend/);
+    assert.match(content, /\$superloopy:superloopy-research/);
+    assert.match(content, /\/superloopy:superloopy-research/);
   }
   assert.match(await readFile("README.md", "utf8"), /Guidance aliases do not mutate state/);
   assert.match(await readFile("README.ko.md", "utf8"), /guidance alias는 상태를 바꾸지 않습니다/);

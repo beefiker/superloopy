@@ -353,8 +353,8 @@ Total: 100 points.
 | `skills/superloopy-frontend/scripts/visual-diff.mjs` | `test/visual-diff.test.js`. | Must decode 8-bit PNGs and emit dimensionsMatch, diffRatio, similarityScore, alphaChannelIntact, and ranked grid hotspots with no dependencies. |
 | `skills/superloopy-loop/SKILL.md` | `test/docs.test.js`, doctor skill check. | Must describe guide, proof, capture, evidence, check, finish, gates, and receipt rules accurately. |
 | `skills/superloopy-loop/agents/openai.yaml` | Audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata. |
-| `skills/superloopy-research/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must describe exhaustive deep research with EXPAND waves, claim verification, cited synthesis, and Superloopy evidence receipts. |
-| `skills/superloopy-research/agents/openai.yaml` | Audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for deep research. |
+| `skills/superloopy-research/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must require explicit invocation (`$superloopy:superloopy-research`, `/superloopy:superloopy-research`, or a leading `loopy`/`루피`), reject plain research/investigate/summarize vocabulary as activation, and describe exhaustive deep research with EXPAND waves, claim verification, cited synthesis, and Superloopy evidence receipts. |
+| `skills/superloopy-research/agents/openai.yaml` | Audit coverage and reviewability check. | Must remain minimal explicit-only Superloopy discovery metadata for deep research. |
 | `skills/superloopy-slides/LICENSE` | Audit coverage and reviewability check. | Must remain Superloopy-native slides skill support content with no plugin runtime coupling. |
 | `skills/superloopy-slides/SKILL.md` | Audit coverage and reviewability check. | Must gate deck completion on a real-browser visual-QA artifact under `.superloopy/evidence/slides/` with a `SUPERLOOPY_EVIDENCE` receipt. |
 | `skills/superloopy-slides/STYLE_PRESETS.md` | Audit coverage and reviewability check. | Must remain Superloopy-native slides skill support content with no plugin runtime coupling. |
