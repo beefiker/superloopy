@@ -402,3 +402,29 @@ test("plugin packages the Superloopy Korean humanizer skill with measurable safe
     assert.equal(existsSync(file), true);
   }
 });
+
+test("plugin slides skill inherits frontend gallery, anti-slop core, motion floor, and evidence lane", async () => {
+  const skill = await readFile("skills/superloopy-slides/SKILL.md", "utf8");
+  const animation = await readFile("skills/superloopy-slides/animation-patterns.md", "utf8");
+
+  for (const target of [
+    "skills/superloopy-frontend/references/design/_INDEX.md",
+    "skills/superloopy-frontend/references/anti-slop.md",
+    "skills/superloopy-frontend/references/image-first.md",
+    "skills/superloopy-frontend/references/motion-core.md",
+    "skills/superloopy-frontend/scripts/evidence-root.mjs"
+  ]) {
+    assert.equal(existsSync(target), true, `slides cross-reference target missing: ${target}`);
+  }
+
+  assert.match(skill, /design\/_INDEX\.md/u);
+  assert.match(skill, /scoped reference input, never automatic token authority/u);
+  assert.match(skill, /Without a user-named brand or mood, do not open the gallery/u);
+  assert.match(skill, /anti-slop contract\]\(\.\.\/superloopy-frontend\/references\/anti-slop\.md\)/u);
+  assert.match(skill, /non-waivable core/iu);
+  assert.match(skill, /image-first\.md/u);
+  assert.match(skill, /motion-core\.md/u);
+  assert.match(skill, /evidence-root\.mjs" create <slug> slides/u);
+  assert.match(animation, /motion-core\.md/u);
+  assert.match(animation, /prefers-reduced-motion/u);
+});

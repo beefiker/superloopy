@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Create and verify cross-shell frontend evidence roots without relying on a
-// platform-specific date command, path separator, or mkdir syntax.
+// Create and verify cross-shell skill evidence roots (frontend or slides lane)
+// without relying on a platform-specific date command, path separator, or
+// mkdir syntax.
 
 import { lstatSync, mkdirSync, realpathSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
@@ -8,7 +9,8 @@ import { fileURLToPath } from "node:url";
 
 const PORTABLE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const WINDOWS_RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/iu;
-const RUN_ROOT = /^\.superloopy\/evidence\/frontend\/\d{8}T\d{6}Z-([a-z0-9]+(?:-[a-z0-9]+)*)$/u;
+const RUN_LANE = /^(?:frontend|slides)$/u;
+const RUN_ROOT = /^\.superloopy\/evidence\/(frontend|slides)\/\d{8}T\d{6}Z-([a-z0-9]+(?:-[a-z0-9]+)*)$/u;
 
 export function validateSlug(value) {
   if (typeof value !== "string" || value.length > 48 || !PORTABLE_SLUG.test(value) || WINDOWS_RESERVED.test(value)) {
@@ -17,10 +19,18 @@ export function validateSlug(value) {
   return value;
 }
 
-export function createEvidenceRoot(slug, cwd = process.cwd(), now = new Date()) {
+export function validateLane(value) {
+  if (typeof value !== "string" || !RUN_LANE.test(value)) {
+    throw new Error("lane must be frontend or slides");
+  }
+  return value;
+}
+
+export function createEvidenceRoot(slug, lane = "frontend", cwd = process.cwd(), now = new Date()) {
   const safeSlug = validateSlug(slug);
+  const safeLane = validateLane(lane);
   const stamp = now.toISOString().replaceAll("-", "").replaceAll(":", "").replace(/\.\d{3}Z$/u, "Z");
-  const root = `.superloopy/evidence/frontend/${stamp}-${safeSlug}`;
+  const root = `.superloopy/evidence/${safeLane}/${stamp}-${safeSlug}`;
   const base = realpathSync(cwd);
   ensureDirectoryTree(base, root.split("/"));
   return root;
@@ -29,8 +39,8 @@ export function createEvidenceRoot(slug, cwd = process.cwd(), now = new Date()) 
 export function verifyEvidenceFiles(root, files, cwd = process.cwd()) {
   const normalizedRoot = root.replaceAll("\\", "/");
   const match = normalizedRoot.match(RUN_ROOT);
-  if (!match) throw new Error("evidence root must match .superloopy/evidence/frontend/YYYYMMDDTHHMMSSZ-<portable-slug>");
-  validateSlug(match[1]);
+  if (!match) throw new Error("evidence root must match .superloopy/evidence/<frontend|slides>/YYYYMMDDTHHMMSSZ-<portable-slug>");
+  validateSlug(match[2]);
   if (!Array.isArray(files) || files.length === 0) throw new Error("at least one evidence file is required");
 
   const base = realpathSync(cwd);
@@ -87,15 +97,15 @@ function requireNoSymlinkPath(base, relativePath) {
 
 function main(argv) {
   const [command, value, ...files] = argv;
-  if (command === "create" && value && files.length === 0) {
-    process.stdout.write(`${createEvidenceRoot(value)}\n`);
+  if (command === "create" && value && files.length <= 1) {
+    process.stdout.write(`${createEvidenceRoot(value, files[0] ?? "frontend")}\n`);
     return;
   }
   if (command === "verify" && value) {
     process.stdout.write(`${verifyEvidenceFiles(value, files)}\n`);
     return;
   }
-  throw new Error("usage: evidence-root.mjs create <slug> | verify <evidence-root> <file...>");
+  throw new Error("usage: evidence-root.mjs create <slug> [frontend|slides] | verify <evidence-root> <file...>");
 }
 
 function isCliEntry(argvPath) {
