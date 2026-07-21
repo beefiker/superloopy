@@ -535,3 +535,13 @@ test("new UX references and contract tests are inventoried as original Superloop
   assert.match(fileAudit, /references\/ux\.md.*Superloopy-native.*original prose/is);
   assert.match(golden, /test\/frontend-ux-contract\.test\.js.*node --test/is);
 });
+
+test("i18n contract requires string externalization for distribution-targeted surfaces", async () => {
+  const ux = await read(reference("ux"));
+  const qt = await read(reference("qt"));
+
+  assert.match(ux, /more than one locale.*every user-visible string ships through the platform's translation mechanism/is);
+  assert.match(ux, /hardcoded single-locale copy in a distribution-targeted surface is a defect, not a follow-up/iu);
+  assert.match(ux, /language different from the brief's language.*record the locale decision/is);
+  assert.match(qt, /strings pass through `tr\(\)`\/`qsTr\(\)` with a translation setup/iu);
+});

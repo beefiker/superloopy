@@ -139,7 +139,7 @@ Use consequence-scaled error handling. Preserve input, identify the specific cor
 
 ## Internationalization and bidirectionality
 
-Internationalization begins during discovery. Avoid display-string concatenation; use locale-aware formatting, sorting, searching, pluralization, and input. Carry language and direction metadata, and define whether a product language override follows the system, persists locally, syncs, or is unavailable.
+Internationalization begins during discovery. When the brief, audience, or distribution intent implies more than one locale (public release, open-source distribution, app-store or marketplace delivery), every user-visible string ships through the platform's translation mechanism (`tr()`/`qsTr()`, resource bundles, message catalogs) from the first artifact; hardcoded single-locale copy in a distribution-targeted surface is a defect, not a follow-up. When copy ships in a language different from the brief's language, record the locale decision and its reason instead of defaulting silently. Avoid display-string concatenation; use locale-aware formatting, sorting, searching, pluralization, and input. Carry language and direction metadata, and define whether a product language override follows the system, persists locally, syncs, or is unavailable.
 
 Test representative long text, unbroken content, bidirectional content, and taller-script content without assuming one universal expansion percentage. Mirroring is selective: media controls, charts, maps, and user-authored direction may not mirror with surrounding navigation.
 
