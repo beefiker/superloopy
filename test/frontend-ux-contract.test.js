@@ -540,8 +540,9 @@ test("i18n contract requires string externalization for distribution-targeted su
   const ux = await read(reference("ux"));
   const qt = await read(reference("qt"));
 
-  assert.match(ux, /more than one locale.*every user-visible string ships through the platform's translation mechanism/is);
-  assert.match(ux, /hardcoded single-locale copy in a distribution-targeted surface is a defect, not a follow-up/iu);
+  assert.match(ux, /more than one locale.*every user-visible string the work introduces or changes ships through the platform's translation mechanism/is);
+  assert.match(ux, /hardcoded single-locale copy in new distribution-targeted work is a defect, not a follow-up/iu);
+  assert.match(ux, /signal to resolve locale intent during discovery, not proof of it.*deliberately single-locale surface stays single-locale/is);
   assert.match(ux, /language different from the brief's language.*record the locale decision/is);
   assert.match(qt, /strings pass through `tr\(\)`\/`qsTr\(\)` with a translation setup/iu);
 });
