@@ -46,9 +46,13 @@ test("layout overlay defines proportional cross-platform spatial ownership witho
   assert.match(layout, /semantic.*task context.*not.*exact.*(?:object|offset)/is);
   assert.match(layout, /target-derived.*change point/is);
   assert.match(layout, /always visible.*summary.*on demand.*omitted/is);
-  assert.match(layout, /disclosure label.*predictable.*expanded state/is);
-  assert.match(layout, /collaps.*expand.*focus.*context.*state/is);
-  assert.match(layout, /actual target.*collapsed.*expanded.*affected bounds.*inputs/is);
+  assert.match(layout, /disclosure label[^\n]*source or summary state[^\n]*disclosed or destination state/is);
+  assert.match(layout, /always visible[^\n]*omitted[^\n]*do not imply a two-state control/is);
+  assert.match(layout, /collapsed[^\n]*expanded[^\n]*only when[^\n]*selected disclosure mechanism/is);
+  assert.match(layout, /details route[^\n]*modal[^\n]*drill-down[^\n]*staged flow[^\n]*contextual reveal[^\n]*source and destination/is);
+  assert.match(layout, /transition.*focus.*context.*state/is);
+  assert.match(layout, /actual target[^\n]*source or summary[^\n]*disclosed or destination[^\n]*affected bounds and inputs/is);
+  assert.doesNotMatch(layout, /(?:(?:each|every|all)(?: affected)? disclosures?[^\n]*(?:must|require|shall)|disclosure always[^\n]*(?:must|require|shall))[^\n]*(?:collaps|expand)/iu);
   assert.doesNotMatch(layout, /320\s*\/\s*375\s*\/\s*768|1024\s*\/\s*1440/u);
   assert.doesNotMatch(layout, /(?:exactly|at most|no more than) \d+ (?:items|controls)|universal whitespace|Web-only (?:accordion|drawer)/iu);
   assert.doesNotMatch(layout, /issue\s*#?28/iu);
@@ -130,6 +134,9 @@ test("campaign composition heuristics cannot become unsupported universal blocke
   const antiSlop = await read(reference("anti-slop"));
 
   assert.match(antiSlop, /review flag.*approved.*(?:brand|content|campaign).*criterion/is);
+  assert.match(antiSlop, /unintended[^\n]*(?:root|page)[^\n]*horizontal overflow/is);
+  assert.match(antiSlop, /intentional[^\n]*task[^\n]*content-owned[^\n]*horizontal[^\n]*valid[^\n]*layout\.md[^\n]*spatial and scroll ownership/is);
+  assert.doesNotMatch(antiSlop, /^\s*(?:-\s*\[[ x]\]\s*)?(?:No horizontal scroll(?:ing)?(?:\s+is allowed|\s+at\b)|Horizontal scroll(?:ing)? is forbidden)\b/imu);
   assert.doesNotMatch(antiSlop, /fail when/iu);
 });
 
@@ -165,8 +172,9 @@ test("audits assign resource, hierarchy, and exposure responsibilities to existi
   for (const content of [fileAudit, golden]) {
     assert.match(row(content, `${root}/SKILL.md`), /information hierarchy.*spatial disclosure/is);
     assert.match(row(content, reference("ux")), /resource identity.*reset provenance.*proportional disclosure/is);
-    assert.match(row(content, reference("layout")), /exposure mode.*collapsed.*expanded/is);
+    assert.match(row(content, reference("layout")), /exposure mode.*source.*destination.*conditional.*collaps.*expand/is);
+    assert.match(row(content, reference("anti-slop")), /unintended.*root.*horizontal.*task-owned.*layout/is);
     assert.match(row(content, "test/frontend-ux-contract.test.js"), /resource identity.*reset.*information hierarchy/is);
-    assert.match(row(content, "test/frontend-quality-overlays.test.js"), /exposure.*audit responsibilit/is);
+    assert.match(row(content, "test/frontend-quality-overlays.test.js"), /generic disclosure.*horizontal-scroll.*audit responsibilit/is);
   }
 });
