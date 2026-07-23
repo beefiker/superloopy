@@ -116,6 +116,15 @@ test("doctor docs describe authoritative installed-plugin version truth", async 
   }
 });
 
+test("doctor docs prescribe the confirmed mismatch remediation", async () => {
+  const readme = await readFile("README.md", "utf8");
+  const skill = await readFile("skills/superloopy-doctor/SKILL.md", "utf8");
+  for (const content of [readme, skill]) {
+    assert.match(content, /codex plugin add superloopy@beefiker --json/iu);
+    assert.match(content, /codex plugin add superloopy@beefiker --json.*start a new Codex session/isu);
+  }
+});
+
 test("public docs describe real marketplace install and bootstrap", async () => {
   const readme = await readFile("README.md", "utf8");
   const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");

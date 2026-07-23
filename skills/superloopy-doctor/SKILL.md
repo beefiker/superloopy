@@ -50,7 +50,7 @@ This is a Superloopy health check, not a generic plugin drift audit.
 Recommend repair commands only after the read-only report explains the failure:
 
 - Marketplace refresh: `codex plugin marketplace upgrade beefiker`.
-- Repair reinstall: `codex plugin add superloopy@beefiker`.
+- Confirmed `installedPluginTruth` mismatch after approval: `codex plugin add superloopy@beefiker --json`, then start a new Codex session.
 - Checkout install: `node src/cli.js install --json`.
 - Forced local wrapper/agent overwrite: `node src/cli.js install --force --json`.
 

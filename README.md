@@ -171,11 +171,13 @@ Superloopy checks for updates on `SessionStart`. Marketplace installs are Codex-
 
 Restart Codex after the upgrade. If hooks show up as Modified, approve them; the following approved `SessionStart` automatically reconciles the generated wrapper, all six agents, and model-routing state from the new plugin version. No Superloopy migration command is required. If definitions changed, follow only the Codex restart notice so the host reloads them.
 
-If the plugin still looks stale or degraded after that, do a repair reinstall from the refreshed marketplace:
+If a confirmed `installedPluginTruth` version mismatch still looks stale or degraded after that, approve a repair reinstall from the refreshed marketplace:
 
 ```
-codex plugin add superloopy@beefiker
+codex plugin add superloopy@beefiker --json
 ```
+
+Then start a new Codex session.
 
 If you installed from a checkout, update the checkout and rerun the installer:
 
