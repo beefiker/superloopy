@@ -34,6 +34,7 @@ test("doctor scope aggregation separates source health from machine-local instal
   const checks = {
     sourceCheck: { ok: true },
     installedModelPolicy: { ok: false },
+    installedPluginTruth: { ok: false, informational: true, state: "version_mismatch" },
     wrapper: { ok: false }
   };
   assert.equal(doctorOverallOk(checks, "source"), true);
@@ -53,6 +54,12 @@ function runCli(args, options = {}) {
     input: options.input,
     timeout: 10_000
   });
+}
+
+function assertDoctorExitMatchesResult(result) {
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(result.status, parsed.ok ? 0 : 1, result.stderr);
+  return parsed;
 }
 
 async function tempRepoCopy({ initGit = true, prefix = "superloopy-doctor-" } = {}) {
@@ -112,6 +119,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
     "modelPolicy",
     "claudeModelPolicy",
     "installedModelPolicy",
+    "installedPluginTruth",
     "hostContract",
     "interop",
     "wrapper"
@@ -178,6 +186,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
     },
     { ok: true, installed: false, degraded: false, restartRequired: false }
   );
+  assert.equal(parsed.checks.installedPluginTruth.state, "authority_unavailable");
   // Interop is informational: it never fails and does not gate overall health.
   assert.equal(parsed.checks.interop.ok, true);
   assert.equal(parsed.checks.interop.informational, true);
@@ -191,9 +200,7 @@ test("doctor CLI falls back to the CLI root outside a Superloopy checkout", asyn
   const project = await mkdtemp(join(tmpdir(), "superloopy-doctor-project-"));
   const result = runCli(["doctor", "--json"], { cwd: project });
 
-  assert.equal(result.status, 0, result.stderr);
-  const parsed = JSON.parse(result.stdout);
-  assert.equal(parsed.ok, true);
+  const parsed = assertDoctorExitMatchesResult(result);
   assert.equal(parsed.scope, "installed");
   assert.equal(parsed.root, process.cwd());
   assert.equal(parsed.checks.pluginManifest.ok, true);
@@ -208,8 +215,7 @@ test("doctor CLI defaults a non-Git package root to installed scope", async () =
     timeout: 10_000
   });
 
-  assert.equal(result.status, 0, result.stderr);
-  const parsed = JSON.parse(result.stdout);
+  const parsed = assertDoctorExitMatchesResult(result);
   assert.equal(parsed.scope, "installed");
   assert.equal(await realpath(parsed.root), await realpath(repo));
 });
@@ -228,8 +234,7 @@ test("doctor CLI accepts an explicit diagnostic root", async () => {
 
 test("doctor CLI supports explicit scope and equals-form selectors", () => {
   const installed = runCli(["doctor", "--scope=installed", "--json"]);
-  assert.equal(installed.status, 0, installed.stderr);
-  assert.equal(JSON.parse(installed.stdout).scope, "installed");
+  assert.equal(assertDoctorExitMatchesResult(installed).scope, "installed");
 
   const source = runCli(["doctor", `--root=${process.cwd()}`, "--scope=source", "--json"], { cwd: tmpdir() });
   assert.equal(source.status, 0, source.stderr);
@@ -383,6 +388,42 @@ test("doctor text renders advisory warning checks as warn", () => {
   assert.match(output, /- wrapper: warn - wrapper\/plugin split-brain/u);
   assert.match(output, /- hostContract: ok - configured routing/u);
   assert.match(output, /overall: ok/u);
+});
+
+test("doctor renders a source-only installed mismatch as info", () => {
+  const output = formatDoctor({
+    ok: true,
+    scope: "source",
+    checks: {
+      installedPluginTruth: {
+        ok: false,
+        informational: true,
+        state: "version_mismatch",
+        message: "confirmed mismatch"
+      }
+    }
+  });
+  assert.match(output, /- installedPluginTruth: info - confirmed mismatch/u);
+  assert.match(output, /overall: ok/u);
+});
+
+test("runDoctor accepts an injected installed-plugin probe without reading live machine state", async () => {
+  const unavailable = await runDoctor(process.cwd());
+  assert.equal(unavailable.checks.installedPluginTruth.state, "authority_unavailable");
+
+  const mismatch = await runDoctor(process.cwd(), {
+    scope: "installed",
+    queryInstalledPluginTruth: () => ({
+      ok: false,
+      informational: true,
+      state: "version_mismatch",
+      executingVersion: "0.12.4",
+      installedVersion: "0.12.3",
+      message: "confirmed mismatch"
+    })
+  });
+  assert.equal(mismatch.ok, false);
+  assert.equal(mismatch.checks.installedPluginTruth.state, "version_mismatch");
 });
 
 test("doctor comparison scan fails on copied-looking blocks", async () => {

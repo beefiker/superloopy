@@ -112,11 +112,10 @@ test("doctor CLI falls back to CLI root from an unrelated Codex plugin project",
 
   const result = runCli(["doctor", "--json"], { cwd: project });
 
-  assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
+  assert.equal(result.status, parsed.ok ? 0 : 1, result.stderr);
   // Not Superloopy by package identity -> diagnose the installed CLI root, not this project.
   assert.equal(parsed.root, process.cwd());
-  assert.equal(parsed.ok, true);
 });
 
 test("doctor CLI returns a structured skills failure when a SKILL.md is unreadable", async () => {
