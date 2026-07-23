@@ -105,6 +105,17 @@ test("public docs describe doctor checks", async () => {
   assert.match(modelPolicy, /split-brain/i);
 });
 
+test("doctor docs describe authoritative installed-plugin version truth", async () => {
+  const readme = await readFile("README.md", "utf8");
+  const skill = await readFile("skills/superloopy-doctor/SKILL.md", "utf8");
+  for (const content of [readme, skill]) {
+    assert.match(content, /codex plugin list --json/iu);
+    assert.match(content, /installedPluginTruth/iu);
+    assert.match(content, /source.*informational|informational.*source/isu);
+    assert.match(content, /installed.*fail|fail.*installed/isu);
+  }
+});
+
 test("public docs describe real marketplace install and bootstrap", async () => {
   const readme = await readFile("README.md", "utf8");
   const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");

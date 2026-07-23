@@ -21,6 +21,10 @@ This is a Superloopy health check, not a generic plugin drift audit.
 - Do not clone external repos, search issue trackers, or compare unrelated harness layouts unless the user separately asks for research.
 - `superloopy doctor` reports the plugin root it checked: by default it uses `source` scope in a recognized Superloopy checkout and `installed` scope elsewhere. Pin a checkout with `superloopy doctor --root <checkout> --scope source --json`; pin an installed cache with `superloopy doctor --root <cache> --scope installed --json`. Source verdicts still return machine-local diagnostics, but `installedModelPolicy` and `wrapper` do not gate source health.
 
+## Installed-plugin Authority
+
+`installedPluginTruth` runs the read-only `codex plugin list --json` authority probe for `superloopy@beefiker`; it never infers the installed version from cache directory names. A confirmed version mismatch is informational in source scope, but fails installed scope. Missing Codex, no registered plugin, and invalid authority output are informational and do not fail doctor. Report these four states as `current`, `version_mismatch`, `not_registered`, or `authority_unavailable`; never repair from this probe without explicit approval.
+
 ## Diagnostic Spine
 
 1. Identify the target root: `pwd`, `git rev-parse --show-toplevel` when it is a checkout, and the installed plugin cache path when the wrapper points into one.
