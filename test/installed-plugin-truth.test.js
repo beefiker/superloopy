@@ -89,3 +89,17 @@ test("query converts command and payload failures into sanitized unavailable res
     assert.doesNotMatch(JSON.stringify(result), /do-not-leak/);
   }
 });
+
+test("query sanitizes malformed options before resolving an injected process", () => {
+  const throwingGetter = {
+    get spawnSyncImpl() {
+      throw new Error("do-not-leak");
+    }
+  };
+
+  for (const options of [null, throwingGetter]) {
+    const result = queryInstalledPluginTruth("0.12.4", options);
+    assert.equal(result.state, "authority_unavailable");
+    assert.doesNotMatch(JSON.stringify(result), /do-not-leak/);
+  }
+});

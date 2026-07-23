@@ -10,9 +10,11 @@ const MAX_OUTPUT_BYTES = 1_000_000;
 const NEXT = "Run `codex plugin add superloopy@beefiker --json`, then start a new Codex session.";
 
 export function queryInstalledPluginTruth(executingVersion, options = {}) {
-  const spawnSyncImpl = options.spawnSyncImpl ?? spawnSync;
   let result;
   try {
+    if (!isRecord(options)) return unavailable();
+    const spawnSyncImpl = options.spawnSyncImpl ?? spawnSync;
+    if (typeof spawnSyncImpl !== "function") return unavailable();
     result = spawnSyncImpl("codex", ["plugin", "list", "--json"], {
       encoding: "utf8",
       maxBuffer: MAX_OUTPUT_BYTES,
