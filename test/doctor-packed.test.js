@@ -50,6 +50,7 @@ test("doctor accepts an npm-packed install run from an arbitrary cwd", async () 
   const result = spawnSync(process.execPath, [join(packed, "src", "cli.js"), "doctor", "--json"], {
     cwd: elsewhere,
     encoding: "utf8",
+    env: { ...process.env, PATH: "" },
     timeout: 30_000
   });
 
@@ -76,6 +77,7 @@ test("doctor accepts an npm-packed install nested inside a parent Git repository
   const result = spawnSync(process.execPath, [join(packed, "src", "cli.js"), "doctor", "--json"], {
     cwd: parent,
     encoding: "utf8",
+    env: { ...process.env, PATH: "" },
     timeout: 30_000
   });
 
@@ -127,6 +129,7 @@ test("doctor ignores host .in_use heartbeat files in a packed install", async ()
   const result = spawnSync(process.execPath, [join(packed, "src", "cli.js"), "doctor", "--json"], {
     cwd: packed,
     encoding: "utf8",
+    env: { ...process.env, PATH: "" },
     timeout: 30_000
   });
 
@@ -135,6 +138,21 @@ test("doctor ignores host .in_use heartbeat files in a packed install", async ()
   assert.equal(parsed.ok, true);
   assert.equal(parsed.checks.fileAudit.ok, true);
   assert.deepEqual(parsed.checks.fileAudit.missing, []);
+});
+
+test("packed doctor stays healthy when Codex installed-plugin authority is unavailable", async () => {
+  const packed = await tempNpmPackedCopy();
+  const result = spawnSync(process.execPath, [join(packed, "src", "cli.js"), "doctor", "--json"], {
+    cwd: packed,
+    encoding: "utf8",
+    env: { ...process.env, PATH: "" },
+    timeout: 30_000
+  });
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(parsed.scope, "installed");
+  assert.equal(parsed.checks.installedPluginTruth.ok, true);
+  assert.equal(parsed.checks.installedPluginTruth.state, "authority_unavailable");
 });
 
 test("source checkout detection falls back safely when git is unavailable", async () => {
