@@ -1,15 +1,45 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
 import { checkComparisonSimilarity, normalizeComparisonPath } from "../src/comparison-similarity.js";
-import { formatDoctor, runDoctor } from "../src/doctor.js";
+import {
+  countPhysicalLines,
+  doctorOverallOk,
+  formatDoctor,
+  isReviewableTextFile,
+  runDoctor
+} from "../src/doctor.js";
 
 const EXPECTED_SKILLS = ["humanize-korean", "superloopy-clone", "superloopy-doctor", "superloopy-frontend", "superloopy-loop", "superloopy-research", "superloopy-slides"];
+
+test("reviewability counts physical lines and recognizes supported script/config extensions", () => {
+  assert.equal(countPhysicalLines(""), 0);
+  assert.equal(countPhysicalLines("one"), 1);
+  assert.equal(countPhysicalLines("one\n"), 1);
+  assert.equal(countPhysicalLines("one\r\ntwo"), 2);
+  assert.equal(countPhysicalLines("one\rtwo\r"), 2);
+
+  for (const file of ["a.js", "a.mjs", "a.cjs", "a.md", "a.json", "a.yaml", "a.yml"]) {
+    assert.equal(isReviewableTextFile(file), true, file);
+  }
+  assert.equal(isReviewableTextFile("package-lock.json"), false);
+});
+
+test("doctor scope aggregation separates source health from machine-local installation health", () => {
+  const checks = {
+    sourceCheck: { ok: true },
+    installedModelPolicy: { ok: false },
+    wrapper: { ok: false }
+  };
+  assert.equal(doctorOverallOk(checks, "source"), true);
+  assert.equal(doctorOverallOk(checks, "installed"), false);
+  assert.equal(doctorOverallOk({ ...checks, sourceCheck: { ok: false } }, "source"), false);
+});
 
 function runCli(args, options = {}) {
   return spawnSync(process.execPath, [join(process.cwd(), "src/cli.js"), ...args], {
@@ -63,6 +93,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.ok, true);
+  assert.equal(parsed.scope, "source");
   assert.equal(parsed.root, process.cwd());
   assert.deepEqual(Object.keys(parsed.checks), [
     "pluginManifest",
@@ -128,6 +159,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.ok(parsed.checks.hostContract.cannotVerify.some((item) => /resolved model/u.test(item)));
   assert.equal(parsed.checks.hostContract.modelRoutingVerification, "unverified");
   assert.equal(parsed.checks.hostContract.unverifiedStatus, "model_unverified");
+  assert.doesNotMatch(JSON.stringify(parsed.checks.hostContract), /multi_agent_v1|fork_context|run_in_background|subagent_type/);
   assert.equal(parsed.checks.claudeHostWiring.ok, true);
   assert.equal(parsed.checks.claudeHostWiring.policy, "claude-host-wiring-present-and-namespaced");
   assert.ok(parsed.checks.claudeHostWiring.matchers.length >= 1);
@@ -162,8 +194,24 @@ test("doctor CLI falls back to the CLI root outside a Superloopy checkout", asyn
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.ok, true);
+  assert.equal(parsed.scope, "installed");
   assert.equal(parsed.root, process.cwd());
   assert.equal(parsed.checks.pluginManifest.ok, true);
+});
+
+test("doctor CLI defaults a non-Git package root to installed scope", async () => {
+  const repo = await tempRepoCopy({ initGit: false, prefix: "superloopy-cli-cache-" });
+  const result = spawnSync(process.execPath, [join(repo, "src", "cli.js"), "doctor", "--json"], {
+    cwd: repo,
+    encoding: "utf8",
+    env: { ...process.env, CODEX_HOME: join(tmpdir(), `superloopy-doctor-empty-cache-${process.pid}`) },
+    timeout: 10_000
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(parsed.scope, "installed");
+  assert.equal(await realpath(parsed.root), await realpath(repo));
 });
 
 test("doctor CLI accepts an explicit diagnostic root", async () => {
@@ -173,8 +221,40 @@ test("doctor CLI accepts an explicit diagnostic root", async () => {
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.ok, true);
+  assert.equal(parsed.scope, "source");
   assert.equal(parsed.root, repo);
   assert.deepEqual(parsed.checks.skills.skills, EXPECTED_SKILLS);
+});
+
+test("doctor CLI supports explicit scope and equals-form selectors", () => {
+  const installed = runCli(["doctor", "--scope=installed", "--json"]);
+  assert.equal(installed.status, 0, installed.stderr);
+  assert.equal(JSON.parse(installed.stdout).scope, "installed");
+
+  const source = runCli(["doctor", `--root=${process.cwd()}`, "--scope=source", "--json"], { cwd: tmpdir() });
+  assert.equal(source.status, 0, source.stderr);
+  assert.equal(JSON.parse(source.stdout).scope, "source");
+});
+
+test("doctor CLI rejects ambiguous or malformed selectors before running checks", () => {
+  const invalid = [
+    ["doctor", "--unknown"],
+    ["doctor", "source"],
+    ["doctor", "--root"],
+    ["doctor", "--scope", "other"],
+    ["doctor", "--root", process.cwd(), "--root", process.cwd()],
+    ["doctor", "--root", process.cwd(), "--plugin-root", process.cwd()],
+    ["doctor", "--comparison-path="]
+  ];
+
+  for (const args of invalid) {
+    const result = runCli(args);
+    assert.equal(result.status, 2, `${args.join(" ")}\n${result.stderr}`);
+    assert.notEqual(result.stderr.trim(), "");
+  }
+
+  const help = runCli(["doctor", "--help", "--unknown"]);
+  assert.equal(help.status, 0, help.stderr);
 });
 
 test("doctor model policy fails when bundled agent defaults drift", async () => {

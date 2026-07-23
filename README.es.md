@@ -167,15 +167,15 @@ Las instalaciones desde checkout no están gestionadas por `npx`. El self-update
 
 ### Claude Code
 
-Actualiza el marketplace, reinstala para resolver la versión nueva y luego recarga; no hace falta reiniciar:
+Actualiza el marketplace, actualiza el plugin instalado y luego recarga; no hace falta reiniciar:
 
 ```
 /plugin marketplace update beefiker
-/plugin install superloopy@beefiker
+/plugin update superloopy@beefiker
 /reload-plugins
 ```
 
-No hay un comando `/plugin update` aparte: reinstalar desde el marketplace actualizado resuelve la versión nueva, y `/reload-plugins` la aplica en la sesión actual (sin reiniciar Claude Code, y los hooks no necesitan volver a aprobarse). Verifica con `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`. Si cargaste un checkout con `--plugin-dir`, basta con `git pull --ff-only` y ejecutar `/reload-plugins`.
+`/plugin update` resuelve la versión nueva desde el marketplace actualizado, y `/reload-plugins` la aplica en la sesión actual (sin reiniciar Claude Code, y los hooks no necesitan volver a aprobarse). Verifica con `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`. Si cargaste un checkout con `--plugin-dir`, basta con `git pull --ff-only` y ejecutar `/reload-plugins`.
 
 ## Solución de problemas
 
@@ -203,9 +203,14 @@ codex plugin marketplace remove beefiker
 
 Reinicia Codex después de desinstalar. Limpieza opcional del bootstrap local: eliminar el plugin cubre la config y cache de plugins de Codex, pero el wrapper `superloopy` y los agents personales copiados pueden quedar. Revísalos antes de borrarlos, sobre todo si personalizaste algún archivo de agent.
 
-```
+```sh
 rm -f ~/.local/bin/superloopy
 rm -f ~/.codex/agents/franky.toml ~/.codex/agents/zoro.toml ~/.codex/agents/usopp.toml ~/.codex/agents/jinbe.toml ~/.codex/agents/robin.toml ~/.codex/agents/nami.toml
+```
+
+```powershell
+Remove-Item "$env:APPDATA\npm\superloopy.cmd" -ErrorAction SilentlyContinue
+Remove-Item "$env:USERPROFILE\.codex\agents\franky.toml", "$env:USERPROFILE\.codex\agents\zoro.toml", "$env:USERPROFILE\.codex\agents\usopp.toml", "$env:USERPROFILE\.codex\agents\jinbe.toml", "$env:USERPROFILE\.codex\agents\robin.toml", "$env:USERPROFILE\.codex\agents\nami.toml" -ErrorAction SilentlyContinue
 ```
 
 Si instalaste con `CODEX_HOME`, `SUPERLOOPY_BIN_DIR` o `CODEX_LOCAL_BIN_DIR`, limpia esas rutas configuradas.

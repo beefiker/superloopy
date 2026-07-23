@@ -130,7 +130,7 @@ function renderResume(context, orchestrate, interop) {
     "A loop is already in progress. Resume as the loop engineer and run the next action yourself; do not start a second plan or ask the user to run Superloopy commands.",
     ...interopBlock(interop),
     ...(orchestrate
-      ? ["", "You opened this with `loopy team`: keep delegating independent slices to the crew via `multi_agent_v1.spawn_agent`, and record only artifact-backed proof.", "", ...orchestrationLines(interop)]
+      ? ["", "You opened this with `loopy team`: keep delegating independent slices with the native subagent controls exposed by the current host, and record only artifact-backed proof.", "", ...orchestrationLines(interop)]
       : []),
     "",
     context
@@ -169,7 +169,7 @@ function renderComplete(status, interop) {
 // Tier 1 (always-on, conservative): one line that keeps a single cohesive change
 // solo but opens the door to parallel delegation when slices are truly independent.
 function baselineDelegationLine() {
-  return "- If the work splits into 2+ genuinely independent slices, you may delegate them in parallel with `multi_agent_v1.spawn_agent` (set `agent_type` to the matching crew role, self-contained `message`, `fork_context: false`) and record each worker's artifact-backed proof; for a single cohesive change, stay solo. Type `loopy team <task>` to run the full crew.";
+  return "- If the work splits into 2+ genuinely independent slices, you may delegate them in parallel with the native subagent controls exposed by the current host. Use the configured name when named selection is available, keep every assignment self-contained, and record each worker's artifact-backed proof; for a single cohesive change, stay solo. Type `loopy team <task>` to run the full crew.";
 }
 
 // Tier 2 (escalation): the crew fan-out playbook, wired to Superloopy's receipt gate.
@@ -182,13 +182,13 @@ function orchestrationLines(interop) {
       : []),
     "- If the requested repository path differs from `cwd`, verify and state the exact target path before editing or dispatching workers.",
     "- This task is big enough to split. Delegate independent slices to parallel workers instead of doing everything in one thread.",
-    "- Spawn each worker with the host's native tool, and ALWAYS set `agent_type` to the crew role so the child loads that role's model and instructions, e.g.: `multi_agent_v1.spawn_agent({\"message\": \"TASK: act as franky — <self-contained assignment>\", \"agent_type\": \"franky\", \"fork_context\": false})`.",
-    "- If the host spawn tool does not expose `agent_type` or resolved-model attestation, report the lane as `model_unverified`; never claim the configured GPT-5.6 pin was enforced at runtime.",
-    "- Match `agent_type` to the lane, one per crew role: `agent_type: \"franky\"` builds one slice, `\"zoro\"` reviews a diff, `\"usopp\"` tests, `\"jinbe\"` gates, `\"robin\"` audits (read-only), `\"nami\"` finds files (read-only). Dispatch `nami` first to scope a slice before assigning `franky`.",
-    "- Role routing by name is best-effort across hosts, so ALSO make the `message` self-contained: lead with `TASK: act as <role>` and paste all needed context, so the worker behaves correctly even if the host ignores `agent_type`.",
+    "- Use the native subagent controls exposed by the current host. Use the configured name when named selection is available, but do not invent arguments the host schema does not expose.",
+    "- Configured names provide steering, while the host-owned stop callback observes the actual role identity. If the host cannot attest that identity, report `role_unverified`; if it cannot attest the resolved model, report `model_unverified`. Never claim the configured GPT-5.6 pin was enforced without attestation.",
+    "- Route one lane per configured crew name: `franky` builds one slice, `zoro` reviews a diff, `usopp` tests, `jinbe` gates, `robin` audits (read-only), and `nami` finds files (read-only). Dispatch `nami` first to scope a slice before assigning `franky`.",
+    "- Make every assignment self-contained: lead with `TASK: act as <role>` and paste all needed context so the worker can execute the bounded lane correctly.",
     "- The implementation worker must own a real bounded implementation slice before the parent edits or completes that slice. If no safe independent implementation slice exists, stay solo or use a smaller read-only crew.",
     "- Parallelize read-heavy lanes first (`nami` navigation, `zoro` review, `usopp` QA); never run two editors on overlapping files at once.",
-    "- Each worker ends its report with `SUPERLOOPY_EVIDENCE: <path-under-active-evidence-root>` (`robin` uses `SUPERLOOPY_AUDIT:`). Collect them with `multi_agent_v1.wait_agent`; treat a running child as alive, not a timeout.",
+    "- Each worker ends its report with `SUPERLOOPY_EVIDENCE: <path-under-active-evidence-root>` (`robin` uses `SUPERLOOPY_AUDIT:`). Collect them with the host's native lifecycle controls; treat a running child as alive, not a timeout.",
     "- After each worker returns, show a concise role completion line with role, normalized verdict, artifact path, risk, and next action before closing or respawning that lane.",
     "- Give `jinbe` a Markdown final gate report such as `.superloopy/evidence/jinbe-final-gate-report.md`; keep it separate from the machine quality gate `.superloopy/evidence/gate.json`.",
     `- You own the plan: record a criterion pass only from a real artifact via \`${cli} loop prove\` or \`${cli} loop evidence\`, never from a worker's claim alone. Track each dispatch with \`${cli} loop handoff\` and run \`${cli} loop fleet --json\` before the final gate.`,

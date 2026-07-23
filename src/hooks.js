@@ -5,7 +5,7 @@ import { parseJson } from "./args.js";
 import { resolveEvidenceArtifact } from "./artifacts.js";
 import { buildGuide, flowStepLine, proofPlanLine, recordedEvidenceLine } from "./guide.js";
 import { CONTEXT_PRESSURE_MARKERS, decideContinuation, transcriptTailHasMarker } from "./continuation.js";
-import { normalizeAgentType, receiptFromPayload, subagentTranscriptPath } from "./receipt.js";
+import { matchesAgentType, receiptFromPayload, subagentTranscriptPath } from "./receipt.js";
 import { hasEngineerTrigger, runEngineerTriggerHook } from "./engineer.js";
 import { applySteering, statusLoop } from "./loop.js";
 import { appendLedger, evidenceRelativeDir, goalsPath, scopeFromSessionId } from "./store.js";
@@ -26,10 +26,14 @@ const PROTECTED_STEERING_KEYS = new Set([
   "completionStatus"
 ]);
 
-export function runSubagentStopHook(payload) {
+export function runSubagentStopHook(payload, context = { host: "codex" }) {
   if (!isRecord(payload)) return "";
   if (payload.hook_event_name !== "SubagentStop") return "";
-  if (!EVIDENCE_RECEIPT_AGENT_TYPES.has(normalizeAgentType(payload.agent_type))) return "";
+  if (![...EVIDENCE_RECEIPT_AGENT_TYPES].some((role) => matchesAgentType({
+    host: context.host,
+    agentType: payload.agent_type,
+    role
+  }))) return "";
   // Read the SAME transcript the receipt recovery reads, so a context-pressure marker in a
   // different transcript (e.g. the parent session on Claude) can't skip the receipt gate.
   if (transcriptHasContextPressureMarker(subagentTranscriptPath(payload))) return "";
