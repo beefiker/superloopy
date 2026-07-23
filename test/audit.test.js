@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { countPhysicalLines, isReviewableTextFile } from "../src/doctor.js";
 
 const AUDIT_PATH = "docs/superloopy-file-audit.md";
 const MAX_REVIEWABLE_LINES = 550;
@@ -22,11 +23,19 @@ test("source and test files stay small enough to review file by file", async () 
   const files = listRepoFiles().filter(isReviewableTextFile);
   const oversized = [];
   for (const file of files) {
-    const lineCount = (await readFile(file, "utf8")).split("\n").length - 1;
+    const lineCount = countPhysicalLines(await readFile(file, "utf8"));
     if (lineCount > MAX_REVIEWABLE_LINES) oversized.push(`${file}:${lineCount}`);
   }
 
   assert.deepEqual(oversized, []);
+});
+
+test("standalone reviewability uses the physical-line and extension contract", () => {
+  assert.equal(countPhysicalLines("one\ntwo"), 2);
+  assert.equal(countPhysicalLines("one\rtwo\r"), 2);
+  for (const file of ["a.mjs", "a.cjs", "a.yml"]) {
+    assert.equal(isReviewableTextFile(file), true, file);
+  }
 });
 
 test("file audit weight note names the current largest source file", async () => {
@@ -36,7 +45,7 @@ test("file audit weight note names the current largest source file", async () =>
   for (const file of sourceFiles) {
     measured.push({
       file,
-      lines: (await readFile(file, "utf8")).split("\n").length - 1
+      lines: countPhysicalLines(await readFile(file, "utf8"))
     });
   }
   const largest = measured.toSorted((left, right) => right.lines - left.lines)[0];
@@ -56,8 +65,4 @@ function listRepoFiles() {
     .filter(Boolean)
     .filter((file) => existsSync(file))
     .sort();
-}
-
-function isReviewableTextFile(file) {
-  return /\.(js|md|json|yaml)$/u.test(file) && !file.endsWith("package-lock.json") && !file.startsWith("web-superloopy/public/_nuxt/") && !file.startsWith("web-superloopy/public/_payload.json") && !file.startsWith("skills/superloopy-slides/bold-template-pack/");
 }

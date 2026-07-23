@@ -83,17 +83,17 @@ test("runUserPromptSubmitHook injects the crew fan-out playbook in team mode, wi
   });
   const context = JSON.parse(output).hookSpecificOutput.additionalContext;
   assert.match(context, /Crew fan-out \(team mode\)/);
-  assert.match(context, /multi_agent_v1\.spawn_agent/);
-  assert.match(context, /multi_agent_v1\.wait_agent/);
-  // agent_type must be set per crew role so the child loads that role's TOML.
-  assert.match(context, /"agent_type": "franky"/);
+  assert.match(context, /native subagent controls exposed by the current host/);
+  assert.doesNotMatch(context, /multi_agent_v1|fork_context|run_in_background/);
+  assert.match(context, /configured name when named selection is available/);
   assert.match(context, /model_unverified/);
-  assert.match(context, /does not expose `agent_type` or resolved-model attestation/);
-  assert.match(context, /"zoro"/);
-  assert.match(context, /"usopp"/);
-  assert.match(context, /"jinbe"/);
-  assert.match(context, /"robin"/);
-  assert.match(context, /"nami"/);
+  assert.match(context, /role_unverified/);
+  assert.match(context, /franky/);
+  assert.match(context, /zoro/);
+  assert.match(context, /usopp/);
+  assert.match(context, /jinbe/);
+  assert.match(context, /robin/);
+  assert.match(context, /nami/);
   assert.match(context, /requested repository path differs from `cwd`/);
   assert.match(context, /implementation worker must own a real bounded implementation slice/);
   assert.match(context, /jinbe-final-gate-report\.md/);
@@ -116,7 +116,7 @@ test("runUserPromptSubmitHook treats the connected loopycrew form as team mode w
   });
   const context = JSON.parse(output).hookSpecificOutput.additionalContext;
   assert.match(context, /Crew fan-out \(team mode\)/);
-  assert.match(context, /multi_agent_v1\.spawn_agent/);
+  assert.match(context, /native subagent controls exposed by the current host/);
   // The connected keyword is stripped from the brief that seeds the loop.
   assert.match(context, /superloopy loop begin --brief 'migrate the auth module'/);
   assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
@@ -131,7 +131,7 @@ test("runUserPromptSubmitHook treats the standalone ultrawork keyword as team mo
   });
   const context = JSON.parse(output).hookSpecificOutput.additionalContext;
   assert.match(context, /Crew fan-out \(team mode\)/);
-  assert.match(context, /multi_agent_v1\.spawn_agent/);
+  assert.match(context, /native subagent controls exposed by the current host/);
   // The ultrawork keyword is stripped from the brief that seeds the loop.
   assert.match(context, /superloopy loop begin --brief 'migrate the auth module'/);
   assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
@@ -210,7 +210,8 @@ test("runUserPromptSubmitHook re-injects the crew playbook when resuming with lo
   const context = JSON.parse(output).hookSpecificOutput.additionalContext;
   assert.match(context, /A loop is already in progress/);
   assert.match(context, /Crew fan-out \(team mode\)/);
-  assert.match(context, /multi_agent_v1\.spawn_agent/);
+  assert.match(context, /native subagent controls exposed by the current host/);
+  assert.doesNotMatch(context, /multi_agent_v1|fork_context|run_in_background/);
   assert.match(context, /run `superloopy loop fleet --json` before the final gate/);
 });
 

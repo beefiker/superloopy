@@ -33,6 +33,8 @@ const GENERATED_INSTALL_FILES = new Set([
 ]);
 
 export async function runDoctor(cwd, options = {}) {
+  const scope = options.scope ?? "source";
+  if (scope !== "source" && scope !== "installed") throw new Error(`Invalid doctor scope: ${scope}.`);
   const pluginManifest = await checkPluginManifest(cwd);
   const hooks = pluginManifest.ok ? await checkHooks(cwd, pluginManifest.manifest.hooks) : fail("Plugin manifest missing.");
   const skills = await checkSkills(cwd);
@@ -58,14 +60,20 @@ export async function runDoctor(cwd, options = {}) {
   const installedModelPolicy = await checkInstalledModelPolicy(cwd, options.installedModelPolicy ?? {});
   const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, modelPolicy, claudeModelPolicy, installedModelPolicy, hostContract: checkHostContract(), interop: checkInterop(options), wrapper: checkWrapper({ ...options, diagnosedRoot: cwd }) };
   return {
-    ok: Object.values(checks).every((check) => check.ok),
+    ok: doctorOverallOk(checks, scope),
+    scope,
     root: cwd,
     checks
   };
 }
 
+export function doctorOverallOk(checks, scope) {
+  const excluded = scope === "source" ? new Set(["installedModelPolicy", "wrapper"]) : new Set();
+  return Object.entries(checks).every(([name, check]) => excluded.has(name) || check.ok);
+}
+
 export function formatDoctor(result) {
-  const lines = ["Superloopy doctor"];
+  const lines = ["Superloopy doctor", `scope: ${result.scope ?? "source"}`];
   for (const [name, check] of Object.entries(result.checks)) {
     const verdict = check.ok ? check.warning === true ? "warn" : "ok" : "fail";
     lines.push(`- ${name}: ${verdict}${doctorDetail(name, check)}`);
@@ -197,7 +205,7 @@ async function checkReviewability(cwd) {
     const files = listGitVisibleFiles(cwd).filter(isReviewableTextFile);
     const measured = await Promise.all(files.map(async (file) => ({
       file,
-      lines: countLines(await readFile(join(cwd, file), "utf8"))
+      lines: countPhysicalLines(await readFile(join(cwd, file), "utf8"))
     })));
     const oversized = measured.filter((item) => item.lines > MAX_REVIEWABLE_LINES);
     if (oversized.length > 0) {
@@ -215,14 +223,15 @@ async function checkReviewability(cwd) {
   }
 }
 
-function isReviewableTextFile(file) {
+export function isReviewableTextFile(file) {
   // web-superloopy/public/_nuxt holds vendored minified orbit-runtime bundles audited by provenance, not line count.
   // skills/superloopy-slides/bold-template-pack holds the vendored frontend-slides template pack audited by provenance, not line count.
-  return /\.(js|md|json|yaml)$/u.test(file) && !file.endsWith("package-lock.json") && !file.startsWith("web-superloopy/public/_nuxt/") && !file.startsWith("web-superloopy/public/_payload.json") && !file.startsWith("skills/superloopy-slides/bold-template-pack/");
+  return /\.(?:[cm]?js|md|json|ya?ml)$/u.test(file) && !file.endsWith("package-lock.json") && !file.startsWith("web-superloopy/public/_nuxt/") && !file.startsWith("web-superloopy/public/_payload.json") && !file.startsWith("skills/superloopy-slides/bold-template-pack/");
 }
 
-function countLines(content) {
-  return content.split("\n").length - 1;
+export function countPhysicalLines(content) {
+  if (content.length === 0) return 0;
+  return content.split(/\r\n|\r|\n/u).length - (/(?:\r\n|\r|\n)$/u.test(content) ? 1 : 0);
 }
 
 function listGitVisibleFiles(cwd) {
@@ -334,9 +343,8 @@ function collectCommands(value) {
   });
 }
 
-// Coherence between the agents Superloopy dispatches, the agents it installs, and the hook
-// matchers that gate them. Catches the auditor-install gap class of bug: an agent named
-// in a task() dispatch directive that is never installed or never matched by a hook.
+// Coherence between the roles Superloopy configures, the agent definitions it installs, and the
+// hook matchers that gate them. Catches the gap where a configured role is not installed or matched.
 async function checkDispatchCoherence(cwd) {
   try {
     const agentsDir = join(cwd, ".codex", "agents");
@@ -346,13 +354,13 @@ async function checkDispatchCoherence(cwd) {
 
     const missingToml = SUPERLOOPY_AGENT_NAMES.filter((name) => !hasToml(name));
     const unmatched = SUPERLOOPY_AGENT_NAMES.filter((name) => !matched(name));
-    const dispatched = await collectDispatchedAgentTypes(cwd);
+    const dispatched = [...SUPERLOOPY_AGENT_NAMES];
     const undispatchable = dispatched.filter((name) => !SUPERLOOPY_AGENT_NAMES.includes(name) || !hasToml(name) || !matched(name));
 
     const problems = [];
     if (missingToml.length > 0) problems.push(`installable agents missing .codex/agents/<name>.toml: ${missingToml.join(", ")}`);
     if (unmatched.length > 0) problems.push(`installable agents with no SubagentStop matcher: ${unmatched.join(", ")}`);
-    if (undispatchable.length > 0) problems.push(`dispatched subagent_type not installable/matched: ${undispatchable.join(", ")}`);
+    if (undispatchable.length > 0) problems.push(`configured roles not installable/matched: ${undispatchable.join(", ")}`);
     if (problems.length > 0) {
       return { ok: false, policy: "dispatched-agents-are-installable-and-matched", agents: SUPERLOOPY_AGENT_NAMES, dispatched, message: `Dispatch coherence: ${problems.join("; ")}.` };
     }
@@ -373,22 +381,6 @@ async function collectSubagentStopMatchers(cwd) {
     }
   }
   return matchers;
-}
-
-// Scan only the files that carry real dispatch directives (the audit dispatch builder and
-// the user-facing flow docs), not every source file — a `subagent_type=` mention inside a
-// comment or example elsewhere is not a dispatch and must not be treated as one.
-async function collectDispatchedAgentTypes(cwd) {
-  const names = new Set();
-  for (const rel of ["src/audit.js", "skills/superloopy-loop/SKILL.md", "README.md"]) {
-    const absolute = join(cwd, rel);
-    if (!existsSync(absolute)) continue;
-    const content = await readFile(absolute, "utf8");
-    const pattern = /subagent_type\s*=\s*["']([a-z0-9-]+)["']/giu;
-    let match;
-    while ((match = pattern.exec(content)) !== null) names.add(match[1]);
-  }
-  return [...names];
 }
 
 // Validate the Claude Code wiring that lives OUTSIDE the Codex plugin manifest: the pure-metadata
@@ -431,26 +423,26 @@ export async function checkClaudeHostWiring(cwd) {
       if (subagentStop.length === 0) {
         problems.push("hooks/hooks.json declares no SubagentStop hooks");
       } else {
-        // Coverage requires the SAME entry to BOTH match an agent AND invoke the CLI, so a broken
-        // command on one entry can't be masked by a healthy sibling, and a CLI entry that matches
-        // nothing real can't be propped up by a non-CLI entry that does. Matchers are compiled
-        // defensively (an invalid pattern is a reported problem, not a doctor crash) and tested with
-        // a FULL (anchored) match against the namespace Claude sends (`superloopy:<name>`), so a bare
-        // Codex-style matcher that only substring-matches is rejected. Claude treats a missing/empty
-        // matcher as match-all.
+        const workerMatcher = "^superloopy:(?:franky|zoro|usopp|jinbe|nami)$";
+        const robinMatcher = "^superloopy:robin$";
+        const exactMatchers = new Set([workerMatcher, robinMatcher]);
         const entries = subagentStop.map((entry) => {
           const commands = (Array.isArray(entry.hooks) ? entry.hooks : [])
             .map((hook) => hook?.command)
             .filter((command) => typeof command === "string");
-          const invokesCli = commands.some(
-            (command) => command.includes("${CLAUDE_PLUGIN_ROOT}/src/cli.js") && command.includes(" hook ")
-          );
           const matcher = typeof entry.matcher === "string" ? entry.matcher : "";
           if (matcher.length > 0) matcherSources.push(matcher);
+          const exactMatcher = exactMatchers.has(matcher);
+          if (!exactMatcher) {
+            problems.push(`hooks/hooks.json SubagentStop entry needs an exact plugin identity matcher: ${matcher || "<missing>"}`);
+          }
+          const expectedSubcommand = matcher === robinMatcher ? "subagent-stop-audit" : "subagent-stop";
+          const invokesExpectedCli = commands.some(
+            (command) => command.includes("${CLAUDE_PLUGIN_ROOT}/src/cli.js")
+              && new RegExp(`(?:^|\\s)hook\\s+${expectedSubcommand}(?:\\s|$)`, "u").test(command)
+          );
           let regex;
-          if (matcher.length === 0) {
-            regex = /.*/u;
-          } else {
+          if (matcher.length > 0) {
             try {
               regex = new RegExp(`^(?:${matcher})$`, "u");
             } catch {
@@ -458,11 +450,14 @@ export async function checkClaudeHostWiring(cwd) {
               problems.push(`hooks/hooks.json SubagentStop matcher is not a valid regex: ${matcher}`);
             }
           }
-          return { regex, invokesCli };
+          return { regex, invokesExpectedCli, exactMatcher };
         });
 
         const uncovered = SUPERLOOPY_AGENT_NAMES.filter(
-          (name) => !entries.some((entry) => entry.invokesCli && entry.regex !== null && entry.regex.test(`superloopy:${name}`))
+          (name) => !entries.some((entry) => entry.exactMatcher
+            && entry.invokesExpectedCli
+            && entry.regex !== null
+            && entry.regex.test(`superloopy:${name}`))
         );
         if (uncovered.length > 0) {
           problems.push(`no CLI-invoking SubagentStop hook covers plugin-namespaced agents: ${uncovered.map((n) => `superloopy:${n}`).join(", ")}`);
@@ -492,7 +487,7 @@ function checkHostContract() {
     modelRoutingVerification: "unverified",
     unverifiedStatus: "model_unverified",
     cannotVerify: [
-      "the host spawns custom agents from ~/.codex/agents by subagent_type",
+      "the host loads and launches each configured custom-agent definition through its native controls",
       "the host attests the resolved model used for each spawned agent",
       "the host emits SubagentStop with agent_type and agent_id populated",
       "the host honors a subagent hook returning a block decision by re-prompting it"

@@ -15,15 +15,15 @@ import { dirname, join } from "node:path";
 import { resolveEvidenceArtifact } from "./artifacts.js";
 import { auditMaxFails, auditOneCriterion, recordAuditFailure } from "./audit.js";
 import { CONTEXT_PRESSURE_MARKERS, transcriptTailHasMarker } from "./continuation.js";
-import { auditReceiptFromPayload, normalizeAgentType, subagentTranscriptPath } from "./receipt.js";
+import { auditReceiptFromPayload, matchesAgentType, subagentTranscriptPath } from "./receipt.js";
 import { validateAuditVerdict, verifyVerdictAgainstState } from "./audit-verdict.js";
 import { appendLedger, auditStatePath, evidenceRelativeDir, goalsPath, nowIso, scopeFromSessionId, withFileLock, writeJsonAtomic } from "./store.js";
 
 const MAX_AUDIT_ATTEMPTS = 3;
-export async function runAuditorStopHook(payload) {
+export async function runAuditorStopHook(payload, context = { host: "codex" }) {
   if (payload === null || typeof payload !== "object") return "";
   if (payload.hook_event_name !== "SubagentStop") return "";
-  if (normalizeAgentType(payload.agent_type) !== "robin") return "";
+  if (!matchesAgentType({ host: context.host, agentType: payload.agent_type, role: "robin" })) return "";
   if (typeof payload.cwd !== "string") return "";
   // Read the SAME transcript the audit receipt recovery reads (agent_transcript_path on Claude),
   // so a marker in a different transcript can't skip the audit gate.

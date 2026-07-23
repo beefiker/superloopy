@@ -167,15 +167,15 @@ checkout インストールは `npx` 管理ではありません。`npx` self-up
 
 ### Claude Code
 
-marketplace を更新し、新しいバージョンを解決するために再インストールしてから再読み込みします。再起動は不要です。
+marketplace を更新し、インストール済みプラグインを更新してから再読み込みします。再起動は不要です。
 
 ```
 /plugin marketplace update beefiker
-/plugin install superloopy@beefiker
+/plugin update superloopy@beefiker
 /reload-plugins
 ```
 
-別途 `/plugin update` コマンドはありません。更新済み marketplace から再インストールすると新しいバージョンが解決され、`/reload-plugins` が現在のセッションにそれを適用します（Claude Code の再起動は不要で、hooks の再承認も必要ありません）。`node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json` で確認してください。`--plugin-dir` で checkout を読み込んでいる場合は、`git pull --ff-only` を実行して `/reload-plugins` するだけです。
+`/plugin update` が更新済み marketplace から新しいバージョンを解決し、`/reload-plugins` が現在のセッションにそれを適用します（Claude Code の再起動は不要で、hooks の再承認も必要ありません）。`node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json` で確認してください。`--plugin-dir` で checkout を読み込んでいる場合は、`git pull --ff-only` を実行して `/reload-plugins` するだけです。
 
 ## トラブルシューティング
 
@@ -203,9 +203,14 @@ codex plugin marketplace remove beefiker
 
 アンインストール後に Codex を再起動してください。任意の local bootstrap cleanup: plugin の削除は Codex の plugin config と cache を扱いますが、`superloopy` wrapper と個人ディレクトリへコピーされた agents は残ることがあります。agent ファイルをカスタマイズしている場合は、削除前に確認してください。
 
-```
+```sh
 rm -f ~/.local/bin/superloopy
 rm -f ~/.codex/agents/franky.toml ~/.codex/agents/zoro.toml ~/.codex/agents/usopp.toml ~/.codex/agents/jinbe.toml ~/.codex/agents/robin.toml ~/.codex/agents/nami.toml
+```
+
+```powershell
+Remove-Item "$env:APPDATA\npm\superloopy.cmd" -ErrorAction SilentlyContinue
+Remove-Item "$env:USERPROFILE\.codex\agents\franky.toml", "$env:USERPROFILE\.codex\agents\zoro.toml", "$env:USERPROFILE\.codex\agents\usopp.toml", "$env:USERPROFILE\.codex\agents\jinbe.toml", "$env:USERPROFILE\.codex\agents\robin.toml", "$env:USERPROFILE\.codex\agents\nami.toml" -ErrorAction SilentlyContinue
 ```
 
 `CODEX_HOME`、`SUPERLOOPY_BIN_DIR`、`CODEX_LOCAL_BIN_DIR` を使ってインストール先を変えた場合は、その設定先を削除してください。

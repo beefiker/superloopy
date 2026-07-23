@@ -179,15 +179,15 @@ checkout 설치는 `npx` 관리 대상이 아닙니다. `npx` self-update는 안
 
 ### Claude Code
 
-marketplace를 갱신하고, 새 버전을 받도록 다시 설치한 뒤 리로드하세요. 재시작은 필요 없습니다.
+marketplace를 갱신하고, 설치된 플러그인을 업데이트한 뒤 리로드하세요. 재시작은 필요 없습니다.
 
 ```
 /plugin marketplace update beefiker
-/plugin install superloopy@beefiker
+/plugin update superloopy@beefiker
 /reload-plugins
 ```
 
-별도의 `/plugin update` 명령은 없습니다. 갱신된 marketplace에서 다시 설치하면 새 버전이 잡히고, `/reload-plugins`가 현재 세션에 적용합니다(Claude Code 재시작이 필요 없고, hooks도 다시 승인할 필요가 없습니다). 확인은 `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`으로 합니다. `--plugin-dir`로 checkout을 로드했다면 `git pull --ff-only` 후 `/reload-plugins`만 하면 됩니다.
+`/plugin update`가 갱신된 marketplace에서 새 버전을 받고, `/reload-plugins`가 현재 세션에 적용합니다(Claude Code 재시작이 필요 없고, hooks도 다시 승인할 필요가 없습니다). 확인은 `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`으로 합니다. `--plugin-dir`로 checkout을 로드했다면 `git pull --ff-only` 후 `/reload-plugins`만 하면 됩니다.
 
 ## 트러블슈팅
 
@@ -215,9 +215,14 @@ codex plugin marketplace remove beefiker
 
 제거 뒤 Codex를 재시작하세요. 선택적 local bootstrap cleanup: plugin 제거는 Codex의 plugin config와 cache를 지우지만, `superloopy` wrapper와 개인 agents 사본은 남을 수 있습니다. agent 파일을 수정한 적이 있다면 지우기 전에 꼭 확인하세요.
 
-```
+```sh
 rm -f ~/.local/bin/superloopy
 rm -f ~/.codex/agents/franky.toml ~/.codex/agents/zoro.toml ~/.codex/agents/usopp.toml ~/.codex/agents/jinbe.toml ~/.codex/agents/robin.toml ~/.codex/agents/nami.toml
+```
+
+```powershell
+Remove-Item "$env:APPDATA\npm\superloopy.cmd" -ErrorAction SilentlyContinue
+Remove-Item "$env:USERPROFILE\.codex\agents\franky.toml", "$env:USERPROFILE\.codex\agents\zoro.toml", "$env:USERPROFILE\.codex\agents\usopp.toml", "$env:USERPROFILE\.codex\agents\jinbe.toml", "$env:USERPROFILE\.codex\agents\robin.toml", "$env:USERPROFILE\.codex\agents\nami.toml" -ErrorAction SilentlyContinue
 ```
 
 `CODEX_HOME`, `SUPERLOOPY_BIN_DIR`, `CODEX_LOCAL_BIN_DIR`로 설치 위치를 바꿨다면 그 경로를 정리하세요.

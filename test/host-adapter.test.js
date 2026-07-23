@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { auditReceiptFromPayload, normalizeAgentType, receiptFromPayload } from "../src/receipt.js";
+import {
+  auditReceiptFromPayload,
+  canonicalAgentType,
+  matchesAgentType,
+  receiptFromPayload
+} from "../src/receipt.js";
 import { bootstrapSuperloopy, isClaudeHost } from "../src/agents.js";
 
 async function transcript(lines) {
@@ -172,11 +177,23 @@ test("auditReceiptFromPayload mirrors the same direct/transcript fallback for SU
   assert.equal(auditReceiptFromPayload({ agent_transcript_path: path }), ".superloopy/evidence/audit/v2.json");
 });
 
-test("normalizeAgentType strips a host namespace so SubagentStop matchers fire on both hosts", () => {
-  assert.equal(normalizeAgentType("franky"), "franky"); // Codex bare
-  assert.equal(normalizeAgentType("superloopy:franky"), "franky"); // Claude plugin-namespaced
-  assert.equal(normalizeAgentType("robin"), "robin");
-  assert.equal(normalizeAgentType(undefined), undefined);
+test("agent identity matching is exact and host-specific", () => {
+  for (const role of ["franky", "zoro", "usopp", "jinbe", "robin", "nami"]) {
+    assert.equal(canonicalAgentType("codex", role), role);
+    assert.equal(canonicalAgentType("claude", role), `superloopy:${role}`);
+    assert.equal(matchesAgentType({ host: "codex", agentType: role, role }), true);
+    assert.equal(matchesAgentType({ host: "claude", agentType: `superloopy:${role}`, role }), true);
+  }
+  assert.equal(matchesAgentType({ host: "codex", agentType: "foreign:robin", role: "robin" }), false);
+  assert.equal(matchesAgentType({ host: "claude", agentType: "robin", role: "robin" }), false);
+  assert.equal(canonicalAgentType("unknown", "robin"), null);
+  assert.equal(canonicalAgentType("codex", "unknown"), null);
+});
+
+test("Codex Nami has restrictive configured defaults", async () => {
+  const nami = await readFile(".codex/agents/nami.toml", "utf8");
+  assert.match(nami, /^sandbox_mode = "read-only"$/mu);
+  assert.match(nami, /^approval_policy = "never"$/mu);
 });
 
 test("bootstrapSuperloopy is a clean no-op on Claude Code (no ~/.codex install)", async () => {

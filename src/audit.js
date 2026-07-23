@@ -223,7 +223,7 @@ function renderAuditDispatch(scope, pending) {
     ""
   ];
   for (const entry of pending) {
-    lines.push(`- ${entry.criterion}: \`task(subagent_type="robin", run_in_background=false)\` — cite re-run artifact \`${entry.rerunArtifact}\` against the scenario; write verdict to \`${evidenceRelativeDir(scope)}/audit/${entry.criterion.replace("/", "-")}-verdict.json\`.`);
+    lines.push(`- ${entry.criterion}: use the host's native subagent controls to dispatch the configured read-only \`robin\` auditor — cite re-run artifact \`${entry.rerunArtifact}\` against the scenario; write verdict to \`${evidenceRelativeDir(scope)}/audit/${entry.criterion.replace("/", "-")}-verdict.json\`. If named selection is unavailable, report \`named_agent_unavailable\` and \`trusted_authority_unavailable\`; do not fabricate a legacy receipt.`);
   }
   lines.push("", `The auditor must be read-only and skeptical. A pass requires citing the re-run artifact. Re-check status with \`superloopy loop audit${sessionFlag} --json\`.`);
   return lines.join("\n");

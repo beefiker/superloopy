@@ -21,16 +21,18 @@ For `loopy team`, `loopy crew`, `loopycrew`, and `ultrawork` runs, full-crew han
 
 The parent must still show a concise human-facing completion summary for each role: role, normalized verdict, artifact path, risk, and next action. Raw host close-agent output is not evidence and should not be the user's only signal that a role finished.
 
-## Role routing is not guaranteed
+## Role routing and identity
 
-The host's spawn surface (for example `multi_agent_v1.spawn_agent`) accepts a `message` plus
-flags such as `agent_type`, `fork_context`, and `model`. It does **not** reliably select a
-bundled TOML role, model, reasoning effort, or service tier by name alone — name-based role
-routing is unverified from Superloopy's side. Therefore a dispatch must be **self-contained**: the
-parent pastes the role's requirements and the bounded assignment into the spawn message and
-judges the result by the delivered evidence, not by the name it requested. Superloopy already does
-this — the receipt gate (`SUPERLOOPY_EVIDENCE`/`SUPERLOOPY_AUDIT`) and the deterministic floor judge what
-a worker actually produced, never which role label was asked for.
+The parent uses the native subagent controls exposed by the current host and selects a configured
+crew name when named selection is available. It must not invent arguments that the host's current
+schema does not expose. Every dispatch remains **self-contained**: the parent pastes the role's
+requirements and bounded assignment into the message.
+
+Configured names provide steering; the host-owned stop callback supplies the role identity that
+Superloopy matches exactly. If the host cannot attest that identity or the resolved model, the
+lane is reported as `role_unverified` or `model_unverified`. The receipt gate
+(`SUPERLOOPY_EVIDENCE`/`SUPERLOOPY_AUDIT`) and deterministic floor still judge what the worker
+actually produced.
 
 ## Model policy
 
