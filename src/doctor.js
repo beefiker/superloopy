@@ -31,6 +31,11 @@ const RUNTIME_IGNORE_SAMPLES = [
 const GENERATED_INSTALL_FILES = new Set([
   ".codex-marketplace-install.json"
 ]);
+const SOURCE_NON_GATING_CHECKS = new Set([
+  "installedModelPolicy",
+  "installedPluginTruth",
+  "wrapper"
+]);
 
 export async function runDoctor(cwd, options = {}) {
   const scope = options.scope ?? "source";
@@ -58,7 +63,15 @@ export async function runDoctor(cwd, options = {}) {
   const modelPolicy = await checkModelPolicy(cwd);
   const claudeModelPolicy = await checkClaudeModelPolicy(cwd);
   const installedModelPolicy = await checkInstalledModelPolicy(cwd, options.installedModelPolicy ?? {});
-  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, modelPolicy, claudeModelPolicy, installedModelPolicy, hostContract: checkHostContract(), interop: checkInterop(options), wrapper: checkWrapper({ ...options, diagnosedRoot: cwd }) };
+  const installedPluginTruth = options.queryInstalledPluginTruth === undefined
+    ? {
+        ok: true,
+        informational: true,
+        state: "authority_unavailable",
+        message: "Codex installed-plugin authority is unavailable."
+      }
+    : options.queryInstalledPluginTruth(pluginManifest.ok ? pluginManifest.manifest.version : undefined);
+  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, modelPolicy, claudeModelPolicy, installedModelPolicy, installedPluginTruth, hostContract: checkHostContract(), interop: checkInterop(options), wrapper: checkWrapper({ ...options, diagnosedRoot: cwd }) };
   return {
     ok: doctorOverallOk(checks, scope),
     scope,
@@ -68,18 +81,25 @@ export async function runDoctor(cwd, options = {}) {
 }
 
 export function doctorOverallOk(checks, scope) {
-  const excluded = scope === "source" ? new Set(["installedModelPolicy", "wrapper"]) : new Set();
-  return Object.entries(checks).every(([name, check]) => excluded.has(name) || check.ok);
+  return Object.entries(checks).every(([name, check]) =>
+    scope === "source" && SOURCE_NON_GATING_CHECKS.has(name) ? true : check.ok
+  );
 }
 
 export function formatDoctor(result) {
   const lines = ["Superloopy doctor", `scope: ${result.scope ?? "source"}`];
   for (const [name, check] of Object.entries(result.checks)) {
-    const verdict = check.ok ? check.warning === true ? "warn" : "ok" : "fail";
+    const verdict = doctorVerdict(name, check, result.scope ?? "source");
     lines.push(`- ${name}: ${verdict}${doctorDetail(name, check)}`);
   }
   lines.push(`overall: ${result.ok ? "ok" : "fail"}`);
   return `${lines.join("\n")}\n`;
+}
+
+function doctorVerdict(name, check, scope) {
+  if (scope === "source" && SOURCE_NON_GATING_CHECKS.has(name) && !check.ok) return "info";
+  if (!check.ok) return "fail";
+  return check.warning === true ? "warn" : "ok";
 }
 
 function doctorDetail(name, check) {

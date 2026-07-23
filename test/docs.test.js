@@ -104,7 +104,20 @@ test("public docs describe doctor checks", async () => {
   assert.match(modelPolicy, /model_unverified/);
   assert.match(modelPolicy, /split-brain/i);
 });
-
+test("doctor docs describe authoritative installed-plugin version truth", async () => {
+  for (const content of await Promise.all(["README.md", "skills/superloopy-doctor/SKILL.md"].map((path) => readFile(path, "utf8")))) {
+    assert.match(content, /codex plugin list --json/iu);
+    assert.match(content, /installedPluginTruth/iu);
+    assert.match(content, /source.*informational|informational.*source/isu);
+    assert.match(content, /installed.*fail|fail.*installed/isu);
+  }
+});
+test("doctor docs prescribe the confirmed mismatch remediation", async () => {
+  for (const content of await Promise.all(["README.md", "skills/superloopy-doctor/SKILL.md"].map((path) => readFile(path, "utf8")))) {
+    assert.match(content, /codex plugin add superloopy@beefiker --json/iu);
+    assert.match(content, /codex plugin add superloopy@beefiker --json.*start a new Codex session/isu);
+  }
+});
 test("public docs describe real marketplace install and bootstrap", async () => {
   const readme = await readFile("README.md", "utf8");
   const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");
@@ -137,7 +150,6 @@ test("public docs describe real marketplace install and bootstrap", async () => 
   assert.match(skill, /first approved `SessionStart` hook/);
   assert.match(notes, /one-time SessionStart bootstrap/);
 });
-
 test("agent install guide gives host-specific marketplace flows", async () => {
   const readme = await readFile("README.md", "utf8");
   const install = await readFile("installation.md", "utf8");
@@ -153,7 +165,6 @@ test("agent install guide gives host-specific marketplace flows", async () => {
   assert.match(install, /Do not add dependencies/);
   assert.match(install, /no (?:Superloopy )?migration command is required/i);
 });
-
 test("README locales are discoverable and do not point at removed PDF manuals", async () => {
   const locales = ["README.md", "README.ko.md", "README.zh-CN.md", "README.ja.md", "README.es.md"];
   const root = await readFile("README.md", "utf8");
@@ -185,7 +196,6 @@ test("README locales are discoverable and do not point at removed PDF manuals", 
   assert.match(await readFile("README.ja.md", "utf8"), /loopy 決済モジュールを追加して/);
   assert.match(await readFile("README.es.md", "utf8"), /loopy agrega el módulo de pagos/);
 });
-
 test("README lists the packaged Superloopy skills and their jobs", async () => {
   const locales = ["README.md", "README.ko.md", "README.zh-CN.md", "README.ja.md", "README.es.md"];
 
@@ -214,7 +224,6 @@ test("README lists the packaged Superloopy skills and their jobs", async () => {
   assert.match(await readFile("README.md", "utf8"), /Guidance aliases do not mutate state/);
   assert.match(await readFile("README.ko.md", "utf8"), /guidance alias는 상태를 바꾸지 않습니다/);
 });
-
 test("frontend discovery rows publish explicit screen-based scope and claim-shaped evidence", async () => {
   const locales = [
     {

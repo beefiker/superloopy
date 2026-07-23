@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { chmod, copyFile, link, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import test from "node:test";
 
 import { checkComparisonSimilarity, normalizeComparisonPath } from "../src/comparison-similarity.js";
@@ -34,6 +34,7 @@ test("doctor scope aggregation separates source health from machine-local instal
   const checks = {
     sourceCheck: { ok: true },
     installedModelPolicy: { ok: false },
+    installedPluginTruth: { ok: false, informational: true, state: "version_mismatch" },
     wrapper: { ok: false }
   };
   assert.equal(doctorOverallOk(checks, "source"), true);
@@ -53,6 +54,12 @@ function runCli(args, options = {}) {
     input: options.input,
     timeout: 10_000
   });
+}
+
+function assertDoctorExitMatchesResult(result) {
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(result.status, parsed.ok ? 0 : 1, result.stderr);
+  return parsed;
 }
 
 async function tempRepoCopy({ initGit = true, prefix = "superloopy-doctor-" } = {}) {
@@ -96,25 +103,10 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.scope, "source");
   assert.equal(parsed.root, process.cwd());
   assert.deepEqual(Object.keys(parsed.checks), [
-    "pluginManifest",
-    "hooks",
-    "skills",
-    "cli",
-    "dependencies",
-    "runtimeBoundary",
-    "fileAudit",
-    "gateNotes",
-    "designAudit",
-    "comparisonSimilarity",
-    "reviewability",
-    "dispatchCoherence",
-    "claudeHostWiring",
-    "modelPolicy",
-    "claudeModelPolicy",
-    "installedModelPolicy",
-    "hostContract",
-    "interop",
-    "wrapper"
+    "pluginManifest", "hooks", "skills", "cli", "dependencies", "runtimeBoundary", "fileAudit",
+    "gateNotes", "designAudit", "comparisonSimilarity", "reviewability", "dispatchCoherence",
+    "claudeHostWiring", "modelPolicy", "claudeModelPolicy", "installedModelPolicy",
+    "installedPluginTruth", "hostContract", "interop", "wrapper"
   ]);
   assert.equal(parsed.checks.pluginManifest.ok, true);
   assert.equal(parsed.checks.hooks.ok, true);
@@ -178,6 +170,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
     },
     { ok: true, installed: false, degraded: false, restartRequired: false }
   );
+  assert.equal(parsed.checks.installedPluginTruth.state, "authority_unavailable");
   // Interop is informational: it never fails and does not gate overall health.
   assert.equal(parsed.checks.interop.ok, true);
   assert.equal(parsed.checks.interop.informational, true);
@@ -190,10 +183,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
 test("doctor CLI falls back to the CLI root outside a Superloopy checkout", async () => {
   const project = await mkdtemp(join(tmpdir(), "superloopy-doctor-project-"));
   const result = runCli(["doctor", "--json"], { cwd: project });
-
-  assert.equal(result.status, 0, result.stderr);
-  const parsed = JSON.parse(result.stdout);
-  assert.equal(parsed.ok, true);
+  const parsed = assertDoctorExitMatchesResult(result);
   assert.equal(parsed.scope, "installed");
   assert.equal(parsed.root, process.cwd());
   assert.equal(parsed.checks.pluginManifest.ok, true);
@@ -207,9 +197,7 @@ test("doctor CLI defaults a non-Git package root to installed scope", async () =
     env: { ...process.env, CODEX_HOME: join(tmpdir(), `superloopy-doctor-empty-cache-${process.pid}`) },
     timeout: 10_000
   });
-
-  assert.equal(result.status, 0, result.stderr);
-  const parsed = JSON.parse(result.stdout);
+  const parsed = assertDoctorExitMatchesResult(result);
   assert.equal(parsed.scope, "installed");
   assert.equal(await realpath(parsed.root), await realpath(repo));
 });
@@ -217,7 +205,6 @@ test("doctor CLI defaults a non-Git package root to installed scope", async () =
 test("doctor CLI accepts an explicit diagnostic root", async () => {
   const repo = await tempRepoCopy();
   const result = runCli(["doctor", "--root", repo, "--json"], { cwd: tmpdir() });
-
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.ok, true);
@@ -228,8 +215,7 @@ test("doctor CLI accepts an explicit diagnostic root", async () => {
 
 test("doctor CLI supports explicit scope and equals-form selectors", () => {
   const installed = runCli(["doctor", "--scope=installed", "--json"]);
-  assert.equal(installed.status, 0, installed.stderr);
-  assert.equal(JSON.parse(installed.stdout).scope, "installed");
+  assert.equal(assertDoctorExitMatchesResult(installed).scope, "installed");
 
   const source = runCli(["doctor", `--root=${process.cwd()}`, "--scope=source", "--json"], { cwd: tmpdir() });
   assert.equal(source.status, 0, source.stderr);
@@ -264,7 +250,6 @@ test("doctor model policy fails when bundled agent defaults drift", async () => 
   await writeFile(agentPath, agent.replace('model = "gpt-5.6-luna"', 'model = "gpt-5.5"'), "utf8");
 
   const result = await runDoctor(repo);
-
   assert.equal(result.ok, false);
   assert.equal(result.checks.modelPolicy.ok, false);
   assert.match(result.checks.modelPolicy.message, /nami\.toml model/);
@@ -279,7 +264,6 @@ test("doctor model policy resolves bundled defaults from the model policy data",
   await writeFile(policyDataPath, `${JSON.stringify(policyData, null, 2)}\n`, "utf8");
 
   const result = await runDoctor(repo);
-
   assert.equal(result.ok, false);
   assert.equal(result.checks.modelPolicy.ok, false);
   assert.match(result.checks.modelPolicy.message, /nami\.toml model must be gpt-5\.5/);
@@ -293,7 +277,6 @@ test("doctor model policy reports invalid model policy data entries", async () =
   await writeFile(policyDataPath, `${JSON.stringify(policyData, null, 2)}\n`, "utf8");
 
   const result = await runDoctor(repo);
-
   assert.equal(result.ok, false);
   assert.equal(result.checks.modelPolicy.ok, false);
   assert.match(result.checks.modelPolicy.message, /model policy data\.codex\.agents\.nami/);
@@ -304,7 +287,6 @@ test("doctor dispatch coherence fails when a dispatched agent is not installed",
   await rm(join(repo, ".codex", "agents", "robin.toml"), { force: true });
 
   const result = await runDoctor(repo);
-
   assert.equal(result.checks.dispatchCoherence.ok, false);
   assert.match(result.checks.dispatchCoherence.message, /robin/);
 });
@@ -314,7 +296,6 @@ test("doctor ignores Codex marketplace install metadata in plugin cache", async 
   await writeFile(join(repo, ".codex-marketplace-install.json"), '{"source":"cache"}\n', "utf8");
 
   const result = await runDoctor(repo);
-
   assert.equal(result.ok, true);
   assert.equal(result.checks.fileAudit.ok, true);
 });
@@ -323,7 +304,6 @@ test("doctor accepts installed plugin caches that are not Git repositories", asy
   const repo = await tempRepoCopy({ initGit: false, prefix: "superloopy-cache-" });
 
   const result = await runDoctor(repo);
-
   assert.equal(result.ok, true);
   assert.equal(result.checks.runtimeBoundary.ok, true);
   assert.equal(result.checks.fileAudit.ok, true);
@@ -337,7 +317,6 @@ test("doctor accepts skill frontmatter after CRLF checkout", async () => {
   await writeFile(skillPath, toCrLf(skill), "utf8");
 
   const result = await runDoctor(repo);
-
   assert.equal(result.ok, true);
   assert.equal(result.checks.skills.ok, true);
 });
@@ -347,7 +326,6 @@ test("doctor skill check requires the bundled doctor skill", async () => {
   await rm(join(repo, "skills", "superloopy-doctor"), { recursive: true, force: true });
 
   const result = await runDoctor(repo);
-
   assert.equal(result.ok, false);
   assert.equal(result.checks.skills.ok, false);
   assert.match(result.checks.skills.message, /superloopy-doctor/);
@@ -383,6 +361,71 @@ test("doctor text renders advisory warning checks as warn", () => {
   assert.match(output, /- wrapper: warn - wrapper\/plugin split-brain/u);
   assert.match(output, /- hostContract: ok - configured routing/u);
   assert.match(output, /overall: ok/u);
+});
+
+test("doctor renders a source-only installed mismatch as info", () => {
+  const output = formatDoctor({
+    ok: true,
+    scope: "source",
+    checks: {
+      installedPluginTruth: {
+        ok: false,
+        informational: true,
+        state: "version_mismatch",
+        message: "confirmed mismatch"
+      }
+    }
+  });
+  assert.match(output, /- installedPluginTruth: info - confirmed mismatch/u);
+  assert.match(output, /overall: ok/u);
+});
+
+test("runDoctor accepts an injected installed-plugin probe without reading live machine state", async () => {
+  const unavailable = await runDoctor(process.cwd());
+  assert.equal(unavailable.checks.installedPluginTruth.state, "authority_unavailable");
+
+  const mismatch = await runDoctor(process.cwd(), {
+    scope: "installed",
+    queryInstalledPluginTruth: () => ({
+      ok: false,
+      informational: true,
+      state: "version_mismatch",
+      executingVersion: "0.12.4",
+      installedVersion: "0.12.3",
+      message: "confirmed mismatch"
+    })
+  });
+  assert.equal(mismatch.ok, false);
+  assert.equal(mismatch.checks.installedPluginTruth.state, "version_mismatch");
+});
+
+test("doctor CLI gates installed scope through the real Codex authority seam", async () => {
+  const fixture = await mkdtemp(join(tmpdir(), "superloopy-codex-authority-"));
+  const binDir = join(fixture, "bin");
+  await mkdir(binDir);
+  const fakePlugin = "if (JSON.stringify(process.argv.slice(2)) !== JSON.stringify(['list', '--json'])) process.exit(2);\nconst version = process.env.SUPERLOOPY_FAKE_INSTALLED_VERSION;\nprocess.stdout.write(JSON.stringify({ installed: [{ pluginId: 'superloopy@beefiker', name: 'superloopy', marketplaceName: 'beefiker', version, installed: true, enabled: true }] }));\n";
+  await writeFile(join(fixture, "plugin"), fakePlugin, "utf8");
+  const codexPath = join(binDir, process.platform === "win32" ? "codex.exe" : "codex");
+  try {
+    await link(process.execPath, codexPath);
+  } catch {
+    await copyFile(process.execPath, codexPath);
+    if (process.platform !== "win32") await chmod(codexPath, 0o755);
+  }
+  const currentVersion = JSON.parse(await readFile(join(process.cwd(), "package.json"), "utf8")).version;
+  const scenarios = [{ version: currentVersion, state: "current", status: 0 }, { version: "0.0.0", state: "version_mismatch", status: 1 }];
+  for (const scenario of scenarios) {
+    const result = runCli(["doctor", "--scope=installed", "--json"], {
+      cwd: fixture,
+      env: { PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`, SUPERLOOPY_FAKE_INSTALLED_VERSION: scenario.version }
+    });
+    const parsed = JSON.parse(result.stdout);
+    const failedChecks = Object.entries(parsed.checks).filter(([, check]) => !check.ok).map(([name]) => name);
+    const diagnostic = JSON.stringify({ authority: parsed.checks.installedPluginTruth.state, failedChecks, stderr: result.stderr });
+    assert.equal(result.status, scenario.status, diagnostic);
+    assert.equal(parsed.scope, "installed");
+    assert.equal(parsed.checks.installedPluginTruth.state, scenario.state);
+  }
 });
 
 test("doctor comparison scan fails on copied-looking blocks", async () => {
