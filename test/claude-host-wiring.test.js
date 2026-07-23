@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -31,8 +31,8 @@ const auditCommand = 'node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" hook subagent-stop
 const fullCrew = {
   hooks: {
     SubagentStop: [
-      stopEntry("(?:superloopy:)?(?:franky|zoro|usopp|jinbe|nami)"),
-      stopEntry("(?:superloopy:)?robin", auditCommand)
+      stopEntry("^superloopy:(?:franky|zoro|usopp|jinbe|nami)$"),
+      stopEntry("^superloopy:robin$", auditCommand)
     ]
   }
 };
@@ -71,6 +71,20 @@ test("checkClaudeHostWiring requires the SAME entry to both match AND invoke the
   assert.match(result.message, /superloopy:robin/);
 });
 
+test("checkClaudeHostWiring requires each exact matcher to invoke its own stop handler", async () => {
+  const hooks = {
+    hooks: {
+      SubagentStop: [
+        stopEntry("^superloopy:(?:franky|zoro|usopp|jinbe|nami)$", auditCommand),
+        stopEntry("^superloopy:robin$", auditCommand)
+      ]
+    }
+  };
+  const result = await checkClaudeHostWiring(await repo({ hooks }));
+  assert.equal(result.ok, false);
+  assert.match(result.message, /superloopy:franky/);
+});
+
 test("checkClaudeHostWiring rejects a CLI entry that matches nothing propped up by a non-CLI entry that covers [round2-5]", async () => {
   const hooks = {
     hooks: {
@@ -90,8 +104,8 @@ test("checkClaudeHostWiring does not crash on a null element in the SubagentStop
     hooks: {
       SubagentStop: [
         null,
-        stopEntry("(?:superloopy:)?(?:franky|zoro|usopp|jinbe|nami)"),
-        stopEntry("(?:superloopy:)?robin", auditCommand)
+        stopEntry("^superloopy:(?:franky|zoro|usopp|jinbe|nami)$"),
+        stopEntry("^superloopy:robin$", auditCommand)
       ]
     }
   };
@@ -99,10 +113,11 @@ test("checkClaudeHostWiring does not crash on a null element in the SubagentStop
   assert.equal(result.ok, true); // null entry safely skipped, rest is a full valid crew
 });
 
-test("checkClaudeHostWiring accepts a catch-all (empty/absent matcher = Claude match-all) that invokes the CLI [round2-10]", async () => {
+test("checkClaudeHostWiring rejects a catch-all because role identities must be exact", async () => {
   const hooks = { hooks: { SubagentStop: [{ hooks: [{ type: "command", command: cliCommand }] }] } };
   const result = await checkClaudeHostWiring(await repo({ hooks }));
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /exact plugin identity matcher/);
 });
 
 test("checkClaudeHostWiring treats a literal `null` hooks.json as broken, not green [round2-3]", async () => {
@@ -131,4 +146,27 @@ test("checkClaudeHostWiring fails when .claude-plugin/plugin.json is missing or 
   const misnamed = await checkClaudeHostWiring(await repo({ manifest: { name: "nope" }, hooks: fullCrew }));
   assert.equal(misnamed.ok, false);
   assert.match(misnamed.message, /name must be superloopy/);
+});
+
+test("README locales use Claude's update command and shell-specific cleanup blocks", async () => {
+  const locales = ["README.md", "README.ko.md", "README.zh-CN.md", "README.ja.md", "README.es.md"];
+
+  for (const file of locales) {
+    const content = await readFile(file, "utf8");
+    assert.equal(content.match(/\/plugin install superloopy@beefiker/g)?.length, 1, `${file}: install command`);
+    assert.equal(content.match(/\/plugin update superloopy@beefiker/g)?.length, 1, `${file}: update command`);
+    assert.match(content, /```sh\nrm -f ~\/\.local\/bin\/superloopy/);
+    assert.match(content, /```powershell\nRemove-Item "\$env:APPDATA\\npm\\superloopy\.cmd"/);
+
+    const mixedBlocks = [...content.matchAll(/```[^\n]*\n([\s\S]*?)```/g)]
+      .map((match) => match[1])
+      .filter((body) => body.includes("rm -f ") && body.includes("Remove-Item "));
+    assert.deepEqual(mixedBlocks, [], `${file}: cleanup commands must not share a shell block`);
+  }
+});
+
+test("Claude validation guide documents exact namespaced role identities", async () => {
+  const guide = await readFile("docs/superloopy-claude-validation.md", "utf8");
+  assert.match(guide, /\^superloopy:\(\?:franky\|zoro\|usopp\|jinbe\|nami\)\$/);
+  assert.doesNotMatch(guide, /normalizeAgentType|\(\?:superloopy:\)\?/);
 });
