@@ -1,10 +1,8 @@
 # Superloopy Loop Golden Set
 This is Superloopy's own long-running loop-engineering golden set. It scores Superloopy on explicit criteria, artifact-backed proof, strict continuation, local state, append-only history, repository clarity, and reviewable files. Inventory scope: Git-visible repository files from `git ls-files --cached --others --exclude-standard`.
 ## Strict Rules
-- Each improvement turn must record a score before claiming completion.
-- Each new score must be greater than the previous score.
-- Each accepted score must be greater than the previous accepted score for this golden-set version.
-- If a turn lowers the score, skip that turn's changes and continue from the last accepted state.
+- Each improvement turn must record a score before claiming completion. Each new score must be greater than the previous score.
+- Each accepted score must be greater than the previous accepted score for this golden-set version; if a turn lowers the score, skip that turn's changes and continue from the last accepted state.
 - A score is invalid without command evidence, changed-file evidence, and a short next-turn improvement target.
 - Pass evidence must be artifact-backed or test-backed. Narrative-only evidence is not enough.
 ## Threshold Model
@@ -466,6 +464,7 @@ Total: 100 points.
 | `src/help.js` | CLI help tests. | Must show the shortest evidence-backed flow and pass-artifact rule. |
 | `src/hooks.js` | Hook, model-install, and golden-hook tests. | Must run managed bootstrap at SessionStart, reuse fresh state without a catalog query, surface compatibility/restart status, and keep continuation, steering, and receipt validation fail-closed. |
 | `src/install-flow.js` | `test/auto-update.test.js`. | Must distinguish marketplace, checkout, future npx-local snapshot, and unknown install states so unsafe npx updates stay off. |
+| `src/installed-plugin-truth.js` | `test/installed-plugin-truth.test.js`. | Must use only the exact `superloopy@beefiker` JSON entry, bounded read-only Codex subprocess output, and strict version classification without scanning or mutating caches, wrappers, or plugin state. |
 | `src/installed-model-policy.js` | `test/installed-model-policy.test.js`, doctor tests. | Must report absent/legacy/unmanaged/preferred/degraded/stale/mixed/tampered status and keep explicit availability refresh read-only before and after install. |
 | `src/interop.js` | `test/interop.test.js`. | Must detect a neighboring Superpowers install best-effort across both hosts, honor the `SUPERLOOPY_SUPERPOWERS` override, and never mutate state or fail a hook. |
 | `src/loop.js` | Core loop and CLI tests. | Must preserve lifecycle state, ledger appends, evidence recording, review, checkpoint, status, and steering. |
@@ -523,6 +522,7 @@ Total: 100 points.
 | `test/host-adapter.test.js` | `npm test`. | Must verify direct and transcript-fallback receipt recovery for both evidence and audit receipts, including trailing-newline, oversized-final-message, tool-use-only, and stale-token cases. |
 | `test/humanize-korean.test.js` | `node --test test/humanize-korean.test.js`. | Must prove the Korean humanizer audit script accepts preserved Korean output and rejects non-Korean or token-dropping output. |
 | `test/installed-model-policy.test.js` | `npm test`. | Must cover absent, preferred, degraded, stale, mixed, unsupported, missing, and tampered installs plus read-only live refresh with isolated `CODEX_HOME` fixtures. |
+| `test/installed-plugin-truth.test.js` | `npm test`. | Must cover authoritative version matching, malformed authority data, bounded subprocess failures, and output sanitization using injected process results only; never read or change the live Codex installation. |
 | `test/interop.test.js` | `npm test`. | Must cover Superpowers detection, the informational doctor interop check, and coexistence routing in loop guidance. |
 | `test/loop-gates.test.js` | `npm test`. | Must cover gate, report, trace, check, review, finish, and checkpoint behavior. |
 | `test/loop.test.js` | `npm test`. | Must cover core lifecycle, evidence recording, steering, and command capture. |
