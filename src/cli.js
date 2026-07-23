@@ -19,6 +19,7 @@ import { beginLoop } from "./begin.js";
 import { captureLoop } from "./capture.js";
 import { checkLoop, formatCheckResult } from "./check.js";
 import { formatDoctor, runDoctor } from "./doctor.js";
+import { queryInstalledPluginTruth } from "./installed-plugin-truth.js";
 import { finishLoop } from "./finish.js";
 import { formatGuideResult } from "./guide.js";
 import { fleetLoop, handoffLoop } from "./fleet.js";
@@ -137,6 +138,7 @@ async function runDoctorCommand(argv, stdout, cwd) {
   const result = await runDoctor(selection.root, {
     scope: selection.scope,
     comparisonPath: parsed.comparisonPath,
+    queryInstalledPluginTruth,
     installedModelPolicy: {
       env: process.env,
       homeDir: homedir(),

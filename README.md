@@ -90,6 +90,8 @@ Upgrades from pre-managed Superloopy releases are hash-bound: a complete exact l
 
 Resolution finishes before launch, with no post-launch retry or model switch. The TOML pins configure routing, but a host that does not expose `agent_type` plus resolved-model attestation remains `model_unverified`; Superloopy never presents that as a proven GPT-5.6 runtime gate. The policy details are in `docs/superloopy-model-policy.md` (Codex) and `docs/superloopy-model-policy-claude.md` (Claude Code).
 
+**Installed-plugin truth.** `installedPluginTruth` runs the read-only `codex plugin list --json` authority probe. A confirmed `superloopy@beefiker` version mismatch is informational in source scope, but fails installed scope. Missing Codex, no registered plugin, and invalid authority output stay informational and do not fail doctor. Never infer the installed version from cache directory names or repair without approval.
+
 <table>
   <tr>
     <td align="center" width="33%"><img src=".github/assets/franky.png" width="190" alt="franky" /><br /><b>franky</b><br /><sub>builds it</sub></td>
@@ -169,11 +171,13 @@ Superloopy checks for updates on `SessionStart`. Marketplace installs are Codex-
 
 Restart Codex after the upgrade. If hooks show up as Modified, approve them; the following approved `SessionStart` automatically reconciles the generated wrapper, all six agents, and model-routing state from the new plugin version. No Superloopy migration command is required. If definitions changed, follow only the Codex restart notice so the host reloads them.
 
-If the plugin still looks stale or degraded after that, do a repair reinstall from the refreshed marketplace:
+If a confirmed `installedPluginTruth` version mismatch still looks stale or degraded after that, approve a repair reinstall from the refreshed marketplace:
 
 ```
-codex plugin add superloopy@beefiker
+codex plugin add superloopy@beefiker --json
 ```
+
+Then start a new Codex session.
 
 If you installed from a checkout, update the checkout and rerun the installer:
 
