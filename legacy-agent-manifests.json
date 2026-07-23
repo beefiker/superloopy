@@ -11,6 +11,17 @@
         "robin": { "sha256": "d861b93c75cdb45f6172c9c2ae3468721e0e8ce16f3a94c1bc5605e23b59378b" },
         "nami": { "sha256": "4a38b64a31b86e87344eccc6f98d4708f19540a84070e6ac60770016f8566925" }
       }
+    },
+    {
+      "id": "0.12.3",
+      "files": {
+        "franky": { "sha256": "68b00c8a6ae4fb2f97bf6764da70d2d8abee5f8672639cf75f587a74ba8f8217" },
+        "zoro": { "sha256": "2bc7e1496c45f9972aa816c2e2ef921228e0089854c7c0a38bef249f12b4e62b" },
+        "usopp": { "sha256": "abe34c3cf0ec5deb510cf8f80bbc77e2d66dc1f68a71734e2b24cde34360872f" },
+        "jinbe": { "sha256": "758b81ecc1efca189a56d276f1d27988d02bc18f290b6f33655e256d21ff4c38" },
+        "robin": { "sha256": "d861b93c75cdb45f6172c9c2ae3468721e0e8ce16f3a94c1bc5605e23b59378b" },
+        "nami": { "sha256": "a82e77488e43e633a4c9c5c2e261b54327195aad10e110d3ff8057795babc05e" }
+      }
     }
   ]
 }

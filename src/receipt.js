@@ -11,6 +11,7 @@
 // gates the loop, exactly as the host contract states.
 
 import { readTranscriptTail } from "./continuation.js";
+import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
 
 // Capture the path as any run of non-whitespace, matching the original Codex behavior exactly. Both
 // sources we scan are plain text (the Codex direct field, or the DECODED transcript text where an
@@ -114,10 +115,16 @@ function assistantRecordText(record) {
   return typeof record.text === "string" ? record.text : "";
 }
 
-// A host may namespace a plugin-bundled agent type (Claude sends `superloopy:franky`); Codex sends
-// the bare `franky`. Strip any leading `<ns>:` so the SubagentStop matchers fire on both.
-export function normalizeAgentType(agentType) {
-  if (typeof agentType !== "string") return agentType;
-  const idx = agentType.lastIndexOf(":");
-  return idx >= 0 ? agentType.slice(idx + 1) : agentType;
+const AGENT_NAMES = new Set(SUPERLOOPY_AGENT_NAMES);
+
+export function canonicalAgentType(host, role) {
+  if (!AGENT_NAMES.has(role)) return null;
+  if (host === "codex") return role;
+  if (host === "claude") return `superloopy:${role}`;
+  return null;
+}
+
+export function matchesAgentType({ host, agentType, role } = {}) {
+  const expected = canonicalAgentType(host, role);
+  return expected !== null && agentType === expected;
 }

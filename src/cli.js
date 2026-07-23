@@ -10,7 +10,8 @@ import {
   formatBinInstallResult,
   formatBootstrapResult,
   installAgents,
-  installBinShim
+  installBinShim,
+  isClaudeHost
 } from "./agents.js";
 import { auditLoop } from "./audit.js";
 import { runAuditorStopHook } from "./audit-hooks.js";
@@ -25,6 +26,7 @@ import { formatCrewLine } from "./crew-lines.js";
 import { trustLoop } from "./plan-trust.js";
 import { proveLoop } from "./prove.js";
 import { reportLoop } from "./report.js";
+import { isSourceCheckoutRoot } from "./source-checkout.js";
 import { formatTraceResult, traceLoop } from "./trace.js";
 import {
   checkpointLoop,
@@ -46,6 +48,8 @@ import {
 
 const CLI_FILE = fileURLToPath(import.meta.url);
 const CLI_ROOT = dirname(dirname(CLI_FILE));
+
+class CliUsageError extends Error {}
 
 async function main(argv, stdin, stdout, stderr, cwd) {
   const [command, subcommand, ...rest] = argv;
@@ -76,7 +80,7 @@ async function main(argv, stdin, stdout, stderr, cwd) {
     return 1;
   } catch (error) {
     stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-    return 1;
+    return error instanceof CliUsageError ? 2 : 1;
   }
 }
 
@@ -128,24 +132,79 @@ async function runDoctorCommand(argv, stdout, cwd) {
     stdout.write(doctorHelp());
     return 0;
   }
-  const json = hasFlag(argv, "--json");
-  const comparisonPath = readFlag(argv, "--comparison-path");
-  const result = await runDoctor(resolveDoctorRoot(cwd, argv), {
-    comparisonPath,
+  const parsed = parseDoctorArgs(argv);
+  const selection = resolveDoctorSelection(cwd, parsed);
+  const result = await runDoctor(selection.root, {
+    scope: selection.scope,
+    comparisonPath: parsed.comparisonPath,
     installedModelPolicy: {
       env: process.env,
       homeDir: homedir(),
-      refreshModels: hasFlag(argv, "--refresh-models")
+      refreshModels: parsed.refreshModels
     }
   });
-  stdout.write(json ? `${JSON.stringify(result, null, 2)}\n` : formatDoctor(result));
+  stdout.write(parsed.json ? `${JSON.stringify(result, null, 2)}\n` : formatDoctor(result));
   return result.ok ? 0 : 1;
 }
 
-function resolveDoctorRoot(cwd, argv) {
-  const explicit = readFlag(argv, "--root") ?? readFlag(argv, "--plugin-root");
-  if (explicit !== undefined) return resolve(cwd, explicit);
-  return isLikelySuperloopyPluginRoot(cwd) ? cwd : CLI_ROOT;
+function parseDoctorArgs(argv) {
+  const parsed = {
+    json: false,
+    refreshModels: false,
+    root: undefined,
+    scope: undefined,
+    comparisonPath: undefined
+  };
+  const seen = new Set();
+  let rootSelector;
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+    if (token === "--json") {
+      parsed.json = true;
+      continue;
+    }
+    if (token === "--refresh-models") {
+      parsed.refreshModels = true;
+      continue;
+    }
+
+    const equals = token.indexOf("=");
+    const name = equals >= 0 ? token.slice(0, equals) : token;
+    if (!["--root", "--plugin-root", "--scope", "--comparison-path"].includes(name)) {
+      throw new CliUsageError(token.startsWith("-") ? `Unknown doctor option: ${token}.` : `Unexpected doctor argument: ${token}.`);
+    }
+    if (seen.has(name)) throw new CliUsageError(`Duplicate doctor option: ${name}.`);
+    seen.add(name);
+    const value = equals >= 0 ? token.slice(equals + 1) : argv[++index];
+    if (value === undefined || value.length === 0 || (equals < 0 && value.startsWith("-"))) {
+      throw new CliUsageError(`Missing ${name}.`);
+    }
+
+    if (name === "--root" || name === "--plugin-root") {
+      if (rootSelector !== undefined) {
+        throw new CliUsageError("Use only one of --root or --plugin-root.");
+      }
+      rootSelector = name;
+      parsed.root = value;
+    } else if (name === "--scope") {
+      if (value !== "source" && value !== "installed") {
+        throw new CliUsageError("--scope must be source or installed.");
+      }
+      parsed.scope = value;
+    } else {
+      parsed.comparisonPath = value;
+    }
+  }
+  return parsed;
+}
+
+function resolveDoctorSelection(cwd, parsed) {
+  const explicitRoot = parsed.root === undefined ? undefined : resolve(cwd, parsed.root);
+  const recognizedCheckout = isLikelySuperloopyPluginRoot(cwd) && isSourceCheckoutRoot(cwd);
+  const scope = parsed.scope ?? (explicitRoot !== undefined || recognizedCheckout ? "source" : "installed");
+  const root = explicitRoot ?? (scope === "source" && recognizedCheckout ? cwd : CLI_ROOT);
+  return { root, scope };
 }
 
 function isLikelySuperloopyPluginRoot(cwd) {
@@ -232,6 +291,7 @@ async function dispatchLoop(cwd, subcommand, argv) {
 
 async function runHook(subcommand, stdin, stdout) {
   const payload = parseJson(await readStdin(stdin));
+  const context = { host: isClaudeHost(process.env) ? "claude" : "codex" };
   if (subcommand === "session-start") {
     stdout.write(await runSessionStartHook(payload));
     return 0;
@@ -241,11 +301,11 @@ async function runHook(subcommand, stdin, stdout) {
     return 0;
   }
   if (subcommand === "subagent-stop") {
-    stdout.write(runSubagentStopHook(payload));
+    stdout.write(runSubagentStopHook(payload, context));
     return 0;
   }
   if (subcommand === "subagent-stop-audit") {
-    stdout.write(await runAuditorStopHook(payload));
+    stdout.write(await runAuditorStopHook(payload, context));
     return 0;
   }
   if (subcommand === "stop") {
@@ -318,7 +378,7 @@ function topHelp() {
     "  superloopy install [--bin-dir PATH] [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
     "  superloopy bin install [--bin-dir PATH] [--force] [--json]",
     "  superloopy agents install [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
-    "  superloopy doctor [--json] [--root PATH] [--comparison-path PATH] [--refresh-models]",
+    "  superloopy doctor [--scope source|installed] [--json] [--root PATH|--plugin-root PATH] [--comparison-path PATH] [--refresh-models]",
     "  superloopy hook session-start|pre-tool-use|stop|subagent-stop|user-prompt-submit",
     "",
     helpText()
@@ -353,9 +413,10 @@ function installHelp() {
 function doctorHelp() {
   return [
     "Usage:",
-    "  superloopy doctor [--json] [--root PATH] [--comparison-path PATH] [--refresh-models]",
+    "  superloopy doctor [--scope source|installed] [--json] [--root PATH|--plugin-root PATH] [--comparison-path PATH] [--refresh-models]",
     "",
-    "Checks repository and installed Superloopy health without launching workers.",
+    "Checks source or installed Superloopy health without launching workers.",
+    "Default scope: source in a recognized checkout; installed elsewhere. An explicit root defaults to source.",
     "Use --refresh-models for one read-only live model comparison; no state or agent files are changed.",
     ""
   ].join("\n");
