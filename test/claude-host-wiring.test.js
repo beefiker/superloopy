@@ -152,7 +152,7 @@ test("README locales use Claude's update command and shell-specific cleanup bloc
   const locales = ["README.md", "README.ko.md", "README.zh-CN.md", "README.ja.md", "README.es.md"];
 
   for (const file of locales) {
-    const content = await readFile(file, "utf8");
+    const content = (await readFile(file, "utf8")).replace(/\r\n|\r/gu, "\n");
     assert.equal(content.match(/\/plugin install superloopy@beefiker/g)?.length, 1, `${file}: install command`);
     assert.equal(content.match(/\/plugin update superloopy@beefiker/g)?.length, 1, `${file}: update command`);
     assert.match(content, /```sh\nrm -f ~\/\.local\/bin\/superloopy/);

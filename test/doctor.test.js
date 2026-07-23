@@ -211,7 +211,7 @@ test("doctor CLI defaults a non-Git package root to installed scope", async () =
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.scope, "installed");
-  assert.equal(parsed.root, await realpath(repo));
+  assert.equal(await realpath(parsed.root), await realpath(repo));
 });
 
 test("doctor CLI accepts an explicit diagnostic root", async () => {
