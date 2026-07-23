@@ -56,6 +56,48 @@ test("classifier rejects invalid executing versions, top-level shapes, and exact
   }
 });
 
+test("classifier rejects unsafe authority versions without returning rejected data", () => {
+  const secret = "do-not-leak";
+  const invalidCases = [
+    [`0.12.4-\u001b[31m${secret}`, "0.12.4"],
+    [` 0.12.4+${secret}`, "0.12.4"],
+    [`0.12.4+${secret} `, "0.12.4"],
+    ["0.12.4", `0.12.3-\u001b[31m${secret}`],
+    ["0.12.4", ` 0.12.3+${secret}`],
+    ["0.12.4", `0.12.3+${secret} `],
+    ["0.12.4", `0.12.3-01.${secret}`],
+    ["0.12.4", `0.12.3-${secret}..1`],
+    ["0.12.4", `0.12.3+${secret}..1`],
+    ["0.12.4", `0.12.3+${"a".repeat(1_024)}.${secret}`]
+  ];
+
+  for (const [executingVersion, installedVersion] of invalidCases) {
+    const result = classifyInstalledPluginTruth(executingVersion, { installed: [exact(installedVersion)] });
+    assert.equal(result.ok, true);
+    assert.equal(result.state, "authority_unavailable");
+    assert.doesNotMatch(JSON.stringify(result), /do-not-leak|\\u001b/iu);
+  }
+});
+
+test("classifier supports strict SemVer prerelease and build strings with exact equality", () => {
+  for (const version of [
+    "0.12.4-alpha.1+build.5",
+    "1.0.0-0.3.7",
+    "1.0.0-x.7.z.92",
+    "1.0.0+21AF26D3----117B344092BD"
+  ]) {
+    const result = classifyInstalledPluginTruth(version, { installed: [exact(version)] });
+    assert.equal(result.state, "current");
+    assert.equal(result.executingVersion, version);
+    assert.equal(result.installedVersion, version);
+  }
+
+  const mismatch = classifyInstalledPluginTruth("0.12.4-alpha+build.1", {
+    installed: [exact("0.12.4-alpha+build.2")]
+  });
+  assert.equal(mismatch.state, "version_mismatch");
+});
+
 test("query invokes Codex directly with bounded options", () => {
   let invocation;
   const result = queryInstalledPluginTruth("0.12.4", {

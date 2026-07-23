@@ -1,12 +1,12 @@
 import { spawnSync } from "node:child_process";
 
-import { parseVersion } from "./auto-update-plan.js";
-
 const PLUGIN_ID = "superloopy@beefiker";
 const PLUGIN_NAME = "superloopy";
 const MARKETPLACE_NAME = "beefiker";
 const DEFAULT_TIMEOUT_MS = 5_000;
 const MAX_OUTPUT_BYTES = 1_000_000;
+const MAX_VERSION_LENGTH = 256;
+const STRICT_SEMVER = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
 const NEXT = "Run `codex plugin add superloopy@beefiker --json`, then start a new Codex session.";
 
 export function queryInstalledPluginTruth(executingVersion, options = {}) {
@@ -37,10 +37,9 @@ export function queryInstalledPluginTruth(executingVersion, options = {}) {
 }
 
 export function classifyInstalledPluginTruth(executingVersion, payload) {
-  if (parseVersion(executingVersion) === null || !isRecord(payload) || !Array.isArray(payload.installed)) {
+  if (!validAuthorityVersion(executingVersion) || !isRecord(payload) || !Array.isArray(payload.installed)) {
     return unavailable();
   }
-  const normalizedExecutingVersion = executingVersion.trim();
   const matches = payload.installed.filter((entry) => isRecord(entry) && entry.pluginId === PLUGIN_ID);
   if (matches.length === 0) {
     return informational("not_registered", "Codex does not report an installed superloopy@beefiker plugin.");
@@ -50,23 +49,23 @@ export function classifyInstalledPluginTruth(executingVersion, payload) {
   if (entry.installed !== true) {
     return informational("not_registered", "Codex does not report an installed superloopy@beefiker plugin.");
   }
-  if (entry.version === normalizedExecutingVersion) {
+  if (entry.version === executingVersion) {
     return {
       ok: true,
       informational: true,
       state: "current",
-      executingVersion: normalizedExecutingVersion,
+      executingVersion,
       installedVersion: entry.version,
-      message: `Codex and this doctor both report Superloopy v${normalizedExecutingVersion}.`
+      message: `Codex and this doctor both report Superloopy v${executingVersion}.`
     };
   }
   return {
     ok: false,
     informational: true,
     state: "version_mismatch",
-    executingVersion: normalizedExecutingVersion,
+    executingVersion,
     installedVersion: entry.version,
-    message: `This doctor runs Superloopy v${normalizedExecutingVersion}, but Codex reports installed v${entry.version}.`,
+    message: `This doctor runs Superloopy v${executingVersion}, but Codex reports installed v${entry.version}.`,
     next: NEXT
   };
 }
@@ -75,9 +74,16 @@ function validExactEntry(entry) {
   return entry.pluginId === PLUGIN_ID
     && entry.name === PLUGIN_NAME
     && entry.marketplaceName === MARKETPLACE_NAME
-    && parseVersion(entry.version) !== null
+    && validAuthorityVersion(entry.version)
     && typeof entry.installed === "boolean"
     && (entry.enabled === undefined || typeof entry.enabled === "boolean");
+}
+
+function validAuthorityVersion(version) {
+  if (typeof version !== "string" || version.length === 0 || version.length > MAX_VERSION_LENGTH) return false;
+  const match = STRICT_SEMVER.exec(version);
+  if (match === null || match[1] === undefined) return match !== null;
+  return match[1].split(".").every((identifier) => !/^\d+$/u.test(identifier) || identifier === "0" || !identifier.startsWith("0"));
 }
 
 function isRecord(value) {
