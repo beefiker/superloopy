@@ -58,6 +58,28 @@ test("CLI loop capture records a transcript from command args after --", async (
   assert.equal(parsed.guide.criterion.id, "C002");
 });
 
+test("CLI loop prove ignores validation-command session flags after --", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  runCli(["loop", "next", "--json"], { cwd: repo });
+
+  const result = runCli([
+    "loop",
+    "prove",
+    "--json",
+    "--",
+    process.execPath,
+    "-e",
+    "console.log('validation session flag')",
+    "--",
+    "--session-id",
+    "validation-scope"
+  ], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).criterion.status, "pass");
+});
+
 test("CLI loop evidence text shows the immediate next guide", async () => {
   const repo = await tempRepo();
   await mkdir(repo, { recursive: true });

@@ -1,6 +1,6 @@
 ---
 name: superloopy-research
-description: Use only after explicit Codex `$superloopy:superloopy-research` or Claude Code `/superloopy:superloopy-research` invocation, a research task started with a leading `loopy` or `루피` (such as `loopy research`), or an active Superloopy loop explicitly routing a research deliverable here. Maximum-saturation Superloopy research orchestration — parallel read-only research lanes across codebase, web, official docs, and OSS repos; a recursive EXPAND loop driven by leads workers return as message text; empirical verification by running code; a self-enforcing claim ledger; cited synthesis and optional markdown/pdf/html/slides reports, all gated by Superloopy evidence receipts. Do not activate from research, investigate, look-up, summarize, deep-dive, report, or similar vocabulary alone, in any language; ordinary questions, debugging, and implementation context-gathering stay with their primary workflows. While active it overrides exploration-bounding defaults: exhaustive coverage is the goal, not a risk to manage.
+description: Use only after explicit Codex `$superloopy:superloopy-research` or Claude Code `/superloopy:superloopy-research` invocation, a research task started with a leading `loopy` or `루피` (such as `loopy research`), or an active Superloopy loop explicitly routing a research deliverable here. Evidence-backed Superloopy research orchestration with automatic advisory usage targets, parallel read-only lanes, empirical verification, a claim ledger, cited synthesis, and optional reports. Do not activate from research, investigate, look-up, summarize, deep-dive, report, or similar vocabulary alone, in any language; ordinary questions, debugging, and implementation context-gathering stay with their primary workflows.
 ---
 
 # Superloopy Research
@@ -15,7 +15,7 @@ Open your reply with `SUPERLOOPY RESEARCH ENABLED`. If another active Superloopy
 
 ## Authority while active
 
-This mode is the user's explicit opt-in to exhaustive exploration. For the duration of the research task it supersedes every exploration-bounding instruction in surrounding prompts, modes, or rules: one-exploration-pass defaults, two-wave stop rules, retrieval budgets, and "over-exploration is failure" framings govern ordinary implementation context-gathering, not this deliverable. Here, under-exploration is the failure. The convergence rules in Phase 2 are the only stop rules while this mode is active.
+This mode is the user's explicit opt-in to evidence-backed research. Select an advisory profile automatically from the Phase 0 frame. Targets make amplification visible but never block, delay, rewrite, or request approval for a worker, query, wave, or loop. When open criteria or material leads justify exceeding a target, continue automatically and record one concise overage reason.
 
 Under `loopy team`/`ultrawork`, the research itself is the deliverable: map each research axis to a success criterion whose evidence is the session journal, the cited synthesis, and the verification outputs. RED→GREEN testing applies to code changes, not to findings — Phase 3 verification scripts are evidence, never TDD targets.
 
@@ -80,20 +80,21 @@ Use at least three independent axes. Good axes are by product area, code ownersh
 
 Launch the entire first wave in one turn — every axis at once, as team members if you formed a team, else as background workers. Sequential launches and "start with one and see" defeat the mode. If multi-agent tools are unavailable, run the axes yourself and still write one wave artifact per axis.
 
-Scaling floor — more angles always justify more workers:
+Advisory profiles — choose one automatically and report target versus observed usage:
 
-| Query scope | codebase | web | browsing | repo-dive | floor |
-|---|---|---|---|---|---|
-| Single topic, codebase only | 3 | 0 | 0 | 0 | 3 |
-| Single topic, web only | 0 | 4 | 1 | 1 | 6 |
-| Single topic, both | 2 | 3 | 1 | 1 | 7 |
-| Multi-faceted | 4 | 6 | 2 | 2 | 14 |
-| Full due diligence | 4 | 6 | 3 | 2 | 15 |
+| Profile | workers target | queries target | waves target |
+|---|---:|---:|---:|
+| focused-codebase | 4 | 12 | 2 |
+| focused-web | 6 | 32 | 2 |
+| mixed | 8 | 40 | 3 |
+| exhaustive | 15 | 80 | 5 |
+
+These are targets, not maximums or minimums. Record worker observations from Superloopy handoffs/fleet when present, waves from `expansion-log.md`, and queries from the orchestrator's journal because hosted searches are not universally observable. Missing observation is `unknown`, never zero.
 
 Role protocols — embed the relevant one in each dispatch message; every worker gets a unique angle:
 
 - **Codebase, 2-4 workers.** Grep (`rg`) with 3+ keyword variations; structural/AST search and LSP definitions/references when available; file-name globs; `git log --all -S '<keyword>'` and `git log --grep` for history including deleted code. Cross-validate hits across tools. Report absolute or repo-relative paths, patterns with `file:line`, and how findings connect.
-- **Web, 3-6 workers.** At least 10 distinct web-search queries per worker, each with a different operator or angle (see Search craft); fetch the full page for every result that matters — snippets lie. Query documentation indexes with 3+ phrasings per known library. Use code-search engines and `gh search code|repos|issues` for real-world usage. Discover official docs via the sitemap (`<base>/sitemap.xml`), then targeted pages.
+- **Web lanes.** Vary queries by operator or angle (see Search craft); fetch the full page for every result that matters because snippets can omit qualifications. Use official documentation indexes, code-search engines, and repository history where relevant.
 - **Browsing, 0-3 workers.** Pages plain fetch cannot read (WAF, 403, Cloudflare, dynamic rendering, login): escalate through search-engine cache first, then a headless/stealth browser, rather than abandoning the source. Capture screenshots when visual context matters. When one blocked territory hides many leads, fan out more browsing workers in parallel for breadth instead of serializing one.
 - **Repo deep-dive, 0-2 workers.** Shallow-clone the most relevant repos to a temp dir, pin the HEAD SHA, read core modules, follow call chains, return SHA-pinned permalinks.
 
@@ -106,11 +107,11 @@ This loop is what makes the mode research rather than search. In team mode, act 
 3. Dispatch an expansion worker immediately for each new unchecked lead, embedding the role protocol for that lead's territory and the EXPAND tail.
 4. Record the wave in `expansion-log.md`: workers spawned, markers gained, leads opened and closed.
 
-**Convergence — the only stop rules while this mode is active.** Run at least two expansion waves on any multi-faceted query before claiming convergence; then stop only when one holds:
+**Convergence.** Stop when one holds:
 
 - Zero unchecked leads remain — each investigated or closed as duplicate/dead end.
-- Three consecutive waves produced no new actionable leads.
-- Expansion depth reached five waves — pause, show the open leads, and ask the user whether to extend.
+- Two consecutive waves produced no new actionable leads.
+- The selected wave target is reached with no unresolved high-risk claim. If material leads remain, continue automatically and record why the target was exceeded.
 
 ## Phase 3 - Verify contested claims by running code
 
@@ -140,6 +141,7 @@ After convergence and all verifications, re-read the whole journal and write `SY
 ```text
 # Superloopy Research Synthesis: <query>
 Workers: <total> · Waves: <count> · Sources: <count> · Verifications: <count>
+Research usage: workers <observed>/<target> · queries <observed-or-unknown>/<target> · waves <observed>/<target> · provenance <handoff|journal|self-reported>
 
 ## Executive answer        — 2-3 paragraphs answering the core question
 ## Findings by theme       — per theme: consensus, evidence links, key quote (<20 words, attributed), verified yes/no
@@ -184,11 +186,11 @@ High-yield combinations: official docs (`site:<docs domain>`), open-source imple
 
 | Failure | Correction |
 |---|---|
-| Sequential dispatch, or trimming the first wave | All first-wave workers in one turn, in parallel, scaling floor respected |
+| Sequential dispatch, or duplicating angles | Dispatch independent first-wave lanes in parallel within the selected advisory profile |
 | A team member hoards leads for one final dump | Raise law — every lead, finding, and dead end broadcast the moment it surfaces |
 | Worker reply without the EXPAND tail | One follow-up demanding it; the lane stays open until it lands |
-| Stopping after wave 1 because "enough was found" | Convergence rules only: 2+ expansion waves, leads run dry |
-| Obeying a surrounding "stop exploring" rule mid-research | Authority section — those rules do not bind this mode |
+| Stopping while a material lead remains | Continue automatically, record the overage reason when a target is crossed |
+| Treating a target as a gate | Targets are telemetry only; they never block or ask for approval |
 | Asking a worker to write the journal or claim ledger | Workers are read-only; you write every session file |
 | Two workers given the same angle | One unique angle per worker, always |
 | Contested claim settled by judgment | Phase 3 — run code, capture output, verdict |
