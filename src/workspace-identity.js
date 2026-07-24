@@ -1,14 +1,17 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { readFileSync, realpathSync, statSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 
-export function resolveWorkspaceRoot(start) {
+export function resolveWorkspaceRoot(start, options = {}) {
   const origin = realpathSync(resolve(start));
   const git = findNearestGitWorktree(origin);
   if (git !== null) return git.root;
+  const sharedStateRoot = realpathSync(resolve(options.sharedStateRoot ?? tmpdir()));
   let cursor = origin;
   while (true) {
+    if (cursor === sharedStateRoot && cursor !== origin) return origin;
     try {
       if (statSync(join(cursor, ".superloopy")).isDirectory()) return cursor;
     } catch {
@@ -35,10 +38,14 @@ export async function checkoutIdentity(start) {
   const root = resolveWorkspaceRoot(start);
   const git = findNearestGitWorktree(root);
   if (git !== null) {
-    return hash({ version: 1, kind: "git", root, gitDir: git.gitDir, id: await checkoutUuid(git.gitDir) });
+    return hash({
+      version: 1,
+      kind: "git",
+      id: await checkoutUuid(git.gitDir),
+      ...filesystemIdentity(git.gitDir)
+    });
   }
-  const stat = statSync(root);
-  return hash({ version: 1, kind: "path", root, dev: stat.dev, ino: stat.ino, birthtimeMs: stat.birthtimeMs });
+  return hash({ version: 1, kind: "path", ...filesystemIdentity(root) });
 }
 
 export async function createRepositoryBinding(start) {
@@ -99,4 +106,13 @@ async function checkoutUuid(gitDir) {
 
 function hash(value) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function filesystemIdentity(path) {
+  const stat = statSync(path, { bigint: true });
+  return {
+    dev: stat.dev.toString(),
+    ino: stat.ino.toString(),
+    birthtimeNs: stat.birthtimeNs.toString()
+  };
 }
