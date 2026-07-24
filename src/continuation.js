@@ -120,6 +120,10 @@ export async function decideContinuation(payload, deps) {
     ].join("\n") })}\n`;
   }
 
+  // A copied, legacy-unbound, or otherwise invalid plan is not resumable. Stop
+  // without writing loop-control or ledger state; the binding flow owns recovery.
+  if (status.ok === false || status.binding?.resumable === false) return "";
+
   // Termination authority is unchanged and absolute.
   if (status.summary.aggregateComplete) {
     await clearLoopControl(cwd, scope);

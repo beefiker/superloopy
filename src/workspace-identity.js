@@ -7,8 +7,9 @@ import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 export function resolveWorkspaceRoot(start, options = {}) {
   const origin = realpathSync(resolve(start));
   const git = findNearestGitWorktree(origin);
-  if (git !== null) return git.root;
-  const sharedStateRoot = realpathSync(resolve(options.sharedStateRoot ?? tmpdir()));
+  const sharedStateRoot = git === null
+    ? realpathSync(resolve(options.sharedStateRoot ?? tmpdir()))
+    : null;
   let cursor = origin;
   while (true) {
     if (cursor === sharedStateRoot && cursor !== origin) return origin;
@@ -17,6 +18,7 @@ export function resolveWorkspaceRoot(start, options = {}) {
     } catch {
       // Keep walking.
     }
+    if (git !== null && cursor === git.root) return git.root;
     const parent = dirname(cursor);
     if (parent === cursor) return origin;
     cursor = parent;

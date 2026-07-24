@@ -240,7 +240,8 @@ function hasSuperloopySignature(cwd) {
 }
 
 async function runLoop(subcommand, argv, stdout, cwd) {
-  const json = hasFlag(argv, "--json");
+  const optionArgv = loopOptionArgv(subcommand, argv);
+  const json = hasFlag(optionArgv, "--json");
   if (subcommand === "help" || subcommand === "--help" || subcommand === "-h") {
     stdout.write(helpText());
     return 0;
@@ -252,8 +253,9 @@ async function runLoop(subcommand, argv, stdout, cwd) {
 }
 
 async function dispatchLoop(cwd, subcommand, argv) {
+  const optionArgv = loopOptionArgv(subcommand, argv);
   if (!["begin", "create", "status", "bind"].includes(subcommand)) {
-    const scope = scopeFromSessionId(readFlag(argv, "--session-id"));
+    const scope = scopeFromSessionId(readFlag(optionArgv, "--session-id"));
     const plan = await readPlanUnchecked(cwd, scope);
     const binding = await inspectRepositoryBinding(cwd, plan);
     if (!binding.resumable) {
@@ -303,6 +305,12 @@ async function dispatchLoop(cwd, subcommand, argv) {
     default:
       throw new Error(`Unknown loop subcommand: ${subcommand}`);
   }
+}
+
+function loopOptionArgv(subcommand, argv) {
+  if (subcommand !== "capture" && subcommand !== "prove") return argv;
+  const delimiter = argv.indexOf("--");
+  return delimiter === -1 ? argv : argv.slice(0, delimiter);
 }
 
 async function runHook(subcommand, stdin, stdout) {

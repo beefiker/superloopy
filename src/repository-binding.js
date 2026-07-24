@@ -3,6 +3,7 @@ import { readFlag } from "./args.js";
 import {
   appendLedger,
   goalsPath,
+  normalizeLoopSessionId,
   nowIso,
   readPlanUnchecked,
   scopeFromSessionId,
@@ -70,6 +71,7 @@ function escapes(value) {
 }
 
 function bindCommand(sessionId) {
-  const session = typeof sessionId === "string" && sessionId.length > 0 ? ` --session-id ${sessionId}` : "";
+  const normalized = normalizeLoopSessionId(sessionId);
+  const session = normalized === null ? "" : ` --session-id ${normalized}`;
   return `superloopy loop bind --confirm-current-root${session} --json`;
 }

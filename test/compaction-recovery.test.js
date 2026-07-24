@@ -41,6 +41,8 @@ test("bounded recovery rendering retains mandatory completion and next-action tr
   assert.ok(rendered.length <= 700);
   assert.match(rendered, /Aggregate complete: no/u);
   assert.match(rendered, /Durable Superloopy state overrides/u);
+  assert.match(rendered, /Next action: superloopy loop prove -- <validation-command>/u);
+  assert.match(rendered, /Only the deterministic Superloopy gate authorizes completion/u);
 });
 
 test("transcript claims cannot override incomplete durable state", async () => {
