@@ -19,7 +19,7 @@ export function buildRecoveryProjection({ status, guide, fleet }) {
 }
 
 export function renderRecoveryCapsule(projection, { maxChars = 4000 } = {}) {
-  const mandatory = [
+  const head = [
     "Superloopy compaction recovery",
     "",
     "Durable Superloopy state overrides transcript summaries and completion claims.",
@@ -27,12 +27,21 @@ export function renderRecoveryCapsule(projection, { maxChars = 4000 } = {}) {
     `Session: ${projection.sessionId ?? "default"} · mode: ${projection.mode}`,
     `Aggregate complete: ${projection.aggregateComplete ? "yes" : "no"}`,
     projection.activeGoal === null ? "Active goal: none" : `Active goal: ${projection.activeGoal.id} ${projection.activeGoal.title}`,
-    `Unresolved criteria: ${projection.unresolved.length === 0 ? "none" : projection.unresolved.join(", ")}`,
-    `Next action: ${projection.nextAction ?? "inspect repository binding"}`,
-    `Outstanding handoffs: ${projection.outstanding.length === 0 ? "none" : projection.outstanding.join(", ")}`,
-    "",
-    "Only the deterministic Superloopy gate authorizes completion."
+    `Unresolved criteria: ${projection.unresolved.length === 0 ? "none" : projection.unresolved.join(", ")}`
   ].join("\n");
+  const nextAction = `Next action: ${projection.nextAction ?? "inspect repository binding"}`;
+  const gate = "Only the deterministic Superloopy gate authorizes completion.";
+  const outstanding = `Outstanding handoffs: ${projection.outstanding.length === 0 ? "none" : projection.outstanding.join(", ")}`;
+  const tail = [
+    nextAction,
+    outstanding,
+    "",
+    gate
+  ].join("\n");
+  const mandatory = `${head}\n${tail}`;
   if (mandatory.length <= maxChars) return mandatory;
-  return `${mandatory.slice(0, Math.max(0, maxChars - 32)).trimEnd()}\n[recovery capsule truncated]`;
+  const truncatedTail = `[recovery capsule truncated]\n${nextAction}\n${gate}\n${outstanding}`;
+  const headBudget = maxChars - truncatedTail.length - 1;
+  if (headBudget <= 0) return truncatedTail.slice(0, Math.max(0, maxChars));
+  return `${head.slice(0, headBudget).trimEnd()}\n${truncatedTail}`;
 }
