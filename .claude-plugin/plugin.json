@@ -1,6 +1,6 @@
 {
   "name": "superloopy",
-  "version": "0.12.4",
+  "version": "0.13.0",
   "description": "Lightweight loop harness with strict evidence gates — Claude Code edition.",
   "homepage": "https://github.com/beefiker/superloopy#readme",
   "repository": "https://github.com/beefiker/superloopy",

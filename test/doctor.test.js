@@ -16,7 +16,6 @@ import {
 } from "../src/doctor.js";
 
 const EXPECTED_SKILLS = ["humanize-korean", "superloopy-clone", "superloopy-doctor", "superloopy-frontend", "superloopy-loop", "superloopy-research", "superloopy-slides"];
-
 test("reviewability counts physical lines and recognizes supported script/config extensions", () => {
   assert.equal(countPhysicalLines(""), 0);
   assert.equal(countPhysicalLines("one"), 1);
@@ -76,10 +75,12 @@ async function tempRepoCopy({ initGit = true, prefix = "superloopy-doctor-" } = 
     await mkdir(dirname(target), { recursive: true });
     await writeFile(target, await readFile(source));
   }
-  if (initGit) spawnSync("git", ["init"], { cwd: repo, encoding: "utf8" });
+  if (initGit) {
+    const initialized = spawnSync("git", ["init"], { cwd: repo, encoding: "utf8" }); assert.equal(initialized.status, 0, initialized.stderr);
+    const staged = spawnSync("git", ["add", "--force", "."], { cwd: repo, encoding: "utf8" }); assert.equal(staged.status, 0, staged.stderr);
+  }
   return repo;
 }
-
 async function tempComparisonTree(files) {
   const repo = await mkdtemp(join(tmpdir(), "superloopy-comparison-"));
   for (const [file, content] of Object.entries(files)) {
@@ -89,7 +90,6 @@ async function tempComparisonTree(files) {
   }
   return repo;
 }
-
 function toCrLf(content) {
   return content.replace(/\r\n?/gu, "\n").replace(/\n/gu, "\r\n");
 }
