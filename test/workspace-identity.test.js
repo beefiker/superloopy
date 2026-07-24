@@ -36,3 +36,14 @@ test("non-Git workspaces reuse the nearest Superloopy ancestor", async () => {
   await mkdir(child, { recursive: true });
   assert.equal(resolveWorkspaceRoot(child), realpathSync(root));
 });
+
+test("shared temporary state is never inherited by a child workspace", async () => {
+  const shared = await mkdtemp(join(tmpdir(), "superloopy-shared-root-"));
+  await mkdir(join(shared, ".superloopy"));
+  const workspace = join(shared, "isolated-project");
+  await mkdir(workspace);
+  assert.equal(
+    resolveWorkspaceRoot(workspace, { sharedStateRoot: shared }),
+    realpathSync(workspace)
+  );
+});
