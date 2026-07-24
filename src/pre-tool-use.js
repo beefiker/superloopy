@@ -9,6 +9,7 @@
 // this hook only keeps the host's native plan state honest. See docs/superloopy-host-contract.md.
 import { existsSync, readFileSync } from "node:fs";
 import { goalsPath, scopeFromSessionId } from "./store.js";
+import { appendContextCost } from "./context-cost.js";
 
 const CREATE_GOAL_PAYLOAD_WARNING =
   "Use create_goal with objective only. Omit token_budget so the goal stays unlimited; use update_goal only after Superloopy aggregate completion is recorded.";
@@ -66,7 +67,7 @@ function denyPreToolUse(message) {
       hookEventName: "PreToolUse",
       permissionDecision: "deny",
       permissionDecisionReason: message,
-      additionalContext: message
+      additionalContext: appendContextCost(message)
     }
   })}\n`;
 }
