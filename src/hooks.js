@@ -7,9 +7,14 @@ import { buildGuide, flowStepLine, proofPlanLine, recordedEvidenceLine } from ".
 import { CONTEXT_PRESSURE_MARKERS, decideContinuation, transcriptTailHasMarker } from "./continuation.js";
 import { matchesAgentType, receiptFromPayload, subagentTranscriptPath } from "./receipt.js";
 import { hasEngineerTrigger, runEngineerTriggerHook } from "./engineer.js";
-import { applySteering, statusLoop } from "./loop.js";
+import { applySteeringIdempotent, statusLoop } from "./loop.js";
 import { appendLedger, evidenceRelativeDir, goalsPath, scopeFromSessionId } from "./store.js";
 import { MAX_SUBAGENT_ATTEMPTS, clearAttemptState, nextAttemptState, recordSubagentLedger } from "./subagent-attempts.js";
+import { resolveWorkspaceRoot } from "./workspace-identity.js";
+import { steeringRequestKey } from "./steering-receipts.js";
+import { formatMeasuredAdditionalContext } from "./context-cost.js";
+import { buildRecoveryProjection, renderRecoveryCapsule } from "./compaction-recovery.js";
+import { fleetLoop } from "./fleet.js";
 
 export { runPreToolUseHook } from "./pre-tool-use.js";
 
@@ -29,6 +34,7 @@ const PROTECTED_STEERING_KEYS = new Set([
 export function runSubagentStopHook(payload, context = { host: "codex" }) {
   if (!isRecord(payload)) return "";
   if (payload.hook_event_name !== "SubagentStop") return "";
+  if (typeof payload.cwd === "string") payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
   if (![...EVIDENCE_RECEIPT_AGENT_TYPES].some((role) => matchesAgentType({
     host: context.host,
     agentType: payload.agent_type,
@@ -74,6 +80,7 @@ export async function runUserPromptSubmitHook(payload) {
   if (!isRecord(payload)) return "";
   if (payload.hook_event_name !== "UserPromptSubmit") return "";
   if (typeof payload.prompt !== "string" || typeof payload.cwd !== "string") return "";
+  payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
   if (hasContextPressureMarker(payload.prompt) || transcriptHasContextPressureMarker(payload.transcript_path)) return "";
   const directive = parseSteeringDirective(payload.prompt);
   if (directive === null) {
@@ -101,9 +108,20 @@ export async function runSessionStartHook(payload, options = {}) {
   if (!isRecord(payload)) return "";
   if (payload.hook_event_name !== "SessionStart") return "";
   if (typeof payload.cwd !== "string") return "";
-  if (transcriptHasContextPressureMarker(payload.transcript_path)) return "";
+  payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
+  if (payload.source !== "compact" && transcriptHasContextPressureMarker(payload.transcript_path)) return "";
   const env = options.env ?? process.env;
   const contexts = [];
+  if (payload.source === "compact") {
+    try {
+      const status = await statusForPayload(payload);
+      const guide = status.binding?.resumable === false ? null : guideForPayload(payload, status.plan);
+      const fleet = await fleetLoop(payload.cwd, argsFromPayloadScope(payload));
+      contexts.push(renderRecoveryCapsule(buildRecoveryProjection({ status, guide, fleet })));
+    } catch {
+      // No plan: compaction recovery remains quiet.
+    }
+  }
   try {
     // Auto-update is the Codex install-flow concern; on Claude Code updates are managed by
     // `/plugin`, so skip it there (like the bootstrap no-op) to avoid emitting Codex upgrade notices.
@@ -138,6 +156,7 @@ export async function runStopHook(payload) {
   if (!isRecord(payload)) return "";
   if (payload.hook_event_name !== "Stop" && payload.hook_event_name !== "SubagentStop") return "";
   if (typeof payload.cwd !== "string") return "";
+  payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
   if (!envOn(process.env, "SUPERLOOPY_STOP_HOOK")) return "";
   return await decideContinuation(payload, {
     statusForPayload,
@@ -160,14 +179,14 @@ export function parseSteeringDirective(prompt) {
     const evidence = readNonEmptyString(parsed.evidence);
     const rationale = readNonEmptyString(parsed.rationale);
     if (evidence === null || rationale === null) return null;
-    return { kind: "annotate", evidence, rationale };
+    return steeringDirective({ kind: "annotate", evidence, rationale }, parsed);
   }
   if (parsed.kind === "add_goal") {
     const title = readNonEmptyString(parsed.title);
     const objective = readNonEmptyString(parsed.objective);
     const rationale = readNonEmptyString(parsed.rationale);
     if (title === null || objective === null || rationale === null) return null;
-    return { kind: "add_goal", title, objective, rationale };
+    return steeringDirective({ kind: "add_goal", title, objective, rationale }, parsed);
   }
   if (parsed.kind === "revise_criterion") {
     const goalId = readNonEmptyString(parsed.goalId);
@@ -175,7 +194,7 @@ export function parseSteeringDirective(prompt) {
     const scenario = readNonEmptyString(parsed.scenario);
     const rationale = readNonEmptyString(parsed.rationale);
     if (goalId === null || criterionId === null || scenario === null || rationale === null) return null;
-    return { kind: "revise_criterion", goalId, criterionId, scenario, rationale };
+    return steeringDirective({ kind: "revise_criterion", goalId, criterionId, scenario, rationale }, parsed);
   }
   if (parsed.kind === "reorder_pending") {
     if (!Array.isArray(parsed.goalIds)) return null;
@@ -183,7 +202,7 @@ export function parseSteeringDirective(prompt) {
     const rationale = readNonEmptyString(parsed.rationale);
     if (goalIds.length === 0 || goalIds.some((goalId) => goalId === null) || rationale === null) return null;
     if (new Set(goalIds).size !== goalIds.length) return null;
-    return { kind: "reorder_pending", goalIds, rationale };
+    return steeringDirective({ kind: "reorder_pending", goalIds, rationale }, parsed);
   }
   return null;
 }
@@ -237,6 +256,7 @@ async function readContextInjection(payload) {
   } catch {
     return "";
   }
+  if (status.binding?.resumable === false) return renderBindingBlocked(status);
   if (status.summary.aggregateComplete) return "";
   const guide = guideForPayload(payload, status.plan);
   return renderSuperloopyContext(status, guide);
@@ -245,6 +265,9 @@ async function readContextInjection(payload) {
 async function runLoosePromptTriggerHook(payload) {
   try {
     const status = await statusForPayload(payload);
+    if (status.binding?.resumable === false) {
+      return formatAdditionalContext("UserPromptSubmit", renderBindingBlocked(status));
+    }
     if (status.summary.aggregateComplete) {
       return formatAdditionalContext("UserPromptSubmit", renderLoosePromptCompleted(status));
     }
@@ -261,10 +284,19 @@ async function runLoosePromptTriggerHook(payload) {
   }
 }
 
+function renderBindingBlocked(status) {
+  return [
+    "Superloopy repository binding",
+    "",
+    `- Status: ${status.binding.status}`,
+    status.binding.next === null
+      ? "- Refusing to resume or mutate this copied state. Return to the bound repository or start a separate loop here."
+      : `- Confirm the legacy plan before resuming: \`${status.binding.next}\``
+  ].join("\n");
+}
+
 function formatAdditionalContext(hookEventName, additionalContext) {
-  const normalized = typeof additionalContext === "string" ? additionalContext.trim() : "";
-  if (normalized.length === 0) return "";
-  return `${JSON.stringify({ hookSpecificOutput: { hookEventName, additionalContext: normalized } })}\n`;
+  return formatMeasuredAdditionalContext(hookEventName, additionalContext);
 }
 
 function envOn(env, key) {
@@ -423,14 +455,22 @@ function evidenceRootForReceipt(payload) {
 
 async function applySteeringForPayload(payload, directive) {
   const scope = scopeFromPayload(payload);
+  const key = steeringRequestKey(payload, directive);
   if (scope !== undefined) {
     try {
-      return await applySteering(payload.cwd, directive, scope);
+      return await applySteeringIdempotent(payload.cwd, directive, scope, key);
     } catch (error) {
       if (!isMissingPlanError(error)) throw error;
     }
   }
-  return await applySteering(payload.cwd, directive);
+  return await applySteeringIdempotent(payload.cwd, directive, undefined, key);
+}
+
+function steeringDirective(directive, parsed) {
+  if (typeof parsed.requestId === "string" && /^[A-Za-z0-9._:-]{1,128}$/u.test(parsed.requestId)) {
+    return { ...directive, requestId: parsed.requestId };
+  }
+  return directive;
 }
 
 async function statusForPayload(payload) {

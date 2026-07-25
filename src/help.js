@@ -17,6 +17,7 @@ export function helpText() {
     "  superloopy loop handoff --agent NAME --assignment TEXT [--status TEXT] [--verdict TEXT] [--artifact PATH] [--language TAG] [--session-id ID] [--json]",
     "  superloopy loop fleet [--language TAG] [--session-id ID] [--json]",
     "  superloopy loop status [--session-id ID] [--json]",
+    "  superloopy loop bind --confirm-current-root [--session-id ID] [--json]   # bind a legacy plan to this worktree",
     "  superloopy loop trust [--session-id ID] [--json]   # approve plan commands for audit re-run (plans that arrived with the repo)",
     "  superloopy agents install [--target PATH] [--force] [--json]",
     "",

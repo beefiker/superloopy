@@ -19,6 +19,7 @@ import { readLoopControl } from "./continuation.js";
 import { buildGuide, guideLoop } from "./guide.js";
 import { helpText } from "./help.js";
 import { summarizePlan } from "./plan-summary.js";
+import { inspectRepositoryBinding } from "./repository-binding.js";
 import {
   appendLedger,
   briefRelativePath,
@@ -29,12 +30,15 @@ import {
   ledgerRelativePath,
   nowIso,
   readPlan,
+  readPlanUnchecked,
   scopeFromSessionId,
   withFileLock,
   writeBrief,
   writeJsonAtomic,
   writePlan
 } from "./store.js";
+import { createRepositoryBinding } from "./workspace-identity.js";
+import { findSteeringReceipt, recordSteeringReceipt } from "./steering-receipts.js";
 
 export { guideLoop, helpText };
 
@@ -50,7 +54,7 @@ export async function createLoop(cwd, argv) {
   const now = nowIso();
   const goals = deriveGoals(brief).map((goal, index) => makeGoal(goal, index, mode, now));
   const plan = {
-    version: 1,
+    version: 2,
     mode,
     createdAt: now,
     updatedAt: now,
@@ -59,7 +63,8 @@ export async function createLoop(cwd, argv) {
     goalsPath: goalsRelativePath(scope),
     ledgerPath: ledgerRelativePath(scope),
     goals,
-    aggregateCompletion: null
+    aggregateCompletion: null,
+    repositoryBinding: await createRepositoryBinding(cwd)
   };
   if (scope?.sessionId) plan.sessionId = scope.sessionId;
   await writeBrief(cwd, brief, scope);
@@ -70,8 +75,12 @@ export async function createLoop(cwd, argv) {
 
 export async function statusLoop(cwd, argv = []) {
   const scope = readScope(argv);
-  const plan = await readPlan(cwd, scope);
-  const result = { ok: true, plan, summary: summarizePlan(plan), guide: buildGuide(plan, { cwd, scope }) };
+  const plan = await readPlanUnchecked(cwd, scope);
+  const binding = await inspectRepositoryBinding(cwd, plan);
+  if (!binding.resumable) {
+    return { ok: false, plan, binding, summary: summarizePlan(plan), guide: null };
+  }
+  const result = { ok: true, plan, binding, summary: summarizePlan(plan), guide: buildGuide(plan, { cwd, scope }) };
   const loopControl = await readLoopControl(cwd, scope);
   if (loopControl !== null) result.loopControl = loopControl;
   return result;
@@ -251,6 +260,26 @@ export async function applySteering(cwd, directive, scope) {
   if (directive.kind === "revise_criterion") return reviseCriterionFromSteering(cwd, directive, scope);
   if (directive.kind === "reorder_pending") return reorderPendingFromSteering(cwd, directive, scope);
   throw new Error(`Unsupported steering kind: ${directive.kind}`);
+}
+
+export async function applySteeringIdempotent(cwd, directive, scope, requestKey) {
+  return await withFileLock(goalsPath(cwd, scope), async () => {
+    const before = await readPlan(cwd, scope);
+    const binding = await inspectRepositoryBinding(cwd, before);
+    if (!binding.resumable) {
+      throw new Error(`Superloopy repository is ${binding.status}; refusing to apply steering.`);
+    }
+    const prior = findSteeringReceipt(before, requestKey);
+    if (prior !== null) return { ...prior.result, deduplicated: true };
+    const result = await applySteering(cwd, directive, scope);
+    const plan = result.plan ?? await readPlan(cwd, scope);
+    const appliedAt = nowIso();
+    const stableResult = { ok: true, kind: result.kind, goal: result.goal, criterion: result.criterion };
+    recordSteeringReceipt(plan, { key: requestKey, appliedAt, result: stableResult });
+    plan.updatedAt = appliedAt;
+    await writePlan(cwd, plan, scope);
+    return { ...result, plan, requestKey, deduplicated: false };
+  });
 }
 
 async function annotateOnly(cwd, directive, scope) {

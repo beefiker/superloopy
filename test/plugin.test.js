@@ -156,6 +156,11 @@ test("plugin packages Superloopy research and website-clone skills", async () =>
   assert.match(research.content, /EXPAND/);
   assert.match(research.content, /SUPERLOOPY_EVIDENCE/);
   assert.match(research.content, /\.superloopy\/evidence\/research/);
+  assert.match(research.content, /focused-codebase.*focused-web.*mixed.*exhaustive/is);
+  assert.match(research.content, /targets, not maximums or minimums/i);
+  assert.match(research.content, /Missing observation is `unknown`, never zero/i);
+  assert.match(research.content, /continue automatically.*overage reason/is);
+  assert.doesNotMatch(research.content, /Scaling floor|At least 10 distinct web-search queries|pause.*ask.*extend/is);
 
   assert.match(clone.frontmatter, /^name: superloopy-clone$/m);
   assert.match(clone.frontmatter, /loopy clone|website|reverse-engineer/i);
