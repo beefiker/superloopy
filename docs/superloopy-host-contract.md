@@ -75,6 +75,11 @@ inert on Claude. As with every hook, completion authority never rests here — i
 deterministic in-process floor (`loop check`/`review`/`finish`); the hook layer is advisory on both
 hosts.
 
+Research worker/query/wave profiles are also advisory on every host. Codex can expose local
+`Agent` dispatches to `PreToolUse`, but Superloopy intentionally does not deny dispatch based on a
+usage target. Hosted searches are not universally observable by hooks, so query totals may be
+journal-derived or `unknown`; they are never presented as enforced limits.
+
 ## What Superloopy cannot verify (advisory limits)
 
 Superloopy cannot confirm, from inside a hook, that the host:

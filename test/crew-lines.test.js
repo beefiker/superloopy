@@ -95,6 +95,8 @@ test("crewLineForHandoff stays silent for pending or unknown lanes", () => {
 
 test("CLI handoff text shows the crew line without hiding status", async () => {
   const repo = await tempRepo();
+  const begun = runCli(["loop", "begin", "--brief", "Crew line", "--json"], { cwd: repo });
+  assert.equal(begun.status, 0, begun.stderr);
   const artifact = await writeEvidence(repo, "qa.txt");
 
   const result = runCli([
@@ -118,6 +120,8 @@ test("CLI handoff text shows the crew line without hiding status", async () => {
 
 test("CLI handoff text can use an explicit supported language override", async () => {
   const repo = await tempRepo();
+  const begun = runCli(["loop", "begin", "--brief", "Crew line language", "--json"], { cwd: repo });
+  assert.equal(begun.status, 0, begun.stderr);
   const artifact = await writeEvidence(repo, "qa.txt");
 
   const result = runCli([

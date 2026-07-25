@@ -225,6 +225,10 @@ function sleep(ms) {
 }
 
 export async function readPlan(cwd, scope) {
+  return await readPlanUnchecked(cwd, scope);
+}
+
+export async function readPlanUnchecked(cwd, scope) {
   let parsed;
   try {
     parsed = JSON.parse(await readFile(goalsPath(cwd, scope), "utf8"));

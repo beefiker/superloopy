@@ -73,6 +73,9 @@ export async function runEngineerTriggerHook(payload, deps) {
   const interop = detectSuperpowers();
   try {
     const status = await statusForPayload(payload);
+    if (status.binding?.resumable === false) {
+      return formatAdditionalContext("UserPromptSubmit", renderBindingBlocked(status));
+    }
     if (status.summary.aggregateComplete) {
       return formatAdditionalContext("UserPromptSubmit", renderComplete(status, interop));
     }
@@ -81,6 +84,17 @@ export async function runEngineerTriggerHook(payload, deps) {
   } catch {
     return formatAdditionalContext("UserPromptSubmit", renderStart(payload, orchestrate, interop));
   }
+}
+
+function renderBindingBlocked(status) {
+  return [
+    HEADER,
+    "",
+    `The repo-local Superloopy plan cannot resume here because its repository binding is ${status.binding.status}.`,
+    status.binding.next === null
+      ? "Do not mutate or resume this copied state. Return to the repository where the plan was created, or start a separate loop here."
+      : `Confirm this legacy plan explicitly before resuming: \`${status.binding.next}\`.`
+  ].join("\n");
 }
 
 function renderStart(payload, orchestrate, interop) {

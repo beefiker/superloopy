@@ -39,6 +39,22 @@ test("PreToolUse blocks native update_goal completion while Superloopy is incomp
   assert.match(parsed.hookSpecificOutput.additionalContext, /superloopy loop finish/);
 });
 
+test("PreToolUse finds an incomplete canonical plan from a child directory", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  const child = join(repo, "packages", "app");
+  await mkdir(child, { recursive: true });
+
+  const output = runPreToolUseHook({
+    hook_event_name: "PreToolUse",
+    tool_name: "update_goal",
+    cwd: child,
+    tool_input: { status: "complete" }
+  });
+
+  assert.equal(JSON.parse(output).hookSpecificOutput.permissionDecision, "deny");
+});
+
 test("PreToolUse allows native update_goal completion after Superloopy aggregate completion", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);

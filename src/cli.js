@@ -25,6 +25,7 @@ import { formatGuideResult } from "./guide.js";
 import { fleetLoop, handoffLoop } from "./fleet.js";
 import { formatCrewLine } from "./crew-lines.js";
 import { trustLoop } from "./plan-trust.js";
+import { bindLegacyLoop, inspectRepositoryBinding } from "./repository-binding.js";
 import { proveLoop } from "./prove.js";
 import { reportLoop } from "./report.js";
 import { isSourceCheckoutRoot } from "./source-checkout.js";
@@ -46,6 +47,8 @@ import {
   runSubagentStopHook,
   runUserPromptSubmitHook
 } from "./hooks.js";
+import { resolveWorkspaceRoot } from "./workspace-identity.js";
+import { readPlanUnchecked, scopeFromSessionId } from "./store.js";
 
 const CLI_FILE = fileURLToPath(import.meta.url);
 const CLI_ROOT = dirname(dirname(CLI_FILE));
@@ -237,18 +240,29 @@ function hasSuperloopySignature(cwd) {
 }
 
 async function runLoop(subcommand, argv, stdout, cwd) {
-  const json = hasFlag(argv, "--json");
+  const optionArgv = loopOptionArgv(subcommand, argv);
+  const json = hasFlag(optionArgv, "--json");
   if (subcommand === "help" || subcommand === "--help" || subcommand === "-h") {
     stdout.write(helpText());
     return 0;
   }
-  const result = await dispatchLoop(cwd, subcommand, argv);
+  const result = await dispatchLoop(resolveWorkspaceRoot(cwd), subcommand, argv);
   if (json) stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   else stdout.write(formatLoopResult(subcommand, result));
   return result.ok === false ? 1 : 0;
 }
 
 async function dispatchLoop(cwd, subcommand, argv) {
+  const optionArgv = loopOptionArgv(subcommand, argv);
+  if (!["begin", "create", "status", "bind"].includes(subcommand)) {
+    const scope = scopeFromSessionId(readFlag(optionArgv, "--session-id"));
+    const plan = await readPlanUnchecked(cwd, scope);
+    const binding = await inspectRepositoryBinding(cwd, plan);
+    if (!binding.resumable) {
+      const next = binding.next ? ` Run \`${binding.next}\`.` : "";
+      throw new Error(`Superloopy repository is ${binding.status}.${next}`);
+    }
+  }
   switch (subcommand) {
     case "begin":
       return beginLoop(cwd, argv);
@@ -286,9 +300,17 @@ async function dispatchLoop(cwd, subcommand, argv) {
       return handoffLoop(cwd, argv);
     case "fleet":
       return fleetLoop(cwd, argv);
+    case "bind":
+      return bindLegacyLoop(cwd, argv);
     default:
       throw new Error(`Unknown loop subcommand: ${subcommand}`);
   }
+}
+
+function loopOptionArgv(subcommand, argv) {
+  if (subcommand !== "capture" && subcommand !== "prove") return argv;
+  const delimiter = argv.indexOf("--");
+  return delimiter === -1 ? argv : argv.slice(0, delimiter);
 }
 
 async function runHook(subcommand, stdin, stdout) {
@@ -369,6 +391,13 @@ function formatLoopResult(subcommand, result) {
     for (const item of result.attention ?? []) lines.push(`- attention ${item.id} ${item.agent}: ${item.normalizedVerdict} ${item.assignment}`);
     if (result.warning) lines.push(result.warning);
     return `${lines.join("\n")}\n`;
+  }
+  if (subcommand === "bind") {
+    return `superloopy repository: ${result.alreadyBound ? "already bound" : "bound"} to ${result.plan.repositoryBinding.rootLabel}\n`;
+  }
+  if (subcommand === "status" && result.binding?.resumable === false) {
+    const next = result.binding.next ? `\nNext action: \`${result.binding.next}\`` : "";
+    return `superloopy repository: ${result.binding.status}${next}\n`;
   }
   return `superloopy status: ${result.summary.goals.complete}/${result.summary.goals.total} goals complete\n${formatGuideResult(result)}`;
 }
