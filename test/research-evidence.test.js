@@ -9,7 +9,9 @@ import {
   dependencyIds,
   observationSurfaces,
   parseBlockedSources,
+  parseExpectedTruths,
   parseLedger,
+  parseTable,
   tokens,
   validate
 } from "../skills/superloopy-research/scripts/validate-research-evidence.mjs";
@@ -23,8 +25,18 @@ const BLOCKED_HEADER = [
   "| url | tiers | reason | substitute | status |",
   "| --- | --- | --- | --- | --- |"
 ];
+const TRUTH_HEADER = [
+  "| id | expected | source | observed | status | claim |",
+  "| --- | --- | --- | --- | --- | --- |"
+];
+const DEFAULT_INDEX = [
+  "# Index",
+  "- claim C1 -> wave-1-web-spec.md",
+  "- claim C2 -> wave-1-web-spec.md",
+  "- claim C3 -> wave-1-web-spec.md"
+].join("\n");
 
-async function evidenceRoot(ledgerRows, synthesis, blockedRows = null) {
+async function evidenceRoot(ledgerRows, synthesis, blockedRows = null, options = {}) {
   const root = await mkdtemp(join(tmpdir(), "superloopy-research-"));
   if (ledgerRows !== null) {
     await writeFile(join(root, "claim-ledger.md"), [...LEDGER_HEADER, ...ledgerRows].join("\n"), "utf8");
@@ -32,6 +44,12 @@ async function evidenceRoot(ledgerRows, synthesis, blockedRows = null) {
   if (synthesis !== null) await writeFile(join(root, "SYNTHESIS.md"), synthesis, "utf8");
   if (blockedRows !== null) {
     await writeFile(join(root, "blocked-sources.md"), [...BLOCKED_HEADER, ...blockedRows].join("\n"), "utf8");
+  }
+  if (options.truthRows !== undefined) {
+    await writeFile(join(root, "expected-truths.md"), [...TRUTH_HEADER, ...options.truthRows].join("\n"), "utf8");
+  }
+  if (options.index !== null) {
+    await writeFile(join(root, "INDEX.md"), options.index ?? DEFAULT_INDEX, "utf8");
   }
   return root;
 }
@@ -202,18 +220,18 @@ test("a missing synthesis section fails the deliverable shape", async () => {
 
 test("ledger parsing reports structural damage instead of silently skipping rows", () => {
   const noHeader = parseLedger("| C1 | claim |\n");
-  assert.match(noHeader.problems.join("\n"), /no ledger table header/u);
+  assert.match(noHeader.problems.join("\n"), /no table header starting with `id`/u);
 
   const shortRow = parseLedger([...LEDGER_HEADER, "| C1 | claim | high |"].join("\n"));
-  assert.match(shortRow.problems.join("\n"), /has 3 cells, header has 11/u);
+  assert.match(shortRow.problems.join("\n"), /row has 3 cells, header has 11/u);
 
   const duplicate = parseLedger([...LEDGER_HEADER, row(), row()].join("\n"));
-  assert.match(duplicate.problems.join("\n"), /Duplicate ledger id: C1/u);
+  assert.match(duplicate.problems.join("\n"), /duplicate id: C1/u);
 
   const missingColumn = parseLedger(
     ["| id | claim | risk | status |", "| --- | --- | --- | --- |", "| C1 | c | high | verified |"].join("\n")
   );
-  assert.match(missingColumn.problems.join("\n"), /Ledger header missing columns: cost, observations/u);
+  assert.match(missingColumn.problems.join("\n"), /header missing columns: cost, observations/u);
 });
 
 test("surface and dependency parsing ignore empty and label-less entries", () => {
@@ -307,6 +325,95 @@ test("blocked-sources parsing reports structural damage", () => {
 
   const shortRow = parseBlockedSources([...BLOCKED_HEADER, "| https://a | api |"].join("\n"));
   assert.match(shortRow.problems.join("\n"), /row has 2 cells, header has 5/u);
+});
+
+test("the index must exist and must reach every wave file and claim", async () => {
+  const missing = await validate(await evidenceRoot([row()], GOOD_SYNTHESIS, null, { index: null }));
+  assert.equal(missing.ok, false);
+  assert.match(missing.problems.join("\n"), /Missing INDEX\.md: the session has no summary layer/u);
+
+  const noClaim = await validate(
+    await evidenceRoot([row()], GOOD_SYNTHESIS, null, { index: "# Index\n- nothing useful" })
+  );
+  assert.equal(noClaim.ok, false);
+  assert.match(noClaim.problems.join("\n"), /INDEX\.md has no line for claim C1/u);
+
+  const stale = await evidenceRoot([row()], GOOD_SYNTHESIS, null, { index: "# Index\n- claim C1" });
+  await writeFile(join(stale, "wave-2-web-registry.md"), "detail", "utf8");
+  const staleReport = await validate(stale);
+  assert.equal(staleReport.ok, false);
+  assert.match(staleReport.problems.join("\n"), /INDEX\.md never names wave-2-web-registry\.md/u);
+});
+
+test("expected truths need an authority and a landing place for every violation", async () => {
+  const truth = (overrides = {}) => {
+    const values = {
+      id: "T1",
+      expected: "Idle sessions expire in 30 minutes",
+      source: "spec section 4.2",
+      observed: "They expire in 8 hours",
+      status: "violated",
+      claim: "C1",
+      ...overrides
+    };
+    return `| ${[values.id, values.expected, values.source, values.observed, values.status, values.claim].join(" | ")} |`;
+  };
+
+  const linked = await validate(
+    await evidenceRoot([row()], GOOD_SYNTHESIS, null, { truthRows: [truth()] })
+  );
+  assert.deepEqual(linked.problems, []);
+  assert.equal(linked.expectedTruths.violated, 1);
+
+  const dangling = await validate(
+    await evidenceRoot([row()], GOOD_SYNTHESIS, null, { truthRows: [truth({ claim: "C9" })] })
+  );
+  assert.equal(dangling.ok, false);
+  assert.match(dangling.problems.join("\n"), /T1: violated but claim "C9" is not a ledger id or `gap`/u);
+
+  const unpublishedGap = await validate(
+    await evidenceRoot([row()], GOOD_SYNTHESIS, null, { truthRows: [truth({ claim: "gap" })] })
+  );
+  assert.equal(unpublishedGap.ok, false);
+  assert.match(unpublishedGap.problems.join("\n"), /T1: violated and routed to a gap the synthesis Gaps section never names/u);
+
+  const publishedGap = await validate(
+    await evidenceRoot(
+      [row()],
+      GOOD_SYNTHESIS.replace("## Gaps\nNone.", "## Gaps\nT1 has no reachable source."),
+      null,
+      { truthRows: [truth({ claim: "gap" })] }
+    )
+  );
+  assert.deepEqual(publishedGap.problems, []);
+
+  const noAuthority = await validate(
+    await evidenceRoot([row()], GOOD_SYNTHESIS, null, { truthRows: [truth({ source: "none" })] })
+  );
+  assert.match(noAuthority.problems.join("\n"), /T1: no intent source recorded/u);
+
+  const unmeasured = await validate(
+    await evidenceRoot([row()], GOOD_SYNTHESIS, null, { truthRows: [truth({ status: "unknown", claim: "none" })] })
+  );
+  assert.equal(unmeasured.ok, false);
+  assert.match(unmeasured.problems.join("\n"), /T1: unmeasured expected truth that the synthesis Gaps section never names/u);
+
+  const badStatus = await validate(
+    await evidenceRoot([row()], GOOD_SYNTHESIS, null, { truthRows: [truth({ status: "maybe" })] })
+  );
+  assert.match(badStatus.problems.join("\n"), /T1: status must be holds, violated, or unknown/u);
+});
+
+test("the shared table reader names the document it is reading", () => {
+  const truths = parseExpectedTruths("| id | expected |\n| --- | --- |\n| T1 | x |\n");
+  assert.match(truths.problems.join("\n"), /expected-truths\.md header missing columns: source, observed, status, claim/u);
+
+  const duplicate = parseTable("| id | a |\n| --- | --- |\n| T1 | x |\n| T1 | y |\n", {
+    label: "demo.md",
+    columns: ["id", "a"],
+    uniqueFirstColumn: true
+  });
+  assert.match(duplicate.problems.join("\n"), /demo\.md duplicate id: T1/u);
 });
 
 test("the validator runs as a CLI and exits non-zero on a failing session", async () => {

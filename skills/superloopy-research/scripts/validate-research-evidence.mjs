@@ -2,7 +2,7 @@
 // Mechanical gate for a Superloopy research session: the claim ledger and the synthesis
 // are checked against the Phase 3b rules instead of trusting that the rules were followed.
 // Prose rules only bind when something fails closed on them, so this exits non-zero.
-import { readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -51,6 +51,8 @@ export const PRIMARY_SURFACES = new Set([
 ]);
 const BLOCKED_COLUMNS = ["url", "tiers", "reason", "substitute", "status"];
 const BLOCKED_STATUSES = new Set(["substituted", "gap", "open"]);
+const TRUTH_COLUMNS = ["id", "expected", "source", "observed", "status", "claim"];
+const TRUTH_STATUSES = new Set(["holds", "violated", "unknown"]);
 const LADDER_TIERS = new Set(["api", "plain", "tls", "headless"]);
 // Reasons that make later ladder tiers pointless: no client trick defeats a login or a takedown.
 const TERMINAL_REASONS = new Set(["auth-required", "paywall", "removed", "legal"]);
@@ -65,47 +67,31 @@ const REQUIRED_SYNTHESIS_SECTIONS = [
 ];
 
 const args = parseArgs(process.argv.slice(2));
-if (isDirectRun()) {
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   if (args.help || args.root === undefined) {
-    process.stdout.write(
-      "Usage: validate-research-evidence.mjs --root <evidence-root> [--json] [--report <path>]\n"
-    );
+    process.stdout.write("Usage: validate-research-evidence.mjs --root <evidence-root> [--json] [--report <path>]\n");
     process.exit(args.help ? 0 : 2);
   }
-
   let report;
   try {
     report = await validate(args.root);
   } catch (error) {
-    report = {
-      ok: false,
-      root: args.root,
-      problems: [error instanceof Error ? error.message : String(error)],
-      ledger: null,
-      synthesis: null
-    };
+    report = failedRun(args.root, error instanceof Error ? error.message : String(error));
   }
-
   if (args.report !== undefined) await writeFile(args.report, `${JSON.stringify(report, null, 2)}\n`);
   process.stdout.write(args.json ? `${JSON.stringify(report, null, 2)}\n` : `${formatReport(report)}\n`);
   process.exit(report.ok ? 0 : 1);
 }
 
-function isDirectRun() {
-  return process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+function failedRun(root, ...problems) {
+  return { ok: false, root, problems, ledger: null, blocked: null, expectedTruths: null, synthesis: null };
 }
 
 export async function validate(root) {
   const problems = [];
   const ledgerText = await readOptional(join(root, "claim-ledger.md"));
   if (ledgerText === null) {
-    return {
-      ok: false,
-      root,
-      problems: ["Missing claim-ledger.md: the synthesis has no allowlist to draw from."],
-      ledger: null,
-      synthesis: null
-    };
+    return failedRun(root, "Missing claim-ledger.md: the synthesis has no allowlist to draw from.");
   }
 
   const ledger = parseLedger(ledgerText);
@@ -130,59 +116,151 @@ export async function validate(root) {
     problems.push(...checkBlockedSources(blocked.rows, synthesisText ?? ""));
   }
 
+  const truthsText = await readOptional(join(root, "expected-truths.md"));
+  const truths = truthsText === null ? null : parseExpectedTruths(truthsText);
+  if (truths !== null) {
+    problems.push(...truths.problems);
+    problems.push(...checkExpectedTruths(truths.rows, ledger.rows, synthesisText ?? ""));
+  }
+
+  const indexText = await readOptional(join(root, "INDEX.md"));
+  problems.push(...checkIndex(indexText, root, await listRootFiles(root), ledger.rows));
+
   return {
     ok: problems.length === 0,
     root,
     problems,
-    ledger: {
-      rows: ledger.rows.length,
-      verified: ledger.rows.filter((row) => row.status === "verified").length,
-      unresolved: ledger.rows.filter((row) => row.status === "unresolved").length,
-      refuted: ledger.rows.filter((row) => row.status === "refuted").length,
-      deferred: ledger.rows.filter((row) => row.status === "deferred").length
-    },
-    blocked: blocked === null
-      ? null
-      : {
-          rows: blocked.rows.length,
-          substituted: blocked.rows.filter((row) => row.status === "substituted").length,
-          gap: blocked.rows.filter((row) => row.status === "gap").length,
-          open: blocked.rows.filter((row) => row.status === "open").length
-        },
+    ledger: tally(ledger.rows, ["verified", "unresolved", "refuted", "deferred"]),
+    blocked: blocked === null ? null : tally(blocked.rows, ["substituted", "gap", "open"]),
+    expectedTruths: truths === null ? null : tally(truths.rows, ["holds", "violated", "unknown"]),
     synthesis: synthesis === null ? null : { sources: synthesis.sources, citations: synthesis.citations }
   };
 }
 
-export function parseBlockedSources(text) {
+// One shape for every ledger summary: total rows plus a count per status.
+function tally(rows, statuses) {
+  const summary = { rows: rows.length };
+  for (const status of statuses) summary[status] = rows.filter((row) => row.status === status).length;
+  return summary;
+}
+
+async function listRootFiles(root) {
+  try {
+    return await readdir(root);
+  } catch {
+    return [];
+  }
+}
+
+// One markdown-table reader for every ledger in the session: the header row names the columns,
+// so a renamed or dropped column fails loudly instead of silently reading as a blank cell.
+export function parseTable(text, options) {
   const problems = [];
   const rows = [];
   const tableLines = text
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.startsWith("|"));
-  const headerIndex = tableLines.findIndex((line) => cells(line)[0]?.toLowerCase() === "url");
+  const headerIndex = tableLines.findIndex((line) => cells(line)[0]?.toLowerCase() === options.columns[0]);
   if (headerIndex === -1) {
-    return { rows, problems: ["blocked-sources.md has no table header starting with `url`."] };
+    return { rows, problems: [`${options.label} has no table header starting with \`${options.columns[0]}\`.`] };
   }
-  const header = cells(tableLines[headerIndex]).map((cell) => cell.toLowerCase());
-  const missing = BLOCKED_COLUMNS.filter((column) => !header.includes(column));
-  if (missing.length > 0) problems.push(`blocked-sources.md header missing columns: ${missing.join(", ")}.`);
 
+  const header = cells(tableLines[headerIndex]).map((cell) => cell.toLowerCase());
+  const missing = options.columns.filter((column) => !header.includes(column));
+  if (missing.length > 0) problems.push(`${options.label} header missing columns: ${missing.join(", ")}.`);
+
+  const seen = new Set();
   for (const line of tableLines.slice(headerIndex + 1)) {
     const values = cells(line);
     if (values.length === 0 || values.every((value) => /^:?-{1,}:?$/u.test(value))) continue;
     if (values.length !== header.length) {
-      problems.push(`blocked-sources.md row has ${values.length} cells, header has ${header.length}: ${values[0] ?? line}`);
+      problems.push(`${options.label} row has ${values.length} cells, header has ${header.length}: ${values[0] ?? line}`);
       continue;
     }
     const row = {};
     header.forEach((column, index) => {
       row[column] = values[index];
     });
-    row.status = (row.status ?? "").toLowerCase();
+    for (const column of options.lowercase ?? []) row[column] = (row[column] ?? "").toLowerCase();
+    if (options.uniqueFirstColumn === true) {
+      const key = row[options.columns[0]];
+      if (seen.has(key)) problems.push(`${options.label} duplicate ${options.columns[0]}: ${key}`);
+      seen.add(key);
+    }
     rows.push(row);
   }
   return { rows, problems };
+}
+
+export function parseBlockedSources(text) {
+  return parseTable(text, { label: "blocked-sources.md", columns: BLOCKED_COLUMNS, lowercase: ["status"] });
+}
+
+export function parseExpectedTruths(text) {
+  return parseTable(text, {
+    label: "expected-truths.md",
+    columns: TRUTH_COLUMNS,
+    lowercase: ["status"],
+    uniqueFirstColumn: true
+  });
+}
+
+// An expected truth that reality violated has to land somewhere the reader can see: a ledger
+// claim or a published gap. Otherwise the diff was found and then quietly dropped.
+function checkExpectedTruths(rows, ledgerRows, synthesisText) {
+  const problems = [];
+  const gaps = section(synthesisText, "Gaps");
+  const ledgerIds = new Set(ledgerRows.map((row) => row.id));
+  for (const row of rows) {
+    const id = isBlank(row.id) ? "<blank id>" : row.id;
+    if (isBlank(row.id)) problems.push("expected-truths.md row has no id.");
+    if (isBlank(row.expected)) problems.push(`${id}: expected truth text is empty.`);
+    if (isBlank(row.source)) problems.push(`${id}: no intent source recorded, so the expectation has no authority.`);
+    if (!TRUTH_STATUSES.has(row.status)) {
+      problems.push(`${id}: status must be holds, violated, or unknown, found "${row.status}".`);
+      continue;
+    }
+    if (row.status === "holds" && isBlank(row.observed)) {
+      problems.push(`${id}: recorded as holding with no observed reality.`);
+    }
+    if (row.status === "unknown" && !gaps.includes(row.id)) {
+      problems.push(`${id}: unmeasured expected truth that the synthesis Gaps section never names.`);
+    }
+    if (row.status !== "violated") continue;
+    if (isBlank(row.observed)) problems.push(`${id}: recorded as violated with no observed reality.`);
+    const claim = (row.claim ?? "").trim();
+    if (claim.toLowerCase() === "gap") {
+      if (!gaps.includes(row.id)) {
+        problems.push(`${id}: violated and routed to a gap the synthesis Gaps section never names.`);
+      }
+      continue;
+    }
+    const linked = dependencyIds(claim).filter((value) => ledgerIds.has(value));
+    if (linked.length === 0) {
+      problems.push(`${id}: violated but claim "${claim || "none"}" is not a ledger id or \`gap\`.`);
+    }
+  }
+  return problems;
+}
+
+// The index is the only file the orchestrator re-reads, so a stale index means the detail it
+// points away from is unreachable in practice.
+function checkIndex(text, root, files, ledgerRows) {
+  const problems = [];
+  if (text === null) {
+    return ["Missing INDEX.md: the session has no summary layer to read back."];
+  }
+  if (text.trim() === "") problems.push("INDEX.md is empty.");
+  for (const file of files.filter((file) => /^wave-.*\.md$/u.test(file))) {
+    if (!text.includes(file)) problems.push(`INDEX.md never names ${file}, so its detail is unreachable.`);
+  }
+  for (const row of ledgerRows) {
+    if (!new RegExp(`(^|[^A-Za-z0-9._-])${escapeId(row.id)}([^A-Za-z0-9._-]|$)`, "u").test(text)) {
+      problems.push(`INDEX.md has no line for claim ${row.id}.`);
+    }
+  }
+  return problems;
 }
 
 function checkBlockedSources(rows, synthesisText) {
@@ -241,41 +319,16 @@ async function readOptional(path) {
 }
 
 export function parseLedger(text) {
-  const problems = [];
-  const rows = [];
-  const tableLines = text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.startsWith("|"));
-  const headerIndex = tableLines.findIndex((line) => cells(line)[0]?.toLowerCase() === "id");
-  if (headerIndex === -1) {
-    return { rows, problems: ["claim-ledger.md has no ledger table header starting with `id`."] };
+  const parsed = parseTable(text, {
+    label: "claim-ledger.md",
+    columns: LEDGER_COLUMNS,
+    lowercase: ["status", "risk"],
+    uniqueFirstColumn: true
+  });
+  if (parsed.rows.length === 0 && !parsed.problems.some((problem) => problem.includes("no table header"))) {
+    parsed.problems.push("claim-ledger.md has a header but no claim rows.");
   }
-
-  const header = cells(tableLines[headerIndex]).map((cell) => cell.toLowerCase());
-  const missing = LEDGER_COLUMNS.filter((column) => !header.includes(column));
-  if (missing.length > 0) problems.push(`Ledger header missing columns: ${missing.join(", ")}.`);
-
-  const seen = new Set();
-  for (const line of tableLines.slice(headerIndex + 1)) {
-    const values = cells(line);
-    if (values.length === 0 || values.every((value) => /^:?-{1,}:?$/u.test(value))) continue;
-    if (values.length !== header.length) {
-      problems.push(`Ledger row has ${values.length} cells, header has ${header.length}: ${values[0] ?? line}`);
-      continue;
-    }
-    const row = {};
-    header.forEach((column, index) => {
-      row[column] = values[index];
-    });
-    row.status = (row.status ?? "").toLowerCase();
-    row.risk = (row.risk ?? "").toLowerCase();
-    if (seen.has(row.id)) problems.push(`Duplicate ledger id: ${row.id}`);
-    seen.add(row.id);
-    rows.push(row);
-  }
-  if (rows.length === 0) problems.push("claim-ledger.md has a header but no claim rows.");
-  return { rows, problems };
+  return parsed;
 }
 
 function checkRows(rows) {
@@ -456,18 +509,20 @@ function isBlank(value) {
 
 function formatReport(report) {
   const lines = [`Superloopy research evidence: ${report.ok ? "pass" : "fail"}`, `root: ${report.root}`];
-  if (report.ledger !== null) {
-    lines.push(
-      `ledger: ${report.ledger.rows} rows (verified ${report.ledger.verified}, unresolved ${report.ledger.unresolved}, refuted ${report.ledger.refuted}, deferred ${report.ledger.deferred})`
-    );
+  for (const [label, summary] of [
+    ["ledger", report.ledger],
+    ["blocked sources", report.blocked],
+    ["expected truths", report.expectedTruths]
+  ]) {
+    if (summary === null || summary === undefined) continue;
+    const detail = Object.entries(summary)
+      .filter(([key]) => key !== "rows")
+      .map(([key, value]) => `${key} ${value}`)
+      .join(", ");
+    lines.push(`${label}: ${summary.rows} rows (${detail})`);
   }
-  if (report.synthesis !== null) {
+  if (report.synthesis !== null && report.synthesis !== undefined) {
     lines.push(`synthesis: ${report.synthesis.sources} numbered sources, ${report.synthesis.citations} cited`);
-  }
-  if (report.blocked !== null && report.blocked !== undefined) {
-    lines.push(
-      `blocked sources: ${report.blocked.rows} (substituted ${report.blocked.substituted}, gap ${report.blocked.gap}, open ${report.blocked.open})`
-    );
   }
   for (const problem of report.problems) lines.push(`- ${problem}`);
   return lines.join("\n");
