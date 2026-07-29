@@ -19,6 +19,11 @@ const DESIGN_AUDIT_PATH = "docs/superloopy-design-audit.md";
 const GATE_NOTE_SECTIONS = ["Gate Compatibility", "Golden Scenarios", "Host Contract"];
 const GATE_GOLDEN_TESTS = ["test/golden-hooks.test.js", "test/golden-review-gate.test.js", "test/golden-matrix-gate.test.js"];
 const MAX_REVIEWABLE_LINES = 550;
+// Inventories that must list every Git-visible file: audited by completeness, not by line count.
+export const INVENTORY_DOCS = new Set([
+  "docs/superloopy-file-audit.md",
+  "docs/superloopy-loop-golden-set.md"
+]);
 const RUNTIME_IGNORE_SAMPLES = [
   ".superloopy/goals.json",
   ".superloopy/evidence/report.md",
@@ -246,7 +251,16 @@ async function checkReviewability(cwd) {
 export function isReviewableTextFile(file) {
   // web-superloopy/public/_nuxt holds vendored minified orbit-runtime bundles audited by provenance, not line count.
   // skills/superloopy-slides/bold-template-pack holds the vendored frontend-slides template pack audited by provenance, not line count.
-  return /\.(?:[cm]?js|md|json|ya?ml)$/u.test(file) && !file.endsWith("package-lock.json") && !file.startsWith("web-superloopy/public/_nuxt/") && !file.startsWith("web-superloopy/public/_payload.json") && !file.startsWith("skills/superloopy-slides/bold-template-pack/");
+  // The two inventory documents carry one row per Git-visible file, so their length tracks repository
+  // size rather than authoring verbosity: a fixed line cap would make repository growth a violation.
+  // They are audited by completeness instead — checkFileAudit proves every file has a row, and the
+  // golden set records the judgment trail. Every other doc, source, and test stays under the cap.
+  return /\.(?:[cm]?js|md|json|ya?ml)$/u.test(file)
+    && !file.endsWith("package-lock.json")
+    && !file.startsWith("web-superloopy/public/_nuxt/")
+    && !file.startsWith("web-superloopy/public/_payload.json")
+    && !file.startsWith("skills/superloopy-slides/bold-template-pack/")
+    && !INVENTORY_DOCS.has(file);
 }
 
 export function countPhysicalLines(content) {

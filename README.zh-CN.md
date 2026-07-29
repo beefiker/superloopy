@@ -46,7 +46,7 @@ Superloopy 保持命令层很小。具体工作方式由 skills 负责：什么�
 | --- | --- | --- |
 | `superloopy-loop` | 用 `loopy <task>` 或 `loopy team <task>` 启动完整 loop；用 `loopywork`、`lpy`、`$lpy` 只注入 guidance。 | 完整 loop 会产出轻量计划、下一步指引、命令验证证明、质量 gate、最终 evidence report。Guidance alias 不会改状态。 |
 | `superloopy-doctor` | 诊断安装、wrapper、plugin cache、hook/bootstrap、agent、Codex/Claude Code host wiring 或版本过旧问题时。 | 只读 health report：wrapper/cache/version 证据、失败检查，以及只有批准后才运行的精确修复命令。 |
-| `superloopy-research` | 仅当你在 Codex 中显式调用 `$superloopy:superloopy-research`、在 Claude Code 中调用 `/superloopy:superloopy-research`，或以行首 `loopy`/`루피`（如 `loopy research`）开始研究任务时。普通的调查、检索或总结请求不会激活它。 | 研究轴、扩展 wave、claim ledger、验证笔记、带引用的 synthesis artifact。 |
+| `superloopy-research` | 仅当你在 Codex 中显式调用 `$superloopy:superloopy-research`、在 Claude Code 中调用 `/superloopy:superloopy-research`，或以行首 `loopy`/`루피`（如 `loopy research`）开始研究任务时。普通的调查、检索或总结请求不会激活它。 | 研究轴、扩展 wave、每次抓取的判定结果、带评级与时点的来源、记录成本的 claim ledger、验证笔记、带引用的 synthesis artifact。 |
 | `superloopy-clone` | 请求 `loopy clone`、已授权的网站克隆、重建、迁移，或需要按像素恢复页面时。 | 浏览器截图、页面结构、设计 token、资产清单、实现笔记、build 输出、visual QA 证据。 |
 | `superloopy-frontend` | 仅在处理受支持的基于屏幕的应用 UI（浏览器托管 Web，包括公开、需认证、私有/内部、已安装 PWA 或扩展；具有用户旅程的已部署交互式内容型 Web，例如营销活动、出版物或着陆页体验；以及桌面、移动设备/平板、嵌入式/混合客户端、自定义渲染 UI、Qt 或混合目标）时，在 Codex 中显式调用 `$superloopy:superloopy-frontend`，或在 Claude Code 中调用 `/superloopy:superloopy-frontend`，也可用开头的 `loopy`/`루피` 启动该工作。仅出现 UI、平台或框架词汇不会激活它；TV、可穿戴设备、XR、汽车、游戏 UI、TUI、静态媒体/文档产物和非 UI 工作仍被排除。 | 采用一份共享 UX 契约，并叠加平台/界面构成路径。证据与变更声明成比例，并分别验证浏览器、原生目标/外壳、渲染器和每个混合目标。独立运行保留按次划分的证据；活动循环则把证据绑定到 goal 和 criterion。 |
 | `humanize-korean` | 需要去掉韩文内容里的 AI 腔、修正翻译腔，或在不改事实的前提下让韩文更像真人写作时。 | 写入 `final.md`、`summary.md`、`audit.json`；在 Superloopy loop 中把证据记录到 `.superloopy/evidence/humanize-korean/`。 |
