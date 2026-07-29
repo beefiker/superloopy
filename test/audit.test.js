@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { countPhysicalLines, isReviewableTextFile } from "../src/doctor.js";
+import { countPhysicalLines, INVENTORY_DOCS, isReviewableTextFile } from "../src/doctor.js";
 
 const AUDIT_PATH = "docs/superloopy-file-audit.md";
 const MAX_REVIEWABLE_LINES = 550;
@@ -34,6 +34,22 @@ test("standalone reviewability uses the physical-line and extension contract", (
   assert.equal(countPhysicalLines("one\ntwo"), 2);
   assert.equal(countPhysicalLines("one\rtwo\r"), 2);
   for (const file of ["a.mjs", "a.cjs", "a.yml"]) {
+    assert.equal(isReviewableTextFile(file), true, file);
+  }
+});
+
+test("the per-file inventories are audited by completeness, not by line count", () => {
+  // Their length is one row per Git-visible file, so a fixed cap would make repository growth a
+  // violation. Completeness is proven by the file-audit check above instead.
+  for (const file of [...INVENTORY_DOCS]) {
+    assert.equal(isReviewableTextFile(file), false, file);
+  }
+  // The exemption is exactly those two documents: every other doc still reviews by line count.
+  assert.deepEqual([...INVENTORY_DOCS].toSorted(), [
+    "docs/superloopy-file-audit.md",
+    "docs/superloopy-loop-golden-set.md"
+  ]);
+  for (const file of ["docs/superloopy-design-audit.md", "docs/superloopy-gate-notes.md", "README.md"]) {
     assert.equal(isReviewableTextFile(file), true, file);
   }
 });
