@@ -85,7 +85,7 @@ A worker with nothing to expand writes `## EXPAND` followed by `none - <one-line
 - Use the active Superloopy plan when one exists. For a new substantial research task create one with `superloopy loop begin`, then record artifacts under `.superloopy/evidence/research/<timestamp>-<slug>/`.
 - Maintain `INDEX.md`, `expansion-log.md`, one `wave-<n>-<kind>-<axis>.md` file per worker return, `blocked-sources.md` when any source resists retrieval, optional `verify-<slug>.md` files, `claim-ledger.md`, and `SYNTHESIS.md`.
 - Append each digest the moment its worker returns, not in a batch at the end — the journal is your recovery point after context loss and the user's audit trail.
-- **Write detail down, read summaries back.** `INDEX.md` is the only file you re-read routinely: one line per lead, claim, and source, each naming the wave file that holds the detail. Bulk goes in the wave files and stays there until a specific question needs it. Deduplicate new leads by matching lead text against `expansion-log.md` with a search tool rather than reading the log into context — mechanical matching is both cheaper and stricter than remembering.
+- **Write detail down, read summaries back.** `INDEX.md` is the only file you re-read routinely: one line per lead, claim, and source, each naming the wave file that holds the detail. Every wave file must be named there and every ledger claim id must have a line, because an index that does not reach the detail makes the detail unreachable in practice — the validator checks both. Bulk goes in the wave files and stays there until a specific question needs it. Deduplicate new leads by matching lead text against `expansion-log.md` with a search tool rather than reading the log into context — mechanical matching is both cheaper and stricter than remembering.
 - End the completed research with a Superloopy artifact record, for example `superloopy loop evidence --status pass --artifact .superloopy/evidence/research/<slug>/SYNTHESIS.md --notes "<summary>"`.
 
 ## Phase 0 - Scope
@@ -118,7 +118,16 @@ A D or E source can open a lead or add supporting context; it cannot be the load
 
 ### Expected truths — when the question has an authority
 
-Some questions have a stated intent behind them: a spec, a design doc, a contract, a standard, a ticket, the user's own description of how the system is supposed to work. For those, start from "what must be true if that intent holds?" and write the expected truths down *before* searching. Then research measures reality against them instead of asking the open-ended "what is out there", which is how an investigation drifts into describing what it happened to find. Each row is `expected truth | where the intent says so | observed reality | diff | status (holds / violated / unknown)`, kept in `INDEX.md` for a short list or `expected-truths.md` when it grows, and every violated row must end up either as a claim in the ledger or as a recorded gap.
+Some questions have a stated intent behind them: a spec, a design doc, a contract, a standard, a ticket, the user's own description of how the system is supposed to work. For those, start from "what must be true if that intent holds?" and write the expected truths down *before* searching. Then research measures reality against them instead of asking the open-ended "what is out there", which is how an investigation drifts into describing what it happened to find.
+
+Keep them in `expected-truths.md`, one row per expectation, in the columns the validator reads:
+
+```text
+| id | expected | source | observed | status | claim |
+| T1 | <what must be true> | <where the intent says so> | <what reality showed> | violated | C1 |
+```
+
+`status` is `holds`, `violated`, or `unknown`. A `violated` row must land somewhere the reader can see — either the id of a ledger claim that now carries it, or the literal `gap`, in which case the synthesis `## Gaps` section must name the expected truth by id. `unknown` means the expectation went unmeasured, which is also a gap and must be published the same way. A diff you found and then dropped is worse than one you never looked for, because the journal implies it was handled.
 
 Skip this when the question has no authority to measure against — open market scans, prior-art surveys, and "what are the options" questions have no expected truth to violate, and inventing one there just biases the sweep. State which case you are in as part of the frame. (Expected-truth discipline adapted from the `ulw-research` skill in code-yeongyu/lazycodex, MIT.)
 
@@ -336,7 +345,7 @@ Run the mechanical gate before you claim completion — it reads the ledger and 
 node "$RESEARCH_SKILL_DIR/scripts/validate-research-evidence.mjs" --root .superloopy/evidence/research/<slug> --json
 ```
 
-It fails on an absent ledger, a verified row whose observations share one surface, a surface label outside the closed vocabulary, a high-risk verified claim with no primary surface, a verified row with no counter-search, no primary source, or no ISO dates, an unpriced claim, a verified claim resting on a refuted or unresolved dependency, a dependency cycle, a high-risk row asserted in the synthesis that the ledger did not clear, a `[Source N]` citation with no numbered entry, and — when `blocked-sources.md` exists — a row still `open`, untried ladder tiers with no terminal reason, a substitution with no substitute, or a gap the synthesis never names. A non-zero exit is the answer: fix the evidence, not the row. Then confirm what the script cannot read:
+It fails on an absent ledger, a verified row whose observations share one surface, a surface label outside the closed vocabulary, a high-risk verified claim with no primary surface, a verified row with no counter-search, no primary source, or no ISO dates, an unpriced claim, a verified claim resting on a refuted or unresolved dependency, a dependency cycle, a high-risk row asserted in the synthesis that the ledger did not clear, a `[Source N]` citation with no numbered entry, a missing `INDEX.md` or one that never reaches a wave file or a claim id, and — when `blocked-sources.md` or `expected-truths.md` exists — a blocked row still `open`, untried ladder tiers with no terminal reason, a substitution with no substitute, a violated expected truth with no ledger claim, or a gap the synthesis never names. A non-zero exit is the answer: fix the evidence, not the row. Then confirm what the script cannot read:
 
 - Every axis from Phase 0 was covered by at least one dedicated worker, with a wave artifact; expected truths, when the question had an authority, are each `holds`, `violated` with a ledger claim, or a recorded gap.
 - Every EXPAND lead was investigated, deduplicated, or closed as dead, and convergence was reached under the Phase 2 rules — no wave counted as dry on empty, blocked, or silent lanes, and no lane was left in `thin` or `silent` state.
