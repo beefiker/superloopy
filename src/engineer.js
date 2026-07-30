@@ -71,19 +71,32 @@ export async function runEngineerTriggerHook(payload, deps) {
   const { statusForPayload, guideForPayload, renderSuperloopyContext, formatAdditionalContext } = deps;
   const { orchestrate, brief } = parseInvocation(payload.prompt);
   const loadAdhdOverlay = deps.loadAdhdFriendlyOutputOverlay ?? loadDefaultAdhdOverlay;
-  const adhdOverlay = await loadAdhdOverlay(brief);
+  const loadOverlayForInvocation = async () => (
+    typeof payload.prompt === "string" && ENGINEER_TRIGGER_PATTERN.test(payload.prompt)
+      ? await loadAdhdOverlay(brief)
+      : ""
+  );
   // Best-effort coexistence check; never throws, so compute it outside the try.
   const interop = detectSuperpowers();
+  let status;
   try {
-    const status = await statusForPayload(payload);
-    if (status.binding?.resumable === false) {
-      return formatAdditionalContext("UserPromptSubmit", renderBindingBlocked(status));
-    }
-    if (status.summary.aggregateComplete) {
-      return formatAdditionalContext("UserPromptSubmit", renderComplete(status, interop));
-    }
+    status = await statusForPayload(payload);
+  } catch {
+    return formatAdditionalContext("UserPromptSubmit", renderStart(payload, orchestrate, interop, await loadOverlayForInvocation()));
+  }
+  if (status.binding?.resumable === false) {
+    return formatAdditionalContext("UserPromptSubmit", renderBindingBlocked(status));
+  }
+  if (status.summary.aggregateComplete) {
+    return formatAdditionalContext("UserPromptSubmit", renderComplete(status, interop));
+  }
+  const adhdOverlay = await loadOverlayForInvocation();
+  try {
     const guide = guideForPayload(payload, status.plan);
-    return formatAdditionalContext("UserPromptSubmit", renderResume(renderSuperloopyContext(status, guide), orchestrate, interop, adhdOverlay));
+    return formatAdditionalContext(
+      "UserPromptSubmit",
+      renderResume(renderSuperloopyContext(status, guide), orchestrate, interop, adhdOverlay)
+    );
   } catch {
     return formatAdditionalContext("UserPromptSubmit", renderStart(payload, orchestrate, interop, adhdOverlay));
   }
