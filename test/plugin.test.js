@@ -421,6 +421,41 @@ test("plugin packages the Superloopy Korean humanizer skill with measurable safe
   }
 });
 
+test("plugin packages explicit-only i-have-adhd with attribution and Superloopy precedence", async () => {
+  const skill = await readSkill("i-have-adhd");
+
+  assert.match(skill.frontmatter, /^name: i-have-adhd$/m);
+  assert.match(skill.frontmatter, /^disable-model-invocation: true$/m);
+  assert.match(skill.frontmatter, /^license: MIT$/m);
+  assert.match(skill.frontmatter, /\$superloopy:i-have-adhd/);
+  assert.match(skill.frontmatter, /\/superloopy:i-have-adhd/);
+  assert.match(skill.content, /never infer or assert.*diagnos/is);
+  assert.match(skill.content, /Superloopy.*evidence.*completion.*precedence/is);
+  assert.match(skill.content, /does not create.*evidence artifact/is);
+  assert.match(skill.content, /stop adhd mode.*normal mode/is);
+
+  for (let rule = 1; rule <= 10; rule += 1) {
+    assert.match(skill.content, new RegExp(`^### ${rule}\\.`, "m"));
+  }
+
+  for (const file of [
+    "skills/i-have-adhd/agents/openai.yaml",
+    "skills/i-have-adhd/LICENSE",
+    "skills/i-have-adhd/references/upstream-notice.md"
+  ]) {
+    assert.equal(existsSync(file), true, file);
+  }
+
+  const metadata = await readFile("skills/i-have-adhd/agents/openai.yaml", "utf8");
+  const license = await readFile("skills/i-have-adhd/LICENSE", "utf8");
+  const notice = await readFile("skills/i-have-adhd/references/upstream-notice.md", "utf8");
+  assert.match(metadata, /allow_implicit_invocation:\s*false/);
+  assert.match(metadata, /\$superloopy:i-have-adhd/);
+  assert.match(license, /Copyright \(c\) 2026 Ayoub Ghriss/);
+  assert.match(notice, /07684c4ab625dd7d1ea6e99e065f60bc0ac6a1ba/);
+  assert.match(notice, /https:\/\/github\.com\/ayghri\/i-have-adhd/);
+});
+
 test("plugin slides skill inherits frontend gallery, anti-slop core, motion floor, and evidence lane", async () => {
   const skill = await readFile("skills/superloopy-slides/SKILL.md", "utf8");
   const animation = await readFile("skills/superloopy-slides/animation-patterns.md", "utf8");
