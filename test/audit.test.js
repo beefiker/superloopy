@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { countPhysicalLines, isReviewableTextFile } from "../src/doctor.js";
+import { countPhysicalLines, INVENTORY_DOCS, isReviewableTextFile, runDoctor } from "../src/doctor.js";
 
 const AUDIT_PATH = "docs/superloopy-file-audit.md";
 const MAX_REVIEWABLE_LINES = 550;
@@ -38,6 +38,22 @@ test("standalone reviewability uses the physical-line and extension contract", (
   }
 });
 
+test("the per-file inventories are audited by completeness, not by line count", () => {
+  // Their length is one row per Git-visible file, so a fixed cap would make repository growth a
+  // violation. Completeness is proven by the file-audit check above instead.
+  for (const file of [...INVENTORY_DOCS]) {
+    assert.equal(isReviewableTextFile(file), false, file);
+  }
+  // The exemption is exactly those two documents: every other doc still reviews by line count.
+  assert.deepEqual([...INVENTORY_DOCS].sort(), [
+    "docs/superloopy-file-audit.md",
+    "docs/superloopy-loop-golden-set.md"
+  ]);
+  for (const file of ["docs/superloopy-design-audit.md", "docs/superloopy-gate-notes.md", "README.md"]) {
+    assert.equal(isReviewableTextFile(file), true, file);
+  }
+});
+
 test("file audit weight note names the current largest source file", async () => {
   const audit = await readFile(AUDIT_PATH, "utf8");
   const sourceFiles = listRepoFiles().filter((file) => file.startsWith("src/") && file.endsWith(".js"));
@@ -48,10 +64,26 @@ test("file audit weight note names the current largest source file", async () =>
       lines: countPhysicalLines(await readFile(file, "utf8"))
     });
   }
-  const largest = measured.toSorted((left, right) => right.lines - left.lines)[0];
+  const largest = [...measured].sort((left, right) => right.lines - left.lines)[0];
   const escapedFile = largest.file.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   assert.match(audit, new RegExp(`Current largest source file: \`${escapedFile}\``, "u"));
+});
+
+test("the reviewability check does not depend on a runtime-version-gated array method", async () => {
+  // Regression: this check catches its own errors, so calling a method the running Node may lack
+  // turned a runtime gap into a failed repository check whose message named an internal variable.
+  // Verified by deleting the method and proving the check still reports the repository truthfully.
+  const original = Array.prototype.toSorted;
+  delete Array.prototype.toSorted;
+  try {
+    const result = await runDoctor(process.cwd());
+    assert.equal(result.checks.reviewability.ok, true);
+    assert.equal(result.checks.reviewability.message, undefined);
+    assert.ok(result.checks.reviewability.largest.file.length > 0);
+  } finally {
+    Array.prototype.toSorted = original;
+  }
 });
 
 function listRepoFiles() {
