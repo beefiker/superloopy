@@ -11,7 +11,7 @@ const DIRECT_ADHD_OUTPUT_REQUEST_PATTERNS = [
 const DIRECT_PRESENTATION_REQUEST_PATTERNS = [
   /(?:^|[.;!?]\s*|,\s*)(?:(?:could|can|would)\s+you\s+)?(?:(?:please|kindly)\s+)?(?:break\s+(?:this|the\s+task)\s+down(?:\s+into)?|(?:give|show|send|provide)\s+me)\b.{0,40}\b(?:one\s+step\s+at\s+a\s+time|short(?:\s+numbered)?\s+steps?|steps?\s+short|one\s+action|next\s+action)\b/iu,
   /(?:^|[.;!?]\s*|,\s*)(?:(?:could|can|would)\s+you\s+)?(?:(?:please|kindly)\s+)?(?:keep|make|format|write|organize|present|respond|answer)\s+(?:this|the|my|your)?\s*(?:answer|instructions?|output|response|steps?)\b.{0,40}\b(?:one\s+step\s+at\s+a\s+time|short(?:\s+numbered)?\s+steps?|steps?\s+short|action[-\s]?first|easy\s+to\s+scan|one\s+action|next\s+action)\b/iu,
-  /(?:^|[.;!?]\s*|,\s*)(?:(?:could|can|would)\s+you\s+)?(?:(?:please|kindly)\s+)?(?:fix|migrate|add|implement|update|change|refactor|build|debug)\b.{0,40}\bone\s+step\s+at\s+a\s+time\b/iu,
+  /(?:^|[.;!?]\s*|,\s*)(?:(?:could|can|would)\s+you\s+)?(?:(?:please|kindly)\s+)?(?:fix|migrate|add|implement|update|change|refactor|build|debug)\b.{0,40}\bone\s+step\s+at\s+a\s+time\b(?=\s*(?:[.!?]|$))/iu,
   /(?:^|[.;!?]\s*|,\s*)(?:(?:could|can|would)\s+you\s+)?(?:(?:please|kindly)\s+)?(?:lead|start)\s+with\s+(?:one\s+action|the\s+next\s+action)\b/iu,
   /(?:^|[.;!?]\s*|,\s*)(?:do\s+not|don't|don’t)\s+bury\s+(?:the\s+)?(?:answer|next\s+action)\b/iu,
   /(?:^|[.!?]\s*)(?:한\s*단계씩|짧은\s*단계|핵심부터|행동부터|읽기\s*쉽게|단계별(?:로)?).{0,30}(?:알려줘|정리해줘|진행해줘|설명해줘|보여줘|추가해줘)/u
