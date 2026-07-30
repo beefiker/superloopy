@@ -351,3 +351,106 @@ test("engineer hook preserves start guidance when the overlay loader returns emp
   assert.match(context, /loop begin --brief/);
   assert.doesNotMatch(context, /ADHD-friendly output overlay/);
 });
+
+test("connected crew aliases retain normal guidance without loading the ADHD overlay", async () => {
+  for (const prompt of [
+    "loopycrew I have ADHD; keep this one step at a time",
+    "ultrawork I have ADHD; keep this one step at a time"
+  ]) {
+    const payload = {
+      hook_event_name: "UserPromptSubmit",
+      cwd: await tempRepo(),
+      prompt
+    };
+    const baseline = await runEngineerTriggerHook(payload, {
+      statusForPayload: async () => { throw new Error("no plan"); },
+      guideForPayload: () => { throw new Error("unused"); },
+      renderSuperloopyContext: () => "",
+      formatAdditionalContext: (_event, additionalContext) => additionalContext,
+      loadAdhdFriendlyOutputOverlay: async () => ""
+    });
+    let loaderCalls = 0;
+    const context = await runEngineerTriggerHook(payload, {
+      statusForPayload: async () => { throw new Error("no plan"); },
+      guideForPayload: () => { throw new Error("unused"); },
+      renderSuperloopyContext: () => "",
+      formatAdditionalContext: (_event, additionalContext) => additionalContext,
+      loadAdhdFriendlyOutputOverlay: async () => {
+        loaderCalls += 1;
+        return "ADHD-friendly output overlay";
+      }
+    });
+
+    assert.equal(loaderCalls, 0, prompt);
+    assert.equal(context, baseline, prompt);
+    assert.match(context, /Crew fan-out \(team mode\)/);
+    assert.doesNotMatch(context, /ADHD-friendly output overlay/);
+  }
+});
+
+test("qualifying loopy prompts append the overlay when resuming", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+
+  const output = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "loopy I have ADHD; keep this one step at a time"
+  });
+  const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+
+  assert.match(context, /A loop is already in progress/);
+  assert.match(context, /^ADHD-friendly output overlay$/m);
+});
+
+test("binding-blocked engineer guidance does not load or append the ADHD overlay", async () => {
+  let loaderCalls = 0;
+  const context = await runEngineerTriggerHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: await tempRepo(),
+    prompt: "loopy I have ADHD; keep this one step at a time"
+  }, {
+    statusForPayload: async () => ({ binding: { resumable: false, status: "mismatch", next: null } }),
+    guideForPayload: () => { throw new Error("unused"); },
+    renderSuperloopyContext: () => "",
+    formatAdditionalContext: (_event, additionalContext) => additionalContext,
+    loadAdhdFriendlyOutputOverlay: async () => {
+      loaderCalls += 1;
+      return "ADHD-friendly output overlay";
+    }
+  });
+
+  assert.equal(loaderCalls, 0);
+  assert.equal(context, [
+    "Superloopy loop engineer",
+    "",
+    "The repo-local Superloopy plan cannot resume here because its repository binding is mismatch.",
+    "Do not mutate or resume this copied state. Return to the repository where the plan was created, or start a separate loop here."
+  ].join("\n"));
+});
+
+test("aggregate-complete engineer guidance does not load or append the ADHD overlay", async () => {
+  let loaderCalls = 0;
+  const context = await runEngineerTriggerHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: await tempRepo(),
+    prompt: "loopy I have ADHD; keep this one step at a time"
+  }, {
+    statusForPayload: async () => ({
+      binding: { resumable: true },
+      summary: { aggregateComplete: true },
+      plan: {}
+    }),
+    guideForPayload: () => { throw new Error("unused"); },
+    renderSuperloopyContext: () => "",
+    formatAdditionalContext: (_event, additionalContext) => additionalContext,
+    loadAdhdFriendlyOutputOverlay: async () => {
+      loaderCalls += 1;
+      return "ADHD-friendly output overlay";
+    }
+  });
+
+  assert.equal(loaderCalls, 0);
+  assert.match(context, /The current Superloopy aggregate is already complete/);
+  assert.doesNotMatch(context, /ADHD-friendly output overlay/);
+});
