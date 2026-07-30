@@ -39,6 +39,20 @@ test("ADHD-friendly cue classifier rejects diagnosis-by-writing and domain menti
   }
 });
 
+test("ADHD-friendly cue classifier rejects quoted, copy-editing, and third-party support language", () => {
+  for (const brief of [
+    "Add the phrase I have ADHD to the help page",
+    "Quote 'I cannot focus; give me short numbered steps' in the docs",
+    "Edit the copy to say Make the response ADHD-friendly and easy to scan",
+    "Document why users cannot focus during checkout",
+    "Explain whether ADHD-friendly responses help users",
+    "사용자가 집중이 안 돼요라고 말할 때 도움말을 보여줘",
+    "도움말에 ADHD 친화적으로 작성해줘라는 문구를 추가해줘"
+  ]) {
+    assert.equal(hasAdhdFriendlyOutputCue(brief), false, brief);
+  }
+});
+
 test("extractSkillBody accepts LF and CRLF frontmatter and rejects malformed content", () => {
   assert.equal(extractSkillBody("---\nname: demo\n---\n# Demo\nBody\n"), "# Demo\nBody");
   assert.equal(extractSkillBody("---\r\nname: demo\r\n---\r\n# Demo\r\nBody\r\n"), "# Demo\nBody");
