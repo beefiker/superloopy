@@ -22,6 +22,26 @@ test("ADHD-friendly cue classifier accepts self-selected execution support", () 
   }
 });
 
+test("ADHD-friendly cue classifier accepts approved standalone activation cues", () => {
+  const briefs = [
+    "I have ADHD. Migrate the auth module",
+    "I cannot focus. Migrate the auth module",
+    "This task is overwhelming me. Add login",
+    "Please fix this one step at a time",
+    "Migrate auth one step at a time",
+    "한 단계씩 로그인 기능을 추가해줘"
+  ];
+
+  assert.deepEqual(briefs.map(hasAdhdFriendlyOutputCue), [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ]);
+});
+
 test("ADHD-friendly cue classifier keeps direct requests active alongside engineering work", () => {
   for (const brief of [
     "I have ADHD; add the settings page one step at a time",

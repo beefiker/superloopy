@@ -11,9 +11,10 @@ const DIRECT_ADHD_OUTPUT_REQUEST_PATTERNS = [
 const DIRECT_PRESENTATION_REQUEST_PATTERNS = [
   /(?:^|[.;!?]\s*|,\s*)(?:(?:could|can|would)\s+you\s+)?(?:(?:please|kindly)\s+)?(?:break\s+(?:this|the\s+task)\s+down(?:\s+into)?|(?:give|show|send|provide)\s+me)\b.{0,40}\b(?:one\s+step\s+at\s+a\s+time|short(?:\s+numbered)?\s+steps?|steps?\s+short|one\s+action|next\s+action)\b/iu,
   /(?:^|[.;!?]\s*|,\s*)(?:(?:could|can|would)\s+you\s+)?(?:(?:please|kindly)\s+)?(?:keep|make|format|write|organize|present|respond|answer)\s+(?:this|the|my|your)?\s*(?:answer|instructions?|output|response|steps?)\b.{0,40}\b(?:one\s+step\s+at\s+a\s+time|short(?:\s+numbered)?\s+steps?|steps?\s+short|action[-\s]?first|easy\s+to\s+scan|one\s+action|next\s+action)\b/iu,
+  /(?:^|[.;!?]\s*|,\s*)(?:(?:could|can|would)\s+you\s+)?(?:(?:please|kindly)\s+)?(?:fix|migrate|add|implement|update|change|refactor|build|debug)\b.{0,40}\bone\s+step\s+at\s+a\s+time\b/iu,
   /(?:^|[.;!?]\s*|,\s*)(?:(?:could|can|would)\s+you\s+)?(?:(?:please|kindly)\s+)?(?:lead|start)\s+with\s+(?:one\s+action|the\s+next\s+action)\b/iu,
   /(?:^|[.;!?]\s*|,\s*)(?:do\s+not|don't|don’t)\s+bury\s+(?:the\s+)?(?:answer|next\s+action)\b/iu,
-  /(?:^|[.!?]\s*)(?:한\s*단계씩|짧은\s*단계|핵심부터|행동부터|읽기\s*쉽게|단계별(?:로)?).{0,30}(?:알려줘|정리해줘|진행해줘|설명해줘|보여줘)/u
+  /(?:^|[.!?]\s*)(?:한\s*단계씩|짧은\s*단계|핵심부터|행동부터|읽기\s*쉽게|단계별(?:로)?).{0,30}(?:알려줘|정리해줘|진행해줘|설명해줘|보여줘|추가해줘)/u
 ];
 const SELF_SELECTED_DISCLOSURE_PATTERNS = [
   /(?:^|[.;!?]\s*|,\s*)(?:i\s+have|i(?:'|’)ve\s+got)\s+adhd\b(?=\s*(?:[.;!?]|$|(?:and|but)\b))/iu,
@@ -24,12 +25,6 @@ const EXECUTION_FRICTION_PATTERNS = [
   /(?:^|[.;!?]\s*|,\s*)(?:this\s+task\s+is\s+overwhelming\s+me|i(?:'m| am)\s+overwhelmed)\b(?=\s*(?:[.;!?]|$))/iu,
   /(?:^|[.!?]\s*)(?:집중이\s*안\s*(?:돼|돼요|됩니다)|시작하기\s*어려|너무\s*막막(?:해요|합니다|해)?)(?=\s*(?:[.!?]|$))/u
 ];
-const PRESENTATION_REQUEST_PATTERNS = [
-  /\b(?:keep|make|give|show|send|use|provide|write|format|break(?:\s+down)?|present|organize|lead|start|respond|answer|tell|edit|add)\b.{0,80}\b(?:one\s+step\s+at\s+a\s+time|short(?:\s+numbered)?\s+steps?|steps?\s+short|action[-\s]?first|one\s+action|next\s+action)\b/iu,
-  /\b(?:keep|make|give|show|send|use|provide|write|format|break(?:\s+down)?|present|organize|lead|start|respond|answer|tell|edit|add)\b.{0,40}\b(?:answer|instructions?|output|response|steps?)\b.{0,40}\b(?:action[-\s]?first|easy\s+to\s+scan)\b/iu,
-  /(?:한\s*단계씩|짧은\s*단계|핵심부터|행동부터|읽기\s*쉽게|단계별(?:로)?).{0,30}(?:알려줘|정리해줘|진행해줘|설명해줘|보여줘|추가해줘)/u
-];
-
 export function hasAdhdFriendlyOutputCue(brief) {
   if (typeof brief !== "string") return false;
   const normalized = brief.replace(/\s+/gu, " ").trim();
@@ -44,9 +39,6 @@ export function hasAdhdFriendlyOutputCue(brief) {
     || DIRECT_PRESENTATION_REQUEST_PATTERNS.some((pattern) => pattern.test(matchable))
   ) {
     return true;
-  }
-  if (!PRESENTATION_REQUEST_PATTERNS.some((pattern) => pattern.test(matchable))) {
-    return false;
   }
   return [...SELF_SELECTED_DISCLOSURE_PATTERNS, ...EXECUTION_FRICTION_PATTERNS]
     .some((pattern) => pattern.test(matchable));
