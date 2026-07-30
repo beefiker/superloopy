@@ -280,7 +280,7 @@ test("blocked sources must exhaust the ladder or record a terminal reason", asyn
 
   const terminal = await validate(
     await evidenceRoot([row()], GOOD_SYNTHESIS, [
-      blockedRow({ tiers: "api", reason: "auth-required behind a customer login" })
+      blockedRow({ tiers: "api", reason: "auth-required: behind a customer login" })
     ])
   );
   assert.deepEqual(terminal.problems, []);
@@ -414,6 +414,121 @@ test("the shared table reader names the document it is reading", () => {
     uniqueFirstColumn: true
   });
   assert.match(duplicate.problems.join("\n"), /demo\.md duplicate id: T1/u);
+});
+
+test("high-risk corroboration needs distinct domains as well as distinct surfaces", async () => {
+  const report = await validate(
+    await evidenceRoot([row({
+      observations: "api: https://api.same.example/data · rendered: https://www.same.example/page"
+    })], GOOD_SYNTHESIS)
+  );
+
+  assert.equal(report.ok, false);
+  assert.match(report.problems.join("\n"), /needs observations from 2\+ independent domains/u);
+});
+
+test("malformed observation URLs fail closed instead of crashing validation", async () => {
+  const report = await validate(await evidenceRoot([row({
+    observations: "api: https://[broken · rendered: https://valid.example/page"
+  })], GOOD_SYNTHESIS));
+
+  assert.equal(report.ok, false);
+  assert.match(report.problems.join("\n"), /needs observations from 2\+ independent domains/u);
+});
+
+test("country-code second-level domains remain independently countable", async () => {
+  const report = await validate(
+    await evidenceRoot([row({
+      observations: "api: https://api.example.co.uk/data · rendered: https://www.other.co.uk/page"
+    })], GOOD_SYNTHESIS)
+  );
+
+  assert.equal(report.ok, true, report.problems.join("\n"));
+});
+
+test("normal-risk uncleared claims cannot appear in the verified section", async () => {
+  const report = await validate(
+    await evidenceRoot([row({ risk: "normal", status: "refuted" })], GOOD_SYNTHESIS)
+  );
+
+  assert.equal(report.ok, false);
+  assert.match(report.problems.join("\n"), /lists C1 as verified but the ledger says refuted/u);
+});
+
+test("hyphenated claim ids are valid and do not crash boundary matching", async () => {
+  const synthesis = GOOD_SYNTHESIS.replaceAll("C1", "SEC-1");
+  const report = await validate(
+    await evidenceRoot([row({ id: "SEC-1" })], synthesis, null, { index: "# Index\n- claim SEC-1" })
+  );
+
+  assert.deepEqual(report.problems, []);
+  assert.equal(report.ok, true);
+});
+
+test("prose outside Sources cannot masquerade as a numbered source definition", async () => {
+  const synthesis = GOOD_SYNTHESIS
+    .replace("[Source 1].", "[Source 5].")
+    .replace("## Contradictions\nNone.", "## Contradictions\nSource 5 contradicts the draft.");
+  const report = await validate(await evidenceRoot([row()], synthesis));
+
+  assert.equal(report.ok, false);
+  assert.match(report.problems.join("\n"), /no numbered entry: \[Source 5\]/u);
+});
+
+test("source definitions require the documented numbered bullet shape", async () => {
+  const synthesis = GOOD_SYNTHESIS.replace("- Source 1:", "- Source 1)");
+  const report = await validate(await evidenceRoot([row()], synthesis));
+
+  assert.equal(report.ok, false);
+  assert.match(report.problems.join("\n"), /no numbered entry: \[Source 1\]/u);
+});
+
+test("terminal ladder reasons require a structured reason code, not a keyword in prose", async () => {
+  const report = await validate(
+    await evidenceRoot([row()], GOOD_SYNTHESIS, [
+      blockedRow({ tiers: "api", reason: "the legal department was consulted" })
+    ])
+  );
+
+  assert.equal(report.ok, false);
+  assert.match(report.problems.join("\n"), /only 1\/4 ladder tiers tried and no terminal reason/u);
+});
+
+test("verified claim dates must exist on the calendar", async () => {
+  const report = await validate(
+    await evidenceRoot([row({ observed: "2026-13-45", "as-of": "2026-02-31" })], GOOD_SYNTHESIS)
+  );
+
+  assert.equal(report.ok, false);
+  assert.match(report.problems.join("\n"), /observed must be an ISO date/u);
+  assert.match(report.problems.join("\n"), /high-risk verified claim needs an ISO as-of date/u);
+});
+
+test("structured verified rows reject arbitrary ids absent from the ledger", async () => {
+  const synthesis = GOOD_SYNTHESIS.replace("- C1 | verified | ledger", "- SEC-9 | verified | ledger");
+  const report = await validate(await evidenceRoot([row()], synthesis));
+
+  assert.equal(report.ok, false);
+  assert.match(report.problems.join("\n"), /neither a ledger claim nor a present code-verification artifact/u);
+});
+
+test("structured code-verification rows require a present artifact", async () => {
+  const synthesis = GOOD_SYNTHESIS.replace("- C1 | verified | ledger", "- V-runtime | CONFIRMED | verify-runtime.md");
+  const root = await evidenceRoot([row()], synthesis);
+  let report = await validate(root);
+  assert.match(report.problems.join("\n"), /neither a ledger claim nor a present code-verification artifact/u);
+
+  await writeFile(join(root, "verify-runtime.md"), "# Verification\nCONFIRMED\n", "utf8");
+  report = await validate(root);
+  assert.equal(report.ok, true, report.problems.join("\n"));
+});
+
+test("verified-claim bullets must use the structured three-field shape", async () => {
+  const synthesis = GOOD_SYNTHESIS.replace("- C1 | verified | ledger", "- C1 is verified");
+  const report = await validate(await evidenceRoot([row()], synthesis));
+
+  assert.equal(report.ok, false);
+  assert.match(report.problems.join("\n"), /unstructured verified-claim row/u);
 });
 
 test("the validator runs as a CLI and exits non-zero on a failing session", async () => {
