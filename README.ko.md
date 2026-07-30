@@ -125,7 +125,7 @@ Superloopy는 하나의 repo에서 **Codex**와 **Claude Code** 양쪽에 설치
 
 ### Codex
 
-Node.js 20 이상과 `codex plugin add`를 지원하는 Codex CLI 0.131.0 이상이 필요합니다. Superloopy는 의존성이 없습니다. 런타임 의존성 0, Node만 있으면 됩니다.
+Node.js 22 이상과 `codex plugin add`를 지원하는 Codex CLI 0.131.0 이상이 필요합니다. Superloopy는 의존성이 없습니다. 런타임 의존성 0, Node만 있으면 됩니다.
 
 ```
 codex plugin marketplace add https://github.com/beefiker/superloopy
@@ -138,7 +138,7 @@ checkout에서 설치한다면 `node src/cli.js install --json`을 실행하세�
 
 ### Claude Code
 
-Node.js 20 이상이 필요합니다. 같은 repo에서:
+Node.js 22 이상이 필요합니다. 같은 repo에서:
 
 ```
 /plugin marketplace add beefiker/superloopy
