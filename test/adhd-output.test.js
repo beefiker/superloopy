@@ -145,3 +145,13 @@ test("overlay loader fails closed on missing or malformed skill content", async 
   assert.equal(missing, "");
   assert.equal(malformed, "");
 });
+
+test("default loader reads the packaged skill for a qualifying brief", async () => {
+  const overlay = await loadAdhdFriendlyOutputOverlay(
+    "I have ADHD; keep this one step at a time"
+  );
+
+  assert.match(overlay, /^ADHD-friendly output overlay$/m);
+  assert.match(overlay, /^# i-have-adhd$/m);
+  assert.match(overlay, /### 1\. Lead with the next action/);
+});
