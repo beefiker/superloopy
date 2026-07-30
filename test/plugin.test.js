@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import test from "node:test";
@@ -454,6 +455,16 @@ test("plugin packages explicit-only i-have-adhd with attribution and Superloopy 
   assert.match(license, /Copyright \(c\) 2026 Ayoub Ghriss/);
   assert.match(notice, /07684c4ab625dd7d1ea6e99e065f60bc0ac6a1ba/);
   assert.match(notice, /https:\/\/github\.com\/ayghri\/i-have-adhd/);
+});
+
+test("packaged i-have-adhd preserves the pinned upstream rules exactly", async () => {
+  const skill = await readFile("skills/i-have-adhd/SKILL.md", "utf8");
+  const rulesStart = skill.indexOf("## Rules\n");
+  assert.notEqual(rulesStart, -1, "missing upstream Rules section");
+
+  const rulesDigest = createHash("sha256").update(skill.slice(rulesStart)).digest("hex");
+  // ayghri/i-have-adhd revision 07684c4ab625dd7d1ea6e99e065f60bc0ac6a1ba.
+  assert.equal(rulesDigest, "47188ef5a02412d8f5fd06d93505a6425976bd27ac83dc8edbc76de54c5edcbd");
 });
 
 test("plugin slides skill inherits frontend gallery, anti-slop core, motion floor, and evidence lane", async () => {

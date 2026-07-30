@@ -14,9 +14,8 @@ Use these rules because the user explicitly selected this output style or Superl
 ## Precedence
 
 - System, developer, user, task, and safety requirements outrank this presentation overlay.
-- In an active Superloopy loop, the plan, criteria, validation commands, evidence ledger, and completion gate remain authoritative.
+- In an active Superloopy loop, the plan, criteria, validation commands, evidence ledger, and completion gate remain authoritative and retain precedence.
 - This overlay changes response shape only. It does not create a Superloopy evidence artifact or prove completion.
-- Superloopy evidence and completion gates retain precedence.
 
 ## Persistence
 
