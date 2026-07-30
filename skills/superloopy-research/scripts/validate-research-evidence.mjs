@@ -21,50 +21,19 @@ const LEDGER_COLUMNS = [
 ];
 const STATUSES = new Set(["verified", "unresolved", "refuted", "deferred"]);
 const RISKS = new Set(["high", "normal"]);
-// Surface labels are a closed vocabulary so that "two independent surfaces" is checkable.
-// A free-text label lets one observation be relabelled into two.
-export const SURFACES = new Set([
-  "rendered",
-  "api",
-  "repo",
-  "registry",
-  "standard",
-  "filing",
-  "legal",
-  "dataset",
-  "survey",
-  "press",
-  "community",
-  "runtime"
-]);
-// Surfaces produced by the system or authority itself rather than by commentary about it.
-// A high-risk claim standing only on press and community text has no primary footing.
-export const PRIMARY_SURFACES = new Set([
-  "api",
-  "repo",
-  "registry",
-  "standard",
-  "filing",
-  "legal",
-  "dataset",
-  "runtime"
-]);
+// Closed labels make “two independent surfaces” checkable instead of relabelling one observation.
+export const SURFACES = new Set(["rendered", "api", "repo", "registry", "standard", "filing", "legal", "dataset", "survey", "press", "community", "runtime"]);
+// System/authority surfaces give high-risk claims primary footing beyond commentary.
+export const PRIMARY_SURFACES = new Set(["api", "repo", "registry", "standard", "filing", "legal", "dataset", "runtime"]);
 const BLOCKED_COLUMNS = ["url", "tiers", "reason", "substitute", "status"];
 const BLOCKED_STATUSES = new Set(["substituted", "gap", "open"]);
 const TRUTH_COLUMNS = ["id", "expected", "source", "observed", "status", "claim"];
 const TRUTH_STATUSES = new Set(["holds", "violated", "unknown"]);
 const LADDER_TIERS = new Set(["api", "plain", "tls", "headless"]);
-// Reasons that make later ladder tiers pointless: no client trick defeats a login or a takedown.
 const TERMINAL_REASONS = new Set(["auth-required", "paywall", "removed", "legal"]);
+const COUNTRY_SECOND_LEVEL = new Set(["ac", "co", "com", "edu", "gov", "net", "org"]);
 const EMPTY_VALUES = new Set(["", "-", "none", "n/a", "na", "tbd", "unknown"]);
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
-const REQUIRED_SYNTHESIS_SECTIONS = [
-  "Executive answer",
-  "Sources",
-  "Verified claims",
-  "Contradictions",
-  "Gaps"
-];
+const REQUIRED_SYNTHESIS_SECTIONS = ["Executive answer", "Sources", "Verified claims", "Contradictions", "Gaps"];
 
 const args = parseArgs(process.argv.slice(2));
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -99,8 +68,9 @@ export async function validate(root) {
   problems.push(...checkRows(ledger.rows));
   problems.push(...checkDependencies(ledger.rows));
 
+  const rootFiles = await listRootFiles(root);
   const synthesisText = await readOptional(join(root, "SYNTHESIS.md"));
-  const synthesis = synthesisText === null ? null : checkSynthesis(synthesisText, ledger.rows);
+  const synthesis = synthesisText === null ? null : checkSynthesis(synthesisText, ledger.rows, rootFiles);
   if (synthesis === null) {
     problems.push("Missing SYNTHESIS.md: research is not complete without the cited deliverable.");
   } else {
@@ -124,7 +94,7 @@ export async function validate(root) {
   }
 
   const indexText = await readOptional(join(root, "INDEX.md"));
-  problems.push(...checkIndex(indexText, root, await listRootFiles(root), ledger.rows));
+  problems.push(...checkIndex(indexText, root, rootFiles, ledger.rows));
 
   return {
     ok: problems.length === 0,
@@ -283,7 +253,7 @@ function checkBlockedSources(rows, synthesisText) {
     if (unknownTiers.length > 0) {
       problems.push(`${url}: unknown ladder tier(s) ${unknownTiers.join(", ")}; use ${[...LADDER_TIERS].join(", ")}.`);
     }
-    const terminal = tokens(row.reason).some((word) => TERMINAL_REASONS.has(word));
+    const terminal = isTerminalReason(row.reason);
     if (!terminal && tiers.length < LADDER_TIERS.size) {
       problems.push(
         `${url}: only ${tiers.length}/${LADDER_TIERS.size} ladder tiers tried and no terminal reason (${[...TERMINAL_REASONS].join(", ")}) — not exhausted.`
@@ -357,6 +327,9 @@ function checkRows(rows) {
         `${id}: unknown surface label(s) ${unknown.join(", ")}; use one of ${[...SURFACES].join(", ")}.`
       );
     }
+    if (row.risk === "high" && observationDomains(row.observations).length < 2) {
+      problems.push(`${id}: a high-risk verified claim needs observations from 2+ independent domains.`);
+    }
     if (row.risk === "high" && !surfaces.some((surface) => PRIMARY_SURFACES.has(surface))) {
       problems.push(
         `${id}: a high-risk verified claim needs at least one primary surface (${[...PRIMARY_SURFACES].join(", ")}), found ${surfaces.join(", ") || "none"}.`
@@ -364,8 +337,8 @@ function checkRows(rows) {
     }
     if (isBlank(row.counter)) problems.push(`${id}: verified without a counter-search result.`);
     if (isBlank(row.primary)) problems.push(`${id}: verified without a primary source.`);
-    if (!ISO_DATE.test(row.observed)) problems.push(`${id}: observed must be an ISO date, found "${row.observed}".`);
-    if (row.risk === "high" && !ISO_DATE.test(row["as-of"])) {
+    if (!isIsoDate(row.observed)) problems.push(`${id}: observed must be an ISO date, found "${row.observed}".`);
+    if (row.risk === "high" && !isIsoDate(row["as-of"])) {
       problems.push(`${id}: a high-risk verified claim needs an ISO as-of date, found "${row["as-of"]}".`);
     }
   }
@@ -395,6 +368,18 @@ export function observationSurfaces(value) {
     labels.add(label);
   }
   return [...labels];
+}
+
+function observationDomains(value) {
+  const domains = new Set();
+  for (const match of (value ?? "").matchAll(/https?:\/\/[^\s·|;]+/gu)) {
+    let hostname;
+    try { hostname = new URL(match[0]).hostname; } catch { continue; }
+    const parts = hostname.replace(/^www\./u, "").split(".");
+    const width = parts.at(-1)?.length === 2 && COUNTRY_SECOND_LEVEL.has(parts.at(-2)) ? 3 : 2;
+    if (parts.length >= width) domains.add(parts.slice(-width).join("."));
+  }
+  return [...domains];
 }
 
 function checkDependencies(rows) {
@@ -445,14 +430,14 @@ function findCycles(rows) {
   return problems;
 }
 
-function checkSynthesis(text, rows) {
+function checkSynthesis(text, rows, rootFiles) {
   const problems = [];
   for (const section of REQUIRED_SYNTHESIS_SECTIONS) {
     if (!new RegExp(`^##\\s+${section}`, "mu").test(text)) problems.push(`SYNTHESIS.md missing "## ${section}" section.`);
   }
 
   const sources = new Set();
-  for (const match of text.matchAll(/^\s*(?:[-*]\s*)?\[?Source\s+(\d+)\]?[.:)]?\s+\S/gimu)) {
+  for (const match of section(text, "Sources").matchAll(/^\s*[-*]\s+Source\s+(\d+):\s+\S/gimu)) {
     sources.add(Number(match[1]));
   }
   const citations = new Set();
@@ -466,17 +451,27 @@ function checkSynthesis(text, rows) {
   // Only cleared rows may be asserted: an id in the deliverable that the ledger did not verify
   // means the gate was bypassed rather than passed.
   const verified = new Set(rows.filter((row) => row.status === "verified").map((row) => row.id));
-  const blocked = rows.filter((row) => row.status !== "verified" && row.risk === "high");
+  const byId = new Map(rows.map((row) => [row.id, row]));
   const verifiedSection = section(text, "Verified claims");
-  for (const row of blocked) {
+  for (const row of rows.filter((row) => row.status !== "verified")) {
     if (new RegExp(`(^|[^A-Za-z0-9._-])${escapeId(row.id)}([^A-Za-z0-9._-]|$)`, "u").test(verifiedSection)) {
       problems.push(`SYNTHESIS.md lists ${row.id} as verified but the ledger says ${row.status}.`);
     }
   }
-  for (const match of verifiedSection.matchAll(/(^|[^A-Za-z0-9._-])(C\d+)(?=[^A-Za-z0-9._-]|$)/gu)) {
-    const id = match[2];
-    if (!verified.has(id) && !rows.some((row) => row.id === id)) {
-      problems.push(`SYNTHESIS.md verified claims reference ${id}, which is not in the ledger.`);
+  for (const line of verifiedSection.split("\n").filter((line) => /^\s*[-*]\s+/u.test(line))) {
+    if (!/^\s*[-*]\s+[A-Za-z0-9][A-Za-z0-9._-]*\s*\|\s*[^|\n]+\|\s*[^|\n]+\s*$/u.test(line)) problems.push(`SYNTHESIS.md has an unstructured verified-claim row: ${line.trim()}`);
+  }
+  for (const match of verifiedSection.matchAll(/^\s*[-*]\s+([A-Za-z0-9][A-Za-z0-9._-]*)\s*\|\s*([^|\n]+)\|\s*([^|\n]+)\s*$/gmu)) {
+    const [, id, rawVerdict, rawArtifact] = match;
+    if (byId.has(id)) {
+      if (!verified.has(id)) problems.push(`SYNTHESIS.md lists ${id} as verified but the ledger says ${byId.get(id).status}.`);
+      continue;
+    }
+    const verdict = rawVerdict.trim().toLowerCase();
+    const artifact = rawArtifact.trim();
+    const isCodeClaim = ["confirmed", "refuted", "partial"].includes(verdict) && /^verify-[A-Za-z0-9._-]+\.md$/u.test(artifact);
+    if (!isCodeClaim || !rootFiles.includes(artifact)) {
+      problems.push(`SYNTHESIS.md verified claims reference ${id}, which is neither a ledger claim nor a present code-verification artifact.`);
     }
   }
   return { problems, sources: sources.size, citations: citations.size };
@@ -492,7 +487,20 @@ function section(text, heading) {
 }
 
 function escapeId(id) {
-  return id.replace(/[.*+?^${}()|[\]\\-]/gu, "\\$&");
+  return id.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+function isIsoDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+}
+
+function isTerminalReason(value) {
+  const reason = (value ?? "").trim().toLowerCase();
+  if (TERMINAL_REASONS.has(reason)) return true;
+  const separator = reason.indexOf(":");
+  return separator > 0 && TERMINAL_REASONS.has(reason.slice(0, separator).trim()) && reason.slice(separator + 1).trim() !== "";
 }
 
 function cells(line) {
