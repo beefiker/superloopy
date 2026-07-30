@@ -457,14 +457,27 @@ test("plugin packages explicit-only i-have-adhd with attribution and Superloopy 
   assert.match(notice, /https:\/\/github\.com\/ayghri\/i-have-adhd/);
 });
 
-test("packaged i-have-adhd preserves the pinned upstream rules exactly", async () => {
+test("packaged i-have-adhd preserves pinned upstream rules across checkout line endings", async () => {
   const skill = await readFile("skills/i-have-adhd/SKILL.md", "utf8");
-  const rulesStart = skill.indexOf("## Rules\n");
-  assert.notEqual(rulesStart, -1, "missing upstream Rules section");
-
-  const rulesDigest = createHash("sha256").update(skill.slice(rulesStart)).digest("hex");
-  // ayghri/i-have-adhd revision 07684c4ab625dd7d1ea6e99e065f60bc0ac6a1ba.
-  assert.equal(rulesDigest, "47188ef5a02412d8f5fd06d93505a6425976bd27ac83dc8edbc76de54c5edcbd");
+  const lfSkill = skill.replace(/\r\n?/gu, "\n");
+  const checkoutFixtures = [
+    ["LF", lfSkill],
+    ["CRLF", lfSkill.replace(/\n/gu, "\r\n")],
+    ["CR", lfSkill.replace(/\n/gu, "\r")]
+  ];
+  // SHA-256 of normalized LF bytes from ayghri/i-have-adhd revision
+  // 07684c4ab625dd7d1ea6e99e065f60bc0ac6a1ba.
+  for (const [checkout, checkoutSkill] of checkoutFixtures) {
+    const normalizedSkill = checkoutSkill.replace(/\r\n?/gu, "\n");
+    const rulesStart = normalizedSkill.indexOf("## Rules\n");
+    assert.notEqual(rulesStart, -1, `${checkout}: missing upstream Rules section`);
+    const rulesDigest = createHash("sha256").update(normalizedSkill.slice(rulesStart)).digest("hex");
+    assert.equal(
+      rulesDigest,
+      "47188ef5a02412d8f5fd06d93505a6425976bd27ac83dc8edbc76de54c5edcbd",
+      `${checkout}: pinned upstream rules digest`
+    );
+  }
 });
 
 test("plugin slides skill inherits frontend gallery, anti-slop core, motion floor, and evidence lane", async () => {
