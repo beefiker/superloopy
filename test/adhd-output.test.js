@@ -32,6 +32,27 @@ test("ADHD-friendly cue classifier keeps direct requests active alongside engine
   }
 });
 
+test("ADHD-friendly cue classifier accepts polite and later-clause support requests", () => {
+  for (const brief of [
+    "Please make the response ADHD-friendly and easy to scan",
+    "For this migration, I have ADHD; keep the steps short",
+    "Could you give me an ADHD-friendly answer?",
+    "로그인 버그를 고쳐줘. 집중이 안 돼요. 한 단계씩 알려줘"
+  ]) {
+    assert.equal(hasAdhdFriendlyOutputCue(brief), true, brief);
+  }
+});
+
+test("ADHD-friendly cue classifier accepts direct presentation requests", () => {
+  for (const brief of [
+    "Do not bury the next action",
+    "Format the output action-first",
+    "Make the answer easy to scan"
+  ]) {
+    assert.equal(hasAdhdFriendlyOutputCue(brief), true, brief);
+  }
+});
+
 test("ADHD-friendly cue classifier rejects diagnosis-by-writing and domain mentions", () => {
   for (const brief of [
     "add the login route",
@@ -44,6 +65,19 @@ test("ADHD-friendly cue classifier rejects diagnosis-by-writing and domain menti
     "ADHD라는 용어를 도움말에 추가해줘",
     "stop adhd mode",
     "normal mode"
+  ]) {
+    assert.equal(hasAdhdFriendlyOutputCue(brief), false, brief);
+  }
+});
+
+test("ADHD-friendly cue classifier rejects cue-like UI and domain statements", () => {
+  for (const brief of [
+    "I have ADHD research notes to summarize",
+    "I have ADHD-friendly copy to revise",
+    "I cannot focus the input field after the modal opens",
+    "Short numbered steps are shown in the wizard",
+    "Action-first rendering is broken in the settings page",
+    "Format action-first rendering in the settings page"
   ]) {
     assert.equal(hasAdhdFriendlyOutputCue(brief), false, brief);
   }
