@@ -47,7 +47,10 @@ test("ADHD-friendly cue classifier accepts direct presentation requests", () => 
   for (const brief of [
     "Do not bury the next action",
     "Format the output action-first",
-    "Make the answer easy to scan"
+    "Make the answer easy to scan",
+    "Could you break this down into short numbered steps?",
+    "Could you please break this down into short numbered steps?",
+    "Can you keep the answer easy to scan?"
   ]) {
     assert.equal(hasAdhdFriendlyOutputCue(brief), true, brief);
   }
@@ -77,7 +80,9 @@ test("ADHD-friendly cue classifier rejects cue-like UI and domain statements", (
     "I cannot focus the input field after the modal opens",
     "Short numbered steps are shown in the wizard",
     "Action-first rendering is broken in the settings page",
-    "Format action-first rendering in the settings page"
+    "Format action-first rendering in the settings page",
+    "Write a React component that shows short numbered steps in the wizard",
+    "Write a test for the response action-first option"
   ]) {
     assert.equal(hasAdhdFriendlyOutputCue(brief), false, brief);
   }
