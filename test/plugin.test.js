@@ -104,6 +104,19 @@ test("package metadata names author and GitHub topics", async () => {
   }
 });
 
+test("package metadata, local NVM selection, and CI share the maintained Node floor", async () => {
+  const pkg = JSON.parse(await readFile("package.json", "utf8"));
+  const lock = JSON.parse(await readFile("package-lock.json", "utf8"));
+  const nvmrc = (await readFile(".nvmrc", "utf8")).trim();
+  const workflow = await readFile(".github/workflows/test.yml", "utf8");
+
+  assert.equal(pkg.engines.node, ">=22.0.0");
+  assert.equal(lock.packages[""].engines.node, ">=22.0.0");
+  assert.equal(nvmrc, "22");
+  assert.match(workflow, /node: \["22", "24"\]/u);
+  assert.doesNotMatch(workflow, /node: \[[^\]]*"20"/u);
+});
+
 test("package ignore rules exclude Claude runtime lock state", async () => {
   const ignore = await readFile(".gitignore", "utf8");
 

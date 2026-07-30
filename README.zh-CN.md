@@ -113,7 +113,7 @@ Superloopy 可以从同一个仓库同时安装到 **Codex** 和 **Claude Code**
 
 ### Codex
 
-需要 Node.js ≥ 20，以及支持 `codex plugin add` 的 Codex CLI ≥ 0.131.0。Superloopy 没有依赖——零运行时依赖，只需要 Node。
+需要 Node.js ≥ 22，以及支持 `codex plugin add` 的 Codex CLI ≥ 0.131.0。Superloopy 没有依赖——零运行时依赖，只需要 Node。
 
 ```
 codex plugin marketplace add https://github.com/beefiker/superloopy
@@ -126,7 +126,7 @@ codex plugin add superloopy@beefiker
 
 ### Claude Code
 
-需要 Node.js ≥ 20。从同一个仓库：
+需要 Node.js ≥ 22。从同一个仓库：
 
 ```
 /plugin marketplace add beefiker/superloopy

@@ -113,7 +113,7 @@ Superloopy se instala tanto en **Codex** como en **Claude Code** desde un mismo 
 
 ### Codex
 
-Requiere Node.js ≥ 20 y Codex CLI ≥ 0.131.0 para `codex plugin add`. Superloopy no tiene dependencias: cero dependencias de runtime, solo Node.
+Requiere Node.js ≥ 22 y Codex CLI ≥ 0.131.0 para `codex plugin add`. Superloopy no tiene dependencias: cero dependencias de runtime, solo Node.
 
 ```
 codex plugin marketplace add https://github.com/beefiker/superloopy
@@ -126,7 +126,7 @@ Reinicia Codex después de instalar el plugin. Si Codex te pide revisar hooks, a
 
 ### Claude Code
 
-Requiere Node.js ≥ 20. Desde el mismo repo:
+Requiere Node.js ≥ 22. Desde el mismo repo:
 
 ```
 /plugin marketplace add beefiker/superloopy

@@ -135,7 +135,7 @@ For agent-driven installs such as `install https://github.com/beefiker/superloop
 
 ### Codex
 
-Needs Node.js ≥ 20 and Codex CLI ≥ 0.131.0 for `codex plugin add`. Superloopy is dependency-free — zero runtime dependencies, just Node.
+Needs Node.js ≥ 22 and Codex CLI ≥ 0.131.0 for `codex plugin add`. Superloopy is dependency-free — zero runtime dependencies, just Node.
 
 ```
 codex plugin marketplace add https://github.com/beefiker/superloopy
@@ -148,7 +148,7 @@ Installing from a checkout instead? Run `node src/cli.js install --json`.
 
 ### Claude Code
 
-Needs Node.js ≥ 20. From the same repo:
+Needs Node.js ≥ 22. From the same repo:
 
 ```
 /plugin marketplace add beefiker/superloopy
