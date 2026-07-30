@@ -241,7 +241,10 @@ async function checkReviewability(cwd) {
       maxLines: MAX_REVIEWABLE_LINES,
       scanned: measured.length,
       oversized,
-      largest: measured.toSorted((left, right) => right.lines - left.lines)[0] ?? null
+      // Sorting a copy rather than calling toSorted keeps this check off a runtime-version floor:
+      // checkReviewability catches its own errors, so a missing modern method would surface as a
+      // failed repository check naming an internal variable instead of naming the runtime.
+      largest: [...measured].sort((left, right) => right.lines - left.lines)[0] ?? null
     };
   } catch (error) {
     return fail(error instanceof Error ? error.message : String(error));
