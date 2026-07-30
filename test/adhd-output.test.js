@@ -111,7 +111,11 @@ test("ADHD-friendly cue classifier rejects cue-like UI and domain statements", (
     "Action-first rendering is broken in the settings page",
     "Format action-first rendering in the settings page",
     "Write a React component that shows short numbered steps in the wizard",
-    "Write a test for the response action-first option"
+    "Write a test for the response action-first option",
+    "Add one step at a time copy to the settings page",
+    "Implement the one step at a time setting",
+    "Update the one step at a time label",
+    "Build a one step at a time onboarding option"
   ]) {
     assert.equal(hasAdhdFriendlyOutputCue(brief), false, brief);
   }
