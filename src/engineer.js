@@ -81,14 +81,14 @@ export async function runEngineerTriggerHook(payload, deps) {
   let status;
   try {
     status = await statusForPayload(payload);
+    if (status.binding?.resumable === false) {
+      return formatAdditionalContext("UserPromptSubmit", renderBindingBlocked(status));
+    }
+    if (status.summary.aggregateComplete) {
+      return formatAdditionalContext("UserPromptSubmit", renderComplete(status, interop));
+    }
   } catch {
     return formatAdditionalContext("UserPromptSubmit", renderStart(payload, orchestrate, interop, await loadOverlayForInvocation()));
-  }
-  if (status.binding?.resumable === false) {
-    return formatAdditionalContext("UserPromptSubmit", renderBindingBlocked(status));
-  }
-  if (status.summary.aggregateComplete) {
-    return formatAdditionalContext("UserPromptSubmit", renderComplete(status, interop));
   }
   const adhdOverlay = await loadOverlayForInvocation();
   try {
