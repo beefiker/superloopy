@@ -221,8 +221,9 @@ test("README lists the packaged Superloopy skills and their jobs", async () => {
     assert.match(content, /\/superloopy:superloopy-frontend/);
     assert.match(content, /\$superloopy:superloopy-research/);
     assert.match(content, /\/superloopy:superloopy-research/);
+    for (const pattern of [/i-have-adhd/, /\$superloopy:i-have-adhd/, /\/superloopy:i-have-adhd/, /loopy|루피/u]) assert.match(content, pattern);
   }
-  assert.match(await readFile("README.md", "utf8"), /Guidance aliases do not mutate state/);
+  const english = await readFile("README.md", "utf8"); assert.match(english, /writing style alone never activates/i); assert.match(english, /does not create.*evidence artifact/i); assert.match(english, /Guidance aliases do not mutate state/);
   assert.match(await readFile("README.ko.md", "utf8"), /guidance alias는 상태를 바꾸지 않습니다/);
 });
 test("frontend discovery rows publish explicit screen-based scope and claim-shaped evidence", async () => {
