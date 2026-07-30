@@ -17,11 +17,24 @@ const EXECUTION_SUPPORT_PATTERNS = [
   /\b(?:do\s+not|don't|don’t)\s+bury\s+(?:the\s+)?(?:answer|next\s+action)\b/iu,
   /(?:집중이\s*안\s*(?:돼|돼요|됩니다)|시작하기\s*어려|너무\s*막막|한\s*단계씩|짧은\s*단계|핵심부터|행동부터)/u
 ];
+const NON_SELF_SELECTED_CONTEXT_PATTERNS = [
+  /\b(?:add|append|insert|include|remove|replace|edit|change|translate|locali[sz]e|quote|mention|use)\b.{0,80}\b(?:phrase|text|copy|string|label|help|docs?|documentation|page|settings|modal|tooltip)\b/iu,
+  /\b(?:document|explain|describe|discuss|research|analy[sz]e|compare)\b.{0,100}\b(?:users?|people|customers?|adhd|focus|attention)\b/iu,
+  /\b(?:users?|people|customers?|they|he|she|someone)\b.{0,40}\b(?:cannot|can't|can’t|struggle\s+to)\s+(?:focus|start)\b/iu,
+  /(?:["'“‘]).{0,120}(?:\b(?:i\s+have|i\s+cannot|i\s+can't|i\s+can’t)\b|ADHD[-\s]?friendly|집중이\s*안)/iu,
+  /(?:사용자|유저|고객|사람).{0,40}(?:집중이\s*안|시작하기\s*어려|너무\s*막막)/u,
+  /(?:도움말|문구|문장|텍스트|카피).{0,80}(?:ADHD|집중이\s*안)/u,
+  /(?:ADHD\s*친화적|집중이\s*안).{0,80}(?:문구|문장|텍스트|카피|도움말)/u
+];
 
 export function hasAdhdFriendlyOutputCue(brief) {
   if (typeof brief !== "string") return false;
   const normalized = brief.replace(/\s+/gu, " ").trim();
-  if (normalized.length === 0 || STOP_PATTERN.test(normalized)) return false;
+  if (
+    normalized.length === 0
+    || STOP_PATTERN.test(normalized)
+    || NON_SELF_SELECTED_CONTEXT_PATTERNS.some((pattern) => pattern.test(normalized))
+  ) return false;
   return [...SELF_SELECTED_PATTERNS, ...EXECUTION_SUPPORT_PATTERNS]
     .some((pattern) => pattern.test(normalized));
 }
