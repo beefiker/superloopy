@@ -32,6 +32,15 @@ test("ADHD-friendly cue classifier keeps direct requests active alongside engine
   }
 });
 
+test("ADHD-friendly cue classifier accepts friction paired with presentation intent", () => {
+  const briefs = [
+    "너무 막막해요. 한 단계씩 로그인 기능을 추가해줘",
+    "I cannot focus; keep the migration action-first"
+  ];
+
+  assert.deepEqual(briefs.map(hasAdhdFriendlyOutputCue), [true, true]);
+});
+
 test("ADHD-friendly cue classifier accepts polite and later-clause support requests", () => {
   for (const brief of [
     "Please make the response ADHD-friendly and easy to scan",
