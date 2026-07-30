@@ -46,7 +46,7 @@ Superloopy はコマンド層を小さく保ちます。専門的な進め方は
 | --- | --- | --- |
 | `superloopy-loop` | 完全な loop は `loopy <task>` または `loopy team <task>` で始めます。`loopywork`、`lpy`、`$lpy` は guidance だけが必要なときに使います。 | 完全な loop は軽量な計画、次の行動、コマンドで検証した証拠、品質 gate、最終 evidence report を残します。Guidance alias は状態を変更しません。 |
 | `superloopy-doctor` | install、wrapper、plugin cache、hook/bootstrap、agent、Codex/Claude Code host wiring、stale version の問題を診断するとき。 | 読み取り専用の health report: wrapper/cache/version の証拠、失敗した check、承認後にだけ実行する正確な修復コマンド。 |
-| `superloopy-research` | Codex の `$superloopy:superloopy-research` または Claude Code の `/superloopy:superloopy-research` を明示的に呼び出すか、リサーチ作業を先頭の `loopy`/`루피`（例: `loopy research`）で始めたときのみ。単なる調査・検索・要約の依頼では起動しません。 | 調査軸、拡張 wave、claim ledger、検証メモ、引用付き synthesis artifact。 |
+| `superloopy-research` | Codex の `$superloopy:superloopy-research` または Claude Code の `/superloopy:superloopy-research` を明示的に呼び出すか、リサーチ作業を先頭の `loopy`/`루피`（例: `loopy research`）で始めたときのみ。単なる調査・検索・要約の依頼では起動しません。 | 調査軸、拡張 wave、取得ごとの判定、等級と時点付きの出典、コストを記録した claim ledger、検証メモ、引用付き synthesis artifact。 |
 | `superloopy-clone` | `loopy clone`、許可された Web サイトのクローン、再構築、移行、ピクセル単位の復元を求めるとき。 | ブラウザ取得、ページ構造、デザイントークン、アセット一覧、実装メモ、build 出力、visual QA 証拠。 |
 | `superloopy-frontend` | 対応範囲の画面ベースのアプリ UI（公開・認証済み・非公開/社内向け・インストール型 PWA/拡張機能を含むブラウザーホスト Web、ユーザージャーニーを備えたインタラクティブなデプロイ済みコンテンツ主導 Web（キャンペーン、出版、ランディング体験など）、デスクトップ、モバイル/タブレット、組み込み/ハイブリッドクライアント、カスタムレンダリング UI、Qt、混在ターゲット）の作業で Codex の `$superloopy:superloopy-frontend` または Claude Code の `/superloopy:superloopy-frontend` を明示的に呼び出すか、その作業を先頭の `loopy`/`루피` で始める場合だけ。単なる UI・プラットフォーム・フレームワーク用語では起動せず、TV、ウェアラブル、XR、自動車、ゲーム UI、TUI、静的なメディア/文書成果物、非 UI 作業は除外します。 | 1 つの共通 UX 契約にプラットフォーム/コンポジション経路を加えます。証拠は変更した主張に比例し、ブラウザー、ネイティブのターゲット/シェル、レンダラー、混在ターゲットの各所有者を独立して検証します。単独実行では実行単位の証跡を保持し、アクティブなループでは goal と criterion に関連付けます。 |
 | `humanize-korean` | 韓国語テキストの AI っぽさや翻訳調を抑え、事実を変えずに人が書いたように整えるとき。 | `final.md`、`summary.md`、`audit.json` を書き、Superloopy loop では `.superloopy/evidence/humanize-korean/` に証拠を残します。 |
@@ -113,7 +113,7 @@ Superloopy は 1 つの repo から **Codex** と **Claude Code** の両方に�
 
 ### Codex
 
-`codex plugin add` には Node.js 20 以上と Codex CLI 0.131.0 以上が必要です。Superloopy は依存のないパッケージです。ランタイム依存はゼロで、Node だけで動きます。
+`codex plugin add` には Node.js 22 以上と Codex CLI 0.131.0 以上が必要です。Superloopy は依存のないパッケージです。ランタイム依存はゼロで、Node だけで動きます。
 
 ```
 codex plugin marketplace add https://github.com/beefiker/superloopy
@@ -126,7 +126,7 @@ checkout からインストールする場合は `node src/cli.js install --json
 
 ### Claude Code
 
-Node.js 20 以上が必要です。同じ repo から:
+Node.js 22 以上が必要です。同じ repo から:
 
 ```
 /plugin marketplace add beefiker/superloopy

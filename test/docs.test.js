@@ -178,6 +178,7 @@ test("README locales are discoverable and do not point at removed PDF manuals", 
     assert.match(content, /codex plugin marketplace add https:\/\/github\.com\/beefiker\/superloopy/);
     assert.match(content, /codex plugin add superloopy@beefiker/);
     assert.match(content, /0\.131\.0/);
+    assert.match(content, /Node\.js(?:\s*≥|\s+)\s*22|Node\.js 22 (?:이상|以上)/u);
     assert.match(content, /codex plugin marketplace upgrade beefiker/);
     assert.match(content, /codex plugin remove superloopy@beefiker/);
     assert.match(content, /superloopy doctor/);

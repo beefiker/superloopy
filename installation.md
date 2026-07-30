@@ -16,7 +16,7 @@ Use the first matching path:
 2. If the current session is Claude Code or `claude` is the target, use the Claude Code flow.
 3. If the user only asked to inspect or test a checkout, use the local checkout flow.
 
-Prerequisite for all flows: Node.js >= 20.
+Prerequisite for all flows: Node.js >= 22.
 
 ## Codex Flow
 
@@ -113,4 +113,4 @@ Before saying the install is done, report:
 - Host installed: Codex, Claude Code, or local checkout.
 - Command path used: marketplace or checkout.
 - Verification result: `superloopy doctor --json`, `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`, or `claude plugin validate`.
-- Any blocker, such as missing Node.js >= 20, old Codex CLI, auth/login failure, hook approval needed, or missing `PATH` entry.
+- Any blocker, such as missing Node.js >= 22, old Codex CLI, auth/login failure, hook approval needed, or missing `PATH` entry.

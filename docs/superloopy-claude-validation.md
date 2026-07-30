@@ -12,7 +12,7 @@ Run it once on a real install and fill in the results table at the end.
 ```
 
 - Reload plugins (or restart Claude Code); approve hooks when prompted.
-- Expect: `superloopy` appears in `/plugin` (installed). Node.js ≥ 20 present.
+- Expect: `superloopy` appears in `/plugin` (installed). Node.js ≥ 22 present.
 
 ## 1. Components load
 
