@@ -8,6 +8,7 @@
 // injects the helpers it needs.
 
 import { detectSuperpowers } from "./interop.js";
+import { loadAdhdFriendlyOutputOverlay as loadDefaultAdhdOverlay } from "./adhd-output.js";
 
 // Invocation syntax is intentionally lexical, not semantic: an alias must be the first
 // complete token and end or be followed by whitespace, `:`, or `,`. Do not use `\b` here:
@@ -68,21 +69,36 @@ export function parseInvocation(prompt) {
 
 export async function runEngineerTriggerHook(payload, deps) {
   const { statusForPayload, guideForPayload, renderSuperloopyContext, formatAdditionalContext } = deps;
-  const { orchestrate } = parseInvocation(payload.prompt);
+  const { orchestrate, brief } = parseInvocation(payload.prompt);
+  const loadAdhdOverlay = deps.loadAdhdFriendlyOutputOverlay ?? loadDefaultAdhdOverlay;
+  const loadOverlayForInvocation = async () => (
+    typeof payload.prompt === "string" && ENGINEER_TRIGGER_PATTERN.test(payload.prompt)
+      ? await loadAdhdOverlay(brief)
+      : ""
+  );
   // Best-effort coexistence check; never throws, so compute it outside the try.
   const interop = detectSuperpowers();
+  let status;
   try {
-    const status = await statusForPayload(payload);
+    status = await statusForPayload(payload);
     if (status.binding?.resumable === false) {
       return formatAdditionalContext("UserPromptSubmit", renderBindingBlocked(status));
     }
     if (status.summary.aggregateComplete) {
       return formatAdditionalContext("UserPromptSubmit", renderComplete(status, interop));
     }
-    const guide = guideForPayload(payload, status.plan);
-    return formatAdditionalContext("UserPromptSubmit", renderResume(renderSuperloopyContext(status, guide), orchestrate, interop));
   } catch {
-    return formatAdditionalContext("UserPromptSubmit", renderStart(payload, orchestrate, interop));
+    return formatAdditionalContext("UserPromptSubmit", renderStart(payload, orchestrate, interop, await loadOverlayForInvocation()));
+  }
+  const adhdOverlay = await loadOverlayForInvocation();
+  try {
+    const guide = guideForPayload(payload, status.plan);
+    return formatAdditionalContext(
+      "UserPromptSubmit",
+      renderResume(renderSuperloopyContext(status, guide), orchestrate, interop, adhdOverlay)
+    );
+  } catch {
+    return formatAdditionalContext("UserPromptSubmit", renderStart(payload, orchestrate, interop, adhdOverlay));
   }
 }
 
@@ -97,11 +113,11 @@ function renderBindingBlocked(status) {
   ].join("\n");
 }
 
-function renderStart(payload, orchestrate, interop) {
+function renderStart(payload, orchestrate, interop, adhdOverlay) {
   const { brief } = parseInvocation(payload.prompt);
   const cli = superloopyCommand();
   if (brief.length === 0) {
-    return [
+    return withAdhdOverlay([
       HEADER,
       "",
       orchestrate
@@ -115,9 +131,9 @@ function renderStart(payload, orchestrate, interop) {
       `- Preflight \`${cli} loop check\`, then \`${cli} loop finish --evidence "<summary>" --artifact .superloopy/evidence/gate.json --json\`.`,
       ...interopBlock(interop),
       ...(orchestrate ? ["", ...orchestrationLines(interop)] : [])
-    ].join("\n");
+    ], adhdOverlay);
   }
-  return [
+  return withAdhdOverlay([
     HEADER,
     "",
     orchestrate
@@ -134,11 +150,11 @@ function renderStart(payload, orchestrate, interop) {
     ...interopBlock(interop),
     "",
     ...(orchestrate ? orchestrationLines(interop) : [baselineDelegationLine()])
-  ].join("\n");
+  ], adhdOverlay);
 }
 
-function renderResume(context, orchestrate, interop) {
-  return [
+function renderResume(context, orchestrate, interop, adhdOverlay) {
+  return withAdhdOverlay([
     HEADER,
     "",
     "A loop is already in progress. Resume as the loop engineer and run the next action yourself; do not start a second plan or ask the user to run Superloopy commands.",
@@ -148,6 +164,13 @@ function renderResume(context, orchestrate, interop) {
       : []),
     "",
     context
+  ], adhdOverlay);
+}
+
+function withAdhdOverlay(lines, adhdOverlay) {
+  return [
+    ...lines,
+    ...(adhdOverlay.length === 0 ? [] : ["", adhdOverlay])
   ].join("\n");
 }
 

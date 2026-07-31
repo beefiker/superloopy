@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 const REQUIRED_SKILLS = [
   "humanize-korean",
+  "i-have-adhd",
   "superloopy-clone",
   "superloopy-doctor",
   "superloopy-frontend",
