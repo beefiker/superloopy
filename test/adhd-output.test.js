@@ -85,6 +85,24 @@ test("ADHD-friendly cue classifier accepts direct presentation requests", () => 
   }
 });
 
+test("ADHD-friendly cue classifier accepts direct step-by-step imperatives", () => {
+  for (const brief of [
+    "keep this one step at a time while you migrate auth",
+    "Please provide short numbered steps"
+  ]) {
+    assert.equal(hasAdhdFriendlyOutputCue(brief), true, brief);
+  }
+});
+
+test("ADHD-friendly cue classifier treats stop phrases as commands only", () => {
+  for (const brief of [
+    "add a normal mode toggle, and make the answer easy to scan",
+    "quote \"stop adhd mode\" in docs, and make the answer easy to scan"
+  ]) {
+    assert.equal(hasAdhdFriendlyOutputCue(brief), true, brief);
+  }
+});
+
 test("ADHD-friendly cue classifier rejects diagnosis-by-writing and domain mentions", () => {
   for (const brief of [
     "add the login route",
@@ -132,6 +150,8 @@ test("ADHD-friendly cue classifier rejects quoted, copy-editing, and third-party
     "도움말에 ADHD 친화적으로 작성해줘라는 문구를 추가해줘",
     "Review the copy that says I have ADHD",
     "A user wrote I have ADHD and needs assistance",
+    "A user says, I have ADHD. Add an appropriate help message",
+    "Our persona says. I have ADHD. Revise the onboarding copy",
     "저는 ADHD 연구자입니다. 연구 결과를 요약해줘"
   ]) {
     assert.equal(hasAdhdFriendlyOutputCue(brief), false, brief);
