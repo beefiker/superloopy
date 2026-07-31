@@ -5,7 +5,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { hasEngineerTrigger, hasTeamTrigger, parseInvocation } from "../src/engineer.js";
+import {
+  hasEngineerTrigger,
+  hasTeamTrigger,
+  parseInvocation,
+  runEngineerTriggerHook
+} from "../src/engineer.js";
 import { runUserPromptSubmitHook } from "../src/hooks.js";
 import { createLoop } from "../src/loop.js";
 
@@ -275,4 +280,255 @@ test("Korean 팀/크루 escalate the alias to crew mode, but 팀워크 stays a b
   assert.equal(hasTeamTrigger("루피 팀워크 페이지 만들어"), false); // 팀워크 != 팀
   assert.equal(hasTeamTrigger("루피 로그인 고쳐줘"), false);
   assert.deepEqual(parseInvocation("루피 팀 마이그레이션"), { orchestrate: true, brief: "마이그레이션" });
+});
+
+test("loopy hook injects ADHD-friendly output only for qualifying cleaned briefs", async () => {
+  for (const prompt of [
+    "loopy I have ADHD; add login one step at a time",
+    "루피 너무 막막해요. 한 단계씩 로그인 기능을 추가해줘",
+    "loopy team I cannot focus; keep the migration action-first"
+  ]) {
+    const repo = await tempRepo();
+    const output = await runUserPromptSubmitHook({
+      hook_event_name: "UserPromptSubmit",
+      cwd: repo,
+      prompt
+    });
+    const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+    assert.match(context, /Superloopy loop engineer/);
+    assert.match(context, /^ADHD-friendly output overlay$/m);
+    assert.match(context, /never infer or assert.*diagnos/is);
+    assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
+  }
+});
+
+test("loopy hook leaves ordinary tasks and domain discussion on normal output", async () => {
+  for (const prompt of [
+    "loopy add proof-backed login",
+    "loopy add ADHD accessibility copy to settings",
+    "loopy fix the focus ring",
+    "loopy URGENT!!! ship auth NOW",
+    "loopy stop adhd mode",
+    "loopy normal mode"
+  ]) {
+    const repo = await tempRepo();
+    const output = await runUserPromptSubmitHook({
+      hook_event_name: "UserPromptSubmit",
+      cwd: repo,
+      prompt
+    });
+    const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+    assert.match(context, /Superloopy loop engineer/);
+    assert.doesNotMatch(context, /ADHD-friendly output overlay/);
+  }
+});
+
+test("non-loopy ADHD-friendly requests do not activate the loop route", async () => {
+  const repo = await tempRepo();
+  const output = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "I have ADHD; keep this one step at a time"
+  });
+
+  assert.equal(output, "");
+});
+
+test("engineer hook preserves start guidance when the overlay loader returns empty", async () => {
+  const context = await runEngineerTriggerHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: await tempRepo(),
+    prompt: "loopy I have ADHD; use short steps"
+  }, {
+    statusForPayload: async () => { throw new Error("no plan"); },
+    guideForPayload: () => { throw new Error("unused"); },
+    renderSuperloopyContext: () => "",
+    formatAdditionalContext: (_event, additionalContext) => additionalContext,
+    loadAdhdFriendlyOutputOverlay: async () => ""
+  });
+
+  assert.match(context, /Superloopy loop engineer/);
+  assert.match(context, /loop begin --brief/);
+  assert.doesNotMatch(context, /ADHD-friendly output overlay/);
+});
+
+test("connected crew aliases retain normal guidance without loading the ADHD overlay", async () => {
+  for (const prompt of [
+    "loopycrew I have ADHD; keep this one step at a time",
+    "ultrawork I have ADHD; keep this one step at a time"
+  ]) {
+    const payload = {
+      hook_event_name: "UserPromptSubmit",
+      cwd: await tempRepo(),
+      prompt
+    };
+    const baseline = await runEngineerTriggerHook(payload, {
+      statusForPayload: async () => { throw new Error("no plan"); },
+      guideForPayload: () => { throw new Error("unused"); },
+      renderSuperloopyContext: () => "",
+      formatAdditionalContext: (_event, additionalContext) => additionalContext,
+      loadAdhdFriendlyOutputOverlay: async () => ""
+    });
+    let loaderCalls = 0;
+    const context = await runEngineerTriggerHook(payload, {
+      statusForPayload: async () => { throw new Error("no plan"); },
+      guideForPayload: () => { throw new Error("unused"); },
+      renderSuperloopyContext: () => "",
+      formatAdditionalContext: (_event, additionalContext) => additionalContext,
+      loadAdhdFriendlyOutputOverlay: async () => {
+        loaderCalls += 1;
+        return "ADHD-friendly output overlay";
+      }
+    });
+
+    assert.equal(loaderCalls, 0, prompt);
+    assert.equal(context, baseline, prompt);
+    assert.match(context, /Crew fan-out \(team mode\)/);
+    assert.doesNotMatch(context, /ADHD-friendly output overlay/);
+  }
+});
+
+test("qualifying loopy prompts append the overlay when resuming", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+
+  const output = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "loopy I have ADHD; keep this one step at a time"
+  });
+  const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+
+  assert.match(context, /A loop is already in progress/);
+  assert.match(context, /^ADHD-friendly output overlay$/m);
+});
+
+test("binding-blocked engineer guidance does not load or append the ADHD overlay", async () => {
+  let loaderCalls = 0;
+  const context = await runEngineerTriggerHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: await tempRepo(),
+    prompt: "loopy I have ADHD; keep this one step at a time"
+  }, {
+    statusForPayload: async () => ({ binding: { resumable: false, status: "mismatch", next: null } }),
+    guideForPayload: () => { throw new Error("unused"); },
+    renderSuperloopyContext: () => "",
+    formatAdditionalContext: (_event, additionalContext) => additionalContext,
+    loadAdhdFriendlyOutputOverlay: async () => {
+      loaderCalls += 1;
+      return "ADHD-friendly output overlay";
+    }
+  });
+
+  assert.equal(loaderCalls, 0);
+  assert.equal(context, [
+    "Superloopy loop engineer",
+    "",
+    "The repo-local Superloopy plan cannot resume here because its repository binding is mismatch.",
+    "Do not mutate or resume this copied state. Return to the repository where the plan was created, or start a separate loop here."
+  ].join("\n"));
+});
+
+test("aggregate-complete engineer guidance does not load or append the ADHD overlay", async () => {
+  let loaderCalls = 0;
+  const context = await runEngineerTriggerHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: await tempRepo(),
+    prompt: "loopy I have ADHD; keep this one step at a time"
+  }, {
+    statusForPayload: async () => ({
+      binding: { resumable: true },
+      summary: { aggregateComplete: true },
+      plan: {}
+    }),
+    guideForPayload: () => { throw new Error("unused"); },
+    renderSuperloopyContext: () => "",
+    formatAdditionalContext: (_event, additionalContext) => additionalContext,
+    loadAdhdFriendlyOutputOverlay: async () => {
+      loaderCalls += 1;
+      return "ADHD-friendly output overlay";
+    }
+  });
+
+  assert.equal(loaderCalls, 0);
+  assert.match(context, /The current Superloopy aggregate is already complete/);
+  assert.doesNotMatch(context, /ADHD-friendly output overlay/);
+});
+
+test("approved standalone support cues append the overlay on start with a cleaned brief", async () => {
+  for (const { prompt, brief } of [
+    {
+      prompt: "loopy I have ADHD. Migrate the auth module",
+      brief: "I have ADHD. Migrate the auth module"
+    },
+    {
+      prompt: "루피 I cannot focus. Migrate the auth module",
+      brief: "I cannot focus. Migrate the auth module"
+    },
+    {
+      prompt: "loopy This task is overwhelming me. Add login",
+      brief: "This task is overwhelming me. Add login"
+    }
+  ]) {
+    const output = await runUserPromptSubmitHook({
+      hook_event_name: "UserPromptSubmit",
+      cwd: await tempRepo(),
+      prompt
+    });
+    const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+
+    assert.deepEqual(parseInvocation(prompt), { orchestrate: false, brief });
+    assert.match(context, /Superloopy loop engineer/);
+    assert.ok(context.includes(`- Brief: ${brief}`));
+    assert.match(context, /^ADHD-friendly output overlay$/m);
+  }
+});
+
+test("approved direct presentation cues append the overlay on resume from a cleaned brief", async () => {
+  for (const { prompt, brief } of [
+    {
+      prompt: "루피 Please fix this one step at a time",
+      brief: "Please fix this one step at a time"
+    },
+    {
+      prompt: "loopy Migrate auth one step at a time",
+      brief: "Migrate auth one step at a time"
+    },
+    {
+      prompt: "루피 한 단계씩 로그인 기능을 추가해줘",
+      brief: "한 단계씩 로그인 기능을 추가해줘"
+    }
+  ]) {
+    const repo = await tempRepo();
+    await createLoop(repo, ["--brief", "Ship"]);
+    const output = await runUserPromptSubmitHook({
+      hook_event_name: "UserPromptSubmit",
+      cwd: repo,
+      prompt
+    });
+    const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+
+    assert.deepEqual(parseInvocation(prompt), { orchestrate: false, brief });
+    assert.match(context, /A loop is already in progress/);
+    assert.match(context, /^ADHD-friendly output overlay$/m);
+  }
+});
+
+test("malformed successful status falls back to normal start guidance", async () => {
+  const context = await runEngineerTriggerHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: await tempRepo(),
+    prompt: "loopy add login"
+  }, {
+    statusForPayload: async () => ({}),
+    guideForPayload: () => { throw new Error("unused"); },
+    renderSuperloopyContext: () => "",
+    formatAdditionalContext: (_event, additionalContext) => additionalContext,
+    loadAdhdFriendlyOutputOverlay: async () => ""
+  });
+
+  assert.match(context, /Superloopy loop engineer/);
+  assert.match(context, /Start now/);
+  assert.match(context, /- Brief: add login/);
+  assert.doesNotMatch(context, /A loop is already in progress/);
 });

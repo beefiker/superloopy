@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import test from "node:test";
@@ -418,6 +419,64 @@ test("plugin packages the Superloopy Korean humanizer skill with measurable safe
     "skills/humanize-korean/scripts/audit-humanize-output.mjs"
   ]) {
     assert.equal(existsSync(file), true);
+  }
+});
+
+test("plugin packages explicit-only i-have-adhd with attribution and Superloopy precedence", async () => {
+  const skill = await readSkill("i-have-adhd");
+
+  assert.match(skill.frontmatter, /^name: i-have-adhd$/m);
+  assert.match(skill.frontmatter, /^disable-model-invocation: true$/m);
+  assert.match(skill.frontmatter, /^license: MIT$/m);
+  assert.match(skill.frontmatter, /\$superloopy:i-have-adhd/);
+  assert.match(skill.frontmatter, /\/superloopy:i-have-adhd/);
+  assert.match(skill.content, /never infer or assert.*diagnos/is);
+  assert.match(skill.content, /Superloopy.*evidence.*completion.*precedence/is);
+  assert.match(skill.content, /does not create.*evidence artifact/is);
+  assert.match(skill.content, /stop adhd mode.*normal mode/is);
+
+  for (let rule = 1; rule <= 10; rule += 1) {
+    assert.match(skill.content, new RegExp(`^### ${rule}\\.`, "m"));
+  }
+
+  for (const file of [
+    "skills/i-have-adhd/agents/openai.yaml",
+    "skills/i-have-adhd/LICENSE",
+    "skills/i-have-adhd/references/upstream-notice.md"
+  ]) {
+    assert.equal(existsSync(file), true, file);
+  }
+
+  const metadata = await readFile("skills/i-have-adhd/agents/openai.yaml", "utf8");
+  const license = await readFile("skills/i-have-adhd/LICENSE", "utf8");
+  const notice = await readFile("skills/i-have-adhd/references/upstream-notice.md", "utf8");
+  assert.match(metadata, /allow_implicit_invocation:\s*false/);
+  assert.match(metadata, /\$superloopy:i-have-adhd/);
+  assert.match(license, /Copyright \(c\) 2026 Ayoub Ghriss/);
+  assert.match(notice, /07684c4ab625dd7d1ea6e99e065f60bc0ac6a1ba/);
+  assert.match(notice, /https:\/\/github\.com\/ayghri\/i-have-adhd/);
+});
+
+test("packaged i-have-adhd preserves pinned upstream rules across checkout line endings", async () => {
+  const skill = await readFile("skills/i-have-adhd/SKILL.md", "utf8");
+  const lfSkill = skill.replace(/\r\n?/gu, "\n");
+  const checkoutFixtures = [
+    ["LF", lfSkill],
+    ["CRLF", lfSkill.replace(/\n/gu, "\r\n")],
+    ["CR", lfSkill.replace(/\n/gu, "\r")]
+  ];
+  // SHA-256 of normalized LF bytes from ayghri/i-have-adhd revision
+  // 07684c4ab625dd7d1ea6e99e065f60bc0ac6a1ba.
+  for (const [checkout, checkoutSkill] of checkoutFixtures) {
+    const normalizedSkill = checkoutSkill.replace(/\r\n?/gu, "\n");
+    const rulesStart = normalizedSkill.indexOf("## Rules\n");
+    assert.notEqual(rulesStart, -1, `${checkout}: missing upstream Rules section`);
+    const rulesDigest = createHash("sha256").update(normalizedSkill.slice(rulesStart)).digest("hex");
+    assert.equal(
+      rulesDigest,
+      "47188ef5a02412d8f5fd06d93505a6425976bd27ac83dc8edbc76de54c5edcbd",
+      `${checkout}: pinned upstream rules digest`
+    );
   }
 });
 

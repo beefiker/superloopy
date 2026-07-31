@@ -1,5 +1,6 @@
 .DS_Store
 node_modules/
+.worktrees/
 .superloopy/
 .claude/scheduled_tasks.lock
 .wrangler/
