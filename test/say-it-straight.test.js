@@ -28,3 +28,14 @@ test("say-it-straight ships one-level references and MIT terms", async () => {
   }
   assert.match(await readFile(`${skillRoot}/LICENSE`, "utf8"), /MIT License/);
 });
+
+test("say-it-straight preserves exact operational relations and unsupported perspectives", async () => {
+  const skill = await readFile(`${skillRoot}/SKILL.md`, "utf8");
+
+  assert.match(skill, /retain the exact wording of the condition/i);
+  assert.match(skill, /retries are accepted/i);
+  assert.match(skill, /preserve supplied operational clauses verbatim/i);
+  assert.match(skill, /return an otherwise sound operational sentence exactly/i);
+  assert.match(skill, /first-person perspective.*I.*we.*us/i);
+  assert.match(skill, /detector.*otherwise strong.*source exactly/i);
+});
