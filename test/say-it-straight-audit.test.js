@@ -101,6 +101,24 @@ test("audit rejects a newly introduced number", () => {
   assert.deepEqual(report.checks.numbers.added, ["40%"]);
 });
 
+// Mutation caught: beginning a numeric match after a leading decimal point and treating .5% as 5%.
+test("audit rejects removal of a leading decimal point", () => {
+  const report = auditTexts("The rate is .5%.", "The rate is 5%.");
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.checks.numbers.missing, [".5%"]);
+  assert.deepEqual(report.checks.numbers.added, ["5%"]);
+});
+
+// Mutation caught: comparing only the numeric portion of a quantity and accepting a changed spaced unit.
+test("audit rejects a changed separated unit", () => {
+  const report = auditTexts("The package weighs 12 kg.", "The package weighs 12 lb.");
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.checks.numbers.missing, ["12 kg"]);
+  assert.deepEqual(report.checks.numbers.added, ["12 lb"]);
+});
+
 // Mutation caught: ignoring exact user-specified frozen strings that automatic syntax matching cannot infer.
 test("audit preserves user-frozen values", () => {
   const options = { protectedValues: ["Acme Ultra", "Northwind"] };
@@ -112,6 +130,18 @@ test("audit preserves user-frozen values", () => {
 
   assert.equal(report.ok, false);
   assert.deepEqual(report.checks.protected.missing.values, ["Acme Ultra"]);
+});
+
+// Mutation caught: discarding a user-frozen string because it partially overlaps a wider syntax span.
+test("audit preserves user-frozen values independently of syntax overlap", () => {
+  const report = auditTexts(
+    "Run `npm test` today.",
+    "Run `npm test` tomorrow.",
+    { protectedValues: ["npm test` today"] }
+  );
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.checks.protected.userFrozen.missing.values, ["npm test` today"]);
 });
 
 // Mutation caught: omitting literal frontmatter comparison and accepting a changed document header.
@@ -165,6 +195,25 @@ test("audit rejects removal of a fenced block with a longer closing fence", () =
   assert.equal(report.checks.structure.fences.ok, false);
 });
 
+// Mutation caught: ignoring a valid fenced-code block whose content extends to end of file.
+test("audit rejects changed code in an unclosed EOF fence", () => {
+  const report = auditTexts("```js\nconst mode = safe;", "```js\nconst mode = fast;");
+
+  assert.equal(report.ok, false);
+  assert.equal(report.checks.structure.fences.ok, false);
+});
+
+// Mutation caught: stopping a Markdown destination at its first closing parenthesis.
+test("audit rejects a removed delimiter from a balanced-parentheses link", () => {
+  const report = auditTexts(
+    "See [guide](https://example.test/a_(b)).",
+    "See [guide](https://example.test/a_(b)."
+  );
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.checks.protected.missing.values, ["[guide](https://example.test/a_(b))"]);
+});
+
 // Mutation caught: ignoring Markdown table row and column signatures.
 test("audit rejects a changed table shape", () => {
   const report = auditTexts(
@@ -192,6 +241,16 @@ test("audit reports a source placeholder collision", () => {
   assert.equal(report.ok, false);
   assert.deepEqual(report.checks.placeholders.sourceCollisions, ["⟦SIS:a1:path:1⟧"]);
   assert.match(report.problems[0].message, /different run tag/);
+});
+
+// Mutation caught: recognizing only fully valid placeholders and accepting mutated sentinel residue.
+test("audit rejects malformed SIS sentinel residue", () => {
+  const report = auditTexts("Use the runbook.", "Use ⟦SIS:tag:path:x⟧.");
+
+  assert.equal(report.ok, false);
+  assert.equal(report.checks.placeholders.ok, false);
+  assert.deepEqual(report.checks.placeholders.unresolved, ["⟦SIS:tag:path:x⟧"]);
+  assert.deepEqual(report.checks.placeholders.malformed, ["⟦SIS:tag:path:x⟧"]);
 });
 
 // Mutation caught: failing warnings as hard errors or omitting the required character-rate metrics.

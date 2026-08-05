@@ -78,6 +78,18 @@ test("plugin interface assets resolve inside the npm package", async () => {
     true,
     "portable frontend evidence helper missing from npm pack",
   );
+  for (const path of [
+    "skills/say-it-straight/SKILL.md",
+    "skills/say-it-straight/agents/openai.yaml",
+    "skills/say-it-straight/LICENSE",
+    "skills/say-it-straight/references/preservation.md",
+    "skills/say-it-straight/references/quality-rubric.md",
+    "skills/say-it-straight/references/quick-rules.md",
+    "skills/say-it-straight/references/upstream-notice.md",
+    "skills/say-it-straight/scripts/audit-output.mjs"
+  ]) {
+    assert.equal(files.has(path), true, `say-it-straight package file missing from npm pack: ${path}`);
+  }
 });
 
 test("plugin audit docs describe convention discovery and current ignore scope", async () => {

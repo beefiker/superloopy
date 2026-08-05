@@ -1,8 +1,10 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
-const PLACEHOLDER_PATTERN = /⟦SIS:[A-Za-z0-9_-]+:[a-z-]+:\d+⟧/gu;
+const VALID_PLACEHOLDER_PATTERN = /^⟦SIS:[A-Za-z0-9_-]+:[a-z-]+:\d+⟧$/u;
 const FRONTMATTER_PATTERN = /^(?:\uFEFF)?---[^\r\n]*\r?\n(?:[\s\S]*?\r?\n)?---[ \t]*(?=\r?\n|$)/;
+const NUMBER_PATTERN = /[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)(?:%|[A-Za-z]+)?/gu;
+const SPACED_UNIT_PATTERN = /^([ \t]+)(?:GiB|GHz|KiB|MHz|MiB|TiB|bytes?|cm|GB|hrs?|kHz|kg|km|kW|lbs?|mA|MB|mg|min|mm|ms|mV|oz|TB|yd|°C|°F|ft|Hz|in|mi|[ABghmsVW])(?![\p{L}\p{N}_])/iu;
 
 function addRegexCandidates(candidates, text, type, expression) {
   for (const match of text.matchAll(expression)) {
@@ -18,6 +20,23 @@ function addValueCandidates(candidates, text, protectedValues) {
       candidates.push({ type: "user-frozen", value, start, end: start + value.length });
       start = text.indexOf(value, start + value.length);
     }
+  }
+}
+
+function addNumberCandidates(candidates, text) {
+  for (const match of text.matchAll(NUMBER_PATTERN)) {
+    const previous = text[match.index - 1] ?? "";
+    if (/[\p{L}\p{N}_]/u.test(previous) || (previous === "." && !match[0].startsWith("."))) continue;
+    let value = match[0];
+    let end = match.index + value.length;
+    if (!/[A-Za-z%]$/u.test(value)) {
+      const unit = SPACED_UNIT_PATTERN.exec(text.slice(end));
+      if (unit) {
+        value += unit[0];
+        end += unit[0].length;
+      }
+    }
+    candidates.push({ type: "number", value, start: match.index, end });
   }
 }
 
@@ -47,6 +66,7 @@ function fencedCodeBlocks(text) {
   for (let index = 0; index < lines.length; index += 1) {
     const opening = /^(?: {0,3})(`{3,}|~{3,})([^\r\n]*)$/u.exec(lines[index].text);
     if (!opening) continue;
+    let closed = false;
     for (let closingIndex = index + 1; closingIndex < lines.length; closingIndex += 1) {
       const closing = /^(?: {0,3})(`{3,}|~{3,})[ \t]*$/u.exec(lines[closingIndex].text);
       if (!closing || closing[1][0] !== opening[1][0] || closing[1].length < opening[1].length) continue;
@@ -58,10 +78,75 @@ function fencedCodeBlocks(text) {
         language: info.split(/[ \t]+/u)[0] || ""
       });
       index = closingIndex;
+      closed = true;
+      break;
+    }
+    if (!closed) {
+      const info = opening[2].trim();
+      blocks.push({
+        start: lines[index].start,
+        end: text.length,
+        value: text.slice(lines[index].start),
+        language: info.split(/[ \t]+/u)[0] || ""
+      });
       break;
     }
   }
   return blocks;
+}
+
+function closingTitleIndex(text, cursor) {
+  while (text[cursor] === " " || text[cursor] === "\t") cursor += 1;
+  if (text[cursor] === ")") return cursor;
+  const opener = text[cursor];
+  const closer = opener === "(" ? ")" : opener;
+  if (opener !== "\"" && opener !== "'" && opener !== "(") return -1;
+  for (cursor += 1; cursor < text.length && text[cursor] !== "\n" && text[cursor] !== "\r"; cursor += 1) {
+    if (text[cursor] === "\\") cursor += 1;
+    else if (text[cursor] === closer) {
+      cursor += 1;
+      while (text[cursor] === " " || text[cursor] === "\t") cursor += 1;
+      return text[cursor] === ")" ? cursor : -1;
+    }
+  }
+  return -1;
+}
+
+function closingLinkIndex(text, opening) {
+  let cursor = opening + 1;
+  if (text[cursor] === "<") {
+    for (cursor += 1; cursor < text.length && text[cursor] !== "\n" && text[cursor] !== "\r"; cursor += 1) {
+      if (text[cursor] === "\\") cursor += 1;
+      else if (text[cursor] === ">") return closingTitleIndex(text, cursor + 1);
+    }
+    return -1;
+  }
+  let depth = 0;
+  for (; cursor < text.length && text[cursor] !== "\n" && text[cursor] !== "\r"; cursor += 1) {
+    if (text[cursor] === "\\") cursor += 1;
+    else if ((text[cursor] === " " || text[cursor] === "\t") && depth === 0) return closingTitleIndex(text, cursor);
+    else if (text[cursor] === "(") depth += 1;
+    else if (text[cursor] === ")" && depth === 0) return cursor;
+    else if (text[cursor] === ")") depth -= 1;
+  }
+  return -1;
+}
+
+function addMarkdownLinkCandidates(candidates, text) {
+  for (let start = text.indexOf("["); start !== -1; start = text.indexOf("[", start + 1)) {
+    let labelDepth = 0;
+    for (let cursor = start + 1; cursor < text.length && text[cursor] !== "\n" && text[cursor] !== "\r"; cursor += 1) {
+      if (text[cursor] === "\\") cursor += 1;
+      else if (text[cursor] === "[") labelDepth += 1;
+      else if (text[cursor] === "]" && labelDepth > 0) labelDepth -= 1;
+      else if (text[cursor] === "]") {
+        if (text[cursor + 1] !== "(") break;
+        const closing = closingLinkIndex(text, cursor + 1);
+        if (closing !== -1) candidates.push({ type: "markdown-url", value: text.slice(start, closing + 1), start, end: closing + 1 });
+        break;
+      }
+    }
+  }
 }
 
 function tableCells(line) {
@@ -111,12 +196,12 @@ function collectCandidates(text, protectedValues) {
   for (const block of fencedCodeBlocks(text)) candidates.push({ type: "fenced-code", value: block.value, start: block.start, end: block.end });
   addRegexCandidates(candidates, text, "inline-code", /`[^`\r\n]+`/g);
   for (const table of tableBlocks(text)) candidates.push({ type: "table", value: table.value, start: table.start, end: table.end });
-  addRegexCandidates(candidates, text, "markdown-url", /\[[^\]\r\n]*\]\((?:<[^>\r\n]+>|[^)\s\r\n]+)(?:\s+["'][^"']*["'])?\)/g);
+  addMarkdownLinkCandidates(candidates, text);
   addRegexCandidates(candidates, text, "bare-url", /\b(?:https?|ftp):\/\/[^\s<>()\[\]{}"']+[^\s<>()\[\]{}"'.,;:!?]/g);
   addRegexCandidates(candidates, text, "path", /(?:~\/|\.\.?\/|\/)(?:[\w@%+=:.-]+\/)*[\w@%+=:.-]+/g);
   addRegexCandidates(candidates, text, "citation", /\[(?:[A-Z][\w.-]*|\d+)(?:\s+[\w.-]+)*\]/g);
   addRegexCandidates(candidates, text, "quotation", /"(?:[^"\\\r\n]|\\.)*"|“[^”\r\n]*”/g);
-  addRegexCandidates(candidates, text, "number", /[+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:%|[a-zA-Z]+)?/g);
+  addNumberCandidates(candidates, text);
   addValueCandidates(candidates, text, protectedValues);
   return candidates;
 }
@@ -200,6 +285,27 @@ function compareProtectedSpans(sourceSpans, finalSpans, finalText) {
   return { ok: problems.length === 0, missing, count, order, problems };
 }
 
+function userFrozenSpans(text, protectedValues) {
+  const spans = [];
+  addValueCandidates(spans, text, protectedValues);
+  return spans.sort((left, right) => left.start - right.start || right.end - left.end);
+}
+
+function mergeProtectedChecks(syntax, userFrozen) {
+  const userProblems = userFrozen.problems.map((problem) => ({
+    ...problem,
+    check: problem.check.replace("protected.", "protected.user-frozen.")
+  }));
+  return {
+    ok: syntax.ok && userFrozen.ok,
+    missing: { ok: syntax.missing.ok && userFrozen.missing.ok, values: [...syntax.missing.values, ...userFrozen.missing.values] },
+    count: { ok: syntax.count.ok && userFrozen.count.ok, missing: [...syntax.count.missing, ...userFrozen.count.missing], added: [...syntax.count.added, ...userFrozen.count.added] },
+    order: { ok: syntax.order.ok && userFrozen.order.ok, positions: syntax.order.positions, userFrozenPositions: userFrozen.order.positions },
+    userFrozen,
+    problems: [...syntax.problems, ...userProblems]
+  };
+}
+
 function compareNumberMultisets(sourceSpans, finalSpans) {
   const sourceNumbers = sourceSpans.filter((span) => span.type === "number");
   const finalNumbers = finalSpans.filter((span) => span.type === "number");
@@ -254,17 +360,25 @@ function structureCheck(sourceText, finalText) {
   return { ok: problems.length === 0, ...checks, problems };
 }
 
-function placeholderMatches(text) {
-  return Array.from(text.matchAll(PLACEHOLDER_PATTERN), (match) => match[0]);
+function placeholderResidues(text) {
+  const residues = [];
+  for (let start = text.indexOf("⟦SIS"); start !== -1; start = text.indexOf("⟦SIS", start + 1)) {
+    const closing = text.indexOf("⟧", start + 4);
+    const newline = text.indexOf("\n", start + 4);
+    const end = closing !== -1 && (newline === -1 || closing < newline) ? closing + 1 : newline === -1 ? text.length : newline;
+    residues.push(text.slice(start, end));
+  }
+  return residues;
 }
 
 function placeholderCheck(sourceText, finalText) {
-  const sourceCollisions = placeholderMatches(sourceText);
-  const unresolved = placeholderMatches(finalText);
+  const sourceCollisions = placeholderResidues(sourceText);
+  const unresolved = placeholderResidues(finalText);
+  const malformed = unresolved.filter((value) => !VALID_PLACEHOLDER_PATTERN.test(value));
   const problems = [];
   if (sourceCollisions.length > 0) problems.push({ check: "placeholders.collision", values: sourceCollisions, message: "Source contains placeholder-shaped text; choose a different run tag." });
   if (unresolved.length > 0) problems.push({ check: "placeholders.unresolved", values: unresolved });
-  return { ok: problems.length === 0, sourceCollisions, unresolved, problems };
+  return { ok: problems.length === 0, sourceCollisions, unresolved, malformed, problems };
 }
 
 function lengthMetrics(sourceText, finalText) {
@@ -291,9 +405,12 @@ function lengthWarnings(metrics) {
 }
 
 export function auditTexts(sourceText, finalText, options = {}) {
-  const sourceSpans = extractProtectedSpans(sourceText, options);
-  const finalSpans = extractProtectedSpans(finalText, options);
-  const protectedCheck = compareProtectedSpans(sourceSpans, finalSpans, finalText);
+  const sourceSpans = extractProtectedSpans(sourceText);
+  const finalSpans = extractProtectedSpans(finalText);
+  const syntaxCheck = compareProtectedSpans(sourceSpans, finalSpans, finalText);
+  const protectedValues = Array.isArray(options.protectedValues) ? options.protectedValues : [];
+  const userFrozen = compareProtectedSpans(userFrozenSpans(sourceText, protectedValues), userFrozenSpans(finalText, protectedValues), finalText);
+  const protectedCheck = mergeProtectedChecks(syntaxCheck, userFrozen);
   const numbers = compareNumberMultisets(sourceSpans, finalSpans);
   const structure = structureCheck(sourceText, finalText);
   const placeholders = placeholderCheck(sourceText, finalText);
@@ -381,7 +498,7 @@ function cliFailureReport(error) {
       protected: { ok: true, missing: { ok: true, values: [] }, count: { ok: true, missing: [], added: [] }, order: { ok: true, positions: [] }, problems: [] },
       numbers: { ok: true, missing: [], added: [], problems: [] },
       structure: emptyStructureCheck(),
-      placeholders: { ok: true, sourceCollisions: [], unresolved: [], problems: [] }
+      placeholders: { ok: true, sourceCollisions: [], unresolved: [], malformed: [], problems: [] }
     },
     metrics: { sourceCharacters: null, finalCharacters: null, lengthDeltaRate: null, shrinkageRate: null },
     problems: [{ check: error.check, message: error.message }],
