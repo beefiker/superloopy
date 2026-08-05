@@ -315,6 +315,106 @@ test("runUserPromptSubmitHook stays quiet for ordinary prompts even when Superlo
   assert.equal(output, "");
 });
 
+test("exact output-style controls disable and re-enable only the current loop", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  const off = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "직설 모드 끄기"
+  });
+  assert.match(JSON.parse(off).hookSpecificOutput.additionalContext, /disabled for the current loop/u);
+  assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, false);
+
+  const on = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "say-it-straight on"
+  });
+  assert.match(JSON.parse(on).hookSpecificOutput.additionalContext, /enabled for the current loop/u);
+  assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
+});
+
+test("a scoped control leaves the global loop unchanged", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Global"]);
+  await createLoop(repo, ["--session-id", "beta", "--brief", "Scoped"]);
+  await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    session_id: "beta",
+    prompt: "say-it-straight off"
+  });
+  assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
+  assert.equal((await statusLoop(repo, ["--session-id", "beta"])).plan.outputStyle.sayItStraight, false);
+});
+
+test("near matches and quoted controls remain inert", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  for (const prompt of ["please say-it-straight off", "quote 'say-it-straight off'", "직설 모드 끄기를 문서화해줘"]) {
+    assert.equal(await runUserPromptSubmitHook({ hook_event_name: "UserPromptSubmit", cwd: repo, prompt }), "");
+  }
+  assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
+});
+
+test("a control without an active loop reports no mutation", async () => {
+  const output = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: await tempRepo(),
+    prompt: "say-it-straight off"
+  });
+  assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /No active Superloopy loop/u);
+});
+
+test("completed loops refuse output-style mutation", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  const path = join(repo, ".superloopy", "goals.json");
+  const plan = JSON.parse(await readFile(path, "utf8"));
+  plan.aggregateCompletion = { status: "complete", completedAt: "2026-08-06T00:00:00.000Z" };
+  await writeFile(path, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
+  const before = await readFile(path, "utf8");
+  const output = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "say-it-straight off"
+  });
+  assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /already complete/u);
+  assert.equal(await readFile(path, "utf8"), before);
+});
+
+test("mismatched repository binding refuses output-style mutation", async () => {
+  const source = await tempRepo();
+  const target = await tempRepo();
+  await createLoop(source, ["--brief", "Source"]);
+  await mkdir(join(target, ".superloopy"), { recursive: true });
+  const copied = await readFile(join(source, ".superloopy", "goals.json"));
+  const targetPlan = join(target, ".superloopy", "goals.json");
+  await writeFile(targetPlan, copied);
+  const output = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: target,
+    prompt: "say-it-straight off"
+  });
+  assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /binding is mismatch/u);
+  assert.deepEqual(await readFile(targetPlan), copied);
+});
+
+test("write failure keeps the prior output style authoritative", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  const output = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "say-it-straight off"
+  }, {
+    updateSayItStraightOutput: async () => { throw new Error("locked write"); }
+  });
+  assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /prior loop setting remains authoritative/u);
+  assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
+});
+
 test("runUserPromptSubmitHook appends annotate steering to ledger", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
