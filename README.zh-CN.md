@@ -51,6 +51,7 @@ Superloopy 保持命令层很小。具体工作方式由 skills 负责：什么�
 | `superloopy-frontend` | 仅在处理受支持的基于屏幕的应用 UI（浏览器托管 Web，包括公开、需认证、私有/内部、已安装 PWA 或扩展；具有用户旅程的已部署交互式内容型 Web，例如营销活动、出版物或着陆页体验；以及桌面、移动设备/平板、嵌入式/混合客户端、自定义渲染 UI、Qt 或混合目标）时，在 Codex 中显式调用 `$superloopy:superloopy-frontend`，或在 Claude Code 中调用 `/superloopy:superloopy-frontend`，也可用开头的 `loopy`/`루피` 启动该工作。仅出现 UI、平台或框架词汇不会激活它；TV、可穿戴设备、XR、汽车、游戏 UI、TUI、静态媒体/文档产物和非 UI 工作仍被排除。 | 采用一份共享 UX 契约，并叠加平台/界面构成路径。证据与变更声明成比例，并分别验证浏览器、原生目标/外壳、渲染器和每个混合目标。独立运行保留按次划分的证据；活动循环则把证据绑定到 goal 和 criterion。 |
 | `humanize-korean` | 需要去掉韩文内容里的 AI 腔、修正翻译腔，或在不改事实的前提下让韩文更像真人写作时。 | 写入 `final.md`、`summary.md`、`audit.json`；在 Superloopy loop 中把证据记录到 `.superloopy/evidence/humanize-korean/`。 |
 | `i-have-adhd` | 显式调用 Codex `$superloopy:i-have-adhd` 或 Claude Code `/superloopy:i-have-adhd`，或者以 `loopy`/`루피` 开头的 brief 直接要求 ADHD 友好、行动优先、一次一步或易于扫读的输出时。不会仅凭写作风格自动激活。 | 调整进度更新的表达，让下一步行动保持醒目；不会创建 Superloopy evidence artifact，也不会削弱规划、安全、验证或完成 gate。 |
+| `say-it-straight` | 仅在显式调用 Codex `$superloopy:say-it-straight` 或 Claude `/superloopy:say-it-straight`，需要直接、简洁、自然的文字时使用；不会仅凭写作风格自动启用. | 保留事实、语域、受保护文本和必要细节；文件改写会运行审计. |
 | `superloopy-slides` | 需要幻灯片、演示文稿、deck，或把 PPT/PPTX 转成网页时。 | 固定 16:9 舞台的零依赖单文件 HTML deck、可挑选的三种样式预览，以及 `.superloopy/evidence/slides/` 下的渲染截图 visual-QA 证据产物。 |
 
 Loop skill 是默认护栏。开头的完整 `loopy` token 会启动或继续 evidence loop；`loopy team` 会升级到 crew 模式。开头的 `loopywork`、`lpy`、`$lpy` 只注入起步 guidance，结构化的 `SUPERLOOPY_STEER` 可调整进行中的 loop。Prompt hook 不会从普通文本推断 frontend 或韩文写作模式；请显式调用专门 skill，或让已经启动的 loop 明确分派真正的专门 subtask。

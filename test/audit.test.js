@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import test from "node:test";
 import { countPhysicalLines, INVENTORY_DOCS, isReviewableTextFile, runDoctor } from "../src/doctor.js";
 
@@ -84,6 +86,32 @@ test("the reviewability check does not depend on a runtime-version-gated array m
   } finally {
     Array.prototype.toSorted = original;
   }
+});
+
+test("reviewability excludes tracked approved plans but not ordinary Markdown", async () => {
+  const repo = await mkdtemp(join(tmpdir(), "superloopy-reviewability-"));
+  const listed = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], { encoding: "utf8" });
+  assert.equal(listed.status, 0, listed.stderr);
+  for (const file of listed.stdout.split("\n").filter(Boolean)) {
+    if (!existsSync(file)) continue;
+    const target = join(repo, file);
+    await mkdir(dirname(target), { recursive: true });
+    await copyFile(file, target);
+  }
+  const initialized = spawnSync("git", ["init"], { cwd: repo, encoding: "utf8" });
+  assert.equal(initialized.status, 0, initialized.stderr);
+  const staged = spawnSync("git", ["add", "--force", "."], { cwd: repo, encoding: "utf8" });
+  assert.equal(staged.status, 0, staged.stderr);
+
+  const approvedPlan = await runDoctor(repo);
+  assert.equal(approvedPlan.checks.reviewability.ok, true, approvedPlan.checks.reviewability.message);
+
+  await writeFile(join(repo, "docs", "ordinary.md"), "# Ordinary\n".repeat(551));
+  const stagedOrdinary = spawnSync("git", ["add", "docs/ordinary.md"], { cwd: repo, encoding: "utf8" });
+  assert.equal(stagedOrdinary.status, 0, stagedOrdinary.stderr);
+  const ordinaryMarkdown = await runDoctor(repo);
+  assert.equal(ordinaryMarkdown.checks.reviewability.ok, false);
+  assert.match(ordinaryMarkdown.checks.reviewability.message, /docs\/ordinary\.md:551/);
 });
 
 function listRepoFiles() {
