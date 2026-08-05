@@ -23,7 +23,9 @@ Keep task, safety, evidence, validation, and direct user requirements intact. Th
 
 ## Edit Contract
 
-Build an internal target card for audience, purpose, language/locale, register, genre, and output shape. Freeze protected spans. Diagnose observable defects. Make the smallest useful edit. Leave strong prose unchanged.
+Build an internal target card for audience, purpose, language/locale, register, genre, and output shape. Freeze protected spans. Diagnose observable defects. Make the smallest useful edit.
+
+Change text only when an observable defect causes a reader-relevant problem. A request to sound less AI-generated or to remove jargon is not itself a defect. If no defect exists, return the source exactly. Treat a technical term that states an operational condition as frozen: retain its exact wording even when the request calls it jargon. Do not replace it with a looser gloss.
 
 ## Composition
 
