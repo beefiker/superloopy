@@ -15,8 +15,14 @@ import { runUserPromptSubmitHook } from "../src/hooks.js";
 import { createLoop } from "../src/loop.js";
 import { updateSayItStraightOutput } from "../src/loop-output-style.js";
 
-async function tempRepo() {
-  return mkdtemp(join(tmpdir(), "superloopy-engineer-"));
+async function tempRepo() { return mkdtemp(join(tmpdir(), "superloopy-engineer-")); }
+
+async function submitPrompt(prompt, cwd) {
+  return runUserPromptSubmitHook({ hook_event_name: "UserPromptSubmit", cwd: cwd ?? await tempRepo(), prompt });
+}
+
+async function promptContext(prompt, cwd) {
+  return JSON.parse(await submitPrompt(prompt, cwd)).hookSpecificOutput.additionalContext;
 }
 
 test("hasTeamTrigger fires on spaced, connected, and ultrawork escalations", () => {
@@ -82,12 +88,7 @@ test("parseInvocation strips spaced, connected, and ultrawork keywords and repor
 
 test("runUserPromptSubmitHook injects the crew fan-out playbook in team mode, with a clean brief", async () => {
   const repo = await tempRepo();
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "loopy team migrate the auth module"
-  });
-  const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+  const context = await promptContext("loopy team migrate the auth module", repo);
   assert.match(context, /Crew fan-out \(team mode\)/);
   assert.match(context, /native subagent controls exposed by the current host/);
   assert.doesNotMatch(context, /multi_agent_v1|fork_context|run_in_background/);
@@ -115,12 +116,7 @@ test("runUserPromptSubmitHook injects the crew fan-out playbook in team mode, wi
 
 test("runUserPromptSubmitHook treats the connected loopycrew form as team mode with a clean brief", async () => {
   const repo = await tempRepo();
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "loopycrew migrate the auth module"
-  });
-  const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+  const context = await promptContext("loopycrew migrate the auth module", repo);
   assert.match(context, /Crew fan-out \(team mode\)/);
   assert.match(context, /native subagent controls exposed by the current host/);
   // The connected keyword is stripped from the brief that seeds the loop.
@@ -130,12 +126,7 @@ test("runUserPromptSubmitHook treats the connected loopycrew form as team mode w
 
 test("runUserPromptSubmitHook treats the standalone ultrawork keyword as team mode with a clean brief", async () => {
   const repo = await tempRepo();
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "ultrawork migrate the auth module"
-  });
-  const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+  const context = await promptContext("ultrawork migrate the auth module", repo);
   assert.match(context, /Crew fan-out \(team mode\)/);
   assert.match(context, /native subagent controls exposed by the current host/);
   // The ultrawork keyword is stripped from the brief that seeds the loop.
@@ -145,12 +136,7 @@ test("runUserPromptSubmitHook treats the standalone ultrawork keyword as team mo
 
 test("runUserPromptSubmitHook stays solo on a plain loopy task but advertises team mode", async () => {
   const repo = await tempRepo();
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "loopy add proof-backed login"
-  });
-  const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+  const context = await promptContext("loopy add proof-backed login", repo);
   // Tier 1 baseline: no full playbook, but a conservative delegation line that names team mode.
   assert.doesNotMatch(context, /Crew fan-out \(team mode\)/);
   assert.match(context, /loopy team <task>/);
@@ -166,12 +152,7 @@ test("every full loop trigger receives say-it-straight output by default", async
     "loopycrew ship login",
     "ultrawork ship login"
   ]) {
-    const output = await runUserPromptSubmitHook({
-      hook_event_name: "UserPromptSubmit",
-      cwd: await tempRepo(),
-      prompt
-    });
-    const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+    const context = await promptContext(prompt);
     assert.match(context, /^Say It Straight loop output overlay$/m, prompt);
     assert.equal(context.match(/^Say It Straight loop output overlay$/gm)?.length, 1, prompt);
   }
@@ -181,28 +162,16 @@ test("active loops honor disable and re-enable without duplicate overlays", asyn
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
   await updateSayItStraightOutput(repo, undefined, false);
-  const disabled = JSON.parse(await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "loopy continue"
-  })).hookSpecificOutput.additionalContext;
+  const disabled = await promptContext("loopy continue", repo);
   assert.doesNotMatch(disabled, /Say It Straight loop output overlay/u);
 
   await updateSayItStraightOutput(repo, undefined, true);
-  const enabled = JSON.parse(await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "loopy continue"
-  })).hookSpecificOutput.additionalContext;
+  const enabled = await promptContext("loopy continue", repo);
   assert.equal(enabled.match(/^Say It Straight loop output overlay$/gm)?.length, 1);
 });
 
 test("ADHD structure precedes say-it-straight wording", async () => {
-  const context = JSON.parse(await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: await tempRepo(),
-    prompt: "loopy I have ADHD; keep this one step at a time"
-  })).hookSpecificOutput.additionalContext;
+  const context = await promptContext("loopy I have ADHD; keep this one step at a time");
   assert.ok(context.indexOf("ADHD-friendly output overlay") < context.indexOf("Say It Straight loop output overlay"));
   assert.match(context, /ADHD-friendly output.*owns structure/is);
 });
@@ -214,12 +183,7 @@ test("runUserPromptSubmitHook uses plugin-root CLI fallback when available", asy
   process.env.PLUGIN_ROOT = "C:\\Users\\me\\.codex\\plugins\\cache\\beefiker\\superloopy\\0.7.3";
   delete process.env.CLAUDE_PLUGIN_ROOT;
   try {
-    const output = await runUserPromptSubmitHook({
-      hook_event_name: "UserPromptSubmit",
-      cwd: repo,
-      prompt: "loopy add proof-backed login"
-    });
-    const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+    const context = await promptContext("loopy add proof-backed login", repo);
     const expectedCli = 'node "C:\\Users\\me\\.codex\\plugins\\cache\\beefiker\\superloopy\\0.7.3\\src\\cli.js"';
     assert.ok(context.includes(`${expectedCli} loop begin --brief 'add proof-backed login'`));
     assert.ok(context.includes(`${expectedCli} loop prove -- <validation-command>`));
@@ -237,12 +201,7 @@ test("runUserPromptSubmitHook prefers Claude plugin root over bare command", asy
   const previous = process.env.CLAUDE_PLUGIN_ROOT;
   process.env.CLAUDE_PLUGIN_ROOT = "C:\\Users\\me\\.claude\\plugins\\superloopy";
   try {
-    const output = await runUserPromptSubmitHook({
-      hook_event_name: "UserPromptSubmit",
-      cwd: repo,
-      prompt: "loopy migrate the auth module"
-    });
-    const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+    const context = await promptContext("loopy migrate the auth module", repo);
     const expectedCli = 'node "C:\\Users\\me\\.claude\\plugins\\superloopy\\src\\cli.js"';
     assert.ok(context.includes(`${expectedCli} loop begin --brief 'migrate the auth module'`));
     assert.ok(context.includes(`${expectedCli} loop prove -- <validation-command>`));
@@ -256,14 +215,7 @@ test("runUserPromptSubmitHook prefers Claude plugin root over bare command", asy
 test("runUserPromptSubmitHook re-injects the crew playbook when resuming with loopy team", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
-
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "loopy team keep going"
-  });
-
-  const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+  const context = await promptContext("loopy team keep going", repo);
   assert.match(context, /A loop is already in progress/);
   assert.match(context, /Crew fan-out \(team mode\)/);
   assert.match(context, /native subagent controls exposed by the current host/);
@@ -283,11 +235,7 @@ test("runUserPromptSubmitHook does not infer specialist modes from ordinary prom
   ];
 
   for (const prompt of prompts) {
-    const output = await runUserPromptSubmitHook({
-      hook_event_name: "UserPromptSubmit",
-      cwd: repo,
-      prompt
-    });
+    const output = await submitPrompt(prompt, repo);
     assert.equal(output, "", `unexpected semantic steer for: ${prompt}`);
   }
   assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
@@ -295,12 +243,7 @@ test("runUserPromptSubmitHook does not infer specialist modes from ordinary prom
 
 test("runUserPromptSubmitHook uses the general loop for an explicitly invoked visual task", async () => {
   const repo = await tempRepo();
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "loopy build a landing page"
-  });
-  const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+  const context = await promptContext("loopy build a landing page", repo);
   assert.match(context, /Superloopy loop engineer/);
   assert.doesNotMatch(context, /Superloopy frontend trigger/);
 });
