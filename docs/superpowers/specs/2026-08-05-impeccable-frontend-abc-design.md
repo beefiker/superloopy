@@ -194,9 +194,9 @@ Impeccable's deterministic detector runs separately against each result. Its fin
 
 ## Deliverable Location and Repository Hygiene
 
-Committed experiment code and durable reports live under repository-owned test, script, documentation, and evidence paths following existing patterns. Large transient browser profiles, local servers, dependency caches, and intermediate captures stay ignored. The report links exact files and records which artifacts are committed versus local-only.
+Committed skill code, tests, and product-decision notes live under repository-owned paths. Generated pages, screenshots, browser profiles, evaluator output, scores, local servers, dependency caches, and intermediate captures stay in the ignored run-scoped evidence root. Tracked release documentation may describe the qualitative decision, but must label those artifacts local-only and must not present their exact results as independently reproducible release proof.
 
-The feature work remains on `codex/impeccable-frontend-abc` in an isolated worktree. It is not pushed or merged without separate authorization.
+The experiment was developed on `codex/impeccable-frontend-abc` in an isolated worktree. Integration or publication requires separate authorization and an independent pre-push review.
 
 ## Non-Goals
 
