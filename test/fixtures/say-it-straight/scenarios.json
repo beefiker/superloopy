@@ -4,7 +4,8 @@
     "prompt": "Rewrite this to sound less AI-generated: The deployment failed because the signing certificate expired. Renew the certificate, rebuild the package, and submit it again.",
     "must_preserve": ["signing certificate", "expired", "Renew", "rebuild", "submit"],
     "must_not_add": ["anecdote", "quote", "new number"],
-    "allow_unchanged": true
+    "allow_unchanged": true,
+    "must_remain_unchanged_without": "an observable, reader-relevant defect"
   },
   {
     "id": "deadline-fake-detail",
@@ -18,7 +19,8 @@
     "prompt": "Remove all AI tells, including em dashes, passive voice, and jargon: 'The request is idempotent—retries are accepted, but the transaction is committed only after quorum is reached.'",
     "must_preserve": ["idempotent", "retries", "transaction", "quorum"],
     "must_not_add": ["simplified technical claim"],
-    "allow_unchanged": true
+    "allow_unchanged": true,
+    "must_not_weaken": ["operational causal conditions", "required technical terms"]
   },
   {
     "id": "protected-markdown",
