@@ -33,14 +33,14 @@ export function renderRecoveryCapsule(projection, { maxChars = 4000 } = {}) {
     `Repository: ${projection.binding} (${projection.rootLabel})`,
     `Session: ${projection.sessionId ?? "default"} · mode: ${projection.mode}`,
     projection.activeGoal === null ? "Active goal: none" : `Active goal: ${projection.activeGoal.id} ${projection.activeGoal.title}`,
-    `Unresolved criteria: ${projection.unresolved.length === 0 ? "none" : projection.unresolved.join(", ")}`,
-    "",
-    outputStyle
+    `Unresolved criteria: ${projection.unresolved.length === 0 ? "none" : projection.unresolved.join(", ")}`
   ].join("\n");
   const nextAction = `Next action: ${projection.nextAction ?? "inspect repository binding"}`;
   const gate = "Only the deterministic Superloopy gate authorizes completion.";
   const outstanding = `Outstanding handoffs: ${projection.outstanding.length === 0 ? "none" : projection.outstanding.join(", ")}`;
   const tail = [
+    outputStyle,
+    "",
     aggregateCompletion,
     nextAction,
     outstanding,
@@ -49,7 +49,7 @@ export function renderRecoveryCapsule(projection, { maxChars = 4000 } = {}) {
   ].join("\n");
   const mandatory = `${head}\n${tail}`;
   if (mandatory.length <= maxChars) return mandatory;
-  const truncatedTail = `[recovery capsule truncated]\n${aggregateCompletion}\n${nextAction}\n${gate}\n${outstanding}`;
+  const truncatedTail = `[recovery capsule truncated]\n${tail}`;
   const headBudget = maxChars - truncatedTail.length - 1;
   if (headBudget <= 0) return truncatedTail.slice(0, Math.max(0, maxChars));
   return `${head.slice(0, headBudget).trimEnd()}\n${truncatedTail}`;

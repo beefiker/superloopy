@@ -161,7 +161,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/repository-binding.js` | Repository-binding inspection and explicit confined legacy-plan migration. | Uses local checkout identity and atomic Superloopy state; no network or remote-name authority. |
 | `src/steering-receipts.js` | Bounded request-key and receipt helpers for retry-safe structured steering. | Superloopy-local idempotency only; does not add a generic batch protocol. |
 | `src/workspace-identity.js` | Canonical worktree root and checkout fingerprint shared by plan binding and command trust. | Uses built-in filesystem/crypto APIs and a local Git-dir UUID; branch and remote names are not authority. |
-| `test/compaction-recovery.test.js` | Six semantic regressions for durable, bounded, isolated, read-only pressure-safe recovery. | Tests Superloopy state meaning rather than brittle prompt line counts. |
+| `test/compaction-recovery.test.js` | Nine semantic regressions for durable, bounded, output-style-safe, isolated, read-only pressure-safe recovery. | Tests Superloopy state meaning rather than brittle prompt line counts. |
 | `test/loop-output-style.test.js` | State, exact-command, scoped-update, ledger, and overlay isolation regression coverage. | Uses disposable repositories and proves direct output is loop-scoped rather than artifact-rewriting authority. |
 | `test/context-cost.test.js` | Unicode/byte/estimate and empty-output coverage for additional-context metering. | Validates the documented heuristic boundary without a tokenizer dependency. |
 | `test/repository-binding.test.js` | Plan v2, child-directory reuse, copied-state refusal, and confined legacy-binding integration coverage. | Uses disposable local state and CLI processes only; no remote identity authority. |
@@ -570,7 +570,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 
 ## Weight Notes
 
-- Current largest source file: `src/hooks.js`, above the reviewability cap (602 lines). Keep new hook routing in focused helpers or extract an existing concern before growing it further.
+- Current largest source file: `src/review-gate.js`, at the reviewability cap (550 lines). Keep new classifier, target-schema, and proof mechanics in focused helpers or extract an existing concern before growing the gate further.
 - No package dependencies are added; `package.json` stays dependency-free and `superloopy doctor --json` checks that boundary.
 - Marketplace update checks are advisory and self-update only runs for a future npx-local snapshot; current marketplace and checkout installs keep their documented update commands.
 - Runtime state is ignored under `.superloopy/`; `superloopy doctor --json` verifies runtime samples are ignored and not tracked.
