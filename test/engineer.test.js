@@ -13,6 +13,7 @@ import {
 } from "../src/engineer.js";
 import { runUserPromptSubmitHook } from "../src/hooks.js";
 import { createLoop } from "../src/loop.js";
+import { updateSayItStraightOutput } from "../src/loop-output-style.js";
 
 async function tempRepo() {
   return mkdtemp(join(tmpdir(), "superloopy-engineer-"));
@@ -154,6 +155,56 @@ test("runUserPromptSubmitHook stays solo on a plain loopy task but advertises te
   assert.doesNotMatch(context, /Crew fan-out \(team mode\)/);
   assert.match(context, /loopy team <task>/);
   assert.match(context, /genuinely independent slices/);
+});
+
+test("every full loop trigger receives say-it-straight output by default", async () => {
+  for (const prompt of [
+    "loopy ship login",
+    "루피 로그인 배포",
+    "loopy team ship login",
+    "루피 크루 로그인 배포",
+    "loopycrew ship login",
+    "ultrawork ship login"
+  ]) {
+    const output = await runUserPromptSubmitHook({
+      hook_event_name: "UserPromptSubmit",
+      cwd: await tempRepo(),
+      prompt
+    });
+    const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+    assert.match(context, /^Say It Straight loop output overlay$/m, prompt);
+    assert.equal(context.match(/^Say It Straight loop output overlay$/gm)?.length, 1, prompt);
+  }
+});
+
+test("active loops honor disable and re-enable without duplicate overlays", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  await updateSayItStraightOutput(repo, undefined, false);
+  const disabled = JSON.parse(await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "loopy continue"
+  })).hookSpecificOutput.additionalContext;
+  assert.doesNotMatch(disabled, /Say It Straight loop output overlay/u);
+
+  await updateSayItStraightOutput(repo, undefined, true);
+  const enabled = JSON.parse(await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    prompt: "loopy continue"
+  })).hookSpecificOutput.additionalContext;
+  assert.equal(enabled.match(/^Say It Straight loop output overlay$/gm)?.length, 1);
+});
+
+test("ADHD structure precedes say-it-straight wording", async () => {
+  const context = JSON.parse(await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: await tempRepo(),
+    prompt: "loopy I have ADHD; keep this one step at a time"
+  })).hookSpecificOutput.additionalContext;
+  assert.ok(context.indexOf("ADHD-friendly output overlay") < context.indexOf("Say It Straight loop output overlay"));
+  assert.match(context, /ADHD-friendly output.*owns structure/is);
 });
 
 test("runUserPromptSubmitHook uses plugin-root CLI fallback when available", async () => {

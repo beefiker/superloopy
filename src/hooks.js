@@ -418,10 +418,13 @@ function shellQuote(value) {
   return `'${value.replace(/'/g, "'\"'\"'")}'`;
 }
 
-function renderSuperloopyContext(status, guide) {
+function renderSuperloopyContext(status, guide, options = {}) {
   const nextGoal = status.plan.goals.find((goal) => goal.status === "in_progress")
     ?? status.plan.goals.find((goal) => goal.status === "pending")
     ?? null;
+  const sayItStraightOverlay = options.includeOutputStyle === false
+    ? ""
+    : renderSayItStraightLoopOverlay(isSayItStraightEnabled(status.plan));
   return [
     "Superloopy context",
     "",
@@ -444,7 +447,8 @@ function renderSuperloopyContext(status, guide) {
     "",
     "Run `superloopy loop status --json` before claiming progress.",
     `Run \`${guide.commands.guide}\` for the exact next Superloopy command.`,
-    `Record criterion evidence only with a non-empty artifact under \`${status.plan.evidencePath ?? ".superloopy/evidence"}\`.`
+    `Record criterion evidence only with a non-empty artifact under \`${status.plan.evidencePath ?? ".superloopy/evidence"}\`.`,
+    ...(sayItStraightOverlay.length === 0 ? [] : ["", sayItStraightOverlay])
   ].filter(Boolean).join("\n");
 }
 
@@ -453,6 +457,7 @@ function renderContinuationDirective(status, guide) {
     ?? status.plan.goals.find((goal) => goal.status === "pending")
     ?? null;
   const nextCriterion = nextGoal?.criteria.find((criterion) => criterion.status !== "pass") ?? null;
+  const sayItStraightOverlay = renderSayItStraightLoopOverlay(isSayItStraightEnabled(status.plan));
   return [
     "Superloopy continuation",
     "",
@@ -480,7 +485,8 @@ function renderContinuationDirective(status, guide) {
     `2. Run \`${guide.commands.guide}\` to confirm the exact next command.`,
     `3. Execute next action: \`${guide.nextAction.command}\`.`,
     `4. Produce a real artifact under \`${status.plan.evidencePath ?? ".superloopy/evidence"}\` before recording criterion evidence.`,
-    "5. Checkpoint only after required criteria pass."
+    "5. Checkpoint only after required criteria pass.",
+    ...(sayItStraightOverlay.length === 0 ? [] : ["", sayItStraightOverlay])
   ].filter(Boolean).join("\n");
 }
 

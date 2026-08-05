@@ -19,6 +19,7 @@ import {
 import { hasEngineerTrigger } from "../src/engineer.js";
 import { TRANSCRIPT_TAIL_BYTES } from "../src/continuation.js";
 import { checkpointLoop, createLoop, evidenceLoop, nextLoop, statusLoop } from "../src/loop.js";
+import { updateSayItStraightOutput } from "../src/loop-output-style.js";
 
 async function tempRepo() {
   return mkdtemp(join(tmpdir(), "superloopy-hooks-"));
@@ -285,6 +286,19 @@ test("runUserPromptSubmitHook turns loose trigger into starter guidance without 
   assert.match(parsed.hookSpecificOutput.additionalContext, /guidance only/);
   assert.match(parsed.hookSpecificOutput.additionalContext, /superloopy loop begin --brief 'add proof-backed login' --mode light --json/);
   assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
+});
+
+test("guidance-only aliases do not activate the full-loop output default", async () => {
+  for (const prompt of ["loopywork ship", "lpy ship", "$lpy ship"]) {
+    const repo = await tempRepo();
+    const context = JSON.parse(await runUserPromptSubmitHook({
+      hook_event_name: "UserPromptSubmit",
+      cwd: repo,
+      prompt
+    })).hookSpecificOutput.additionalContext;
+    assert.doesNotMatch(context, /Say It Straight loop output overlay/u);
+    assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
+  }
 });
 
 test("runUserPromptSubmitHook points loose trigger at existing Superloopy state", async () => {
@@ -573,6 +587,25 @@ test("runStopHook blocks a normal stop when Superloopy has unresolved active wor
   assert.match(parsed.reason, /Superloopy continuation/);
   assert.match(parsed.reason, /superloopy loop next --json/);
   assert.match(parsed.reason, /.superloopy\/goals.json/);
+}));
+
+test("Stop continuation follows the durable output-style setting", async () => withStopHookEnabled(async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  const enabled = JSON.parse(await runStopHook({
+    hook_event_name: "Stop",
+    cwd: repo,
+    stop_hook_active: false
+  })).reason;
+  assert.match(enabled, /Say It Straight loop output overlay/u);
+
+  await updateSayItStraightOutput(repo, undefined, false);
+  const disabled = JSON.parse(await runStopHook({
+    hook_event_name: "Stop",
+    cwd: repo,
+    stop_hook_active: false
+  })).reason;
+  assert.doesNotMatch(disabled, /Say It Straight loop output overlay/u);
 }));
 
 test("runStopHook includes command templates for an active evidence criterion", async () => withStopHookEnabled(async () => {
