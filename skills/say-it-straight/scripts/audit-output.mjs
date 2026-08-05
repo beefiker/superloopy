@@ -1,6 +1,8 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
+const PLACEHOLDER_PATTERN = /⟦SIS:[A-Za-z0-9_-]+:[a-z-]+:\d+⟧/gu;
+
 function addRegexCandidates(candidates, text, type, expression) {
   for (const match of text.matchAll(expression)) {
     candidates.push({ type, value: match[0], start: match.index, end: match.index + match[0].length });
@@ -130,13 +132,87 @@ function compareNumberMultisets(sourceSpans, finalSpans) {
   return { ok: count.ok, missing: count.missing, added: count.added, problems };
 }
 
+function compareSignatures(source, final) {
+  return { ok: JSON.stringify(source) === JSON.stringify(final), source, final };
+}
+
+function frontmatterBlocks(text) {
+  const match = /^(?:\uFEFF)?---[^\r\n]*\r?\n[\s\S]*?\r?\n---[ \t]*(?=\r?\n|$)/.exec(text);
+  return match ? [match[0]] : [];
+}
+
+function headingSignatures(text) {
+  const headings = [];
+  for (const match of text.matchAll(/^(#{1,6})[ \t]+(.+?)[ \t]*$/gmu)) {
+    headings.push({ level: match[1].length, text: match[2].replace(/[ \t]+#+$/, "") });
+  }
+  return headings;
+}
+
+function fenceSignatures(text) {
+  const fences = [];
+  for (const match of text.matchAll(/^(?: {0,3})(`{3,}|~{3,})([^\r\n]*)\r?\n[\s\S]*?^(?: {0,3})\1[ \t]*$/gmu)) {
+    const info = match[2].trim();
+    fences.push({ language: info.split(/[ \t]+/u)[0] || "", value: match[0] });
+  }
+  return fences;
+}
+
+function tableSignatures(text) {
+  const tables = [];
+  for (const match of text.matchAll(/^(?:\|.*\|[ \t]*)(?:\r?\n\|.*\|[ \t]*)*$/gmu)) {
+    const rowColumns = match[0].split(/\r?\n/u).map((line) => line.trim().slice(1, -1).split("|").length);
+    tables.push({ rows: rowColumns.length, rowColumns });
+  }
+  return tables;
+}
+
+function structureCheck(sourceText, finalText) {
+  const frontmatter = compareSignatures(frontmatterBlocks(sourceText), frontmatterBlocks(finalText));
+  const headings = compareSignatures(headingSignatures(sourceText), headingSignatures(finalText));
+  const fences = compareSignatures(fenceSignatures(sourceText), fenceSignatures(finalText));
+  const tables = compareSignatures(tableSignatures(sourceText), tableSignatures(finalText));
+  const checks = { frontmatter, headings, fences, tables };
+  const problems = Object.entries(checks)
+    .filter(([, check]) => !check.ok)
+    .map(([name, check]) => ({ check: `structure.${name}`, source: check.source, final: check.final }));
+  return { ok: problems.length === 0, ...checks, problems };
+}
+
+function placeholderMatches(text) {
+  return Array.from(text.matchAll(PLACEHOLDER_PATTERN), (match) => match[0]);
+}
+
+function placeholderCheck(sourceText, finalText) {
+  const sourceCollisions = placeholderMatches(sourceText);
+  const unresolved = placeholderMatches(finalText);
+  const problems = [];
+  if (sourceCollisions.length > 0) problems.push({ check: "placeholders.collision", values: sourceCollisions, message: "Source contains placeholder-shaped text; choose a different run tag." });
+  if (unresolved.length > 0) problems.push({ check: "placeholders.unresolved", values: unresolved });
+  return { ok: problems.length === 0, sourceCollisions, unresolved, problems };
+}
+
 function lengthMetrics(sourceText, finalText) {
+  const sourceCharacters = sourceText.length;
+  const finalCharacters = finalText.length;
+  const lengthDeltaRate = sourceCharacters === 0 ? null : (finalCharacters - sourceCharacters) / sourceCharacters;
   return {
-    sourceLength: sourceText.length,
-    finalLength: finalText.length,
-    delta: finalText.length - sourceText.length,
-    ratio: sourceText.length === 0 ? null : finalText.length / sourceText.length
+    sourceCharacters,
+    finalCharacters,
+    lengthDeltaRate,
+    shrinkageRate: lengthDeltaRate === null ? null : Math.max(0, -lengthDeltaRate)
   };
+}
+
+function lengthWarnings(metrics) {
+  const warnings = [];
+  if (metrics.shrinkageRate !== null && metrics.shrinkageRate > 0.35) {
+    warnings.push({ check: "metrics.shrinkage", value: metrics.shrinkageRate, threshold: 0.35 });
+  }
+  if (metrics.lengthDeltaRate !== null && metrics.lengthDeltaRate > 0.5) {
+    warnings.push({ check: "metrics.expansion", value: metrics.lengthDeltaRate, threshold: 0.5 });
+  }
+  return warnings;
 }
 
 export function auditTexts(sourceText, finalText, options = {}) {
@@ -144,33 +220,102 @@ export function auditTexts(sourceText, finalText, options = {}) {
   const finalSpans = extractProtectedSpans(finalText, options);
   const protectedCheck = compareProtectedSpans(sourceSpans, finalSpans, finalText);
   const numbers = compareNumberMultisets(sourceSpans, finalSpans);
-  const problems = [...protectedCheck.problems, ...numbers.problems];
+  const structure = structureCheck(sourceText, finalText);
+  const placeholders = placeholderCheck(sourceText, finalText);
+  const metrics = lengthMetrics(sourceText, finalText);
+  const problems = [...protectedCheck.problems, ...numbers.problems, ...structure.problems, ...placeholders.problems];
   return {
     schemaVersion: 1,
     ok: problems.length === 0,
-    checks: { protected: protectedCheck, numbers },
-    metrics: lengthMetrics(sourceText, finalText),
+    checks: { protected: protectedCheck, numbers, structure, placeholders },
+    metrics,
     problems,
+    warnings: lengthWarnings(metrics)
+  };
+}
+
+class CliArgumentError extends Error {}
+
+class CliReadableError extends Error {
+  constructor(check, message) {
+    super(message);
+    this.check = check;
+  }
+}
+
+function usageError() {
+  return new CliArgumentError("Usage: --source <path> --final <path> --report <path> [--protected <json-path>]");
+}
+
+function parseArguments(argv) {
+  const values = {};
+  const flags = new Set(["--source", "--final", "--report", "--protected"]);
+  for (let index = 0; index < argv.length; index += 2) {
+    const flag = argv[index];
+    const value = argv[index + 1];
+    if (!flags.has(flag) || !value || value.startsWith("--") || values[flag] !== undefined) throw usageError();
+    values[flag] = value;
+  }
+  if (!values["--source"] || !values["--final"] || !values["--report"]) throw usageError();
+  return values;
+}
+
+async function readCliInput(path, check) {
+  try {
+    return await readFile(path, "utf8");
+  } catch (error) {
+    throw new CliReadableError(check, `${check} failed: ${error.message}`);
+  }
+}
+
+async function readProtectedValues(path) {
+  const text = await readCliInput(path, "cli.protected.read");
+  let manifest;
+  try {
+    manifest = JSON.parse(text);
+  } catch (error) {
+    throw new CliReadableError("cli.protected-manifest", `cli.protected-manifest failed: ${error.message}`);
+  }
+  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest) || Object.keys(manifest).length !== 1 || !Object.hasOwn(manifest, "values") || !Array.isArray(manifest.values) || !manifest.values.every((value) => typeof value === "string")) {
+    throw new CliReadableError("cli.protected-manifest", "cli.protected-manifest failed: expected { values: [\"exact text\"] }");
+  }
+  return manifest.values;
+}
+
+function emptyStructureCheck() {
+  const empty = { ok: true, source: [], final: [] };
+  return { ok: true, frontmatter: empty, headings: empty, fences: empty, tables: empty, problems: [] };
+}
+
+function cliFailureReport(error) {
+  return {
+    schemaVersion: 1,
+    ok: false,
+    checks: {
+      protected: { ok: true, missing: { ok: true, values: [] }, count: { ok: true, missing: [], added: [] }, order: { ok: true, positions: [] }, problems: [] },
+      numbers: { ok: true, missing: [], added: [], problems: [] },
+      structure: emptyStructureCheck(),
+      placeholders: { ok: true, sourceCollisions: [], unresolved: [], problems: [] }
+    },
+    metrics: { sourceCharacters: null, finalCharacters: null, lengthDeltaRate: null, shrinkageRate: null },
+    problems: [{ check: error.check, message: error.message }],
     warnings: []
   };
 }
 
-function optionValue(argv, flag) {
-  const index = argv.indexOf(flag);
-  return index === -1 ? undefined : argv[index + 1];
-}
-
 export async function runCli(argv = process.argv.slice(2)) {
-  const sourcePath = optionValue(argv, "--source");
-  const finalPath = optionValue(argv, "--final");
-  const reportPath = optionValue(argv, "--report");
-  const protectedPath = optionValue(argv, "--protected");
-  if (!sourcePath || !finalPath || !reportPath) {
-    throw new Error("Usage: --source <path> --final <path> --report <path> [--protected <json-path>]");
+  const args = parseArguments(argv);
+  let report;
+  try {
+    const protectedValues = args["--protected"] ? await readProtectedValues(args["--protected"]) : [];
+    const sourceText = await readCliInput(args["--source"], "cli.source.read");
+    const finalText = await readCliInput(args["--final"], "cli.final.read");
+    report = auditTexts(sourceText, finalText, { protectedValues });
+  } catch (error) {
+    if (!(error instanceof CliReadableError)) throw error;
+    report = cliFailureReport(error);
   }
-  const options = protectedPath ? { protectedValues: JSON.parse(await readFile(protectedPath, "utf8")) } : {};
-  const report = auditTexts(await readFile(sourcePath, "utf8"), await readFile(finalPath, "utf8"), options);
-  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);
+  await writeFile(args["--report"], `${JSON.stringify(report, null, 2)}\n`);
   return report;
 }
 
@@ -179,6 +324,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.exitCode = report.ok ? 0 : 1;
   }).catch((error) => {
     console.error(error.message);
-    process.exitCode = 2;
+    process.exitCode = error instanceof CliArgumentError ? 2 : 1;
   });
 }
