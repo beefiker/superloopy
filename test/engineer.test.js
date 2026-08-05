@@ -565,6 +565,27 @@ test("approved direct presentation cues append the overlay on resume from a clea
   }
 });
 
+test("post-status fallback preserves a disabled loop output style", async () => {
+  const context = await runEngineerTriggerHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: await tempRepo(),
+    prompt: "loopy add login"
+  }, {
+    statusForPayload: async () => ({
+      binding: { resumable: true },
+      summary: { aggregateComplete: false },
+      plan: { outputStyle: { sayItStraight: false } }
+    }),
+    guideForPayload: () => { throw new Error("guide unavailable"); },
+    renderSuperloopyContext: () => "",
+    formatAdditionalContext: (_event, additionalContext) => additionalContext,
+    loadAdhdFriendlyOutputOverlay: async () => ""
+  });
+
+  assert.match(context, /Start now/);
+  assert.doesNotMatch(context, /Say It Straight loop output overlay/u);
+});
+
 test("malformed successful status falls back to normal start guidance", async () => {
   const context = await runEngineerTriggerHook({
     hook_event_name: "UserPromptSubmit",
