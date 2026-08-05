@@ -2,6 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
 const PLACEHOLDER_PATTERN = /⟦SIS:[A-Za-z0-9_-]+:[a-z-]+:\d+⟧/gu;
+const FRONTMATTER_PATTERN = /^(?:\uFEFF)?---[^\r\n]*\r?\n(?:[\s\S]*?\r?\n)?---[ \t]*(?=\r?\n|$)/;
 
 function addRegexCandidates(candidates, text, type, expression) {
   for (const match of text.matchAll(expression)) {
@@ -21,18 +22,95 @@ function addValueCandidates(candidates, text, protectedValues) {
 }
 
 function addFrontmatterCandidate(candidates, text) {
-  const match = /^(?:\uFEFF)?---[^\r\n]*\r?\n[\s\S]*?\r?\n---[ \t]*(?=\r?\n|$)/.exec(text);
+  const match = FRONTMATTER_PATTERN.exec(text);
   if (match) {
     candidates.push({ type: "frontmatter", value: match[0], start: 0, end: match[0].length });
   }
 }
 
+function textLines(text) {
+  const lines = [];
+  let start = 0;
+  while (start < text.length) {
+    const newline = text.indexOf("\n", start);
+    const end = newline === -1 ? text.length : newline + 1;
+    const contentEnd = newline === -1 ? end : text[newline - 1] === "\r" ? newline - 1 : newline;
+    lines.push({ text: text.slice(start, contentEnd), start, end, contentEnd });
+    start = end;
+  }
+  return lines;
+}
+
+function fencedCodeBlocks(text) {
+  const lines = textLines(text);
+  const blocks = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const opening = /^(?: {0,3})(`{3,}|~{3,})([^\r\n]*)$/u.exec(lines[index].text);
+    if (!opening) continue;
+    for (let closingIndex = index + 1; closingIndex < lines.length; closingIndex += 1) {
+      const closing = /^(?: {0,3})(`{3,}|~{3,})[ \t]*$/u.exec(lines[closingIndex].text);
+      if (!closing || closing[1][0] !== opening[1][0] || closing[1].length < opening[1].length) continue;
+      const info = opening[2].trim();
+      blocks.push({
+        start: lines[index].start,
+        end: lines[closingIndex].contentEnd,
+        value: text.slice(lines[index].start, lines[closingIndex].contentEnd),
+        language: info.split(/[ \t]+/u)[0] || ""
+      });
+      index = closingIndex;
+      break;
+    }
+  }
+  return blocks;
+}
+
+function tableCells(line) {
+  const trimmed = line.trim();
+  if (!trimmed.includes("|")) return null;
+  const withoutLeadingPipe = trimmed.startsWith("|") ? trimmed.slice(1) : trimmed;
+  const content = withoutLeadingPipe.endsWith("|") ? withoutLeadingPipe.slice(0, -1) : withoutLeadingPipe;
+  return content.split("|").map((cell) => cell.trim());
+}
+
+function isOuterPipeRow(line) {
+  return /^\|.*\|[ \t]*$/u.test(line);
+}
+
+function isTableDivider(cells) {
+  return cells?.length > 0 && cells.every((cell) => /^:?-{3,}:?$/u.test(cell));
+}
+
+function tableBlocks(text) {
+  const lines = textLines(text);
+  const blocks = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!isOuterPipeRow(lines[index].text)) continue;
+    let last = index;
+    while (last + 1 < lines.length && isOuterPipeRow(lines[last + 1].text)) last += 1;
+    const rowColumns = lines.slice(index, last + 1).map((line) => tableCells(line.text).length);
+    blocks.push({ start: lines[index].start, end: lines[last].contentEnd, value: text.slice(lines[index].start, lines[last].contentEnd), rows: rowColumns.length, rowColumns });
+    index = last;
+  }
+  for (let index = 0; index + 1 < lines.length; index += 1) {
+    if (isOuterPipeRow(lines[index].text)) continue;
+    const header = tableCells(lines[index].text);
+    const divider = tableCells(lines[index + 1].text);
+    if (!header || !divider || header.length !== divider.length || !isTableDivider(divider)) continue;
+    let last = index + 1;
+    while (last + 1 < lines.length && tableCells(lines[last + 1].text)) last += 1;
+    const rowColumns = lines.slice(index, last + 1).map((line) => tableCells(line.text).length);
+    blocks.push({ start: lines[index].start, end: lines[last].contentEnd, value: text.slice(lines[index].start, lines[last].contentEnd), rows: rowColumns.length, rowColumns });
+    index = last;
+  }
+  return blocks;
+}
+
 function collectCandidates(text, protectedValues) {
   const candidates = [];
   addFrontmatterCandidate(candidates, text);
-  addRegexCandidates(candidates, text, "fenced-code", /^(?: {0,3})(```|~~~)[^\r\n]*\r?\n[\s\S]*?^(?: {0,3})\1[ \t]*$/gm);
+  for (const block of fencedCodeBlocks(text)) candidates.push({ type: "fenced-code", value: block.value, start: block.start, end: block.end });
   addRegexCandidates(candidates, text, "inline-code", /`[^`\r\n]+`/g);
-  addRegexCandidates(candidates, text, "table", /^(?:\|.*\|[ \t]*)(?:\r?\n\|.*\|[ \t]*)*$/gm);
+  for (const table of tableBlocks(text)) candidates.push({ type: "table", value: table.value, start: table.start, end: table.end });
   addRegexCandidates(candidates, text, "markdown-url", /\[[^\]\r\n]*\]\((?:<[^>\r\n]+>|[^)\s\r\n]+)(?:\s+["'][^"']*["'])?\)/g);
   addRegexCandidates(candidates, text, "bare-url", /\b(?:https?|ftp):\/\/[^\s<>()\[\]{}"']+[^\s<>()\[\]{}"'.,;:!?]/g);
   addRegexCandidates(candidates, text, "path", /(?:~\/|\.\.?\/|\/)(?:[\w@%+=:.-]+\/)*[\w@%+=:.-]+/g);
@@ -137,34 +215,31 @@ function compareSignatures(source, final) {
 }
 
 function frontmatterBlocks(text) {
-  const match = /^(?:\uFEFF)?---[^\r\n]*\r?\n[\s\S]*?\r?\n---[ \t]*(?=\r?\n|$)/.exec(text);
+  const match = FRONTMATTER_PATTERN.exec(text);
   return match ? [match[0]] : [];
 }
 
 function headingSignatures(text) {
   const headings = [];
-  for (const match of text.matchAll(/^(#{1,6})[ \t]+(.+?)[ \t]*$/gmu)) {
-    headings.push({ level: match[1].length, text: match[2].replace(/[ \t]+#+$/, "") });
+  const lines = textLines(text);
+  for (const line of lines) {
+    const match = /^(#{1,6})[ \t]+(.+?)[ \t]*$/u.exec(line.text);
+    if (match) headings.push({ start: line.start, level: match[1].length, text: match[2].replace(/[ \t]+#+$/, "") });
   }
-  return headings;
+  for (let index = 1; index < lines.length; index += 1) {
+    const underline = /^[ \t]*(=+|-+)[ \t]*$/u.exec(lines[index].text);
+    const text = lines[index - 1].text.trim();
+    if (underline && text) headings.push({ start: lines[index - 1].start, level: underline[1][0] === "=" ? 1 : 2, text });
+  }
+  return headings.sort((left, right) => left.start - right.start).map(({ level, text }) => ({ level, text }));
 }
 
 function fenceSignatures(text) {
-  const fences = [];
-  for (const match of text.matchAll(/^(?: {0,3})(`{3,}|~{3,})([^\r\n]*)\r?\n[\s\S]*?^(?: {0,3})\1[ \t]*$/gmu)) {
-    const info = match[2].trim();
-    fences.push({ language: info.split(/[ \t]+/u)[0] || "", value: match[0] });
-  }
-  return fences;
+  return fencedCodeBlocks(text).map(({ language, value }) => ({ language, value }));
 }
 
 function tableSignatures(text) {
-  const tables = [];
-  for (const match of text.matchAll(/^(?:\|.*\|[ \t]*)(?:\r?\n\|.*\|[ \t]*)*$/gmu)) {
-    const rowColumns = match[0].split(/\r?\n/u).map((line) => line.trim().slice(1, -1).split("|").length);
-    tables.push({ rows: rowColumns.length, rowColumns });
-  }
-  return tables;
+  return tableBlocks(text).map(({ rows, rowColumns }) => ({ rows, rowColumns }));
 }
 
 function structureCheck(sourceText, finalText) {
@@ -234,7 +309,12 @@ export function auditTexts(sourceText, finalText, options = {}) {
   };
 }
 
-class CliArgumentError extends Error {}
+class CliArgumentError extends Error {
+  constructor(message) {
+    super(message);
+    this.check = "cli.arguments";
+  }
+}
 
 class CliReadableError extends Error {
   constructor(check, message) {
@@ -258,6 +338,12 @@ function parseArguments(argv) {
   }
   if (!values["--source"] || !values["--final"] || !values["--report"]) throw usageError();
   return values;
+}
+
+function recoverReportPath(argv) {
+  const index = argv.indexOf("--report");
+  const value = argv[index + 1];
+  return index === -1 || !value || value.startsWith("--") ? undefined : value;
 }
 
 async function readCliInput(path, check) {
@@ -304,7 +390,16 @@ function cliFailureReport(error) {
 }
 
 export async function runCli(argv = process.argv.slice(2)) {
-  const args = parseArguments(argv);
+  const recoveredReportPath = recoverReportPath(argv);
+  let args;
+  try {
+    args = parseArguments(argv);
+  } catch (error) {
+    if (error instanceof CliArgumentError && recoveredReportPath) {
+      await writeFile(recoveredReportPath, `${JSON.stringify(cliFailureReport(error), null, 2)}\n`);
+    }
+    throw error;
+  }
   let report;
   try {
     const protectedValues = args["--protected"] ? await readProtectedValues(args["--protected"]) : [];

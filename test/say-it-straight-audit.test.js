@@ -122,9 +122,25 @@ test("audit rejects changed frontmatter", () => {
   assert.equal(report.checks.structure.frontmatter.ok, false);
 });
 
+// Mutation caught: requiring frontmatter content and accepting deletion of a valid empty frontmatter block.
+test("audit rejects removal of empty frontmatter", () => {
+  const report = auditTexts("---\n---\nBody.\n", "Body.\n");
+
+  assert.equal(report.ok, false);
+  assert.equal(report.checks.structure.frontmatter.ok, false);
+});
+
 // Mutation caught: treating headings as an unordered set and accepting a reordered hierarchy.
 test("audit rejects reordered heading levels and text", () => {
   const report = auditTexts("# Start\n\n## Details\n", "## Details\n\n# Start\n");
+
+  assert.equal(report.ok, false);
+  assert.equal(report.checks.structure.headings.ok, false);
+});
+
+// Mutation caught: recognizing only ATX headings and accepting deletion of a Setext heading.
+test("audit rejects removal of a Setext heading", () => {
+  const report = auditTexts("Release notes\n=============\n\nBody.\n", "Body.\n");
 
   assert.equal(report.ok, false);
   assert.equal(report.checks.structure.headings.ok, false);
@@ -141,12 +157,28 @@ test("audit rejects a changed fenced-code block count", () => {
   assert.equal(report.checks.structure.fences.ok, false);
 });
 
+// Mutation caught: requiring a closing fence to equal the opener instead of accepting a longer valid closer.
+test("audit rejects removal of a fenced block with a longer closing fence", () => {
+  const report = auditTexts("```sh\nrun alpha\n````\n", "Body.\n");
+
+  assert.equal(report.ok, false);
+  assert.equal(report.checks.structure.fences.ok, false);
+});
+
 // Mutation caught: ignoring Markdown table row and column signatures.
 test("audit rejects a changed table shape", () => {
   const report = auditTexts(
     "| Name | State |\n| --- | --- |\n| Alpha | Ready |\n",
     "| Name | State | Owner |\n| --- | --- | --- |\n| Alpha | Ready | Lee |\n"
   );
+
+  assert.equal(report.ok, false);
+  assert.equal(report.checks.structure.tables.ok, false);
+});
+
+// Mutation caught: recognizing only outer-pipe tables and accepting deletion of a standard pipe-delimited table.
+test("audit rejects removal of a table without outer pipes", () => {
+  const report = auditTexts("Name | State\n--- | ---\nAlpha | Ready\n", "Body.\n");
 
   assert.equal(report.ok, false);
   assert.equal(report.checks.structure.tables.ok, false);
@@ -247,4 +279,21 @@ test("CLI exits two for malformed arguments", () => {
 
   assert.equal(result.status, 2);
   assert.match(result.stderr, /Usage:/);
+});
+
+// Mutation caught: exiting two before writing a concrete report when otherwise-valid paths accompany an unknown or duplicate flag.
+test("CLI writes an argument report for malformed flags when a report path is available", async (t) => {
+  const files = await writeCase(t, "Use the runbook.", "Use the runbook.");
+  const cases = [
+    ["--unknown", "value"],
+    ["--source", files.source]
+  ];
+
+  for (const extra of cases) {
+    const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report, ...extra], { encoding: "utf8" });
+    assert.equal(result.status, 2);
+    const report = JSON.parse(await readFile(files.report, "utf8"));
+    assert.equal(report.ok, false);
+    assert.equal(report.problems[0].check, "cli.arguments");
+  }
 });
