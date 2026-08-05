@@ -12,6 +12,7 @@ import { hasEngineerTrigger } from "../src/engineer.js";
 import { TRANSCRIPT_TAIL_BYTES } from "../src/continuation.js";
 import { checkpointLoop, createLoop, evidenceLoop, nextLoop, statusLoop } from "../src/loop.js";
 import { updateSayItStraightOutput } from "../src/loop-output-style.js";
+import { writePlan as persistPlan } from "../src/store.js";
 
 async function tempRepo() { return mkdtemp(join(tmpdir(), "superloopy-hooks-")); }
 
@@ -251,22 +252,18 @@ test("runUserPromptSubmitHook stays quiet for ordinary prompts even when Superlo
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
   const output = await submitPrompt(repo, "continue");
-
   assert.equal(output, "");
 });
-
 test("exact output-style controls disable and re-enable only the current loop", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
   const off = await submitPrompt(repo, "직설 모드 끄기");
   assert.match(JSON.parse(off).hookSpecificOutput.additionalContext, /disabled for the current loop/u);
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, false);
-
   const on = await submitPrompt(repo, "say-it-straight on");
   assert.match(JSON.parse(on).hookSpecificOutput.additionalContext, /enabled for the current loop/u);
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
 });
-
 test("a scoped control leaves the global loop unchanged", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Global"]);
@@ -280,7 +277,6 @@ test("a missing scoped loop never falls back to mutate the global loop", async (
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Global"]);
   const output = await submitPrompt(repo, "say-it-straight off", { session_id: "missing" });
-
   assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /No active Superloopy loop/u);
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
 });
@@ -311,7 +307,6 @@ test("output-style mutation rechecks repository binding under the goals-file loc
     await writeFile(targetPlan, copied);
     locker.stdin.end();
     await once(locker, "exit");
-
     const output = await outputPromise;
     assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /binding is mismatch/u);
     assert.deepEqual(await readFile(targetPlan), copied);
@@ -360,14 +355,21 @@ test("mismatched repository binding refuses output-style mutation", async () => 
   assert.deepEqual(await readFile(targetPlan), copied);
 });
 
-test("write failure keeps the prior output style authoritative", async () => {
+test("post-write failures keep output-style control responses truthful", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
-  const output = await submitPrompt(repo, "say-it-straight off", {}, {
-    updateSayItStraightOutput: async () => { throw new Error("locked write"); }
-  });
-  assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /prior loop setting remains authoritative/u);
+  const rolledBack = await submitPrompt(repo, "say-it-straight off", {}, { updateSayItStraightOutput: (...args) =>
+    updateSayItStraightOutput(...args, { appendLedger: async () => { throw new Error("ledger unavailable"); } }) });
+  assert.match(JSON.parse(rolledBack).hookSpecificOutput.additionalContext, /prior loop setting remains authoritative/u);
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
+  let writes = 0;
+  const partial = await submitPrompt(repo, "say-it-straight off", {}, { updateSayItStraightOutput: (...args) =>
+    updateSayItStraightOutput(...args, {
+      appendLedger: async () => { throw new Error("ledger unavailable"); },
+      writePlan: async (...writeArgs) => ++writes === 2 ? Promise.reject(new Error("rollback unavailable")) : persistPlan(...writeArgs)
+    }) });
+  assert.match(JSON.parse(partial).hookSpecificOutput.additionalContext, /actual persisted current-loop output style is disabled/u);
+  assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, false);
 });
 
 test("runUserPromptSubmitHook appends annotate steering to ledger", async () => {
