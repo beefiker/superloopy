@@ -114,7 +114,7 @@ export async function runEngineerTriggerHook(payload, deps) {
   } catch {
     return formatAdditionalContext(
       "UserPromptSubmit",
-      renderStart(payload, orchestrate, interop, adhdOverlay, renderSayItStraightLoopOverlay(true))
+      renderStart(payload, orchestrate, interop, adhdOverlay, sayItStraightOverlay)
     );
   }
 }
