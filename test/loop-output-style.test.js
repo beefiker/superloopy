@@ -11,6 +11,7 @@ import {
   updateSayItStraightOutput
 } from "../src/loop-output-style.js";
 import { createLoop, statusLoop } from "../src/loop.js";
+import { writePlan as persistPlan } from "../src/store.js";
 
 const tempRepo = () => mkdtemp(join(tmpdir(), "superloopy-output-style-"));
 
@@ -65,6 +66,41 @@ test("a scoped update changes only that loop and appends a ledger event", async 
   const ledger = await readFile(join(repo, ".superloopy", "sessions", "beta", "ledger.jsonl"), "utf8");
   assert.match(ledger, /"kind":"output_style_changed"/u);
   assert.match(ledger, /"sayItStraight":false/u);
+});
+
+test("a ledger failure restores the exact prior plan", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  const planPath = join(repo, ".superloopy", "goals.json");
+  const before = await readFile(planPath, "utf8");
+  await assert.rejects(
+    updateSayItStraightOutput(repo, undefined, false, {
+      appendLedger: async () => { throw new Error("ledger unavailable"); }
+    }),
+    (error) => error.outputStyleFailure?.priorRestored === true
+  );
+  assert.equal(await readFile(planPath, "utf8"), before);
+  assert.doesNotMatch(await readFile(join(repo, ".superloopy", "ledger.jsonl"), "utf8"), /output_style_changed/u);
+});
+
+test("a rollback failure reports the actual persisted output style", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  let writes = 0;
+  await assert.rejects(
+    updateSayItStraightOutput(repo, undefined, false, {
+      appendLedger: async () => { throw new Error("ledger unavailable"); },
+      writePlan: async (...args) => {
+        writes += 1;
+        if (writes === 2) throw new Error("rollback unavailable");
+        return await persistPlan(...args);
+      }
+    }),
+    (error) => error.outputStyleFailure?.priorRestored === false
+      && error.outputStyleFailure.effectiveEnabled === false
+  );
+  assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, false);
+  assert.doesNotMatch(await readFile(join(repo, ".superloopy", "ledger.jsonl"), "utf8"), /output_style_changed/u);
 });
 
 test("the compact overlay preserves authority and artifact isolation", () => {

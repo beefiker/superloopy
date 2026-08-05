@@ -127,7 +127,13 @@ async function runOutputStyleControlHook(payload, control, updateOutputStyle) {
       `Say It Straight output is ${enabled ? "enabled" : "disabled"} for the current loop only.`,
       renderSayItStraightLoopOverlay(enabled)
     ].filter(Boolean).join("\n\n"));
-  } catch {
+  } catch (error) {
+    const failure = error?.outputStyleFailure;
+    if (failure?.priorRestored === false && typeof failure.effectiveEnabled === "boolean") {
+      const effective = failure.effectiveEnabled ? "enabled" : "disabled";
+      return formatOutputStyleContext(`Superloopy could not record or roll back the output-style change; the actual persisted current-loop output style is ${effective}.`);
+    }
+    if (failure?.priorRestored === false) return formatOutputStyleContext("Superloopy could not record or roll back the output-style change; the actual persisted current-loop output style could not be verified. Inspect the current loop before continuing.");
     return formatOutputStyleContext("Superloopy could not change the output style; the prior loop setting remains authoritative.");
   }
 }
