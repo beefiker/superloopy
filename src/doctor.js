@@ -263,6 +263,7 @@ export function isReviewableTextFile(file) {
     && !file.startsWith("web-superloopy/public/_nuxt/")
     && !file.startsWith("web-superloopy/public/_payload.json")
     && !file.startsWith("skills/superloopy-slides/bold-template-pack/")
+    && !/^docs\/superpowers\/plans\/[^/]+\.md$/u.test(file)
     && !INVENTORY_DOCS.has(file);
 }
 

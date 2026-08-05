@@ -457,6 +457,33 @@ test("plugin packages explicit-only i-have-adhd with attribution and Superloopy 
   assert.match(notice, /https:\/\/github\.com\/ayghri\/i-have-adhd/);
 });
 
+test("plugin packages explicit-only say-it-straight with clean-room provenance", async () => {
+  const skill = await readSkill("say-it-straight");
+
+  assert.match(skill.frontmatter, /^name: say-it-straight$/m);
+  assert.match(skill.frontmatter, /^disable-model-invocation: true$/m);
+  assert.match(skill.frontmatter, /\$superloopy:say-it-straight/);
+  assert.match(skill.frontmatter, /\/superloopy:say-it-straight/);
+
+  for (const file of [
+    "skills/say-it-straight/agents/openai.yaml",
+    "skills/say-it-straight/LICENSE",
+    "skills/say-it-straight/references/preservation.md",
+    "skills/say-it-straight/references/quality-rubric.md",
+    "skills/say-it-straight/references/quick-rules.md",
+    "skills/say-it-straight/references/upstream-notice.md",
+    "skills/say-it-straight/scripts/audit-output.mjs"
+  ]) {
+    assert.equal(existsSync(file), true, file);
+  }
+
+  const metadata = await readFile("skills/say-it-straight/agents/openai.yaml", "utf8");
+  const notice = await readFile("skills/say-it-straight/references/upstream-notice.md", "utf8");
+  assert.match(metadata, /allow_implicit_invocation:\s*false/);
+  assert.match(notice, /clean-room MIT implementation/);
+  assert.match(notice, /Copied wording: none/);
+});
+
 test("packaged i-have-adhd preserves pinned upstream rules across checkout line endings", async () => {
   const skill = await readFile("skills/i-have-adhd/SKILL.md", "utf8");
   const lfSkill = skill.replace(/\r\n?/gu, "\n");
