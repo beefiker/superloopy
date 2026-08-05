@@ -25,6 +25,13 @@ test("skill frontmatter parser accepts CRLF line endings", () => {
   assert.match(frontmatter, /^description: test$/m);
 });
 
+test("slides skill keeps its description in a YAML-safe scalar", async () => {
+  const { frontmatter } = await readSkill("superloopy-slides");
+  const description = frontmatter.split("\n").find((line) => line.startsWith("description: ")) ?? "";
+
+  assert.match(description, /^description: (?:(?:".*")|(?:'.*')|(?:[>|][-+]?))$/u);
+});
+
 test("plugin manifest exposes Superloopy skills and packaged opt-in hooks", async () => {
   const plugin = JSON.parse(await readFile(".codex-plugin/plugin.json", "utf8"));
 

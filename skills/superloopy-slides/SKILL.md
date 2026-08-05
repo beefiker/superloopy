@@ -1,6 +1,6 @@
 ---
 name: superloopy-slides
-description: Create beautiful, animation-rich HTML slide decks from scratch or by converting PowerPoint files — zero-dependency single-file presentations with curated distinctive styles, gated by real-browser visual-QA evidence on the Superloopy evidence spine. Use when the user wants slides, a presentation, a deck, a pitch deck, a talk, a keynote, or to convert a PPT/PPTX to web. Triggers — slides, presentation, deck, pitch deck, keynote, talk, PPT, PPTX, "make me a deck", "loopy slides". Discovers the user's aesthetic through visual style previews rather than abstract choices; supports PDF export and Vercel/Cloudflare Pages deployment. Live example deck built with this skill: https://fileloom-slides.pages.dev. NOT for general web pages or landing pages — use superloopy-frontend for those.
+description: "Use when the user asks for slides, a presentation, deck, pitch deck, talk, keynote, PowerPoint/PPT/PPTX conversion, or says loopy slides; not for general web pages or landing pages."
 ---
 
 # Superloopy Slides
