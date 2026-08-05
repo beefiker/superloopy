@@ -69,7 +69,7 @@ test("plugin interface assets resolve inside the npm package", async () => {
   assert.equal(packed.status, 0, packed.stderr || packed.stdout);
   const files = new Set(JSON.parse(packed.stdout)[0].files.map((file) => file.path));
   assert.equal(files.has(assetPaths[0].replace(/^\.\//u, "")), true, "interface asset missing from npm pack");
-  for (const reference of ["desktop.md", "hybrid.md", "layout.md", "mobile.md", "motion-core.md", "motion.md", "redesign.md", "renderer.md", "system-map.md", "upstream-notice.md", "ux.md"]) {
+  for (const reference of ["desktop.md", "hybrid.md", "impeccable.md", "layout.md", "mobile.md", "motion-core.md", "motion.md", "redesign.md", "renderer.md", "system-map.md", "upstream-notice.md", "ux.md"]) {
     const path = `skills/superloopy-frontend/references/${reference}`;
     assert.equal(files.has(path), true, `frontend reference missing from npm pack: ${path}`);
   }
