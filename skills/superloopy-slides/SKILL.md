@@ -1,6 +1,11 @@
 ---
 name: superloopy-slides
-description: "Use when the user asks for slides, a presentation, deck, pitch deck, talk, keynote, PowerPoint/PPT/PPTX conversion, or says loopy slides; not for general web pages or landing pages."
+description: >-
+  Use when the user asks to create, convert, style, animate, export, share, or
+  deploy HTML slide decks, presentations, pitch decks, talks, or keynotes;
+  including zero-dependency or single-file output, PowerPoint/PPT/PPTX input,
+  PDF export, browser delivery, visual style exploration, or "loopy slides".
+  Not for general web pages or landing pages.
 ---
 
 # Superloopy Slides
