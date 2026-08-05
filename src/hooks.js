@@ -8,13 +8,14 @@ import { CONTEXT_PRESSURE_MARKERS, decideContinuation, transcriptTailHasMarker }
 import { matchesAgentType, receiptFromPayload, subagentTranscriptPath } from "./receipt.js";
 import { hasEngineerTrigger, runEngineerTriggerHook } from "./engineer.js";
 import { applySteeringIdempotent, statusLoop } from "./loop.js";
-import { appendLedger, evidenceRelativeDir, goalsPath, scopeFromSessionId } from "./store.js";
+import { appendLedger, evidenceRelativeDir, goalsPath, readPlan, scopeFromSessionId, withFileLock } from "./store.js";
 import { MAX_SUBAGENT_ATTEMPTS, clearAttemptState, nextAttemptState, recordSubagentLedger } from "./subagent-attempts.js";
 import { resolveWorkspaceRoot } from "./workspace-identity.js";
 import { steeringRequestKey } from "./steering-receipts.js";
 import { formatMeasuredAdditionalContext } from "./context-cost.js";
 import { buildRecoveryProjection, renderRecoveryCapsule } from "./compaction-recovery.js";
 import { fleetLoop } from "./fleet.js";
+import { inspectRepositoryBinding } from "./repository-binding.js";
 import {
   isSayItStraightEnabled,
   parseLoopOutputStyleControl,
@@ -121,7 +122,7 @@ export async function runUserPromptSubmitHook(payload, options = {}) {
 async function runOutputStyleControlHook(payload, control, updateOutputStyle) {
   let status;
   try {
-    status = await statusForPayload(payload);
+    status = await statusForOutputStyleControl(payload);
   } catch (error) {
     if (isMissingPlanError(error)) {
       return formatAdditionalContext("UserPromptSubmit", "No active Superloopy loop; no output style changed.");
@@ -145,8 +146,26 @@ async function runOutputStyleControlHook(payload, control, updateOutputStyle) {
   }
   try {
     const scope = scopeFromSessionId(status.plan.sessionId);
-    const result = await updateOutputStyle(payload.cwd, scope, control.enabled);
-    const enabled = isSayItStraightEnabled(result.plan);
+    const mutation = await withFileLock(goalsPath(payload.cwd, scope), async () => {
+      const plan = await readPlan(payload.cwd, scope);
+      const binding = await inspectRepositoryBinding(payload.cwd, plan);
+      if (binding.resumable === false) return { binding };
+      if (plan.aggregateCompletion?.status === "complete") return { complete: true };
+      return { result: await updateOutputStyle(payload.cwd, scope, control.enabled) };
+    });
+    if (mutation.binding !== undefined) {
+      return formatAdditionalContext(
+        "UserPromptSubmit",
+        `Superloopy repository binding is ${mutation.binding.status}; no output style changed.`
+      );
+    }
+    if (mutation.complete) {
+      return formatAdditionalContext(
+        "UserPromptSubmit",
+        "The current Superloopy loop is already complete; no output style changed."
+      );
+    }
+    const enabled = isSayItStraightEnabled(mutation.result.plan);
     return formatAdditionalContext("UserPromptSubmit", [
       `Say It Straight output is ${enabled ? "enabled" : "disabled"} for the current loop only.`,
       renderSayItStraightLoopOverlay(enabled)
@@ -157,6 +176,12 @@ async function runOutputStyleControlHook(payload, control, updateOutputStyle) {
       "Superloopy could not change the output style; the prior loop setting remains authoritative."
     );
   }
+}
+
+async function statusForOutputStyleControl(payload) {
+  const scope = scopeFromPayload(payload);
+  if (scope !== undefined) return await statusLoop(payload.cwd, ["--session-id", scope.sessionId]);
+  return await statusLoop(payload.cwd);
 }
 
 export async function runSessionStartHook(payload, options = {}) {

@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -347,6 +349,60 @@ test("a scoped control leaves the global loop unchanged", async () => {
   });
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
   assert.equal((await statusLoop(repo, ["--session-id", "beta"])).plan.outputStyle.sayItStraight, false);
+});
+
+test("a missing scoped loop never falls back to mutate the global loop", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Global"]);
+
+  const output = await runUserPromptSubmitHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repo,
+    session_id: "missing",
+    prompt: "say-it-straight off"
+  });
+
+  assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /No active Superloopy loop/u);
+  assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
+});
+
+test("output-style mutation rechecks repository binding under the goals-file lock", async () => {
+  const source = await tempRepo();
+  const target = await tempRepo();
+  await createLoop(source, ["--brief", "Source"]);
+  await createLoop(target, ["--brief", "Target"]);
+  const targetPlan = join(target, ".superloopy", "goals.json");
+  const copied = await readFile(join(source, ".superloopy", "goals.json"));
+  const locker = spawn(process.execPath, [
+    "--input-type=module",
+    "--eval",
+    [
+      `import { withFileLock } from ${JSON.stringify(new URL("../src/store.js", import.meta.url).href)};`,
+      "await withFileLock(process.argv[1], async () => {",
+      "  process.stdout.write('locked\\n');",
+      "  await new Promise((resolve) => process.stdin.once('data', resolve));",
+      "});"
+    ].join("\n"),
+    targetPlan
+  ], { stdio: ["pipe", "pipe", "pipe"] });
+  await once(locker.stdout, "data");
+  try {
+    const outputPromise = runUserPromptSubmitHook({
+      hook_event_name: "UserPromptSubmit",
+      cwd: target,
+      prompt: "say-it-straight off"
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await writeFile(targetPlan, copied);
+    locker.stdin.end();
+    await once(locker, "exit");
+
+    const output = await outputPromise;
+    assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /binding is mismatch/u);
+    assert.deepEqual(await readFile(targetPlan), copied);
+  } finally {
+    if (!locker.killed) locker.stdin.end();
+  }
 });
 
 test("near matches and quoted controls remain inert", async () => {
