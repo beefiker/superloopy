@@ -48,11 +48,35 @@ test("compaction recovery carries the effective loop output style", async () => 
   assert.doesNotMatch(renderRecoveryCapsule(disabled), /^Say It Straight loop output overlay$/mu);
 });
 
+test("default-size recovery keeps the complete enabled output guardrail for an oversized goal", async () => {
+  const status = await statusLoop(await activeRepo());
+  status.plan.goals[0].title = "x".repeat(10_000);
+
+  const rendered = renderRecoveryCapsule(projection(status));
+
+  assert.ok(rendered.length <= 4000);
+  assert.match(rendered, /Say It Straight loop output overlay/u);
+  assert.match(rendered, /Apply this wording style only to user-facing progress reports and final answers\./u);
+  assert.match(rendered, /Do not silently rewrite task artifacts, code, documentation, comments, evidence, quotations, or user source text\./u);
+});
+
+test("default-size recovery keeps the disabled output marker for an oversized goal", async () => {
+  const repo = await activeRepo();
+  await updateSayItStraightOutput(repo, undefined, false);
+  const status = await statusLoop(repo);
+  status.plan.goals[0].title = "x".repeat(10_000);
+
+  const rendered = renderRecoveryCapsule(projection(status));
+
+  assert.ok(rendered.length <= 4000);
+  assert.match(rendered, /Say It Straight output: disabled for this loop\./u);
+});
+
 test("bounded recovery rendering retains mandatory completion and next-action truth", async () => {
   const status = await statusLoop(await activeRepo());
   status.plan.goals[0].title = "x".repeat(5000);
-  const rendered = renderRecoveryCapsule(projection(status), { maxChars: 300 });
-  assert.ok(rendered.length <= 300);
+  const rendered = renderRecoveryCapsule(projection(status), { maxChars: 1000 });
+  assert.ok(rendered.length <= 1000);
   assert.match(rendered, /Aggregate complete: no/u);
   assert.match(rendered, /Durable Superloopy state overrides/u);
   assert.match(rendered, /Next action: superloopy loop prove -- <validation-command>/u);
