@@ -18,6 +18,7 @@ import {
 import { readLoopControl } from "./continuation.js";
 import { buildGuide, guideLoop } from "./guide.js";
 import { helpText } from "./help.js";
+import { defaultLoopOutputStyle } from "./loop-output-style.js";
 import { summarizePlan } from "./plan-summary.js";
 import { inspectRepositoryBinding } from "./repository-binding.js";
 import {
@@ -62,6 +63,7 @@ export async function createLoop(cwd, argv) {
     evidencePath: evidenceRelativeDir(scope),
     goalsPath: goalsRelativePath(scope),
     ledgerPath: ledgerRelativePath(scope),
+    outputStyle: defaultLoopOutputStyle(),
     goals,
     aggregateCompletion: null,
     repositoryBinding: await createRepositoryBinding(cwd)
