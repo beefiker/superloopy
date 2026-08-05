@@ -207,7 +207,7 @@ test("README lists the packaged Superloopy skills and their jobs", async () => {
     assert.match(content, /superloopy-clone/);
     assert.match(content, /humanize-korean/);
     assert.match(content, /superloopy-doctor/);
-    assert.match(content, /superloopy-slides/);
+    assert.match(content, /superloopy-slides/); assert.match(content, /superloopy-backend/);
     assert.match(content, /transferloom-clone-reference\.png/);
     assert.match(content, /Transferloom\.com/);
     assert.match(content, /AI|Korean|한국어|한글|윤문/u);
@@ -221,7 +221,7 @@ test("README lists the packaged Superloopy skills and their jobs", async () => {
     assert.match(content, /\/superloopy:superloopy-frontend/);
     assert.match(content, /\$superloopy:superloopy-research/);
     assert.match(content, /\/superloopy:superloopy-research/);
-    for (const pattern of [/i-have-adhd/, /\$superloopy:i-have-adhd/, /\/superloopy:i-have-adhd/, /loopy|루피/u]) assert.match(content, pattern);
+    for (const pattern of [/i-have-adhd/, /\$superloopy:i-have-adhd/, /\/superloopy:i-have-adhd/, /loopy|루피/u]) assert.match(content, pattern); const backendRows = content.split("\n").filter((line) => line.startsWith("| `superloopy-backend` |")); assert.equal(backendRows.length, 1, `${file} must publish exactly one superloopy-backend row`); for (const pattern of [/\$superloopy:superloopy-backend/u, /\/superloopy:superloopy-backend/u, /loopy.*루피/u, { "README.md": /Plain backend or database vocabulary does not activate it/iu, "README.ko.md": /단순한 백엔드·데이터베이스 용어로는 활성화되지 않습니다/u, "README.ja.md": /単なるバックエンドやデータベースの用語では起動しません/u, "README.zh-CN.md": /普通的后端或数据库词汇不会激活它/u, "README.es.md": /El vocabulario corriente de backend o base de datos no lo activa/u }[file]]) assert.match(backendRows[0], pattern); assert.equal(backendRows[0].match(/\$superloopy:superloopy-backend/gu)?.length, 1); assert.equal(backendRows[0].match(/\/superloopy:superloopy-backend/gu)?.length, 1);
   }
   const english = await readFile("README.md", "utf8"); assert.match(english, /writing style alone never activates/i); assert.match(english, /does not create.*evidence artifact/i); assert.match(english, /Guidance aliases do not mutate state/);
   assert.match(await readFile("README.ko.md", "utf8"), /guidance alias는 상태를 바꾸지 않습니다/);

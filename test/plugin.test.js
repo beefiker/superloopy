@@ -78,6 +78,17 @@ test("plugin interface assets resolve inside the npm package", async () => {
     true,
     "portable frontend evidence helper missing from npm pack",
   );
+  for (const path of [
+    "skills/superloopy-backend/SKILL.md",
+    "skills/superloopy-backend/agents/openai.yaml",
+    "skills/superloopy-backend/references/architecture.md",
+    "skills/superloopy-backend/references/data-safety.md",
+    "skills/superloopy-backend/references/runtime-agents.md",
+    "skills/superloopy-backend/references/testing-and-operations.md",
+    "skills/superloopy-backend/references/upstream-notice.md"
+  ]) {
+    assert.equal(files.has(path), true, `backend skill file missing from npm pack: ${path}`);
+  }
 });
 
 test("plugin audit docs describe convention discovery and current ignore scope", async () => {
