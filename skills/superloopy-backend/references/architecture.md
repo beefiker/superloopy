@@ -17,22 +17,23 @@ Choose the weakest consistency model that still preserves the user-visible invar
 One typed service boundary in stack-neutral pseudocode:
 
 ```text
-type ReserveInput = { principal, tenant, itemId, quantity, operationId }
+type RequestContext = { verifiedPrincipal, authorizedTenant }
+type ReserveInput = { itemId, quantity, operationId }
 type ReserveResult = { reservationId, status, version }
 type ReserveError = Unauthorized | Invalid | Conflict | Unavailable { retryable }
 
-reserve(input: ReserveInput) -> Result<ReserveResult, ReserveError>:
-  authorize(input.principal, input.tenant, "inventory.reserve")
+reserve(context: RequestContext, input: ReserveInput) -> Result<ReserveResult, ReserveError>:
+  authorize(context.verifiedPrincipal, context.authorizedTenant, "inventory.reserve")
   validate(input.quantity > 0)
   within transaction:
-    existing = reservation_by_operation(input.tenant, input.operationId)
-    if existing: return existing
-    reservation = reserve_if_available(input.tenant, input.itemId, input.quantity)
-    persist_operation(input.operationId, reservation)
+    claim = claim_operation_atomically(context.authorizedTenant, input.operationId)
+    if claim.alreadyCompleted: return claim.result
+    reservation = reserve_if_available(context.authorizedTenant, input.itemId, input.quantity)
+    complete_claim(claim, reservation)
   return typed_result(reservation)
 ```
 
-The operation identity makes the service idempotent; the tenant comes from trusted authorization context, and structured conflicts are distinct from retryable infrastructure failures.
+`claim_operation_atomically` is backed by a uniqueness constraint on tenant plus operation identity, so concurrent requests cannot both pass a check-then-write window. The tenant comes only from verified authorization context, and structured conflicts are distinct from retryable infrastructure failures.
 
 ## Supporting mechanisms
 

@@ -1,4 +1,4 @@
 interface:
   display_name: "Superloopy Backend"
   short_description: "Stack-neutral backend and database-agent workflow"
-  default_prompt: "Use $superloopy-backend to design and validate this backend or database-agent change safely."
+  default_prompt: "Use `$superloopy:superloopy-backend` only after explicit invocation to design and validate this backend or database-agent change safely."

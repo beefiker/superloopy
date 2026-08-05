@@ -39,6 +39,8 @@ test("backend skill routes a stack-neutral, bounded database workflow", async ()
   assert.match(skill, /SUPERLOOPY_EVIDENCE/u);
   assert.doesNotMatch(skill, /always use (PostgreSQL|TypeScript|Python|MongoDB)/iu);
   assert.doesNotMatch(metadata, /^policy:/mu);
+  assert.match(metadata, /Use `\$superloopy:superloopy-backend` only after explicit invocation/u);
+  assert.doesNotMatch(metadata, /Use \$superloopy-backend\b/u);
 
   for (const name of referenceNames) {
     assert.match(
