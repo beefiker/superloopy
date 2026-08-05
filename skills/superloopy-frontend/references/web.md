@@ -14,7 +14,7 @@ This includes authenticated, private, internal, administrative, editor, and publ
 
 ### Marketing/editorial Web
 
-For a campaign, publication, landing page, or explicit new visual direction, load `references/anti-slop.md`. Ground brand, editorial hierarchy, composition, imagery, and copy in real content and the approved visual direction. Prove affected forms, navigation, consent, localization, accessibility, performance, and product handoff claims as behavior rather than decoration.
+For a campaign, publication, landing page, or explicit new visual direction, load `references/anti-slop.md`, then `references/impeccable.md`. Ground brand, editorial hierarchy, composition, imagery, and copy in real content and the approved visual direction; use the bounded direction and refinement passes without transferring product, platform, dependency, accessibility, responsive, evidence, or completion ownership away from Superloopy. Prove affected forms, navigation, consent, localization, accessibility, performance, and product handoff claims as behavior rather than decoration.
 
 ### PWA and browser extension
 
@@ -34,7 +34,7 @@ When the current target is native or embedded, evaluate SEO only for a distinct 
 
 Load the smallest applicable set and state it in one sentence:
 
-- **Marketing, editorial, campaign, or explicit new visual direction:** `references/anti-slop.md`.
+- **Marketing, editorial, campaign, or explicit new visual direction:** `references/anti-slop.md`, then `references/impeccable.md`.
 - **Canvas/custom renderer:** `references/renderer.md`.
 - **Embedded client:** applicable desktop or mobile reference plus `references/hybrid.md`.
 - **Named brand or mood:** `references/design/_INDEX.md`, then one matching teardown. Extract an unlisted brand only when authorized.
