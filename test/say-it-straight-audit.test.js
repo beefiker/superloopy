@@ -110,6 +110,15 @@ test("audit rejects removal of a leading decimal point", () => {
   assert.deepEqual(report.checks.numbers.added, ["5%"]);
 });
 
+// Mutation caught: skipping numeric suffixes attached to identifiers and accepting a changed version.
+test("audit rejects a changed numeric identifier suffix", () => {
+  const report = auditTexts("Use API v2.", "Use API v3.");
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.checks.numbers.missing, ["2"]);
+  assert.deepEqual(report.checks.numbers.added, ["3"]);
+});
+
 // Mutation caught: comparing only the numeric portion of a quantity and accepting a changed spaced unit.
 test("audit rejects a changed separated unit", () => {
   const report = auditTexts("The package weighs 12 kg.", "The package weighs 12 lb.");
@@ -142,6 +151,23 @@ test("audit preserves user-frozen values independently of syntax overlap", () =>
 
   assert.equal(report.ok, false);
   assert.deepEqual(report.checks.protected.userFrozen.missing.values, ["npm test` today"]);
+});
+
+// Mutation caught: requiring duplicate manifest entries to consume distinct text occurrences.
+test("audit accepts unchanged duplicate user-frozen values", () => {
+  const report = auditTexts("Keep Acme.", "Keep Acme.", { protectedValues: ["Acme", "Acme"] });
+
+  assert.equal(report.ok, true);
+  assert.equal(report.checks.protected.userFrozen.order.ok, true);
+});
+
+// Mutation caught: requiring partially overlapping user-frozen values to be disjoint.
+test("audit accepts unchanged overlapping user-frozen values", () => {
+  const text = "Run `npm test` today.";
+  const report = auditTexts(text, text, { protectedValues: ["npm test", "test` today"] });
+
+  assert.equal(report.ok, true);
+  assert.equal(report.checks.protected.userFrozen.order.ok, true);
 });
 
 // Mutation caught: omitting literal frontmatter comparison and accepting a changed document header.

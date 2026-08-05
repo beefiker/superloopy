@@ -26,7 +26,7 @@ function addValueCandidates(candidates, text, protectedValues) {
 function addNumberCandidates(candidates, text) {
   for (const match of text.matchAll(NUMBER_PATTERN)) {
     const previous = text[match.index - 1] ?? "";
-    if (/[\p{L}\p{N}_]/u.test(previous) || (previous === "." && !match[0].startsWith("."))) continue;
+    if (previous === "." && !match[0].startsWith(".")) continue;
     let value = match[0];
     let end = match.index + value.length;
     if (!/[A-Za-z%]$/u.test(value)) {
@@ -262,22 +262,22 @@ function valuesMissingEntirely(sourceSpans, finalSpans) {
   return { ok: values.length === 0, values };
 }
 
-function sourceValuesAppearInOrder(sourceSpans, finalText) {
-  let previousEnd = 0;
+function sourceValuesAppearInOrder(sourceSpans, finalText, allowOverlap = false) {
+  let searchFrom = 0;
   const positions = [];
   for (const span of sourceSpans) {
-    const start = finalText.indexOf(span.value, previousEnd);
+    const start = finalText.indexOf(span.value, searchFrom);
     if (start === -1) return { ok: false, positions };
     positions.push(start);
-    previousEnd = start + span.value.length;
+    searchFrom = start + (allowOverlap ? 0 : span.value.length);
   }
   return { ok: true, positions };
 }
 
-function compareProtectedSpans(sourceSpans, finalSpans, finalText) {
+function compareProtectedSpans(sourceSpans, finalSpans, finalText, options = {}) {
   const missing = valuesMissingEntirely(sourceSpans, finalSpans);
   const count = compareCounts(sourceSpans, finalSpans);
-  const order = sourceValuesAppearInOrder(sourceSpans, finalText);
+  const order = sourceValuesAppearInOrder(sourceSpans, finalText, options.allowOverlap);
   const problems = [];
   if (!missing.ok) problems.push({ check: "protected.missing", values: missing.values });
   if (!count.ok) problems.push({ check: "protected.count", missing: count.missing, added: count.added });
@@ -409,7 +409,12 @@ export function auditTexts(sourceText, finalText, options = {}) {
   const finalSpans = extractProtectedSpans(finalText);
   const syntaxCheck = compareProtectedSpans(sourceSpans, finalSpans, finalText);
   const protectedValues = Array.isArray(options.protectedValues) ? options.protectedValues : [];
-  const userFrozen = compareProtectedSpans(userFrozenSpans(sourceText, protectedValues), userFrozenSpans(finalText, protectedValues), finalText);
+  const userFrozen = compareProtectedSpans(
+    userFrozenSpans(sourceText, protectedValues),
+    userFrozenSpans(finalText, protectedValues),
+    finalText,
+    { allowOverlap: true }
+  );
   const protectedCheck = mergeProtectedChecks(syntaxCheck, userFrozen);
   const numbers = compareNumberMultisets(sourceSpans, finalSpans);
   const structure = structureCheck(sourceText, finalText);
