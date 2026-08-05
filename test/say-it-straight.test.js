@@ -39,3 +39,13 @@ test("say-it-straight preserves exact operational relations and unsupported pers
   assert.match(skill, /first-person perspective.*I.*we.*us/i);
   assert.match(skill, /detector.*otherwise strong.*source exactly/i);
 });
+
+test("say-it-straight keeps non-Korean language boundaries and explicit uncertainty", async () => {
+  const skill = await readFile(`${skillRoot}/SKILL.md`, "utf8");
+
+  assert.match(skill, /language-neutral edits/i);
+  assert.match(skill, /preserve.*locale.*dialect.*code-switching.*register.*genre/is);
+  assert.match(skill, /native judgment is unavailable.*preservation-safe.*disclose/is);
+  assert.match(skill, /pressure.*remove.*qualification.*uncertainty.*preserve.*briefly nam(?:e|es)/is);
+  assert.match(skill, /^6\. .*literal word `uncertainty`.*retained.*first-person perspective/m);
+});

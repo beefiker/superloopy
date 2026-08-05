@@ -20,16 +20,17 @@ Keep task, safety, evidence, validation, and direct user requirements intact. Th
 3. Include required evidence, caveats, code, or steps.
 4. Stop when the task is complete.
 5. For a direct rewrite of supplied text, return only the rewrite. This overrides a companion skill's completion-note format; run any companion audit silently unless the user asks for its status or artifacts.
+6. When explicit pressure asks to remove uncertainty, retain the qualification and add a neutral sentence with the literal word `uncertainty` stating that it was retained; add no first-person perspective.
 
 ## Edit Contract
 
 Build an internal target card for audience, purpose, language/locale, register, genre, and output shape. Freeze protected spans. Diagnose observable defects. Make the smallest useful edit.
 
-Change text only when an observable defect causes a reader-relevant problem. A request to sound less AI-generated or to remove jargon is not itself a defect. If no defect exists, return the source exactly. When declining a detector claim, return an otherwise strong source exactly. Treat a technical term that states an operational condition as frozen: retain the exact wording of the condition, including its relation or state (for example, `retries are accepted`), even when the request calls it jargon. Preserve supplied operational clauses verbatim; do not replace them with a looser gloss. Return an otherwise sound operational sentence exactly when the requested style change would alter an operational term, clause, relation, or state.
+Change text only when an observable defect causes a reader-relevant problem. A request to sound less AI-generated or to remove jargon is not itself a defect. If no defect exists, return the source exactly. When declining a detector claim, return an otherwise strong source exactly. Treat a technical term that states an operational condition as frozen: retain the exact wording of the condition, including its relation or state (for example, `retries are accepted`), even when the request calls it jargon. Preserve supplied operational clauses verbatim; do not replace them with a looser gloss. Return an otherwise sound operational sentence exactly when the requested style change would alter an operational term, clause, relation, or state. Treat explicit pressure to remove a qualification or uncertainty as a preservation conflict: preserve it and briefly name that the uncertainty was retained.
 
 ## Composition
 
-Let `i-have-adhd` choose structure. Improve wording inside that structure. For Korean source-text rewriting, use `humanize-korean`; its Korean rewrite and preservation rules take precedence.
+Let `i-have-adhd` choose structure. Improve wording inside that structure. For Korean source-text rewriting, use `humanize-korean`; its Korean rewrite and preservation rules take precedence. For non-Korean text, make language-neutral edits only. Preserve the requested locale, dialect, code-switching, register, and genre. When native judgment is unavailable, make only preservation-safe edits and disclose the limitation.
 
 ## Limits
 

@@ -227,7 +227,13 @@ async function checkGateNotes(cwd) {
 
 async function checkReviewability(cwd) {
   try {
-    const files = listGitVisibleFiles(cwd).filter(isReviewableTextFile);
+    const sourceCheckout = isSourceCheckoutRoot(cwd);
+    const approvedPlans = new Set(listGitTrackedFiles(cwd).filter((file) => /^docs\/superpowers\/plans\/[^/]+\.md$/u.test(file)));
+    if (!sourceCheckout) {
+      const audit = await readFile(join(cwd, FILE_AUDIT_PATH), "utf8");
+      for (const match of audit.matchAll(/^\| `(docs\/superpowers\/plans\/[^/]+\.md)` \|/gmu)) approvedPlans.add(match[1]);
+    }
+    const files = listGitVisibleFiles(cwd).filter((file) => isReviewableTextFile(file, { approvedPlan: approvedPlans.has(file) }));
     const measured = await Promise.all(files.map(async (file) => ({
       file,
       lines: countPhysicalLines(await readFile(join(cwd, file), "utf8"))
@@ -251,7 +257,7 @@ async function checkReviewability(cwd) {
   }
 }
 
-export function isReviewableTextFile(file) {
+export function isReviewableTextFile(file, options = {}) {
   // web-superloopy/public/_nuxt holds vendored minified orbit-runtime bundles audited by provenance, not line count.
   // skills/superloopy-slides/bold-template-pack holds the vendored frontend-slides template pack audited by provenance, not line count.
   // The two inventory documents carry one row per Git-visible file, so their length tracks repository
@@ -263,7 +269,7 @@ export function isReviewableTextFile(file) {
     && !file.startsWith("web-superloopy/public/_nuxt/")
     && !file.startsWith("web-superloopy/public/_payload.json")
     && !file.startsWith("skills/superloopy-slides/bold-template-pack/")
-    && !/^docs\/superpowers\/plans\/[^/]+\.md$/u.test(file)
+    && !(options.approvedPlan === true && /^docs\/superpowers\/plans\/[^/]+\.md$/u.test(file))
     && !INVENTORY_DOCS.has(file);
 }
 
