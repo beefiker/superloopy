@@ -37,6 +37,9 @@ test("backend skill routes a stack-neutral, bounded database workflow", async ()
   assert.match(skill, /ambiguous/iu);
   assert.match(skill, /migration/iu);
   assert.match(skill, /SUPERLOOPY_EVIDENCE/u);
+  assert.match(skill, /active.*evidence root/isu);
+  assert.match(skill, /standalone.*evidence/isu);
+  assert.doesNotMatch(skill, /ai-db-backend-skill-20260805/u);
   assert.doesNotMatch(skill, /always use (PostgreSQL|TypeScript|Python|MongoDB)/iu);
   assert.doesNotMatch(metadata, /^policy:/mu);
   assert.match(metadata, /Use `\$superloopy:superloopy-backend` only after explicit invocation/u);
@@ -75,6 +78,8 @@ test("backend skill routes a stack-neutral, bounded database workflow", async ()
   assert.match(dataSafety, /staged rollout/iu);
   assert.match(dataSafety, /rollback.*roll[- ]forward|roll[- ]forward.*rollback/isu);
   assert.match(dataSafety, /fail[- ]closed/iu);
+  assert.match(dataSafety, /Production authority:.*not granted/isu);
+  assert.match(dataSafety, /index.*materialized view.*partition.*expand[- ]and[- ]contract/isu);
 
   const runtimeAgents = references["runtime-agents"];
   for (const pattern of [

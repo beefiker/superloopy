@@ -16,6 +16,8 @@ Define transaction boundaries and durable postconditions before code. Give every
 
 Require explicit authority for production writes, destructive operations, DDL, bulk changes, privilege changes, and irreversible transformations. Separate approval from execution and record who authorized what scope.
 
+Every response that proposes a runtime write must state the production decision explicitly. Write `Production authority: granted` only when the user or an identified policy owner supplied evidence for the exact scope; otherwise write `Production authority: not granted; design or test only; write disabled.` Do not hide this decision in a list of unknowns or infer authority from a request to design automatic behavior.
+
 ## Change schemas safely
 
 Prefer an expand-and-contract migration when old and new application versions overlap:
@@ -25,6 +27,8 @@ Prefer an expand-and-contract migration when old and new application versions ov
 3. Backfill in bounded, resumable batches and verify invariants.
 4. Switch reads or constraints after measured convergence.
 5. Contract only after incompatible consumers are gone and recovery criteria are met.
+
+Treat a proposed index, materialized view, partition, summary table, generated column, or constraint as a schema change even when it appears inside a performance plan. Either leave it as an evidence-gated lead, or include its expand-and-contract compatibility, migration ordering, resource preflight, staged rollout, and rollback or roll-forward behavior.
 
 Before rollout, run a lock and resource preflight using representative data and the actual migration mechanism. Record expected lock mode and duration, scan or rewrite cost, log and replication impact, connection and storage headroom, transaction behavior, cancellation behavior, and compatibility with every live version.
 

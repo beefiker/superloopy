@@ -54,6 +54,6 @@ Require explicit user authority before production writes, destructive operations
 - If migration preflight fails, block rollout and preserve the exact evidence.
 - If realistic database proof is unavailable, run the safe checks that remain and report the missing integration evidence; do not claim migration or production safety.
 
-Report the context card, change classification, contracts, changed behavior, validation evidence, rollout and recovery notes, unresolved risks, and blockers. For this active loop, write that report under the active evidence root and end with this exact receipt:
+Report the context card, change classification, contracts, changed behavior, validation evidence, rollout and recovery notes, unresolved risks, and blockers. Resolve `BACKEND_EVIDENCE_REPORT` at run time: when a scoped Superloopy loop is active, obtain its active evidence root from that loop's status or guide and append `backend-skill-report.md`; never guess or reuse another session. Without an active loop, create a project-local, run-scoped standalone evidence directory under `.superloopy/evidence/superloopy-backend/<run-id>/` and use its `backend-skill-report.md`. Announce the resolved path, write the report there, and end with this exact receipt after replacing the placeholder:
 
-`SUPERLOOPY_EVIDENCE: .superloopy/sessions/ai-db-backend-skill-20260805/evidence/backend-skill-report.md`
+`SUPERLOOPY_EVIDENCE: <BACKEND_EVIDENCE_REPORT>`
