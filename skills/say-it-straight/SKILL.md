@@ -25,7 +25,7 @@ Keep task, safety, evidence, validation, and direct user requirements intact. Th
 
 Build an internal target card for audience, purpose, language/locale, register, genre, and output shape. Freeze protected spans. Diagnose observable defects. Make the smallest useful edit.
 
-Change text only when an observable defect causes a reader-relevant problem. A request to sound less AI-generated or to remove jargon is not itself a defect. If no defect exists, return the source exactly. Treat a technical term that states an operational condition as frozen: retain its exact wording even when the request calls it jargon. Do not replace it with a looser gloss.
+Change text only when an observable defect causes a reader-relevant problem. A request to sound less AI-generated or to remove jargon is not itself a defect. If no defect exists, return the source exactly. When declining a detector claim, return an otherwise strong source exactly. Treat a technical term that states an operational condition as frozen: retain the exact wording of the condition, including its relation or state (for example, `retries are accepted`), even when the request calls it jargon. Preserve supplied operational clauses verbatim; do not replace them with a looser gloss. Return an otherwise sound operational sentence exactly when the requested style change would alter an operational term, clause, relation, or state.
 
 ## Composition
 
@@ -33,7 +33,7 @@ Let `i-have-adhd` choose structure. Improve wording inside that structure. For K
 
 ## Limits
 
-Do not claim human authorship or detector safety. Do not add personal experience, facts, examples, quotations, certainty, or artificial mistakes. Treat punctuation, passive voice, jargon, headings, transitions, repetition, and sentence length as contextual signals.
+Do not claim human authorship or detector safety. Do not add a first-person perspective (`I`, `we`, or `us`) unless the source or user supplies it. Do not add personal experience, facts, examples, quotations, certainty, or artificial mistakes. Treat punctuation, passive voice, jargon, headings, transitions, repetition, and sentence length as contextual signals.
 
 ## File-backed Work
 
