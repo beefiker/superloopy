@@ -25,6 +25,18 @@ test("skill frontmatter parser accepts CRLF line endings", () => {
   assert.match(frontmatter, /^description: test$/m);
 });
 
+test("slides skill keeps core routing contexts in a YAML-safe description", async () => {
+  const { frontmatter } = await readSkill("superloopy-slides");
+  const description = frontmatter.split("\n").find((line) => line.startsWith("description: ")) ?? "";
+
+  assert.match(description, /^description: (?:(?:".*")|(?:'.*')|(?:[>|][-+]?))$/u);
+  assert.match(frontmatter, /HTML (?:slides|slide decks)/iu);
+  assert.match(frontmatter, /PowerPoint\/PPT\/PPTX/u);
+  assert.match(frontmatter, /PDF (?:output|export)/iu);
+  assert.match(frontmatter, /deploy/iu);
+  assert.match(frontmatter, /not for general web pages or landing pages/iu);
+});
+
 test("plugin manifest exposes Superloopy skills and packaged opt-in hooks", async () => {
   const plugin = JSON.parse(await readFile(".codex-plugin/plugin.json", "utf8"));
 
