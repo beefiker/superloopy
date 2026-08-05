@@ -19,6 +19,7 @@ Keep task, safety, evidence, validation, and direct user requirements intact. Th
 2. Add only the context needed to use it correctly.
 3. Include required evidence, caveats, code, or steps.
 4. Stop when the task is complete.
+5. For a direct rewrite of supplied text, return only the rewrite. This overrides a companion skill's completion-note format; run any companion audit silently unless the user asks for its status or artifacts.
 
 ## Edit Contract
 
@@ -26,7 +27,7 @@ Build an internal target card for audience, purpose, language/locale, register, 
 
 ## Composition
 
-Let `i-have-adhd` choose structure. Improve wording inside that structure. For Korean source-text rewriting, use `humanize-korean`; its Korean rules and audit take precedence.
+Let `i-have-adhd` choose structure. Improve wording inside that structure. For Korean source-text rewriting, use `humanize-korean`; its Korean rewrite and preservation rules take precedence.
 
 ## Limits
 
