@@ -9,6 +9,7 @@
 
 import { detectSuperpowers } from "./interop.js";
 import { loadAdhdFriendlyOutputOverlay as loadDefaultAdhdOverlay } from "./adhd-output.js";
+import { isSayItStraightEnabled, renderSayItStraightLoopOverlay } from "./loop-output-style.js";
 
 // Invocation syntax is intentionally lexical, not semantic: an alias must be the first
 // complete token and end or be followed by whitespace, `:`, or `,`. Do not use `\b` here:
@@ -85,20 +86,36 @@ export async function runEngineerTriggerHook(payload, deps) {
       return formatAdditionalContext("UserPromptSubmit", renderBindingBlocked(status));
     }
     if (status.summary.aggregateComplete) {
-      return formatAdditionalContext("UserPromptSubmit", renderComplete(status, interop));
+      return formatAdditionalContext(
+        "UserPromptSubmit",
+        renderComplete(status, interop, renderSayItStraightLoopOverlay(isSayItStraightEnabled(status.plan)))
+      );
     }
   } catch {
-    return formatAdditionalContext("UserPromptSubmit", renderStart(payload, orchestrate, interop, await loadOverlayForInvocation()));
+    return formatAdditionalContext(
+      "UserPromptSubmit",
+      renderStart(payload, orchestrate, interop, await loadOverlayForInvocation(), renderSayItStraightLoopOverlay(true))
+    );
   }
   const adhdOverlay = await loadOverlayForInvocation();
+  const sayItStraightOverlay = renderSayItStraightLoopOverlay(isSayItStraightEnabled(status.plan));
   try {
     const guide = guideForPayload(payload, status.plan);
     return formatAdditionalContext(
       "UserPromptSubmit",
-      renderResume(renderSuperloopyContext(status, guide), orchestrate, interop, adhdOverlay)
+      renderResume(
+        renderSuperloopyContext(status, guide, { includeOutputStyle: false }),
+        orchestrate,
+        interop,
+        adhdOverlay,
+        sayItStraightOverlay
+      )
     );
   } catch {
-    return formatAdditionalContext("UserPromptSubmit", renderStart(payload, orchestrate, interop, adhdOverlay));
+    return formatAdditionalContext(
+      "UserPromptSubmit",
+      renderStart(payload, orchestrate, interop, adhdOverlay, renderSayItStraightLoopOverlay(true))
+    );
   }
 }
 
@@ -113,11 +130,11 @@ function renderBindingBlocked(status) {
   ].join("\n");
 }
 
-function renderStart(payload, orchestrate, interop, adhdOverlay) {
+function renderStart(payload, orchestrate, interop, adhdOverlay, sayItStraightOverlay) {
   const { brief } = parseInvocation(payload.prompt);
   const cli = superloopyCommand();
   if (brief.length === 0) {
-    return withAdhdOverlay([
+    return withOutputOverlays([
       HEADER,
       "",
       orchestrate
@@ -131,9 +148,9 @@ function renderStart(payload, orchestrate, interop, adhdOverlay) {
       `- Preflight \`${cli} loop check\`, then \`${cli} loop finish --evidence "<summary>" --artifact .superloopy/evidence/gate.json --json\`.`,
       ...interopBlock(interop),
       ...(orchestrate ? ["", ...orchestrationLines(interop)] : [])
-    ], adhdOverlay);
+    ], adhdOverlay, sayItStraightOverlay);
   }
-  return withAdhdOverlay([
+  return withOutputOverlays([
     HEADER,
     "",
     orchestrate
@@ -150,11 +167,11 @@ function renderStart(payload, orchestrate, interop, adhdOverlay) {
     ...interopBlock(interop),
     "",
     ...(orchestrate ? orchestrationLines(interop) : [baselineDelegationLine()])
-  ], adhdOverlay);
+  ], adhdOverlay, sayItStraightOverlay);
 }
 
-function renderResume(context, orchestrate, interop, adhdOverlay) {
-  return withAdhdOverlay([
+function renderResume(context, orchestrate, interop, adhdOverlay, sayItStraightOverlay) {
+  return withOutputOverlays([
     HEADER,
     "",
     "A loop is already in progress. Resume as the loop engineer and run the next action yourself; do not start a second plan or ask the user to run Superloopy commands.",
@@ -164,13 +181,14 @@ function renderResume(context, orchestrate, interop, adhdOverlay) {
       : []),
     "",
     context
-  ], adhdOverlay);
+  ], adhdOverlay, sayItStraightOverlay);
 }
 
-function withAdhdOverlay(lines, adhdOverlay) {
+function withOutputOverlays(lines, adhdOverlay, sayItStraightOverlay) {
   return [
     ...lines,
-    ...(adhdOverlay.length === 0 ? [] : ["", adhdOverlay])
+    ...(adhdOverlay.length === 0 ? [] : ["", adhdOverlay]),
+    ...(sayItStraightOverlay.length === 0 ? [] : ["", sayItStraightOverlay])
   ].join("\n");
 }
 
@@ -189,7 +207,7 @@ function interopBlock(interop) {
   ];
 }
 
-function renderComplete(status, interop) {
+function renderComplete(status, interop, sayItStraightOverlay) {
   const session = status.plan.sessionId === undefined ? "" : ` --session-id ${shellQuote(status.plan.sessionId)}`;
   const cli = superloopyCommand();
   return [
@@ -200,7 +218,7 @@ function renderComplete(status, interop) {
     `- Inspect: \`${cli} loop status${session} --json\`.`,
     "- For new work, begin a fresh loop and keep it separate with a new --session-id.",
     ...interopBlock(interop)
-  ].join("\n");
+  ].concat(sayItStraightOverlay.length === 0 ? [] : ["", sayItStraightOverlay]).join("\n");
 }
 
 // Tier 1 (always-on, conservative): one line that keeps a single cohesive change
