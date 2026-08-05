@@ -16,12 +16,7 @@ import { formatMeasuredAdditionalContext } from "./context-cost.js";
 import { buildRecoveryProjection, renderRecoveryCapsule } from "./compaction-recovery.js";
 import { fleetLoop } from "./fleet.js";
 import { inspectRepositoryBinding } from "./repository-binding.js";
-import {
-  isSayItStraightEnabled,
-  parseLoopOutputStyleControl,
-  renderSayItStraightLoopOverlay,
-  updateSayItStraightOutput
-} from "./loop-output-style.js";
+import { isSayItStraightEnabled, parseLoopOutputStyleControl, renderSayItStraightLoopOverlay, updateSayItStraightOutput } from "./loop-output-style.js";
 
 export { runPreToolUseHook } from "./pre-tool-use.js";
 
@@ -30,23 +25,13 @@ const EVIDENCE_RECEIPT_AGENT_TYPES = new Set(["franky", "zoro", "usopp", "jinbe"
 // only larger artifacts (assumed non-trivial) skip the read. Closes the blank-placeholder hole.
 const MAX_BLANK_CHECK_BYTES = 1_000_000;
 const LOOSE_TRIGGER_PATTERN = /^\s*(?:loopywork|\$?lpy)(?=$|[\s:,])[\s:,]*/iu;
-const PROTECTED_STEERING_KEYS = new Set([
-  "aggregateCompletion",
-  "qualityGate",
-  "status",
-  "completedAt",
-  "completionStatus"
-]);
+const PROTECTED_STEERING_KEYS = new Set(["aggregateCompletion", "qualityGate", "status", "completedAt", "completionStatus"]);
 
 export function runSubagentStopHook(payload, context = { host: "codex" }) {
   if (!isRecord(payload)) return "";
   if (payload.hook_event_name !== "SubagentStop") return "";
   if (typeof payload.cwd === "string") payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
-  if (![...EVIDENCE_RECEIPT_AGENT_TYPES].some((role) => matchesAgentType({
-    host: context.host,
-    agentType: payload.agent_type,
-    role
-  }))) return "";
+  if (![...EVIDENCE_RECEIPT_AGENT_TYPES].some((role) => matchesAgentType({ host: context.host, agentType: payload.agent_type, role }))) return "";
   // Read the SAME transcript the receipt recovery reads, so a context-pressure marker in a
   // different transcript (e.g. the parent session on Claude) can't skip the receipt gate.
   if (transcriptHasContextPressureMarker(subagentTranscriptPath(payload))) return "";
@@ -90,13 +75,7 @@ export async function runUserPromptSubmitHook(payload, options = {}) {
   payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
   if (hasContextPressureMarker(payload.prompt) || transcriptHasContextPressureMarker(payload.transcript_path)) return "";
   const outputStyleControl = parseLoopOutputStyleControl(payload.prompt);
-  if (outputStyleControl !== null) {
-    return await runOutputStyleControlHook(
-      payload,
-      outputStyleControl,
-      options.updateSayItStraightOutput ?? updateSayItStraightOutput
-    );
-  }
+  if (outputStyleControl !== null) return await runOutputStyleControlHook(payload, outputStyleControl, options.updateSayItStraightOutput ?? updateSayItStraightOutput);
   const directive = parseSteeringDirective(payload.prompt);
   if (directive === null) {
     if (hasSteeringMarker(payload.prompt)) return "";
@@ -108,12 +87,7 @@ export async function runUserPromptSubmitHook(payload, options = {}) {
   try {
     const result = await applySteeringForPayload(payload, directive);
     const status = await statusForPayload(payload);
-    return `${JSON.stringify({
-      ...result,
-      plan: status.plan,
-      summary: status.summary,
-      guide: guideForPayload(payload, status.plan)
-    })}\n`;
+    return `${JSON.stringify({ ...result, plan: status.plan, summary: status.summary, guide: guideForPayload(payload, status.plan) })}\n`;
   } catch {
     return "";
   }
@@ -124,25 +98,14 @@ async function runOutputStyleControlHook(payload, control, updateOutputStyle) {
   try {
     status = await statusForOutputStyleControl(payload);
   } catch (error) {
-    if (isMissingPlanError(error)) {
-      return formatAdditionalContext("UserPromptSubmit", "No active Superloopy loop; no output style changed.");
-    }
-    return formatAdditionalContext(
-      "UserPromptSubmit",
-      "Superloopy could not change the output style; the prior loop setting remains authoritative."
-    );
+    if (isMissingPlanError(error)) return formatOutputStyleContext("No active Superloopy loop; no output style changed.");
+    return formatOutputStyleContext("Superloopy could not change the output style; the prior loop setting remains authoritative.");
   }
   if (status.binding?.resumable === false) {
-    return formatAdditionalContext(
-      "UserPromptSubmit",
-      `Superloopy repository binding is ${status.binding.status}; no output style changed.`
-    );
+    return formatOutputStyleContext(`Superloopy repository binding is ${status.binding.status}; no output style changed.`);
   }
   if (status.plan.aggregateCompletion?.status === "complete") {
-    return formatAdditionalContext(
-      "UserPromptSubmit",
-      "The current Superloopy loop is already complete; no output style changed."
-    );
+    return formatOutputStyleContext("The current Superloopy loop is already complete; no output style changed.");
   }
   try {
     const scope = scopeFromSessionId(status.plan.sessionId);
@@ -154,16 +117,10 @@ async function runOutputStyleControlHook(payload, control, updateOutputStyle) {
       return { result: await updateOutputStyle(payload.cwd, scope, control.enabled) };
     });
     if (mutation.binding !== undefined) {
-      return formatAdditionalContext(
-        "UserPromptSubmit",
-        `Superloopy repository binding is ${mutation.binding.status}; no output style changed.`
-      );
+      return formatOutputStyleContext(`Superloopy repository binding is ${mutation.binding.status}; no output style changed.`);
     }
     if (mutation.complete) {
-      return formatAdditionalContext(
-        "UserPromptSubmit",
-        "The current Superloopy loop is already complete; no output style changed."
-      );
+      return formatOutputStyleContext("The current Superloopy loop is already complete; no output style changed.");
     }
     const enabled = isSayItStraightEnabled(mutation.result.plan);
     return formatAdditionalContext("UserPromptSubmit", [
@@ -171,11 +128,12 @@ async function runOutputStyleControlHook(payload, control, updateOutputStyle) {
       renderSayItStraightLoopOverlay(enabled)
     ].filter(Boolean).join("\n\n"));
   } catch {
-    return formatAdditionalContext(
-      "UserPromptSubmit",
-      "Superloopy could not change the output style; the prior loop setting remains authoritative."
-    );
+    return formatOutputStyleContext("Superloopy could not change the output style; the prior loop setting remains authoritative.");
   }
+}
+
+function formatOutputStyleContext(message) {
+  return formatAdditionalContext("UserPromptSubmit", message);
 }
 
 async function statusForOutputStyleControl(payload) {
@@ -238,15 +196,7 @@ export async function runStopHook(payload) {
   if (typeof payload.cwd !== "string") return "";
   payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
   if (!envOn(process.env, "SUPERLOOPY_STOP_HOOK")) return "";
-  return await decideContinuation(payload, {
-    statusForPayload,
-    guideForPayload,
-    renderContinuationDirective,
-    scopeFromPayload,
-    appendLedger,
-    contextPressureMarkers: CONTEXT_PRESSURE_MARKERS,
-    env: process.env
-  });
+  return await decideContinuation(payload, { statusForPayload, guideForPayload, renderContinuationDirective, scopeFromPayload, appendLedger, contextPressureMarkers: CONTEXT_PRESSURE_MARKERS, env: process.env });
 }
 
 export function parseSteeringDirective(prompt) {
@@ -322,8 +272,6 @@ function readNonEmptyString(value) {
   const trimmed = value.trim();
   return trimmed.length === 0 ? null : trimmed;
 }
-
-
 async function runContextInjectionHook(payload, hookEventName) {
   const context = await readContextInjection(payload);
   return formatAdditionalContext(hookEventName, context);
@@ -491,27 +439,15 @@ function renderContinuationDirective(status, guide) {
 }
 
 function renderProofPlan(guide) {
-  if (!Array.isArray(guide.proofPlan) || guide.proofPlan.length === 0) return [];
-  return [
-    "Proof plan:",
-    ...guide.proofPlan.map(proofPlanLine)
-  ];
+  return !Array.isArray(guide.proofPlan) || guide.proofPlan.length === 0 ? [] : ["Proof plan:", ...guide.proofPlan.map(proofPlanLine)];
 }
 
 function renderFlow(guide) {
-  if (!Array.isArray(guide.flow) || guide.flow.length === 0) return [];
-  return [
-    "Flow checklist:",
-    ...guide.flow.map(flowStepLine)
-  ];
+  return !Array.isArray(guide.flow) || guide.flow.length === 0 ? [] : ["Flow checklist:", ...guide.flow.map(flowStepLine)];
 }
 
 function renderRecordedEvidence(guide) {
-  if (!Array.isArray(guide.recordedEvidence) || guide.recordedEvidence.length === 0) return [];
-  return [
-    "Recorded evidence:",
-    ...guide.recordedEvidence.map(recordedEvidenceLine)
-  ];
+  return !Array.isArray(guide.recordedEvidence) || guide.recordedEvidence.length === 0 ? [] : ["Recorded evidence:", ...guide.recordedEvidence.map(recordedEvidenceLine)];
 }
 
 function guideForPayload(payload, plan) {

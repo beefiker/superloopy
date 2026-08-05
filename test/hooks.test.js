@@ -7,23 +7,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import {
-  hasLoosePromptTrigger,
-  parseSteeringDirective,
-  runPreToolUseHook,
-  runSessionStartHook,
-  runStopHook,
-  runSubagentStopHook,
-  runUserPromptSubmitHook
-} from "../src/hooks.js";
+import { hasLoosePromptTrigger, parseSteeringDirective, runPreToolUseHook, runSessionStartHook, runStopHook, runSubagentStopHook, runUserPromptSubmitHook } from "../src/hooks.js";
 import { hasEngineerTrigger } from "../src/engineer.js";
 import { TRANSCRIPT_TAIL_BYTES } from "../src/continuation.js";
 import { checkpointLoop, createLoop, evidenceLoop, nextLoop, statusLoop } from "../src/loop.js";
 import { updateSayItStraightOutput } from "../src/loop-output-style.js";
 
-async function tempRepo() {
-  return mkdtemp(join(tmpdir(), "superloopy-hooks-"));
-}
+async function tempRepo() { return mkdtemp(join(tmpdir(), "superloopy-hooks-")); }
 
 async function writeEvidence(repo, name, content = "proof\n") {
   const evidenceDir = join(repo, ".superloopy", "evidence");
@@ -50,6 +40,22 @@ async function withStopHookEnabled(fn) {
     if (previous === undefined) delete process.env.SUPERLOOPY_STOP_HOOK;
     else process.env.SUPERLOOPY_STOP_HOOK = previous;
   }
+}
+
+function submitPrompt(cwd, prompt, payload = {}, options = {}) {
+  return runUserPromptSubmitHook({ hook_event_name: "UserPromptSubmit", cwd, prompt, ...payload }, options);
+}
+
+async function promptContext(cwd, prompt, payload = {}) {
+  return JSON.parse(await submitPrompt(cwd, prompt, payload)).hookSpecificOutput.additionalContext;
+}
+
+function stopHook(cwd, stop_hook_active = false) {
+  return runStopHook({ hook_event_name: "Stop", cwd, stop_hook_active });
+}
+
+function subagentStopHook(cwd, payload) {
+  return runSubagentStopHook({ hook_event_name: "SubagentStop", cwd, ...payload });
 }
 
 test("SessionStart reuses a fresh manifest without querying or rewriting state and requests restart on definition changes", async () => {
@@ -103,52 +109,28 @@ test("SessionStart reuses a fresh manifest without querying or rewriting state a
 });
 
 test("runPreToolUseHook denies create_goal payloads with token budget", () => {
-  const output = runPreToolUseHook({
-    hook_event_name: "PreToolUse",
-    tool_name: "create_goal",
-    tool_input: { objective: "Ship", token_budget: 1000 }
-  });
-
+  const output = runPreToolUseHook({ hook_event_name: "PreToolUse", tool_name: "create_goal", tool_input: { objective: "Ship", token_budget: 1000 } });
   const parsed = JSON.parse(output);
   assert.equal(parsed.hookSpecificOutput.permissionDecision, "deny");
   assert.match(parsed.hookSpecificOutput.additionalContext, /objective/);
 });
 
 test("runPreToolUseHook allows create_goal payloads with objective only", () => {
-  const output = runPreToolUseHook({
-    hook_event_name: "PreToolUse",
-    tool_name: "create_goal",
-    tool_input: { objective: "Ship" }
-  });
-
+  const output = runPreToolUseHook({ hook_event_name: "PreToolUse", tool_name: "create_goal", tool_input: { objective: "Ship" } });
   assert.equal(output, "");
 });
 
 test("runSubagentStopHook allows non-empty receipt under .superloopy/evidence", async () => {
   const repo = await tempRepo();
   const artifact = await writeEvidence(repo, "receipt.txt");
-
-  const output = runSubagentStopHook({
-    hook_event_name: "SubagentStop",
-    agent_type: "franky",
-    cwd: repo,
-    last_assistant_message: `done\nSUPERLOOPY_EVIDENCE: ${artifact}`
-  });
-
+  const output = subagentStopHook(repo, { agent_type: "franky", last_assistant_message: `done\nSUPERLOOPY_EVIDENCE: ${artifact}` });
   assert.equal(output, "");
 });
 
 test("runSubagentStopHook validates Superloopy review worker receipts", async () => {
   const repo = await tempRepo();
   const artifact = await writeEvidence(repo, "review-report.txt");
-
-  const output = runSubagentStopHook({
-    hook_event_name: "SubagentStop",
-    agent_type: "zoro",
-    cwd: repo,
-    last_assistant_message: `reviewed\nSUPERLOOPY_EVIDENCE: ${artifact}`
-  });
-
+  const output = subagentStopHook(repo, { agent_type: "zoro", last_assistant_message: `reviewed\nSUPERLOOPY_EVIDENCE: ${artifact}` });
   assert.equal(output, "");
 });
 
@@ -158,20 +140,8 @@ test("runSubagentStopHook uses scoped evidence root when session_id is present",
   const globalArtifact = await writeEvidence(repo, "global-receipt.txt");
   const scopedArtifact = await writeSessionEvidence(repo, "sess.1", "scoped-receipt.txt");
 
-  const globalOutput = runSubagentStopHook({
-    hook_event_name: "SubagentStop",
-    agent_type: "franky",
-    session_id: "sess.1",
-    cwd: repo,
-    last_assistant_message: `done\nEVIDENCE_RECORDED: ${globalArtifact}`
-  });
-  const scopedOutput = runSubagentStopHook({
-    hook_event_name: "SubagentStop",
-    agent_type: "franky",
-    session_id: "sess.1",
-    cwd: repo,
-    last_assistant_message: `done\nEVIDENCE_RECORDED: ${scopedArtifact}`
-  });
+  const globalOutput = subagentStopHook(repo, { agent_type: "franky", session_id: "sess.1", last_assistant_message: `done\nEVIDENCE_RECORDED: ${globalArtifact}` });
+  const scopedOutput = subagentStopHook(repo, { agent_type: "franky", session_id: "sess.1", last_assistant_message: `done\nEVIDENCE_RECORDED: ${scopedArtifact}` });
 
   const globalBlock = JSON.parse(globalOutput).reason;
   assert.match(globalBlock, /receipt missing or invalid/);
@@ -186,14 +156,7 @@ test("runSubagentStopHook suppresses on a context-pressure marker in the transcr
   const transcript = join(repo, "transcript.txt");
   await writeFile(transcript, `${"earlier turn\n".repeat(50)}... context compacted ...\n`, "utf8");
 
-  const output = runSubagentStopHook({
-    hook_event_name: "SubagentStop",
-    agent_type: "franky",
-    cwd: repo,
-    transcript_path: transcript,
-    last_assistant_message: "done"
-  });
-
+  const output = subagentStopHook(repo, { agent_type: "franky", transcript_path: transcript, last_assistant_message: "done" });
   assert.equal(output, "");
 });
 
@@ -204,27 +167,13 @@ test("runSubagentStopHook ignores a marker outside the bounded transcript tail",
   // the bounded read must not see it, so the hook still blocks for a receipt.
   await writeFile(transcript, `context compacted\n${"x".repeat(TRANSCRIPT_TAIL_BYTES + 4096)}`, "utf8");
 
-  const output = runSubagentStopHook({
-    hook_event_name: "SubagentStop",
-    agent_type: "franky",
-    cwd: repo,
-    transcript_path: transcript,
-    last_assistant_message: "done"
-  });
-
+  const output = subagentStopHook(repo, { agent_type: "franky", transcript_path: transcript, last_assistant_message: "done" });
   assert.match(JSON.parse(output).reason, /receipt missing or invalid/);
 });
 
 test("parseSteeringDirective accepts annotate-only directives", () => {
-  const directive = parseSteeringDirective(
-    'please SUPERLOOPY_STEER: {"kind":"annotate","evidence":"found blocker","rationale":"capture context"}'
-  );
-
-  assert.deepEqual(directive, {
-    kind: "annotate",
-    evidence: "found blocker",
-    rationale: "capture context"
-  });
+  const directive = parseSteeringDirective('please SUPERLOOPY_STEER: {"kind":"annotate","evidence":"found blocker","rationale":"capture context"}');
+  assert.deepEqual(directive, { kind: "annotate", evidence: "found blocker", rationale: "capture context" });
 });
 
 test("hasLoosePromptTrigger recognizes only leading complete Superloopy aliases", () => {
@@ -259,11 +208,7 @@ test("hasEngineerTrigger fires only on a leading loopy keyword", () => {
 
 test("runUserPromptSubmitHook wakes the loop engineer on the loopy keyword without mutating state", async () => {
   const repo = await tempRepo();
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "loopy add proof-backed login"
-  });
+  const output = await submitPrompt(repo, "loopy add proof-backed login");
   const parsed = JSON.parse(output);
   assert.equal(parsed.hookSpecificOutput.hookEventName, "UserPromptSubmit");
   assert.match(parsed.hookSpecificOutput.additionalContext, /Superloopy loop engineer/);
@@ -273,12 +218,7 @@ test("runUserPromptSubmitHook wakes the loop engineer on the loopy keyword witho
 
 test("runUserPromptSubmitHook turns loose trigger into starter guidance without mutating state", async () => {
   const repo = await tempRepo();
-
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "loopywork add proof-backed login"
-  });
+  const output = await submitPrompt(repo, "loopywork add proof-backed login");
 
   const parsed = JSON.parse(output);
   assert.equal(parsed.hookSpecificOutput.hookEventName, "UserPromptSubmit");
@@ -291,11 +231,7 @@ test("runUserPromptSubmitHook turns loose trigger into starter guidance without 
 test("guidance-only aliases do not activate the full-loop output default", async () => {
   for (const prompt of ["loopywork ship", "lpy ship", "$lpy ship"]) {
     const repo = await tempRepo();
-    const context = JSON.parse(await runUserPromptSubmitHook({
-      hook_event_name: "UserPromptSubmit",
-      cwd: repo,
-      prompt
-    })).hookSpecificOutput.additionalContext;
+    const context = await promptContext(repo, prompt);
     assert.doesNotMatch(context, /Say It Straight loop output overlay/u);
     assert.equal(existsSync(join(repo, ".superloopy", "goals.json")), false);
   }
@@ -304,14 +240,7 @@ test("guidance-only aliases do not activate the full-loop output default", async
 test("runUserPromptSubmitHook points loose trigger at existing Superloopy state", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
-
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "$lpy continue"
-  });
-
-  const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+  const context = await promptContext(repo, "$lpy continue");
   assert.match(context, /Loopywork trigger/);
   assert.match(context, /Use existing repo-local Superloopy state/);
   assert.match(context, /Superloopy context/);
@@ -321,12 +250,7 @@ test("runUserPromptSubmitHook points loose trigger at existing Superloopy state"
 test("runUserPromptSubmitHook stays quiet for ordinary prompts even when Superloopy state exists", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
-
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "continue"
-  });
+  const output = await submitPrompt(repo, "continue");
 
   assert.equal(output, "");
 });
@@ -334,19 +258,11 @@ test("runUserPromptSubmitHook stays quiet for ordinary prompts even when Superlo
 test("exact output-style controls disable and re-enable only the current loop", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
-  const off = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "직설 모드 끄기"
-  });
+  const off = await submitPrompt(repo, "직설 모드 끄기");
   assert.match(JSON.parse(off).hookSpecificOutput.additionalContext, /disabled for the current loop/u);
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, false);
 
-  const on = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "say-it-straight on"
-  });
+  const on = await submitPrompt(repo, "say-it-straight on");
   assert.match(JSON.parse(on).hookSpecificOutput.additionalContext, /enabled for the current loop/u);
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
 });
@@ -355,12 +271,7 @@ test("a scoped control leaves the global loop unchanged", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Global"]);
   await createLoop(repo, ["--session-id", "beta", "--brief", "Scoped"]);
-  await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    session_id: "beta",
-    prompt: "say-it-straight off"
-  });
+  await submitPrompt(repo, "say-it-straight off", { session_id: "beta" });
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
   assert.equal((await statusLoop(repo, ["--session-id", "beta"])).plan.outputStyle.sayItStraight, false);
 });
@@ -368,13 +279,7 @@ test("a scoped control leaves the global loop unchanged", async () => {
 test("a missing scoped loop never falls back to mutate the global loop", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Global"]);
-
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    session_id: "missing",
-    prompt: "say-it-straight off"
-  });
+  const output = await submitPrompt(repo, "say-it-straight off", { session_id: "missing" });
 
   assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /No active Superloopy loop/u);
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
@@ -401,11 +306,7 @@ test("output-style mutation rechecks repository binding under the goals-file loc
   ], { stdio: ["pipe", "pipe", "pipe"] });
   await once(locker.stdout, "data");
   try {
-    const outputPromise = runUserPromptSubmitHook({
-      hook_event_name: "UserPromptSubmit",
-      cwd: target,
-      prompt: "say-it-straight off"
-    });
+    const outputPromise = submitPrompt(target, "say-it-straight off");
     await new Promise((resolve) => setTimeout(resolve, 50));
     await writeFile(targetPlan, copied);
     locker.stdin.end();
@@ -423,17 +324,13 @@ test("near matches and quoted controls remain inert", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
   for (const prompt of ["please say-it-straight off", "quote 'say-it-straight off'", "직설 모드 끄기를 문서화해줘"]) {
-    assert.equal(await runUserPromptSubmitHook({ hook_event_name: "UserPromptSubmit", cwd: repo, prompt }), "");
+    assert.equal(await submitPrompt(repo, prompt), "");
   }
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
 });
 
 test("a control without an active loop reports no mutation", async () => {
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: await tempRepo(),
-    prompt: "say-it-straight off"
-  });
+  const output = await submitPrompt(await tempRepo(), "say-it-straight off");
   assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /No active Superloopy loop/u);
 });
 
@@ -445,11 +342,7 @@ test("completed loops refuse output-style mutation", async () => {
   plan.aggregateCompletion = { status: "complete", completedAt: "2026-08-06T00:00:00.000Z" };
   await writeFile(path, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
   const before = await readFile(path, "utf8");
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "say-it-straight off"
-  });
+  const output = await submitPrompt(repo, "say-it-straight off");
   assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /already complete/u);
   assert.equal(await readFile(path, "utf8"), before);
 });
@@ -462,11 +355,7 @@ test("mismatched repository binding refuses output-style mutation", async () => 
   const copied = await readFile(join(source, ".superloopy", "goals.json"));
   const targetPlan = join(target, ".superloopy", "goals.json");
   await writeFile(targetPlan, copied);
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: target,
-    prompt: "say-it-straight off"
-  });
+  const output = await submitPrompt(target, "say-it-straight off");
   assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /binding is mismatch/u);
   assert.deepEqual(await readFile(targetPlan), copied);
 });
@@ -474,11 +363,7 @@ test("mismatched repository binding refuses output-style mutation", async () => 
 test("write failure keeps the prior output style authoritative", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "say-it-straight off"
-  }, {
+  const output = await submitPrompt(repo, "say-it-straight off", {}, {
     updateSayItStraightOutput: async () => { throw new Error("locked write"); }
   });
   assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /prior loop setting remains authoritative/u);
@@ -488,12 +373,7 @@ test("write failure keeps the prior output style authoritative", async () => {
 test("runUserPromptSubmitHook appends annotate steering to ledger", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
-
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: 'SUPERLOOPY_STEER: {"kind":"annotate","evidence":"fact","rationale":"keep note"}'
-  });
+  const output = await submitPrompt(repo, 'SUPERLOOPY_STEER: {"kind":"annotate","evidence":"fact","rationale":"keep note"}');
   const ledger = await readFile(join(repo, ".superloopy", "ledger.jsonl"), "utf8");
   const parsed = JSON.parse(output);
 
@@ -506,12 +386,7 @@ test("runUserPromptSubmitHook appends annotate steering to ledger", async () => 
 test("runUserPromptSubmitHook can add a goal through structured steering", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "- First"]);
-
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: 'SUPERLOOPY_STEER: {"kind":"add_goal","title":"Second","objective":"Ship the second slice","rationale":"new user requirement"}'
-  });
+  const output = await submitPrompt(repo, 'SUPERLOOPY_STEER: {"kind":"add_goal","title":"Second","objective":"Ship the second slice","rationale":"new user requirement"}');
   const status = await statusLoop(repo);
   const ledger = await readFile(join(repo, ".superloopy", "ledger.jsonl"), "utf8");
   const parsed = JSON.parse(output);
@@ -528,13 +403,7 @@ test("runUserPromptSubmitHook can add a goal through structured steering", async
 test("runUserPromptSubmitHook can revise a criterion through structured steering", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
-
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt:
-      'SUPERLOOPY_STEER: {"kind":"revise_criterion","goalId":"G001","criterionId":"C002","scenario":"Risk path covers invalid config rollback.","rationale":"risk changed"}'
-  });
+  const output = await submitPrompt(repo, 'SUPERLOOPY_STEER: {"kind":"revise_criterion","goalId":"G001","criterionId":"C002","scenario":"Risk path covers invalid config rollback.","rationale":"risk changed"}');
   const status = await statusLoop(repo);
   const criterion = status.plan.goals[0].criteria[1];
 
@@ -547,12 +416,7 @@ test("runUserPromptSubmitHook can revise a criterion through structured steering
 test("runUserPromptSubmitHook can reorder only pending goals through structured steering", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "- First\n- Second\n- Third"]);
-
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: 'SUPERLOOPY_STEER: {"kind":"reorder_pending","goalIds":["G003","G002"],"rationale":"third is the prerequisite"}'
-  });
+  const output = await submitPrompt(repo, 'SUPERLOOPY_STEER: {"kind":"reorder_pending","goalIds":["G003","G002"],"rationale":"third is the prerequisite"}');
   const status = await statusLoop(repo);
 
   assert.match(output, /goals_reordered/);
@@ -562,25 +426,14 @@ test("runUserPromptSubmitHook can reorder only pending goals through structured 
 test("runStopHook stays quiet by default when the optional Stop hook is not enabled", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
-
-  const output = await runStopHook({
-    hook_event_name: "Stop",
-    cwd: repo,
-    stop_hook_active: false
-  });
-
+  const output = await stopHook(repo);
   assert.equal(output, "");
 });
 
 test("runStopHook blocks a normal stop when Superloopy has unresolved active work", async () => withStopHookEnabled(async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
-
-  const output = await runStopHook({
-    hook_event_name: "Stop",
-    cwd: repo,
-    stop_hook_active: false
-  });
+  const output = await stopHook(repo);
   const parsed = JSON.parse(output);
 
   assert.equal(parsed.decision, "block");
@@ -592,19 +445,11 @@ test("runStopHook blocks a normal stop when Superloopy has unresolved active wor
 test("Stop continuation follows the durable output-style setting", async () => withStopHookEnabled(async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
-  const enabled = JSON.parse(await runStopHook({
-    hook_event_name: "Stop",
-    cwd: repo,
-    stop_hook_active: false
-  })).reason;
+  const enabled = JSON.parse(await stopHook(repo)).reason;
   assert.match(enabled, /Say It Straight loop output overlay/u);
 
   await updateSayItStraightOutput(repo, undefined, false);
-  const disabled = JSON.parse(await runStopHook({
-    hook_event_name: "Stop",
-    cwd: repo,
-    stop_hook_active: false
-  })).reason;
+  const disabled = JSON.parse(await stopHook(repo)).reason;
   assert.doesNotMatch(disabled, /Say It Straight loop output overlay/u);
 }));
 
@@ -612,12 +457,7 @@ test("runStopHook includes command templates for an active evidence criterion", 
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
   await nextLoop(repo);
-
-  const output = await runStopHook({
-    hook_event_name: "Stop",
-    cwd: repo,
-    stop_hook_active: false
-  });
+  const output = await stopHook(repo);
 
   assert.match(JSON.parse(output).reason, /Capture template: `superloopy loop capture --goal-id G001 --criterion-id C001 --notes "<summary>" -- <validation-command>`/);
   assert.match(JSON.parse(output).reason, /Evidence template: `superloopy loop evidence --goal-id G001 --criterion-id C001 --status pass --artifact .superloopy\/evidence\/G001-C001.txt --notes "<summary>" --json`/);
@@ -632,14 +472,7 @@ test("runUserPromptSubmitHook includes evidence template for active work", async
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
   await nextLoop(repo);
-
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "$lpy continue"
-  });
-
-  const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+  const context = await promptContext(repo, "$lpy continue");
   assert.match(context, /Evidence template: `superloopy loop evidence --goal-id G001 --criterion-id C001 --status pass --artifact .superloopy\/evidence\/G001-C001.txt --notes "<summary>" --json`/);
   assert.match(context, /Record criterion evidence only with a non-empty artifact under `.superloopy\/evidence`/);
   assert.match(context, /Flow checklist:\n- \[complete\] Start or resume goal: `superloopy loop next --json`\n- \[current\] Record artifact-backed proof: `superloopy loop prove -- <validation-command>`\n- \[anytime\] Check evidence: `superloopy loop check --json`/);
@@ -665,13 +498,7 @@ test("hook context includes recorded evidence for already-passed criteria", asyn
     "manual smoke covered"
   ]);
 
-  const output = await runUserPromptSubmitHook({
-    hook_event_name: "UserPromptSubmit",
-    cwd: repo,
-    prompt: "$lpy continue"
-  });
-
-  const context = JSON.parse(output).hookSpecificOutput.additionalContext;
+  const context = await promptContext(repo, "$lpy continue");
   assert.match(context, /Recorded evidence:/);
   assert.match(context, /G001\/C001 pass at \d{4}-\d{2}-\d{2}T.* -> `.superloopy\/evidence\/c1.txt` - Happy path works from the real user-facing surface\. - notes: manual smoke covered/);
 });
@@ -694,26 +521,14 @@ test("runStopHook stays silent when Superloopy aggregate is complete", async () 
     "--quality-gate",
     ".superloopy/evidence/gate.json"
   ]);
-
-  const output = await runStopHook({
-    hook_event_name: "Stop",
-    cwd: repo,
-    stop_hook_active: false
-  });
-
+  const output = await stopHook(repo);
   assert.equal(output, "");
 }));
 
 test("runStopHook engine keeps driving even when a prior stop is active", async () => withStopHookEnabled(async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
-
-  const output = await runStopHook({
-    hook_event_name: "Stop",
-    cwd: repo,
-    stop_hook_active: true
-  });
-
+  const output = await stopHook(repo, true);
   assert.equal(JSON.parse(output).decision, "block");
 }));
 
@@ -724,11 +539,7 @@ test("runStopHook honors SUPERLOOPY_CONTINUATION=off as the legacy single-contin
   const previous = process.env.SUPERLOOPY_CONTINUATION;
   process.env.SUPERLOOPY_CONTINUATION = "off";
   try {
-    const output = await runStopHook({
-      hook_event_name: "Stop",
-      cwd: repo,
-      stop_hook_active: true
-    });
+    const output = await stopHook(repo, true);
     assert.equal(output, "");
   } finally {
     if (previous === undefined) delete process.env.SUPERLOOPY_CONTINUATION;
