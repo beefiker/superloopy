@@ -40,5 +40,12 @@
     "must_preserve": ["Fileloom", "2026년 8월 4일", "GPT-5 API"],
     "must_not_add": ["new claim", "register change"],
     "allow_unchanged": false
+  },
+  {
+    "id": "korean-direct-no-audit-metadata",
+    "prompt": "Use say-it-straight with humanize-korean to rewrite: '결론적으로, Northwind는 2027년 3월 12일에 GPT-5 API를 통해 보고서를 처리할 수 있는 것입니다.'",
+    "must_preserve": ["Northwind", "2027년 3월 12일", "GPT-5 API"],
+    "must_not_add": ["audit grade", "change rate", "evidence path", "new claim"],
+    "allow_unchanged": false
   }
 ]
