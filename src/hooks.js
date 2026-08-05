@@ -15,6 +15,12 @@ import { steeringRequestKey } from "./steering-receipts.js";
 import { formatMeasuredAdditionalContext } from "./context-cost.js";
 import { buildRecoveryProjection, renderRecoveryCapsule } from "./compaction-recovery.js";
 import { fleetLoop } from "./fleet.js";
+import {
+  isSayItStraightEnabled,
+  parseLoopOutputStyleControl,
+  renderSayItStraightLoopOverlay,
+  updateSayItStraightOutput
+} from "./loop-output-style.js";
 
 export { runPreToolUseHook } from "./pre-tool-use.js";
 
@@ -76,12 +82,20 @@ export function runSubagentStopHook(payload, context = { host: "codex" }) {
   })}\n`;
 }
 
-export async function runUserPromptSubmitHook(payload) {
+export async function runUserPromptSubmitHook(payload, options = {}) {
   if (!isRecord(payload)) return "";
   if (payload.hook_event_name !== "UserPromptSubmit") return "";
   if (typeof payload.prompt !== "string" || typeof payload.cwd !== "string") return "";
   payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
   if (hasContextPressureMarker(payload.prompt) || transcriptHasContextPressureMarker(payload.transcript_path)) return "";
+  const outputStyleControl = parseLoopOutputStyleControl(payload.prompt);
+  if (outputStyleControl !== null) {
+    return await runOutputStyleControlHook(
+      payload,
+      outputStyleControl,
+      options.updateSayItStraightOutput ?? updateSayItStraightOutput
+    );
+  }
   const directive = parseSteeringDirective(payload.prompt);
   if (directive === null) {
     if (hasSteeringMarker(payload.prompt)) return "";
@@ -101,6 +115,47 @@ export async function runUserPromptSubmitHook(payload) {
     })}\n`;
   } catch {
     return "";
+  }
+}
+
+async function runOutputStyleControlHook(payload, control, updateOutputStyle) {
+  let status;
+  try {
+    status = await statusForPayload(payload);
+  } catch (error) {
+    if (isMissingPlanError(error)) {
+      return formatAdditionalContext("UserPromptSubmit", "No active Superloopy loop; no output style changed.");
+    }
+    return formatAdditionalContext(
+      "UserPromptSubmit",
+      "Superloopy could not change the output style; the prior loop setting remains authoritative."
+    );
+  }
+  if (status.binding?.resumable === false) {
+    return formatAdditionalContext(
+      "UserPromptSubmit",
+      `Superloopy repository binding is ${status.binding.status}; no output style changed.`
+    );
+  }
+  if (status.plan.aggregateCompletion?.status === "complete") {
+    return formatAdditionalContext(
+      "UserPromptSubmit",
+      "The current Superloopy loop is already complete; no output style changed."
+    );
+  }
+  try {
+    const scope = scopeFromSessionId(status.plan.sessionId);
+    const result = await updateOutputStyle(payload.cwd, scope, control.enabled);
+    const enabled = isSayItStraightEnabled(result.plan);
+    return formatAdditionalContext("UserPromptSubmit", [
+      `Say It Straight output is ${enabled ? "enabled" : "disabled"} for the current loop only.`,
+      renderSayItStraightLoopOverlay(enabled)
+    ].filter(Boolean).join("\n\n"));
+  } catch {
+    return formatAdditionalContext(
+      "UserPromptSubmit",
+      "Superloopy could not change the output style; the prior loop setting remains authoritative."
+    );
   }
 }
 
