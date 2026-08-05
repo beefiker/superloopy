@@ -44,17 +44,17 @@ Superloopy はコマンド層を小さく保ちます。専門的な進め方は
 
 | Skill | 使う場面 | 残すもの |
 | --- | --- | --- |
-| `superloopy-loop` | 完全な loop は `loopy <task>` または `loopy team <task>` で始めます。`loopywork`、`lpy`、`$lpy` は guidance だけが必要なときに使います。 | 完全な loop は軽量な計画、次の行動、コマンドで検証した証拠、品質 gate、最終 evidence report を残します。Guidance alias は状態を変更しません。 |
+| `superloopy-loop` | 完全な loop は `loopy <task>` または `loopy team <task>` で始めます。`loopywork`、`lpy`、`$lpy` は guidance だけが必要なときに使います。 | 完全な loop は直接的・簡潔・完全な進捗/最終応答と、軽量な計画、証拠、品質 gate、最終 evidence report を残します。正確な英語/韓国語の制御は現在の未完了 loop だけに適用され、新しい loop では enabled に戻ります。Guidance alias は状態を変更しません。 |
 | `superloopy-doctor` | install、wrapper、plugin cache、hook/bootstrap、agent、Codex/Claude Code host wiring、stale version の問題を診断するとき。 | 読み取り専用の health report: wrapper/cache/version の証拠、失敗した check、承認後にだけ実行する正確な修復コマンド。 |
 | `superloopy-research` | Codex の `$superloopy:superloopy-research` または Claude Code の `/superloopy:superloopy-research` を明示的に呼び出すか、リサーチ作業を先頭の `loopy`/`루피`（例: `loopy research`）で始めたときのみ。単なる調査・検索・要約の依頼では起動しません。 | 調査軸、拡張 wave、取得ごとの判定、等級と時点付きの出典、コストを記録した claim ledger、検証メモ、引用付き synthesis artifact。 |
 | `superloopy-clone` | `loopy clone`、許可された Web サイトのクローン、再構築、移行、ピクセル単位の復元を求めるとき。 | ブラウザ取得、ページ構造、デザイントークン、アセット一覧、実装メモ、build 出力、visual QA 証拠。 |
 | `superloopy-frontend` | 対応範囲の画面ベースのアプリ UI（公開・認証済み・非公開/社内向け・インストール型 PWA/拡張機能を含むブラウザーホスト Web、ユーザージャーニーを備えたインタラクティブなデプロイ済みコンテンツ主導 Web（キャンペーン、出版、ランディング体験など）、デスクトップ、モバイル/タブレット、組み込み/ハイブリッドクライアント、カスタムレンダリング UI、Qt、混在ターゲット）の作業で Codex の `$superloopy:superloopy-frontend` または Claude Code の `/superloopy:superloopy-frontend` を明示的に呼び出すか、その作業を先頭の `loopy`/`루피` で始める場合だけ。単なる UI・プラットフォーム・フレームワーク用語では起動せず、TV、ウェアラブル、XR、自動車、ゲーム UI、TUI、静的なメディア/文書成果物、非 UI 作業は除外します。 | 1 つの共通 UX 契約にプラットフォーム/コンポジション経路を加えます。証拠は変更した主張に比例し、ブラウザー、ネイティブのターゲット/シェル、レンダラー、混在ターゲットの各所有者を独立して検証します。単独実行では実行単位の証跡を保持し、アクティブなループでは goal と criterion に関連付けます。 |
 | `humanize-korean` | 韓国語テキストの AI っぽさや翻訳調を抑え、事実を変えずに人が書いたように整えるとき。 | `final.md`、`summary.md`、`audit.json` を書き、Superloopy loop では `.superloopy/evidence/humanize-korean/` に証拠を残します。 |
 | `i-have-adhd` | Codex の `$superloopy:i-have-adhd` または Claude Code の `/superloopy:i-have-adhd` を明示的に呼び出すか、先頭が `loopy`/`루피` の brief で ADHD フレンドリー、行動優先、一度に一段階、または拾い読みしやすい出力を直接求めるとき。文体だけでは自動起動しません。 | 次の行動が見えるように進捗更新を整えます。Superloopy evidence artifact は作成せず、計画・安全・検証・完了 gate を弱めません。 |
-| `say-it-straight` | 直接的で簡潔かつ自然な文章が必要なとき、Codex `$superloopy:say-it-straight` または Claude `/superloopy:say-it-straight` を明示的に呼び出した場合だけ使用し、文体だけでは自動起動しない. | 事実、文体、保護対象、必要な詳細を保ち、ファイル編集では監査を実行する. |
+| `say-it-straight` | 提供された文章または task artifact を直接的・簡潔・自然に整えるとき、Codex `$superloopy:say-it-straight` または Claude `/superloopy:say-it-straight` を明示的に呼び出した場合だけ使用し、文体だけでは自動起動しない。完全な Loopy の進捗/最終応答は既定で直接的で、正確な英語/韓国語の制御は現在の未完了 loop だけに適用されます。 | 明示的 artifact 編集では事実、文体、保護対象、必要な詳細を保ち、監査を実行します。ADHD は構造を、`humanize-korean` は韓国語の書き換え権限を維持します。 |
 | `superloopy-slides` | スライド・プレゼン・デッキを頼むとき、または PPT/PPTX を Web に変換するとき。 | 固定 16:9 ステージの依存ゼロ単一 HTML デッキ、選べる 3 種のスタイルプレビュー、`.superloopy/evidence/slides/` 配下のレンダリングスクリーンショット visual-QA artifact。 |
 
-Loop skill が標準のガードレールです。先頭の完全な `loopy` トークンは evidence loop を開始または再開し、`loopy team` は crew mode に上げます。先頭の `loopywork`、`lpy`、`$lpy` は最初の guidance だけを注入し、構造化された `SUPERLOOPY_STEER` は進行中の loop を調整します。Prompt hook は通常の文章から frontend や韓国語ライティングの mode を推測しません。専門 skill は明示的に呼び出すか、すでに有効な loop が実際の専門 subtask を割り当てたときだけ使います。
+Loop skill が標準のガードレールです。先頭の完全な `loopy` トークンは evidence loop を開始または再開し、`loopy team` は crew mode に上げます。先頭の `loopywork`、`lpy`、`$lpy` は最初の guidance だけを注入し、構造化された `SUPERLOOPY_STEER` は進行中の loop を調整します。完全な Loopy の直接出力は提供された文章や task artifact を黙って書き換えず、直接編集は明示的な呼び出しだけです。Prompt hook は通常の文章から frontend や韓国語ライティングの mode を推測しません。専門 skill は明示的に呼び出すか、すでに有効な loop が実際の専門 subtask を割り当てたときだけ使います。
 
 ## クローンデモ
 

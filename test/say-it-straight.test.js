@@ -4,7 +4,7 @@ import test from "node:test";
 
 const skillRoot = "skills/say-it-straight";
 
-test("say-it-straight is explicit-only and ships its complete clean-room contract", async () => {
+test("say-it-straight keeps direct artifact editing explicit while documenting bounded Loopy output", async () => {
   const skill = await readFile(`${skillRoot}/SKILL.md`, "utf8");
   const metadata = await readFile(`${skillRoot}/agents/openai.yaml`, "utf8");
   const notice = await readFile(`${skillRoot}/references/upstream-notice.md`, "utf8");
@@ -15,6 +15,9 @@ test("say-it-straight is explicit-only and ships its complete clean-room contrac
   assert.match(skill, /\/superloopy:say-it-straight/);
   assert.match(skill, /humanize-korean.*Korean|Korean.*humanize-korean/is);
   assert.match(skill, /i-have-adhd.*structure|structure.*i-have-adhd/is);
+  assert.match(skill, /full Loopy runs.*direct, concise, complete progress.*final responses/is);
+  assert.match(skill, /current incomplete loop.*say-it-straight off.*직설 모드 끄기/is);
+  assert.match(skill, /enabled.*new loop/is);
   assert.match(metadata, /allow_implicit_invocation:\s*false/);
   assert.match(metadata, /\$superloopy:say-it-straight/);
   assert.match(notice, /clean-room/i);

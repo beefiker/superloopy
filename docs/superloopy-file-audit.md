@@ -156,11 +156,13 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `docs/superpowers/specs/2026-07-24-workspace-context-steering-compaction-design.md` | Approved product and runtime design for safe workspace continuity without budget blocking. | Original Superloopy design record; explicitly defers generic batches, search brokering, and export anonymization. |
 | `docs/superpowers/specs/2026-08-05-impeccable-frontend-abc-design.md` | Approved design for a pinned three-arm Threadmark visual evaluation and a selective Impeccable-informed Superloopy frontend candidate. | Original Superloopy experiment record; preserves explicit routing and owner boundaries, separates detector output from scoring, and forbids external claims, dependencies, and runtime injection. |
 | `src/compaction-recovery.js` | Pure durable-state projection and bounded renderer for post-compaction loop recovery. | Uses Superloopy plan/guide/fleet facts only; never trusts transcript completion prose or mutates state. |
+| `src/loop-output-style.js` | Durable, scoped say-it-straight loop-output state, exact English/Korean controls, and bounded output overlay. | Defaults enabled without legacy migration writes; changes only an incomplete current loop and never grants authority to rewrite task artifacts. |
 | `src/context-cost.js` | Dependency-free Unicode, UTF-8 byte, and estimated-token meter for emitted additional context. | Labels token values as estimates and does not claim host-wide context measurement. |
 | `src/repository-binding.js` | Repository-binding inspection and explicit confined legacy-plan migration. | Uses local checkout identity and atomic Superloopy state; no network or remote-name authority. |
 | `src/steering-receipts.js` | Bounded request-key and receipt helpers for retry-safe structured steering. | Superloopy-local idempotency only; does not add a generic batch protocol. |
 | `src/workspace-identity.js` | Canonical worktree root and checkout fingerprint shared by plan binding and command trust. | Uses built-in filesystem/crypto APIs and a local Git-dir UUID; branch and remote names are not authority. |
 | `test/compaction-recovery.test.js` | Six semantic regressions for durable, bounded, isolated, read-only pressure-safe recovery. | Tests Superloopy state meaning rather than brittle prompt line counts. |
+| `test/loop-output-style.test.js` | State, exact-command, scoped-update, ledger, and overlay isolation regression coverage. | Uses disposable repositories and proves direct output is loop-scoped rather than artifact-rewriting authority. |
 | `test/context-cost.test.js` | Unicode/byte/estimate and empty-output coverage for additional-context metering. | Validates the documented heuristic boundary without a tokenizer dependency. |
 | `test/repository-binding.test.js` | Plan v2, child-directory reuse, copied-state refusal, and confined legacy-binding integration coverage. | Uses disposable local state and CLI processes only; no remote identity authority. |
 | `test/steering-idempotency.test.js` | Regression proving a retried structured directive mutates a plan once. | Uses local hook and plan state only. |
@@ -568,7 +570,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 
 ## Weight Notes
 
-- Current largest source file: `src/review-gate.js`, at the reviewability cap (550 lines). Keep new classifier, target-schema, and proof mechanics in focused helpers or extract an existing concern before growing the gate further.
+- Current largest source file: `src/hooks.js`, above the reviewability cap (602 lines). Keep new hook routing in focused helpers or extract an existing concern before growing it further.
 - No package dependencies are added; `package.json` stays dependency-free and `superloopy doctor --json` checks that boundary.
 - Marketplace update checks are advisory and self-update only runs for a future npx-local snapshot; current marketplace and checkout installs keep their documented update commands.
 - Runtime state is ignored under `.superloopy/`; `superloopy doctor --json` verifies runtime samples are ignored and not tracked.

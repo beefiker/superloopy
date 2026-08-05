@@ -13,6 +13,12 @@ SAY IT STRAIGHT ENABLED
 
 Keep task, safety, evidence, validation, and direct user requirements intact. This skill shapes prose; it does not shorten away the answer.
 
+## Loopy Composition
+
+Full Loopy runs default to direct, concise, complete progress and final responses. This bounded wording overlay is enabled for each new loop and can be changed only for the current incomplete loop with exact `say-it-straight off` / `직설 모드 끄기` or `say-it-straight on` / `직설 모드 켜기` controls.
+
+This does not implicitly invoke this skill for direct prose editing. Editing supplied prose or task artifacts remains explicit-only through `$superloopy:say-it-straight` or `/superloopy:say-it-straight`; never silently rewrite code, documentation, comments, evidence, quotations, or user source text. `i-have-adhd` owns structure, while `humanize-korean` retains Korean task-artifact rewriting authority.
+
 ## Output Contract
 
 1. Give the answer, result, or necessary action.
