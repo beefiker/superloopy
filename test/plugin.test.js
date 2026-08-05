@@ -476,6 +476,8 @@ test("plugin packages explicit-only say-it-straight with clean-room provenance",
   assert.match(skill.frontmatter, /^disable-model-invocation: true$/m);
   assert.match(skill.frontmatter, /\$superloopy:say-it-straight/);
   assert.match(skill.frontmatter, /\/superloopy:say-it-straight/);
+  assert.match(skill.content, /full Loopy runs.*progress.*final responses/is);
+  assert.match(skill.content, /supplied prose.*task artifacts.*explicit-only/is);
 
   for (const file of [
     "skills/say-it-straight/agents/openai.yaml",

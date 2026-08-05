@@ -223,8 +223,7 @@ test("README lists the packaged Superloopy skills and their jobs", async () => {
     assert.match(content, /\/superloopy:superloopy-research/);
     for (const pattern of [/i-have-adhd/, /\$superloopy:i-have-adhd/, /\/superloopy:i-have-adhd/, /loopy|루피/u]) assert.match(content, pattern);
   }
-  const english = await readFile("README.md", "utf8"); assert.match(english, /writing style alone never activates/i); assert.match(english, /does not create.*evidence artifact/i); assert.match(english, /Guidance aliases do not mutate state/);
-  assert.match(await readFile("README.ko.md", "utf8"), /guidance alias는 상태를 바꾸지 않습니다/);
+  const english = await readFile("README.md", "utf8"); assert.match(english, /writing style alone never activates/i); assert.match(english, /does not create.*evidence artifact/i); assert.match(english, /Guidance aliases do not mutate state/); assert.match(await readFile("README.ko.md", "utf8"), /guidance alias는 상태를 바꾸지 않습니다/); for (const file of locales) { const row = (await readFile(file, "utf8")).split("\n").find((line) => line.startsWith("| `say-it-straight` |")); assert.match(row, /full.*loop|full loop|전체 loop|完全な loop|完整 loop|loop completo|full Loopy|Loopy.*progress|Loopy.*進捗|Loopy.*进度|Loopy.*progreso/iu, file); assert.match(row, /explicit|명시|明示|显式|explícit/iu, file); assert.match(row, /artifact|成果物|产物|artefacto/iu, file); }
 });
 test("frontend discovery rows publish explicit screen-based scope and claim-shaped evidence", async () => {
   const locales = [

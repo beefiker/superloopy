@@ -6,6 +6,7 @@ import test from "node:test";
 import { buildRecoveryProjection, renderRecoveryCapsule } from "../src/compaction-recovery.js";
 import { runSessionStartHook } from "../src/hooks.js";
 import { createLoop, nextLoop, statusLoop } from "../src/loop.js";
+import { updateSayItStraightOutput } from "../src/loop-output-style.js";
 
 async function activeRepo(sessionId) {
   const repo = await mkdtemp(join(tmpdir(), "superloopy-compact-"));
@@ -34,11 +35,24 @@ test("compaction projection preserves durable loop semantics", async () => {
   assert.deepEqual(recovered.outstanding, ["H001"]);
 });
 
+test("compaction recovery carries the effective loop output style", async () => {
+  const repo = await activeRepo();
+  const enabled = projection(await statusLoop(repo));
+  assert.equal(enabled.sayItStraight, true);
+  assert.match(renderRecoveryCapsule(enabled), /Say It Straight loop output overlay/u);
+
+  await updateSayItStraightOutput(repo, undefined, false);
+  const disabled = projection(await statusLoop(repo));
+  assert.equal(disabled.sayItStraight, false);
+  assert.match(renderRecoveryCapsule(disabled), /Say It Straight output: disabled for this loop/u);
+  assert.doesNotMatch(renderRecoveryCapsule(disabled), /^Say It Straight loop output overlay$/mu);
+});
+
 test("bounded recovery rendering retains mandatory completion and next-action truth", async () => {
   const status = await statusLoop(await activeRepo());
   status.plan.goals[0].title = "x".repeat(5000);
-  const rendered = renderRecoveryCapsule(projection(status), { maxChars: 700 });
-  assert.ok(rendered.length <= 700);
+  const rendered = renderRecoveryCapsule(projection(status), { maxChars: 300 });
+  assert.ok(rendered.length <= 300);
   assert.match(rendered, /Aggregate complete: no/u);
   assert.match(rendered, /Durable Superloopy state overrides/u);
   assert.match(rendered, /Next action: superloopy loop prove -- <validation-command>/u);
