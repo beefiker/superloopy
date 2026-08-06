@@ -9,6 +9,7 @@ const YEAR_PATTERN = String.raw`(?:1[5-9]\d{2}|20\d{2}|21\d{2})[a-z]?`;
 const AUTHOR_PATTERN = String.raw`[A-Z][\p{L}'’-]*(?:\s+et al\.)?`;
 const AUTHOR_LIST_PATTERN = String.raw`${AUTHOR_PATTERN}(?:,\s*(?:&\s+)?${AUTHOR_PATTERN})*(?:\s+(?:&|and)\s+${AUTHOR_PATTERN})?`;
 const AUTHOR_YEAR_CITATION_PATTERN = new RegExp(String.raw`(?:\b${AUTHOR_LIST_PATTERN}\s*\(${YEAR_PATTERN}\)|\(${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN}(?:;\s*${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN})*\)|\[${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN}\])`, "gu");
+const PATH_PATTERN = /(?<![\p{L}\p{N}_@%+=:.,-])(?:(?:[A-Za-z]:[\\/]|\\\\)(?:[\p{L}\p{N}_@%+=:.,-]+(?:[ \t]+[\p{L}\p{N}_@%+=:.,-]+)*[\\/])*[\p{L}\p{N}_@%+=:.,-]*[\p{L}\p{N}_@%+=_-]|(?:(?:~|\.{1,2})[\\/]|[\\/])(?:[\p{L}\p{N}_@%+=:.,-]+[\\/])*[\p{L}\p{N}_@%+=:.,-]*[\p{L}\p{N}_@%+=_-]|[\p{L}\p{N}_@%+=:.,-]*[\p{L}\p{N}_@%+=_-](?:[\\/][\p{L}\p{N}_@%+=:.,-]*[\p{L}\p{N}_@%+=_-])+)/gu;
 
 function addRegexCandidates(candidates, text, type, expression) {
   for (const match of text.matchAll(expression)) candidates.push({ type, value: match[0], start: match.index, end: match.index + match[0].length });
@@ -214,7 +215,7 @@ function collectCandidates(text, protectedValues) {
   addMarkdownLinkCandidates(candidates, text);
   addBlockquoteCandidates(candidates, text);
   addRegexCandidates(candidates, text, "bare-url", /\b(?:https?|ftp):\/\/[^\s<>()\[\]{}"']+[^\s<>()\[\]{}"'.,;:!?]/g);
-  addRegexCandidates(candidates, text, "path", /(?:~\/|\.\.?\/|\/)(?:[\w@%+=:.-]+\/)*[\w@%+=:.-]+/g);
+  addRegexCandidates(candidates, text, "path", PATH_PATTERN);
   addRegexCandidates(candidates, text, "citation", /\[(?:[A-Z][\w.-]*|\d+)(?:\s+[\w.-]+)*\]/g);
   addRegexCandidates(candidates, text, "author-year-citation", AUTHOR_YEAR_CITATION_PATTERN);
   addRegexCandidates(candidates, text, "quotation", /"(?:[^"\\\r\n]|\\.)*"|(?<![\p{L}\p{N}])'(?:[^'\\\r\n]|\\.)*'(?![\p{L}\p{N}])|“[^”\r\n]*”|‘[^’\r\n]*’|„[^“\r\n]*“|«[^»\r\n]*»|「[^」\r\n]*」|『[^』\r\n]*』/gu);

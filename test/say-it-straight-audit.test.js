@@ -72,6 +72,25 @@ test("extracts ordered non-overlapping markdown spans", () => {
   assert.ok(spans.every((span, index) => index === 0 || spans[index - 1].end <= span.start));
 });
 
+// Mutation caught: recognizing only slash-prefixed paths or only a relative path suffix.
+test("audit preserves complete Windows and relative paths across CRLF input", () => {
+  const fixtures = [
+    [String.raw`C:\Program Files\Acme App\config.json`, String.raw`D:\Program Files\Acme App\config.json`],
+    [String.raw`\\server\team share\reports\report.csv`, String.raw`\\other\team share\reports\report.csv`],
+    [String.raw`src\config\app.json`, String.raw`src\config\prod.json`],
+    ["src/config/app.json", "lib/config/app.json"]
+  ];
+  const source = fixtures.map(([path]) => `Keep ${path}.`).join("\r\n");
+  const final = fixtures.map(([, path]) => `Keep ${path}.`).join("\r\n");
+  const expected = fixtures.map(([path]) => path);
+  const paths = extractProtectedSpans(source).filter((span) => span.type === "path").map((span) => span.value);
+  const report = auditTexts(source, final);
+
+  assert.deepEqual(paths, expected);
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.checks.protected.missing.values, expected);
+});
+
 // Mutation caught: collapsing repeated protected values into a set and accepting a removed duplicate.
 test("audit rejects a removed repeated protected value", () => {
   const report = auditTexts(
