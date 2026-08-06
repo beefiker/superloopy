@@ -75,8 +75,9 @@ test("extracts ordered non-overlapping markdown spans", () => {
 // Mutation caught: recognizing only slash-prefixed paths or only a relative path suffix.
 test("audit preserves complete Windows and relative paths across CRLF input", () => {
   const fixtures = [
-    [String.raw`C:\Program Files\Acme App\config.json`, String.raw`D:\Program Files\Acme App\config.json`],
-    [String.raw`\\server\team share\reports\report.csv`, String.raw`\\other\team share\reports\report.csv`],
+    [String.raw`C:\Reports\Q4 results.docx`, String.raw`C:\Reports\Q4 summary.docx`],
+    [String.raw`C:\Program Files (x86)\Acme\config.json`, String.raw`C:\Program Data (x86)\Acme\config.json`],
+    [String.raw`\\server\team share\folder (old)\report.csv`, String.raw`\\server\team share\folder (new)\report.csv`],
     [String.raw`src\config\app.json`, String.raw`src\config\prod.json`],
     ["src/config/app.json", "lib/config/app.json"]
   ];
@@ -180,13 +181,15 @@ test("audit accepts unchanged duplicate user-frozen values", () => {
   assert.equal(report.checks.protected.userFrozen.order.ok, true);
 });
 
-// Mutation caught: requiring partially overlapping user-frozen values to be disjoint.
-test("audit accepts unchanged overlapping user-frozen values", () => {
+// Mutation caught: requiring distinct overlaps to be disjoint or skipping repeated self-overlaps.
+test("audit handles overlapping user-frozen values and occurrences", () => {
   const text = "Run `npm test` today.";
   const report = auditTexts(text, text, { protectedValues: ["npm test", "test` today"] });
-
+  const repeated = auditTexts("Keep banana.", "Keep bana.", { protectedValues: ["ana"] });
   assert.equal(report.ok, true);
   assert.equal(report.checks.protected.userFrozen.order.ok, true);
+  assert.equal(repeated.ok, false);
+  assert.deepEqual(repeated.checks.protected.userFrozen.count.missing, ["ana"]);
 });
 
 // Mutation caught: omitting literal frontmatter comparison and accepting a changed document header.
