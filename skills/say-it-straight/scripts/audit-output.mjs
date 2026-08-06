@@ -11,7 +11,7 @@ const AUTHOR_YEAR_CITATION_PATTERN = new RegExp(String.raw`(?:\b${AUTHOR_LIST_PA
 const PATH_ATOM = String.raw`[^\u0000-\u0020<>:"/\\|?*]*[^\u0000-\u0020<>:"/\\|?*.,;!?]`;
 const PATH_SEGMENT = String.raw`${PATH_ATOM}(?:[ \t]+${PATH_ATOM})*`;
 const PATH_LEAF = String.raw`(?:${PATH_SEGMENT}\.[\p{L}\p{N}_-]+(?::${PATH_ATOM})?|${PATH_SEGMENT})`;
-const PATH_PATTERN = new RegExp(String.raw`(?<![\p{L}\p{N}_@%+=:.,-])(?:(?:[A-Za-z]:[\\/]|[A-Za-z]:(?![\\/])|\\\\\?(?:[\\/]UNC[\\/]|[\\/][A-Za-z]:[\\/]|[\\/])|\\\\\.[\\/](?:[A-Za-z]:[\\/])?|\\\\)(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|(?:(?:~|\.{1,2})[\\/]|[\\/])(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|${PATH_ATOM}(?:[\\/]${PATH_SEGMENT})*[\\/]${PATH_LEAF})[\\/]?`, "gu");
+const PATH_PATTERN = new RegExp(String.raw`(?<![\p{L}\p{N}_@%+=:.,-])(?:(?:[A-Za-z]:[\\/]|[A-Za-z]:(?![\\/])|\\\\\?(?:[\\/]UNC[\\/]|[\\/][A-Za-z]:[\\/]|[\\/])|\\\\\.[\\/](?:[A-Za-z]:[\\/])?|\\\\)(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|(?:(?:~|\.{1,2})[\\/]|[\\/])(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|${PATH_ATOM}(?:[\\/]${PATH_SEGMENT})*[\\/]${PATH_LEAF}|(?:\.[\p{L}\p{N}_-]+|[\p{L}\p{N}_-][\p{L}\p{N}_.-]*\.[\p{L}\p{N}_-]+)(?![\p{L}\p{N}_-]))[\\/]?`, "gu");
 function addRegexCandidates(candidates, text, type, expression) { for (const match of text.matchAll(expression)) candidates.push({ type, value: match[0], start: match.index, end: match.index + match[0].length }); }
 
 function addValueCandidates(candidates, text, protectedValues) {
@@ -360,13 +360,13 @@ function fenceSignatures(text) {
 }
 
 function tableSignatures(text) { return tableBlocks(text).map(({ rows, rowColumns }) => ({ rows, rowColumns })); }
-
+function listSignatures(text) { return textLines(text).flatMap((line) => { const match = /^( {0,3})([-+*]|\d{1,9}[.)])[ \t]+(?:\[([ xX])\][ \t]+)?/u.exec(line.text); return match ? [{ indent: match[1].length, kind: /^\d/u.test(match[2]) ? "ordered" : "unordered", task: match[3]?.toLowerCase() ?? null }] : []; }); }
 function structureCheck(sourceText, finalText) {
   const frontmatter = compareSignatures(frontmatterBlocks(sourceText), frontmatterBlocks(finalText));
   const headings = compareSignatures(headingSignatures(sourceText), headingSignatures(finalText));
   const fences = compareSignatures(fenceSignatures(sourceText), fenceSignatures(finalText));
-  const tables = compareSignatures(tableSignatures(sourceText), tableSignatures(finalText));
-  const checks = { frontmatter, headings, fences, tables };
+  const tables = compareSignatures(tableSignatures(sourceText), tableSignatures(finalText)); const lists = compareSignatures(listSignatures(sourceText), listSignatures(finalText));
+  const checks = { frontmatter, headings, fences, tables, lists };
   const problems = Object.entries(checks)
     .filter(([, check]) => !check.ok)
     .map(([name, check]) => ({ check: `structure.${name}`, source: check.source, final: check.final }));
@@ -497,7 +497,7 @@ async function readProtectedValues(path) {
   return manifest.values;
 }
 
-function emptyStructureCheck() { const empty = { ok: true, source: [], final: [] }; return { ok: true, frontmatter: empty, headings: empty, fences: empty, tables: empty, problems: [] }; }
+function emptyStructureCheck() { const empty = { ok: true, source: [], final: [] }; return { ok: true, frontmatter: empty, headings: empty, fences: empty, tables: empty, lists: empty, problems: [] }; }
 
 function cliFailureReport(error) {
   return {

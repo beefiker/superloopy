@@ -49,30 +49,32 @@ export async function createLoop(cwd, argv) {
   if (!brief) throw new Error("Missing --brief.");
   const mode = readMode(readFlag(argv, "--mode") ?? "light");
   const force = argv.includes("--force");
-  if (!force && existsSync(goalsPath(cwd, scope))) {
-    throw new Error("Superloopy plan already exists. Pass --force to replace it.");
-  }
-  const now = nowIso();
-  const goals = deriveGoals(brief).map((goal, index) => makeGoal(goal, index, mode, now));
-  const plan = {
-    version: 2,
-    mode,
-    createdAt: now,
-    updatedAt: now,
-    briefPath: briefRelativePath(scope),
-    evidencePath: evidenceRelativeDir(scope),
-    goalsPath: goalsRelativePath(scope),
-    ledgerPath: ledgerRelativePath(scope),
-    outputStyle: defaultLoopOutputStyle(),
-    goals,
-    aggregateCompletion: null,
-    repositoryBinding: await createRepositoryBinding(cwd)
-  };
-  if (scope?.sessionId) plan.sessionId = scope.sessionId;
-  await writeBrief(cwd, brief, scope);
-  await writePlan(cwd, plan, scope);
-  await appendLedger(cwd, { at: now, kind: "plan_created", mode, goals: goals.length }, scope);
-  return { ok: true, plan, summary: summarizePlan(plan), guide: buildGuide(plan, { cwd, scope }) };
+  return await withFileLock(goalsPath(cwd, scope), async () => {
+    if (!force && existsSync(goalsPath(cwd, scope))) {
+      throw new Error("Superloopy plan already exists. Pass --force to replace it.");
+    }
+    const now = nowIso();
+    const goals = deriveGoals(brief).map((goal, index) => makeGoal(goal, index, mode, now));
+    const plan = {
+      version: 2,
+      mode,
+      createdAt: now,
+      updatedAt: now,
+      briefPath: briefRelativePath(scope),
+      evidencePath: evidenceRelativeDir(scope),
+      goalsPath: goalsRelativePath(scope),
+      ledgerPath: ledgerRelativePath(scope),
+      outputStyle: defaultLoopOutputStyle(),
+      goals,
+      aggregateCompletion: null,
+      repositoryBinding: await createRepositoryBinding(cwd)
+    };
+    if (scope?.sessionId) plan.sessionId = scope.sessionId;
+    await writeBrief(cwd, brief, scope);
+    await writePlan(cwd, plan, scope);
+    await appendLedger(cwd, { at: now, kind: "plan_created", mode, goals: goals.length }, scope);
+    return { ok: true, plan, summary: summarizePlan(plan), guide: buildGuide(plan, { cwd, scope }) };
+  });
 }
 
 export async function statusLoop(cwd, argv = []) {

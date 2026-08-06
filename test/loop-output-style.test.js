@@ -44,6 +44,31 @@ test("force replacement resets a disabled loop to enabled", async () => {
   assert.equal(isSayItStraightEnabled(replacement.plan), true);
 });
 
+test("force replacement serializes with an in-flight output-style update", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "First"]);
+  let reachedWrite;
+  let releaseWrite;
+  const writeReached = new Promise((resolve) => { reachedWrite = resolve; });
+  const writeRelease = new Promise((resolve) => { releaseWrite = resolve; });
+  const update = updateSayItStraightOutput(repo, undefined, false, {
+    writePlan: async (...args) => {
+      reachedWrite();
+      await writeRelease;
+      return await persistPlan(...args);
+    }
+  });
+  await writeReached;
+  const replacement = createLoop(repo, ["--force", "--brief", "Second"]);
+  releaseWrite();
+  await update;
+  const result = await replacement;
+  const status = await statusLoop(repo);
+  assert.equal(result.plan.createdAt, status.plan.createdAt);
+  assert.equal(isSayItStraightEnabled(status.plan), true);
+  assert.equal(await readFile(join(repo, ".superloopy", "brief.md"), "utf8"), "Second\n");
+});
+
 test("manual controls accept only exact standalone English and Korean commands", () => {
   for (const prompt of ["say-it-straight off", "say-it-straight off.", "직설 모드 끄기", "직설 모드 끄기!"]) {
     assert.equal(parseLoopOutputStyleControl(prompt)?.enabled, false, prompt);
