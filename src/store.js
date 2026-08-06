@@ -136,7 +136,7 @@ export async function withFileLock(targetPath, fn, options = {}) {
       }
       break;
     } catch (error) {
-      if (error.code !== "EEXIST") throw error;
+      if (!isFileLockContention(error)) throw error;
       const reclaim = reclaimableLock(lockPath, staleMs);
       if (reclaim.reclaimable) {
         // Compare-and-delete: remove the lock only if it STILL holds the exact (unique) token we
@@ -161,6 +161,11 @@ export async function withFileLock(targetPath, fn, options = {}) {
     lease.active = false;
     releaseIfOwned(lockPath, token);
   }
+}
+
+export function isFileLockContention(error, platform = process.platform) {
+  return error?.code === "EEXIST"
+    || (platform === "win32" && (error?.code === "EPERM" || error?.code === "EACCES"));
 }
 
 // Decide whether a held lock can be reclaimed, returning the exact content inspected so the

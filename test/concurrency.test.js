@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
-import { withFileLock } from "../src/store.js";
+import { isFileLockContention, withFileLock } from "../src/store.js";
 import { commitManagedAgentFiles, withManagedAgentInstallLocks } from "../src/managed-agents.js";
 
 const STORE_URL = new URL("../src/store.js", import.meta.url).href;
@@ -69,6 +69,13 @@ test("withFileLock serializes unrelated same-process async chains", async () => 
   await Promise.all([increment(), increment(), increment(), increment(), increment()]);
 
   assert.equal(Number(await readFile(counter, "utf8")), 5);
+});
+
+test("file locks retry Windows sharing violations but not unrelated permission errors", () => {
+  assert.equal(isFileLockContention({ code: "EEXIST" }, "linux"), true);
+  assert.equal(isFileLockContention({ code: "EPERM" }, "win32"), true);
+  assert.equal(isFileLockContention({ code: "EACCES" }, "win32"), true);
+  assert.equal(isFileLockContention({ code: "EPERM" }, "linux"), false);
 });
 
 test("withFileLock reclaims a stale lock instead of blocking forever", async () => {
