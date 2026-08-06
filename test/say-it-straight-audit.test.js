@@ -6,10 +6,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
-import {
-  auditTexts,
-  extractProtectedSpans
-} from "../skills/say-it-straight/scripts/audit-output.mjs";
+import { auditTexts, extractProtectedSpans } from "../skills/say-it-straight/scripts/audit-output.mjs";
 
 const script = fileURLToPath(new URL("../skills/say-it-straight/scripts/audit-output.mjs", import.meta.url));
 
@@ -31,9 +28,7 @@ async function writeCase(t, sourceText, finalText, protectedText) {
 // Mutation caught: returning a failing report for text whose protected values are unchanged.
 test("audit accepts unchanged code URL path and number values", () => {
   const text = "Run `npm test` at https://example.test/docs from ./scripts/check.mjs; target 40%.";
-
   const report = auditTexts(text, text);
-
   assert.equal(report.schemaVersion, 1);
   assert.equal(report.ok, true);
   assert.equal(report.checks.protected.ok, true);
@@ -79,6 +74,8 @@ test("audit preserves complete Windows and relative paths across CRLF input", ()
     [String.raw`C:\Program Files (x86)\Acme\config.json`, String.raw`C:\Program Data (x86)\Acme\config.json`],
     [String.raw`C:\Reports\Q4 [final]\report #1.docx`, String.raw`C:\Reports\Q4 [draft]\report #1.docx`],
     [String.raw`\\?\C:\very long\file.txt`, String.raw`\\?\D:\very long\file.txt`],
+    ["\\\\?\\Volume{b75e2c83}\\very long\\", "\\\\?\\Volume{c91f3d94}\\very long\\"],
+    [String.raw`\\.\C:\device path\file.txt`, String.raw`\\.\D:\device path\file.txt`],
     [String.raw`\\server\team share\folder (old)\report.csv`, String.raw`\\server\team share\folder (new)\report.csv`],
     [String.raw`\\server\C$\ProgramData\file.txt`, String.raw`\\server\D$\ProgramData\file.txt`],
     [String.raw`C:relative\file.txt`, String.raw`D:relative\file.txt`],
@@ -137,10 +134,14 @@ test("audit rejects removal of a leading decimal point", () => {
 // Mutation caught: skipping numeric suffixes attached to identifiers and accepting a changed version.
 test("audit rejects a changed numeric identifier suffix", () => {
   const report = auditTexts("Use API v2.", "Use API v3.");
-
   assert.equal(report.ok, false);
   assert.deepEqual(report.checks.numbers.missing, ["2"]);
   assert.deepEqual(report.checks.numbers.added, ["3"]);
+});
+
+test("audit rejects changed formulas and code-style identifiers", () => {
+  assert.equal(auditTexts("Keep retry_count >= 5.", "Keep retry_count > 5.").ok, false);
+  assert.equal(auditTexts("Set NODE_ENV safely.", "Set APP_ENV safely.").ok, false);
 });
 
 // Mutation caught: comparing only the numeric portion of a quantity and accepting a changed spaced unit.

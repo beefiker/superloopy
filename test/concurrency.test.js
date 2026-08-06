@@ -56,6 +56,21 @@ test("withFileLock is re-entrant within a process (nested same-path does not dea
   assert.equal(inner, true);
 });
 
+test("withFileLock serializes unrelated same-process async chains", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "superloopy-lock-"));
+  const counter = join(dir, "same-process.txt");
+  await writeFile(counter, "0", "utf8");
+  const increment = () => withFileLock(counter, async () => {
+    const value = Number(await readFile(counter, "utf8"));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await writeFile(counter, String(value + 1), "utf8");
+  });
+
+  await Promise.all([increment(), increment(), increment(), increment(), increment()]);
+
+  assert.equal(Number(await readFile(counter, "utf8")), 5);
+});
+
 test("withFileLock reclaims a stale lock instead of blocking forever", async () => {
   const dir = await mkdtemp(join(tmpdir(), "superloopy-lock-"));
   const target = join(dir, "y.json");

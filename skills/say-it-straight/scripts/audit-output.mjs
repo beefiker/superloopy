@@ -1,6 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
-
 const VALID_PLACEHOLDER_PATTERN = /^⟦SIS:[A-Za-z0-9_-]+:[a-z-]+:\d+⟧$/u;
 const FRONTMATTER_PATTERN = /^(?:\uFEFF)?---[^\r\n]*\r?\n(?:[\s\S]*?\r?\n)?---[ \t]*(?=\r?\n|$)/;
 const NUMBER_PATTERN = /[+-]?(?:[$€£¥₩][ \t\u00A0\u202F]?)?(?:(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d{1,3}(?:[\u00A0\u202F]\d{3})+(?:[.,]\d+)?|\d+[.,]\d+|\d+|\.\d+)(?:%|[A-Za-z]+)?)/gu;
@@ -11,9 +10,8 @@ const AUTHOR_LIST_PATTERN = String.raw`${AUTHOR_PATTERN}(?:,\s*(?:&\s+)?${AUTHOR
 const AUTHOR_YEAR_CITATION_PATTERN = new RegExp(String.raw`(?:\b${AUTHOR_LIST_PATTERN}\s*\(${YEAR_PATTERN}\)|\(${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN}(?:;\s*${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN})*\)|\[${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN}\])`, "gu");
 const PATH_ATOM = String.raw`[^\u0000-\u0020<>:"/\\|?*]*[^\u0000-\u0020<>:"/\\|?*.,;!?]`;
 const PATH_SEGMENT = String.raw`${PATH_ATOM}(?:[ \t]+${PATH_ATOM})*`;
-const PATH_LEAF = String.raw`(?:${PATH_SEGMENT}\.[\p{L}\p{N}_-]+(?::${PATH_ATOM})?|${PATH_ATOM}(?:\.${PATH_ATOM})*)`;
-const PATH_PATTERN = new RegExp(String.raw`(?<![\p{L}\p{N}_@%+=:.,-])(?:(?:[A-Za-z]:[\\/]|[A-Za-z]:(?![\\/])|\\\\\?(?:[\\/]UNC[\\/]|[\\/][A-Za-z]:[\\/])|\\\\\.[\\/]|\\\\)(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|(?:(?:~|\.{1,2})[\\/]|[\\/])(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|${PATH_ATOM}(?:[\\/]${PATH_SEGMENT})*[\\/]${PATH_LEAF})`, "gu");
-
+const PATH_LEAF = String.raw`(?:${PATH_SEGMENT}\.[\p{L}\p{N}_-]+(?::${PATH_ATOM})?|${PATH_SEGMENT})`;
+const PATH_PATTERN = new RegExp(String.raw`(?<![\p{L}\p{N}_@%+=:.,-])(?:(?:[A-Za-z]:[\\/]|[A-Za-z]:(?![\\/])|\\\\\?(?:[\\/]UNC[\\/]|[\\/][A-Za-z]:[\\/]|[\\/])|\\\\\.[\\/](?:[A-Za-z]:[\\/])?|\\\\)(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|(?:(?:~|\.{1,2})[\\/]|[\\/])(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|${PATH_ATOM}(?:[\\/]${PATH_SEGMENT})*[\\/]${PATH_LEAF})[\\/]?`, "gu");
 function addRegexCandidates(candidates, text, type, expression) { for (const match of text.matchAll(expression)) candidates.push({ type, value: match[0], start: match.index, end: match.index + match[0].length }); }
 
 function addValueCandidates(candidates, text, protectedValues) {
@@ -216,6 +214,8 @@ function collectCandidates(text, protectedValues) {
   addBlockquoteCandidates(candidates, text);
   addRegexCandidates(candidates, text, "bare-url", /\b(?:https?|ftp):\/\/[^\s<>()\[\]{}"']+[^\s<>()\[\]{}"'.,;:!?]/g);
   addRegexCandidates(candidates, text, "path", PATH_PATTERN);
+  addRegexCandidates(candidates, text, "formula", /(?<![\p{L}\p{N}_])(?:[\p{L}_][\p{L}\p{N}_.-]*|[+-]?(?:\d+(?:\.\d+)?|\.\d+))[ \t]*(?:={1,3}|!==?|<=?|>=?|≈|≠|≤|≥)[ \t]*(?:[\p{L}_][\p{L}\p{N}_.-]*|[+-]?(?:\d+(?:\.\d+)?|\.\d+))(?![\p{L}\p{N}_])/gu);
+  addRegexCandidates(candidates, text, "identifier", /(?<![\p{L}\p{N}_])(?:[A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+|[a-z]+[A-Z][A-Za-z0-9]*|[A-Z]{2,}[a-z][A-Za-z0-9]*|[A-Z][a-z0-9]+(?:[A-Z][A-Za-z0-9]*)+)(?![\p{L}\p{N}_])/gu);
   addRegexCandidates(candidates, text, "citation", /\[(?:[A-Z][\w.-]*|\d+)(?:\s+[\w.-]+)*\]/g);
   addRegexCandidates(candidates, text, "author-year-citation", AUTHOR_YEAR_CITATION_PATTERN);
   addRegexCandidates(candidates, text, "quotation", /"(?:[^"\\\r\n]|\\.)*"|(?<![\p{L}\p{N}])'(?:[^'\\\r\n]|\\.)*'(?![\p{L}\p{N}])|“[^”\r\n]*”|‘[^’\r\n]*’|„[^“\r\n]*“|«[^»\r\n]*»|「[^」\r\n]*」|『[^』\r\n]*』/gu);
