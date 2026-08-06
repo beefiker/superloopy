@@ -240,6 +240,145 @@ test("audit rejects a removed delimiter from a balanced-parentheses link", () =>
   assert.deepEqual(report.checks.protected.missing.values, ["[guide](https://example.test/a_(b))"]);
 });
 
+// Mutation caught: treating a Markdown image as the same protected value as a link with the same label and destination.
+test("audit rejects changing a Markdown image into a link", () => {
+  const report = auditTexts(
+    "See ![release diagram](https://example.test/release.png).",
+    "See [release diagram](https://example.test/release.png)."
+  );
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.checks.protected.missing.values, ["![release diagram](https://example.test/release.png)"]);
+});
+
+// Mutation caught: protecting a citation year alone while allowing its author or reference-style link identity to change.
+test("audit rejects changed author-year citations and reference-style links", () => {
+  const report = auditTexts(
+    "Smith (2024) documents the result in [the study][smith-2024].\n\n[smith-2024]: https://example.test/study\n",
+    "Jones (2024) documents the result in [the study][jones-2024].\n\n[jones-2024]: https://example.test/study\n"
+  );
+
+  assert.equal(report.ok, false);
+  assert.ok(report.checks.protected.missing.values.includes("Smith (2024)"));
+  assert.ok(report.checks.protected.missing.values.includes("[the study][smith-2024]"));
+});
+
+// Mutation caught: preserving only the blockquote marker while allowing quoted content to be rewritten.
+test("audit rejects changed Markdown blockquote content", () => {
+  const report = auditTexts("> Do not deploy.\n", "> Deploy.\n");
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.checks.protected.missing.values, ["> Do not deploy."]);
+});
+
+// Mutation caught: omitting supported quotation forms from exact protected-span comparison.
+test("audit preserves supported quotation forms without freezing surrounding prose", () => {
+  const source = "In conclusion, \"hold\", 'wait', “pause”, ‘Do not deploy.’, «attendre», 「待つ」, and 『止まる』 are explicit.";
+  const rewritten = "\"hold\", 'wait', “pause”, ‘Do not deploy.’, «attendre», 「待つ」, and 『止まる』 are explicit.";
+  const unchanged = auditTexts(source, rewritten);
+  const changed = auditTexts(source, "\"hold\", 'wait', “pause”, ‘Deploy now.’, «attendre», 「待つ」, and 『止まる』 are explicit.");
+
+  assert.equal(unchanged.ok, true);
+  assert.equal(changed.ok, false);
+  assert.deepEqual(extractProtectedSpans(source).filter((span) => span.type === "quotation").map((span) => span.value), ["\"hold\"", "'wait'", "“pause”", "‘Do not deploy.’", "«attendre»", "「待つ」", "『止まる』"]);
+  assert.ok(changed.checks.protected.missing.values.includes("‘Do not deploy.’"));
+});
+
+// Mutation caught: tokenizing locale-formatted quantities into separate digits and accepting punctuation loss.
+test("audit preserves locale-formatted quantities while allowing prose rewrites", () => {
+  const source = "In conclusion, Version 1,5 kg. Total: 1.234,56 €.";
+  const rewritten = "Version 1,5 kg. Total: 1.234,56 €.";
+  const corrupted = "Version 1 5 kg. Total: 1 234,56 €.";
+  const unchanged = auditTexts(source, rewritten);
+  const changed = auditTexts(source, corrupted);
+
+  assert.equal(unchanged.ok, true);
+  assert.equal(changed.ok, false);
+  assert.ok(changed.checks.numbers.missing.includes("1,5 kg"));
+  assert.ok(changed.checks.numbers.missing.includes("1.234,56 €"));
+});
+
+// Mutation caught: treating a shortcut reference as ordinary bracketed prose despite its matching definition.
+test("audit preserves shortcut reference links while allowing prose rewrites", () => {
+  const source = "Opening: [the study].\n\n[the study]: https://example.test/study\n";
+  assert.equal(auditTexts(source, "See [the study] here.\n\n[the study]: https://example.test/study\n").ok, true);
+  assert.equal(auditTexts(source, "See the study here.\n\n[the study]: https://example.test/study\n").ok, false);
+  assert.ok(extractProtectedSpans(source).some((span) => span.type === "markdown-shortcut-reference" && span.value === "[the study]"));
+});
+
+// Mutation caught: treating a shortcut image reference as unprotected despite its matching definition.
+test("audit preserves shortcut reference images while allowing prose rewrites", () => {
+  const source = "![diagram]\n\n[diagram]: image.png\n";
+  assert.equal(auditTexts(source, "Diagram: ![diagram]\n\n[diagram]: image.png\n").ok, true);
+  assert.equal(auditTexts(source, "Diagram omitted.\n\n[diagram]: image.png\n").ok, false);
+  assert.ok(extractProtectedSpans(source).some((span) => span.type === "markdown-shortcut-image" && span.value === "![diagram]"));
+});
+
+// Mutation caught: accepting a changed author in a multi-author parenthetical citation.
+test("audit preserves multi-author author-year citations while allowing prose rewrites", () => {
+  const citation = "(Smith, Jones, & Brown, 2024)", source = `The evidence is ${citation}.`;
+  assert.equal(auditTexts(source, `Evidence: ${citation}.`).ok, true);
+  assert.equal(auditTexts(source, "The evidence is (Smith, Jones, & Green, 2024).").ok, false);
+  assert.ok(extractProtectedSpans(source).some((span) => span.value === citation));
+});
+
+// Mutation caught: accepting a changed author in a semicolon-separated author-year citation.
+test("audit preserves multi-citation author-year forms while allowing prose rewrites", () => {
+  const citation = "(Smith, 2024; Jones, 2023)", source = `The evidence is ${citation}.`;
+  assert.equal(auditTexts(source, `Evidence: ${citation}.`).ok, true);
+  assert.equal(auditTexts(source, "The evidence is (Smith, 2024; Green, 2023).").ok, false);
+  assert.ok(extractProtectedSpans(source).some((span) => span.value === citation));
+});
+
+// Mutation caught: preserving only the marked line of a blockquote and not its lazy continuation.
+test("audit preserves lazy blockquote continuations while allowing prose rewrites", () => {
+  const quote = "> Do not deploy.\nThis remains part of the quote.", source = `${quote}\n\nClosing.`;
+  assert.equal(auditTexts(source, `Intro.\n${quote}\n\nRevised closing.`).ok, true);
+  assert.equal(auditTexts(source, "> Do not deploy.\nThis is changed.\n\nClosing.").ok, false);
+  assert.ok(extractProtectedSpans(source).some((span) => span.type === "blockquote" && span.value === quote));
+});
+
+// Mutation caught: allowing a blockquote's lazy span to consume prose after a thematic-break boundary.
+test("audit stops lazy blockquotes at thematic breaks", () => {
+  const source = "> Keep this.\n---\nClosing prose.";
+  assert.equal(auditTexts(source, "> Keep this.\n---\nRevised closing prose.").ok, true);
+  assert.equal(auditTexts(source, "> Change this.\n---\nClosing prose.").ok, false);
+  assert.ok(extractProtectedSpans(source).some((span) => span.type === "blockquote" && span.value === "> Keep this."));
+  assert.equal(auditTexts("> Keep this.\n---not a break", "> Keep this.\n---changed").ok, false);
+});
+
+// Mutation caught: omitting German low-high quotation marks from protected quoted material.
+test("audit preserves German quotations while allowing prose rewrites", () => {
+  const quotation = "„Nicht bereit“", source = `She said ${quotation}.`;
+  assert.equal(auditTexts(source, `The note says ${quotation}.`).ok, true);
+  assert.equal(auditTexts(source, "She said „Bereit“.").ok, false);
+  assert.ok(extractProtectedSpans(source).some((span) => span.type === "quotation" && span.value === quotation));
+});
+
+// Mutation caught: splitting a narrow-no-break-space grouped locale quantity into an ungrouped number.
+test("audit preserves narrow-no-break-space quantities while allowing prose rewrites", () => {
+  const quantity = "1\u202F234,56 €", source = `Total: ${quantity}.`;
+  assert.equal(auditTexts(source, `The total is ${quantity}.`).ok, true);
+  assert.equal(auditTexts(source, "Total: 1234,56 €.").ok, false);
+  assert.ok(extractProtectedSpans(source).some((span) => span.type === "number" && span.value === quantity));
+});
+
+// Mutation caught: splitting an ordinary-no-break-space grouped locale quantity into an ungrouped number.
+test("audit preserves ordinary-no-break-space quantities while allowing prose rewrites", () => {
+  const quantity = "12\u00A0345,67 €", source = `Total: ${quantity}.`;
+  assert.equal(auditTexts(source, `The total is ${quantity}.`).ok, true);
+  assert.equal(auditTexts(source, "Total: 12 345,67 €.").ok, false);
+  assert.ok(extractProtectedSpans(source).some((span) => span.type === "number" && span.value === quantity));
+});
+
+// Mutation caught: allowing a prefix currency symbol to change while its numeric value stays the same.
+test("audit preserves prefix currency quantities while allowing prose rewrites", () => {
+  const quantity = "€1,234.56", source = `The service costs ${quantity}.`;
+  assert.equal(auditTexts(source, `Price: ${quantity}.`).ok, true);
+  assert.equal(auditTexts(source, "The service costs $1,234.56.").ok, false);
+  assert.ok(extractProtectedSpans(source).some((span) => span.type === "number" && span.value === quantity));
+});
+
 // Mutation caught: ignoring Markdown table row and column signatures.
 test("audit rejects a changed table shape", () => {
   const report = auditTexts(

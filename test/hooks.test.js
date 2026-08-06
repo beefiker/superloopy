@@ -254,33 +254,33 @@ test("runUserPromptSubmitHook stays quiet for ordinary prompts even when Superlo
   const output = await submitPrompt(repo, "continue");
   assert.equal(output, "");
 });
-test("exact output-style controls disable and re-enable only the current loop", async () => {
-  const repo = await tempRepo();
-  await createLoop(repo, ["--brief", "Ship"]);
-  const off = await submitPrompt(repo, "직설 모드 끄기");
+test("a global loop accepts exact off/on controls despite a host session_id", async () => {
+  const repo = await tempRepo(); await createLoop(repo, ["--brief", "Ship"]);
+  const off = await submitPrompt(repo, "직설 모드 끄기", { session_id: "host-session" });
   assert.match(JSON.parse(off).hookSpecificOutput.additionalContext, /disabled for the current loop/u);
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, false);
-  const on = await submitPrompt(repo, "say-it-straight on");
+  const on = await submitPrompt(repo, "say-it-straight on", { session_id: "host-session" });
   assert.match(JSON.parse(on).hookSpecificOutput.additionalContext, /enabled for the current loop/u);
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
 });
-test("a scoped control leaves the global loop unchanged", async () => {
-  const repo = await tempRepo();
-  await createLoop(repo, ["--brief", "Global"]);
+test("a scoped control takes precedence and remains isolated from other loops", async () => {
+  const repo = await tempRepo(); await createLoop(repo, ["--brief", "Global"]);
   await createLoop(repo, ["--session-id", "beta", "--brief", "Scoped"]);
+  await createLoop(repo, ["--session-id", "gamma", "--brief", "Other scoped"]);
   await submitPrompt(repo, "say-it-straight off", { session_id: "beta" });
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
   assert.equal((await statusLoop(repo, ["--session-id", "beta"])).plan.outputStyle.sayItStraight, false);
+  assert.equal((await statusLoop(repo, ["--session-id", "gamma"])).plan.outputStyle.sayItStraight, true);
 });
-
-test("a missing scoped loop never falls back to mutate the global loop", async () => {
-  const repo = await tempRepo();
-  await createLoop(repo, ["--brief", "Global"]);
-  const output = await submitPrompt(repo, "say-it-straight off", { session_id: "missing" });
-  assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /No active Superloopy loop/u);
+test("a missing scoped loop falls back to exact controls for the global loop", async () => {
+  const repo = await tempRepo(); await createLoop(repo, ["--brief", "Global"]);
+  const off = await submitPrompt(repo, "say-it-straight off", { session_id: "missing" });
+  assert.match(JSON.parse(off).hookSpecificOutput.additionalContext, /disabled for the current loop/u);
+  assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, false);
+  const on = await submitPrompt(repo, "say-it-straight on", { session_id: "missing" });
+  assert.match(JSON.parse(on).hookSpecificOutput.additionalContext, /enabled for the current loop/u);
   assert.equal((await statusLoop(repo)).plan.outputStyle.sayItStraight, true);
 });
-
 test("output-style mutation rechecks repository binding under the goals-file lock", async () => {
   const source = await tempRepo();
   const target = await tempRepo();

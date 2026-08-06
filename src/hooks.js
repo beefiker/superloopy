@@ -144,7 +144,13 @@ function formatOutputStyleContext(message) {
 
 async function statusForOutputStyleControl(payload) {
   const scope = scopeFromPayload(payload);
-  if (scope !== undefined) return await statusLoop(payload.cwd, ["--session-id", scope.sessionId]);
+  if (scope !== undefined) {
+    try {
+      return await statusLoop(payload.cwd, ["--session-id", scope.sessionId]);
+    } catch (error) {
+      if (!isMissingPlanError(error)) throw error;
+    }
+  }
   return await statusLoop(payload.cwd);
 }
 

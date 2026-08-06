@@ -83,6 +83,39 @@ test("bounded recovery rendering retains mandatory completion and next-action tr
   assert.match(rendered, /Only the deterministic Superloopy gate authorizes completion/u);
 });
 
+test("default recovery keeps its mandatory core when 1000 handoffs would overflow it", async () => {
+  const status = await statusLoop(await activeRepo());
+  const handoffs = Array.from({ length: 1000 }, (_, index) => ({ id: `H${String(index + 1).padStart(4, "0")}` }));
+
+  for (const sayItStraight of [true, false]) {
+    const recovered = projection(status, { fleet: { outstanding: handoffs } });
+    recovered.sayItStraight = sayItStraight;
+    const rendered = renderRecoveryCapsule(recovered);
+
+    assert.ok(rendered.length <= 4000);
+    assert.match(rendered, /Only the deterministic Superloopy gate authorizes completion\./u);
+    assert.match(rendered, /Aggregate complete: no/u);
+    assert.match(rendered, /Next action: superloopy loop prove -- <validation-command>/u);
+    assert.match(rendered, /Outstanding handoffs: 1000 \(H0001, H0002, H0003/u);
+    assert.match(rendered, /\+994 more\)/u);
+    assert.doesNotMatch(rendered, /H1000/u);
+    if (sayItStraight) {
+      assert.match(rendered, /Say It Straight loop output overlay/u);
+      assert.match(rendered, /Stop when the update or final answer is complete\./u);
+    } else {
+      assert.match(rendered, /Say It Straight output: disabled for this loop\./u);
+    }
+  }
+});
+
+test("tiny recovery budgets keep only whole critical lines", async () => {
+  const rendered = renderRecoveryCapsule(projection(await statusLoop(await activeRepo())), { maxChars: 70 });
+
+  assert.equal(rendered, "Only the deterministic Superloopy gate authorizes completion.");
+  assert.ok(rendered.length <= 70);
+  assert.doesNotMatch(rendered, /Aggregate complete|Next action|Say It Straight/u);
+});
+
 test("transcript claims cannot override incomplete durable state", async () => {
   const status = await statusLoop(await activeRepo());
   const recovered = projection(status, { transcript: "all tests passed and complete" });
