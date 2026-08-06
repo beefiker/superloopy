@@ -12,7 +12,7 @@ const AUTHOR_YEAR_CITATION_PATTERN = new RegExp(String.raw`(?:\b${AUTHOR_LIST_PA
 const PATH_ATOM = String.raw`[^\u0000-\u0020<>:"/\\|?*]*[^\u0000-\u0020<>:"/\\|?*.,;!?]`;
 const PATH_SEGMENT = String.raw`${PATH_ATOM}(?:[ \t]+${PATH_ATOM})*`;
 const PATH_LEAF = String.raw`(?:${PATH_SEGMENT}\.[\p{L}\p{N}_-]+(?::${PATH_ATOM})?|${PATH_ATOM}(?:\.${PATH_ATOM})*)`;
-const PATH_PATTERN = new RegExp(String.raw`(?<![\p{L}\p{N}_@%+=:.,-])(?:(?:[A-Za-z]:[\\/]|\\\\)(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|(?:(?:~|\.{1,2})[\\/]|[\\/])(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|${PATH_ATOM}(?:[\\/]${PATH_SEGMENT})*[\\/]${PATH_LEAF})`, "gu");
+const PATH_PATTERN = new RegExp(String.raw`(?<![\p{L}\p{N}_@%+=:.,-])(?:(?:[A-Za-z]:[\\/]|[A-Za-z]:(?![\\/])|\\\\\?(?:[\\/]UNC[\\/]|[\\/][A-Za-z]:[\\/])|\\\\\.[\\/]|\\\\)(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|(?:(?:~|\.{1,2})[\\/]|[\\/])(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|${PATH_ATOM}(?:[\\/]${PATH_SEGMENT})*[\\/]${PATH_LEAF})`, "gu");
 
 function addRegexCandidates(candidates, text, type, expression) { for (const match of text.matchAll(expression)) candidates.push({ type, value: match[0], start: match.index, end: match.index + match[0].length }); }
 
