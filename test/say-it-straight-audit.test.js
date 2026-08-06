@@ -77,7 +77,9 @@ test("audit preserves complete Windows and relative paths across CRLF input", ()
   const fixtures = [
     [String.raw`C:\Reports\Q4 results.docx`, String.raw`C:\Reports\Q4 summary.docx`],
     [String.raw`C:\Program Files (x86)\Acme\config.json`, String.raw`C:\Program Data (x86)\Acme\config.json`],
+    [String.raw`C:\Reports\Q4 [final]\report #1.docx`, String.raw`C:\Reports\Q4 [draft]\report #1.docx`],
     [String.raw`\\server\team share\folder (old)\report.csv`, String.raw`\\server\team share\folder (new)\report.csv`],
+    [String.raw`\\server\C$\ProgramData\file.txt`, String.raw`\\server\D$\ProgramData\file.txt`],
     [String.raw`src\config\app.json`, String.raw`src\config\prod.json`],
     ["src/config/app.json", "lib/config/app.json"]
   ];
