@@ -5,11 +5,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-
 import { auditTexts, extractProtectedSpans } from "../skills/say-it-straight/scripts/audit-output.mjs";
-
 const script = fileURLToPath(new URL("../skills/say-it-straight/scripts/audit-output.mjs", import.meta.url));
-
 async function writeCase(t, sourceText, finalText, protectedText) {
   const directory = await mkdtemp(join(tmpdir(), "say-it-straight-audit-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -80,7 +77,7 @@ test("audit preserves complete Windows and relative paths across CRLF input", ()
     [String.raw`\\server\C$\ProgramData\file.txt`, String.raw`\\server\D$\ProgramData\file.txt`],
     [String.raw`C:relative\file.txt`, String.raw`D:relative\file.txt`],
     [String.raw`src\config\app.json`, String.raw`src\config\prod.json`],
-    ["src/config/app.json", "lib/config/app.json"]
+    ["src/config/app.json", "lib/config/app.json"], ["README.md", "README.txt"], [".gitignore", ".npmignore"]
   ];
   const source = fixtures.map(([path]) => `Keep ${path}.`).join("\r\n");
   const final = fixtures.map(([, path]) => `Keep ${path}.`).join("\r\n");
@@ -420,11 +417,14 @@ test("audit rejects a changed table shape", () => {
 // Mutation caught: recognizing only outer-pipe tables and accepting deletion of a standard pipe-delimited table.
 test("audit rejects removal of a table without outer pipes", () => {
   const report = auditTexts("Name | State\n--- | ---\nAlpha | Ready\n", "Body.\n");
-
   assert.equal(report.ok, false);
   assert.equal(report.checks.structure.tables.ok, false);
 });
-
+test("audit rejects removed list structure and changed task state", () => {
+  const removed = auditTexts("- First action\n- Second action\n", "First action. Second action.\n");
+  const completed = auditTexts("- [ ] Review before release\n", "- [x] Review before release\n"); assert.equal(removed.checks.structure.lists.ok, false);
+  assert.equal(completed.checks.structure.lists.ok, false);
+});
 // Mutation caught: allowing a source placeholder-shaped literal to share a run tag with generated placeholders.
 test("audit reports a source placeholder collision", () => {
   const text = "Keep ⟦SIS:a1:path:1⟧ unchanged.";
