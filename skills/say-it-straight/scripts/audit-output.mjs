@@ -9,7 +9,7 @@ const YEAR_PATTERN = String.raw`(?:1[5-9]\d{2}|20\d{2}|21\d{2})[a-z]?`;
 const AUTHOR_PATTERN = String.raw`[A-Z][\p{L}'’-]*(?:\s+et al\.)?`;
 const AUTHOR_LIST_PATTERN = String.raw`${AUTHOR_PATTERN}(?:,\s*(?:&\s+)?${AUTHOR_PATTERN})*(?:\s+(?:&|and)\s+${AUTHOR_PATTERN})?`;
 const AUTHOR_YEAR_CITATION_PATTERN = new RegExp(String.raw`(?:\b${AUTHOR_LIST_PATTERN}\s*\(${YEAR_PATTERN}\)|\(${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN}(?:;\s*${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN})*\)|\[${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN}\])`, "gu");
-const PATH_ATOM = String.raw`[.\p{L}\p{N}_@%+=:,()&'’-]*[\p{L}\p{N}_@%+=()&'’_-]`;
+const PATH_ATOM = String.raw`[^\u0000-\u0020<>:"/\\|?*]*[^\u0000-\u0020<>:"/\\|?*.,;!?]`;
 const PATH_SEGMENT = String.raw`${PATH_ATOM}(?:[ \t]+${PATH_ATOM})*`;
 const PATH_LEAF = String.raw`(?:${PATH_SEGMENT}\.[\p{L}\p{N}_-]+(?::${PATH_ATOM})?|${PATH_ATOM}(?:\.${PATH_ATOM})*)`;
 const PATH_PATTERN = new RegExp(String.raw`(?<![\p{L}\p{N}_@%+=:.,-])(?:(?:[A-Za-z]:[\\/]|\\\\)(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|(?:(?:~|\.{1,2})[\\/]|[\\/])(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|${PATH_ATOM}(?:[\\/]${PATH_SEGMENT})*[\\/]${PATH_LEAF})`, "gu");
