@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -22,8 +22,7 @@ test("file audit covers every repository file and reference boundary", async () 
 });
 
 test("source and test files stay small enough to review file by file", async () => {
-  const trackedFiles = listTrackedFiles();
-  const files = listRepoFiles().filter((file) => isReviewableTextFile(file, { approvedPlan: trackedFiles.has(file) }));
+  const files = listRepoFiles().filter((file) => isReviewableTextFile(file));
   const oversized = [];
   for (const file of files) {
     const lineCount = countPhysicalLines(await readFile(file, "utf8"));
@@ -39,7 +38,7 @@ test("standalone reviewability uses the physical-line and extension contract", (
   for (const file of ["a.mjs", "a.cjs", "a.yml"]) {
     assert.equal(isReviewableTextFile(file), true, file);
   }
-  assert.equal(isReviewableTextFile("docs/superpowers/plans/approved.md", { approvedPlan: true }), false);
+  assert.equal(isReviewableTextFile("docs/superpowers/plans/approved.md"), true);
   assert.equal(isReviewableTextFile("docs/superpowers/plans/untracked.md"), true);
 });
 
@@ -91,7 +90,7 @@ test("the reviewability check does not depend on a runtime-version-gated array m
   }
 });
 
-test("reviewability excludes tracked approved plans but not untracked plans or ordinary Markdown", async () => {
+test("ignored plans stay local while force-tracked plans and ordinary Markdown remain reviewable", async () => {
   const repo = await mkdtemp(join(tmpdir(), "superloopy-reviewability-"));
   const listed = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], { encoding: "utf8" });
   assert.equal(listed.status, 0, listed.stderr);
@@ -106,18 +105,19 @@ test("reviewability excludes tracked approved plans but not untracked plans or o
   const staged = spawnSync("git", ["add", "--force", "."], { cwd: repo, encoding: "utf8" });
   assert.equal(staged.status, 0, staged.stderr);
 
-  const approvedPlan = await runDoctor(repo);
-  assert.equal(approvedPlan.checks.reviewability.ok, true, approvedPlan.checks.reviewability.message);
+  const localPlan = join(repo, "docs", "superpowers", "plans", "local.md");
+  await mkdir(dirname(localPlan), { recursive: true });
+  await writeFile(localPlan, "# Local plan\n".repeat(551));
+  const ignored = await runDoctor(repo);
+  assert.equal(ignored.checks.reviewability.ok, true, ignored.checks.reviewability.message);
 
-  const ignorePath = join(repo, ".gitignore");
-  const ignore = await readFile(ignorePath, "utf8");
-  await writeFile(ignorePath, ignore.replace(/^docs\/superpowers\/plans\/\r?\n/mu, ""));
-  const untrackedPlan = join(repo, "docs", "superpowers", "plans", "untracked.md");
-  await writeFile(untrackedPlan, "# Untracked plan\n".repeat(551));
-  const untracked = await runDoctor(repo);
-  assert.equal(untracked.checks.reviewability.ok, false);
-  assert.match(untracked.checks.reviewability.message, /docs\/superpowers\/plans\/untracked\.md:551/);
-  await rm(untrackedPlan);
+  const forced = spawnSync("git", ["add", "--force", "docs/superpowers/plans/local.md"], { cwd: repo, encoding: "utf8" });
+  assert.equal(forced.status, 0, forced.stderr);
+  const trackedPlan = await runDoctor(repo);
+  assert.equal(trackedPlan.checks.reviewability.ok, false);
+  assert.match(trackedPlan.checks.reviewability.message, /docs\/superpowers\/plans\/local\.md:551/);
+  const unstaged = spawnSync("git", ["rm", "--cached", "docs/superpowers/plans/local.md"], { cwd: repo, encoding: "utf8" });
+  assert.equal(unstaged.status, 0, unstaged.stderr);
 
   await writeFile(join(repo, "docs", "ordinary.md"), "# Ordinary\n".repeat(551));
   const stagedOrdinary = spawnSync("git", ["add", "docs/ordinary.md"], { cwd: repo, encoding: "utf8" });
@@ -138,10 +138,4 @@ function listRepoFiles() {
     .filter(Boolean)
     .filter((file) => existsSync(file))
     .sort();
-}
-
-function listTrackedFiles() {
-  const result = spawnSync("git", ["ls-files", "--cached"], { encoding: "utf8" });
-  assert.equal(result.status, 0, result.stderr);
-  return new Set(result.stdout.split("\n").map((line) => line.trim()).filter(Boolean));
 }

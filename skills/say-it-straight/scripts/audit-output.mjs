@@ -3,38 +3,32 @@ import { pathToFileURL } from "node:url";
 
 const VALID_PLACEHOLDER_PATTERN = /^⟦SIS:[A-Za-z0-9_-]+:[a-z-]+:\d+⟧$/u;
 const FRONTMATTER_PATTERN = /^(?:\uFEFF)?---[^\r\n]*\r?\n(?:[\s\S]*?\r?\n)?---[ \t]*(?=\r?\n|$)/;
-const NUMBER_PATTERN = /[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)(?:%|[A-Za-z]+)?/gu;
-const SPACED_UNIT_PATTERN = /^([ \t]+)(?:GiB|GHz|KiB|MHz|MiB|TiB|bytes?|cm|GB|hrs?|kHz|kg|km|kW|lbs?|mA|MB|mg|min|mm|ms|mV|oz|TB|yd|°C|°F|ft|Hz|in|mi|[ABghmsVW])(?![\p{L}\p{N}_])/iu;
+const NUMBER_PATTERN = /[+-]?(?:[$€£¥₩][ \t\u00A0\u202F]?)?(?:(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d{1,3}(?:[\u00A0\u202F]\d{3})+(?:[.,]\d+)?|\d+[.,]\d+|\d+|\.\d+)(?:%|[A-Za-z]+)?)/gu;
+const SPACED_UNIT_PATTERN = /^([ \t\u00A0\u202F]+)(?:GiB|GHz|KiB|MHz|MiB|TiB|bytes?|cm|GB|hrs?|kHz|kg|km|kW|lbs?|mA|MB|mg|min|mm|ms|mV|oz|TB|yd|€|£|¥|₩|°C|°F|ft|Hz|in|mi|[ABghmsVW])(?![\p{L}\p{N}_])/iu;
+const YEAR_PATTERN = String.raw`(?:1[5-9]\d{2}|20\d{2}|21\d{2})[a-z]?`;
+const AUTHOR_PATTERN = String.raw`[A-Z][\p{L}'’-]*(?:\s+et al\.)?`;
+const AUTHOR_LIST_PATTERN = String.raw`${AUTHOR_PATTERN}(?:,\s*(?:&\s+)?${AUTHOR_PATTERN})*(?:\s+(?:&|and)\s+${AUTHOR_PATTERN})?`;
+const AUTHOR_YEAR_CITATION_PATTERN = new RegExp(String.raw`(?:\b${AUTHOR_LIST_PATTERN}\s*\(${YEAR_PATTERN}\)|\(${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN}(?:;\s*${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN})*\)|\[${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN}\])`, "gu");
 
 function addRegexCandidates(candidates, text, type, expression) {
-  for (const match of text.matchAll(expression)) {
-    candidates.push({ type, value: match[0], start: match.index, end: match.index + match[0].length });
-  }
+  for (const match of text.matchAll(expression)) candidates.push({ type, value: match[0], start: match.index, end: match.index + match[0].length });
 }
 
 function addValueCandidates(candidates, text, protectedValues) {
   for (const value of protectedValues) {
     if (typeof value !== "string" || value.length === 0) continue;
-    let start = text.indexOf(value);
-    while (start !== -1) {
-      candidates.push({ type: "user-frozen", value, start, end: start + value.length });
-      start = text.indexOf(value, start + value.length);
-    }
+    for (let start = text.indexOf(value); start !== -1; start = text.indexOf(value, start + value.length)) candidates.push({ type: "user-frozen", value, start, end: start + value.length });
   }
 }
 
 function addNumberCandidates(candidates, text) {
   for (const match of text.matchAll(NUMBER_PATTERN)) {
-    const previous = text[match.index - 1] ?? "";
-    if (previous === "." && !match[0].startsWith(".")) continue;
+    if (text[match.index - 1] === "." && !match[0].startsWith(".")) continue;
     let value = match[0];
     let end = match.index + value.length;
     if (!/[A-Za-z%]$/u.test(value)) {
       const unit = SPACED_UNIT_PATTERN.exec(text.slice(end));
-      if (unit) {
-        value += unit[0];
-        end += unit[0].length;
-      }
+      if (unit) { value += unit[0]; end += unit[0].length; }
     }
     candidates.push({ type: "number", value, start: match.index, end });
   }
@@ -42,9 +36,7 @@ function addNumberCandidates(candidates, text) {
 
 function addFrontmatterCandidate(candidates, text) {
   const match = FRONTMATTER_PATTERN.exec(text);
-  if (match) {
-    candidates.push({ type: "frontmatter", value: match[0], start: 0, end: match[0].length });
-  }
+  if (match) candidates.push({ type: "frontmatter", value: match[0], start: 0, end: match[0].length });
 }
 
 function textLines(text) {
@@ -133,19 +125,42 @@ function closingLinkIndex(text, opening) {
 }
 
 function addMarkdownLinkCandidates(candidates, text) {
+  const referenceLabels = new Set(textLines(text).flatMap((line) => {
+    const match = /^(?: {0,3})\[([^\]\r\n]+)\]:[^\r\n]*$/u.exec(line.text);
+    return match ? [match[1].trim().replace(/[ \t]+/gu, " ").toLowerCase()] : [];
+  }));
   for (let start = text.indexOf("["); start !== -1; start = text.indexOf("[", start + 1)) {
+    const image = text[start - 1] === "!";
+    const candidateStart = image ? start - 1 : start;
     let labelDepth = 0;
     for (let cursor = start + 1; cursor < text.length && text[cursor] !== "\n" && text[cursor] !== "\r"; cursor += 1) {
       if (text[cursor] === "\\") cursor += 1;
       else if (text[cursor] === "[") labelDepth += 1;
       else if (text[cursor] === "]" && labelDepth > 0) labelDepth -= 1;
       else if (text[cursor] === "]") {
-        if (text[cursor + 1] !== "(") break;
-        const closing = closingLinkIndex(text, cursor + 1);
-        if (closing !== -1) candidates.push({ type: "markdown-url", value: text.slice(start, closing + 1), start, end: closing + 1 });
+        const type = image ? "markdown-image" : "markdown-url";
+        if (text[cursor + 1] === "(") {
+          const closing = closingLinkIndex(text, cursor + 1);
+          if (closing !== -1) candidates.push({ type, value: text.slice(candidateStart, closing + 1), start: candidateStart, end: closing + 1 });
+        } else if (text[cursor + 1] === "[") {
+          const closing = text.indexOf("]", cursor + 2);
+          if (closing !== -1 && !/[\r\n]/u.test(text.slice(cursor + 2, closing))) candidates.push({ type: "markdown-reference", value: text.slice(candidateStart, closing + 1), start: candidateStart, end: closing + 1 });
+        } else if (referenceLabels.has(text.slice(start + 1, cursor).trim().replace(/[ \t]+/gu, " ").toLowerCase())) candidates.push({ type: image ? "markdown-shortcut-image" : "markdown-shortcut-reference", value: text.slice(candidateStart, cursor + 1), start: candidateStart, end: cursor + 1 });
         break;
       }
     }
+  }
+  for (const line of textLines(text)) if (/^(?: {0,3})\[[^\]\r\n]+\]:[^\r\n]*$/u.test(line.text)) candidates.push({ type: "markdown-reference-definition", value: line.text, start: line.start, end: line.contentEnd });
+}
+
+function addBlockquoteCandidates(candidates, text) {
+  const lines = textLines(text);
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!/^(?: {0,3})>[ \t]?/u.test(lines[index].text)) continue;
+    let last = index;
+    while (last + 1 < lines.length && (/^(?: {0,3})>[ \t]?/u.test(lines[last + 1].text) || (lines[last + 1].text && !/^(?: {0,3})(?:#{1,6}[ \t]|(?:[-+*]|\d+[.)])[ \t]|`{3,}|~{3,}|\[[^\]]+\]:|(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})[ \t]*$)/u.test(lines[last + 1].text)))) last += 1;
+    candidates.push({ type: "blockquote", value: text.slice(lines[index].start, lines[last].contentEnd), start: lines[index].start, end: lines[last].contentEnd });
+    index = last;
   }
 }
 
@@ -197,10 +212,12 @@ function collectCandidates(text, protectedValues) {
   addRegexCandidates(candidates, text, "inline-code", /`[^`\r\n]+`/g);
   for (const table of tableBlocks(text)) candidates.push({ type: "table", value: table.value, start: table.start, end: table.end });
   addMarkdownLinkCandidates(candidates, text);
+  addBlockquoteCandidates(candidates, text);
   addRegexCandidates(candidates, text, "bare-url", /\b(?:https?|ftp):\/\/[^\s<>()\[\]{}"']+[^\s<>()\[\]{}"'.,;:!?]/g);
   addRegexCandidates(candidates, text, "path", /(?:~\/|\.\.?\/|\/)(?:[\w@%+=:.-]+\/)*[\w@%+=:.-]+/g);
   addRegexCandidates(candidates, text, "citation", /\[(?:[A-Z][\w.-]*|\d+)(?:\s+[\w.-]+)*\]/g);
-  addRegexCandidates(candidates, text, "quotation", /"(?:[^"\\\r\n]|\\.)*"|“[^”\r\n]*”/g);
+  addRegexCandidates(candidates, text, "author-year-citation", AUTHOR_YEAR_CITATION_PATTERN);
+  addRegexCandidates(candidates, text, "quotation", /"(?:[^"\\\r\n]|\\.)*"|(?<![\p{L}\p{N}])'(?:[^'\\\r\n]|\\.)*'(?![\p{L}\p{N}])|“[^”\r\n]*”|‘[^’\r\n]*’|„[^“\r\n]*“|«[^»\r\n]*»|「[^」\r\n]*」|『[^』\r\n]*』/gu);
   addNumberCandidates(candidates, text);
   addValueCandidates(candidates, text, protectedValues);
   return candidates;
@@ -320,10 +337,7 @@ function compareSignatures(source, final) {
   return { ok: JSON.stringify(source) === JSON.stringify(final), source, final };
 }
 
-function frontmatterBlocks(text) {
-  const match = FRONTMATTER_PATTERN.exec(text);
-  return match ? [match[0]] : [];
-}
+function frontmatterBlocks(text) { const match = FRONTMATTER_PATTERN.exec(text); return match ? [match[0]] : []; }
 
 function headingSignatures(text) {
   const headings = [];
@@ -344,9 +358,7 @@ function fenceSignatures(text) {
   return fencedCodeBlocks(text).map(({ language, value }) => ({ language, value }));
 }
 
-function tableSignatures(text) {
-  return tableBlocks(text).map(({ rows, rowColumns }) => ({ rows, rowColumns }));
-}
+function tableSignatures(text) { return tableBlocks(text).map(({ rows, rowColumns }) => ({ rows, rowColumns })); }
 
 function structureCheck(sourceText, finalText) {
   const frontmatter = compareSignatures(frontmatterBlocks(sourceText), frontmatterBlocks(finalText));
@@ -382,15 +394,9 @@ function placeholderCheck(sourceText, finalText) {
 }
 
 function lengthMetrics(sourceText, finalText) {
-  const sourceCharacters = sourceText.length;
-  const finalCharacters = finalText.length;
+  const sourceCharacters = sourceText.length, finalCharacters = finalText.length;
   const lengthDeltaRate = sourceCharacters === 0 ? null : (finalCharacters - sourceCharacters) / sourceCharacters;
-  return {
-    sourceCharacters,
-    finalCharacters,
-    lengthDeltaRate,
-    shrinkageRate: lengthDeltaRate === null ? null : Math.max(0, -lengthDeltaRate)
-  };
+  return { sourceCharacters, finalCharacters, lengthDeltaRate, shrinkageRate: lengthDeltaRate === null ? null : Math.max(0, -lengthDeltaRate) };
 }
 
 function lengthWarnings(metrics) {
@@ -490,10 +496,7 @@ async function readProtectedValues(path) {
   return manifest.values;
 }
 
-function emptyStructureCheck() {
-  const empty = { ok: true, source: [], final: [] };
-  return { ok: true, frontmatter: empty, headings: empty, fences: empty, tables: empty, problems: [] };
-}
+function emptyStructureCheck() { const empty = { ok: true, source: [], final: [] }; return { ok: true, frontmatter: empty, headings: empty, fences: empty, tables: empty, problems: [] }; }
 
 function cliFailureReport(error) {
   return {
