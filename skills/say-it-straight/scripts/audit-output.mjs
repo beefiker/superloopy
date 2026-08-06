@@ -9,16 +9,16 @@ const YEAR_PATTERN = String.raw`(?:1[5-9]\d{2}|20\d{2}|21\d{2})[a-z]?`;
 const AUTHOR_PATTERN = String.raw`[A-Z][\p{L}'’-]*(?:\s+et al\.)?`;
 const AUTHOR_LIST_PATTERN = String.raw`${AUTHOR_PATTERN}(?:,\s*(?:&\s+)?${AUTHOR_PATTERN})*(?:\s+(?:&|and)\s+${AUTHOR_PATTERN})?`;
 const AUTHOR_YEAR_CITATION_PATTERN = new RegExp(String.raw`(?:\b${AUTHOR_LIST_PATTERN}\s*\(${YEAR_PATTERN}\)|\(${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN}(?:;\s*${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN})*\)|\[${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN}\])`, "gu");
-const PATH_PATTERN = /(?<![\p{L}\p{N}_@%+=:.,-])(?:(?:[A-Za-z]:[\\/]|\\\\)(?:[\p{L}\p{N}_@%+=:.,-]+(?:[ \t]+[\p{L}\p{N}_@%+=:.,-]+)*[\\/])*[\p{L}\p{N}_@%+=:.,-]*[\p{L}\p{N}_@%+=_-]|(?:(?:~|\.{1,2})[\\/]|[\\/])(?:[\p{L}\p{N}_@%+=:.,-]+[\\/])*[\p{L}\p{N}_@%+=:.,-]*[\p{L}\p{N}_@%+=_-]|[\p{L}\p{N}_@%+=:.,-]*[\p{L}\p{N}_@%+=_-](?:[\\/][\p{L}\p{N}_@%+=:.,-]*[\p{L}\p{N}_@%+=_-])+)/gu;
+const PATH_ATOM = String.raw`[.\p{L}\p{N}_@%+=:,()&'’-]*[\p{L}\p{N}_@%+=()&'’_-]`;
+const PATH_SEGMENT = String.raw`${PATH_ATOM}(?:[ \t]+${PATH_ATOM})*`;
+const PATH_LEAF = String.raw`(?:${PATH_SEGMENT}\.[\p{L}\p{N}_-]+(?::${PATH_ATOM})?|${PATH_ATOM}(?:\.${PATH_ATOM})*)`;
+const PATH_PATTERN = new RegExp(String.raw`(?<![\p{L}\p{N}_@%+=:.,-])(?:(?:[A-Za-z]:[\\/]|\\\\)(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|(?:(?:~|\.{1,2})[\\/]|[\\/])(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|${PATH_ATOM}(?:[\\/]${PATH_SEGMENT})*[\\/]${PATH_LEAF})`, "gu");
 
-function addRegexCandidates(candidates, text, type, expression) {
-  for (const match of text.matchAll(expression)) candidates.push({ type, value: match[0], start: match.index, end: match.index + match[0].length });
-}
+function addRegexCandidates(candidates, text, type, expression) { for (const match of text.matchAll(expression)) candidates.push({ type, value: match[0], start: match.index, end: match.index + match[0].length }); }
 
 function addValueCandidates(candidates, text, protectedValues) {
   for (const value of protectedValues) {
-    if (typeof value !== "string" || value.length === 0) continue;
-    for (let start = text.indexOf(value); start !== -1; start = text.indexOf(value, start + value.length)) candidates.push({ type: "user-frozen", value, start, end: start + value.length });
+    if (typeof value !== "string" || value.length === 0) continue; for (let start = text.indexOf(value); start !== -1; start = text.indexOf(value, start + 1)) candidates.push({ type: "user-frozen", value, start, end: start + value.length });
   }
 }
 
