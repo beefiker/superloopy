@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
-import { withFileLock } from "../src/store.js";
+import { isFileLockContention, withFileLock } from "../src/store.js";
 import { commitManagedAgentFiles, withManagedAgentInstallLocks } from "../src/managed-agents.js";
 
 const STORE_URL = new URL("../src/store.js", import.meta.url).href;
@@ -54,6 +54,28 @@ test("withFileLock is re-entrant within a process (nested same-path does not dea
     });
   });
   assert.equal(inner, true);
+});
+
+test("withFileLock serializes unrelated same-process async chains", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "superloopy-lock-"));
+  const counter = join(dir, "same-process.txt");
+  await writeFile(counter, "0", "utf8");
+  const increment = () => withFileLock(counter, async () => {
+    const value = Number(await readFile(counter, "utf8"));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await writeFile(counter, String(value + 1), "utf8");
+  });
+
+  await Promise.all([increment(), increment(), increment(), increment(), increment()]);
+
+  assert.equal(Number(await readFile(counter, "utf8")), 5);
+});
+
+test("file locks retry Windows sharing violations but not unrelated permission errors", () => {
+  assert.equal(isFileLockContention({ code: "EEXIST" }, "linux"), true);
+  assert.equal(isFileLockContention({ code: "EPERM" }, "win32"), true);
+  assert.equal(isFileLockContention({ code: "EACCES" }, "win32"), true);
+  assert.equal(isFileLockContention({ code: "EPERM" }, "linux"), false);
 });
 
 test("withFileLock reclaims a stale lock instead of blocking forever", async () => {

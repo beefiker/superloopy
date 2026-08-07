@@ -69,7 +69,7 @@ test("plugin interface assets resolve inside the npm package", async () => {
   assert.equal(packed.status, 0, packed.stderr || packed.stdout);
   const files = new Set(JSON.parse(packed.stdout)[0].files.map((file) => file.path));
   assert.equal(files.has(assetPaths[0].replace(/^\.\//u, "")), true, "interface asset missing from npm pack");
-  for (const reference of ["desktop.md", "hybrid.md", "layout.md", "mobile.md", "motion-core.md", "motion.md", "redesign.md", "renderer.md", "system-map.md", "upstream-notice.md", "ux.md"]) {
+  for (const reference of ["desktop.md", "hybrid.md", "impeccable.md", "layout.md", "mobile.md", "motion-core.md", "motion.md", "redesign.md", "renderer.md", "system-map.md", "upstream-notice.md", "ux.md"]) {
     const path = `skills/superloopy-frontend/references/${reference}`;
     assert.equal(files.has(path), true, `frontend reference missing from npm pack: ${path}`);
   }
@@ -79,15 +79,18 @@ test("plugin interface assets resolve inside the npm package", async () => {
     "portable frontend evidence helper missing from npm pack",
   );
   for (const path of [
-    "skills/superloopy-backend/SKILL.md",
-    "skills/superloopy-backend/agents/openai.yaml",
-    "skills/superloopy-backend/references/architecture.md",
-    "skills/superloopy-backend/references/data-safety.md",
-    "skills/superloopy-backend/references/runtime-agents.md",
-    "skills/superloopy-backend/references/testing-and-operations.md",
-    "skills/superloopy-backend/references/upstream-notice.md"
+    "skills/say-it-straight/SKILL.md",
+    "skills/say-it-straight/agents/openai.yaml",
+    "skills/say-it-straight/LICENSE",
+    "skills/say-it-straight/references/preservation.md",
+    "skills/say-it-straight/references/quality-rubric.md",
+    "skills/say-it-straight/references/quick-rules.md",
+    "skills/say-it-straight/references/upstream-notice.md",
+    "skills/say-it-straight/scripts/audit-output.mjs",
+    ...["SKILL.md", "agents/openai.yaml"].map((name) => `skills/superloopy-backend/${name}`),
+    ...["architecture", "data-safety", "runtime-agents", "testing-and-operations", "upstream-notice"].map((name) => `skills/superloopy-backend/references/${name}.md`)
   ]) {
-    assert.equal(files.has(path), true, `backend skill file missing from npm pack: ${path}`);
+    assert.equal(files.has(path), true, `skill package file missing from npm pack: ${path}`);
   }
 });
 
@@ -466,6 +469,35 @@ test("plugin packages explicit-only i-have-adhd with attribution and Superloopy 
   assert.match(license, /Copyright \(c\) 2026 Ayoub Ghriss/);
   assert.match(notice, /07684c4ab625dd7d1ea6e99e065f60bc0ac6a1ba/);
   assert.match(notice, /https:\/\/github\.com\/ayghri\/i-have-adhd/);
+});
+
+test("plugin packages explicit-only say-it-straight with clean-room provenance", async () => {
+  const skill = await readSkill("say-it-straight");
+
+  assert.match(skill.frontmatter, /^name: say-it-straight$/m);
+  assert.match(skill.frontmatter, /^disable-model-invocation: true$/m);
+  assert.match(skill.frontmatter, /\$superloopy:say-it-straight/);
+  assert.match(skill.frontmatter, /\/superloopy:say-it-straight/);
+  assert.match(skill.content, /full Loopy runs.*progress.*final responses/is);
+  assert.match(skill.content, /supplied prose.*task artifacts.*explicit-only/is);
+
+  for (const file of [
+    "skills/say-it-straight/agents/openai.yaml",
+    "skills/say-it-straight/LICENSE",
+    "skills/say-it-straight/references/preservation.md",
+    "skills/say-it-straight/references/quality-rubric.md",
+    "skills/say-it-straight/references/quick-rules.md",
+    "skills/say-it-straight/references/upstream-notice.md",
+    "skills/say-it-straight/scripts/audit-output.mjs"
+  ]) {
+    assert.equal(existsSync(file), true, file);
+  }
+
+  const metadata = await readFile("skills/say-it-straight/agents/openai.yaml", "utf8");
+  const notice = await readFile("skills/say-it-straight/references/upstream-notice.md", "utf8");
+  assert.match(metadata, /allow_implicit_invocation:\s*false/);
+  assert.match(notice, /clean-room MIT implementation/);
+  assert.match(notice, /Copied wording: none/);
 });
 
 test("packaged i-have-adhd preserves pinned upstream rules across checkout line endings", async () => {

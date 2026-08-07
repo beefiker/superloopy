@@ -227,7 +227,7 @@ async function checkGateNotes(cwd) {
 
 async function checkReviewability(cwd) {
   try {
-    const files = listGitVisibleFiles(cwd).filter(isReviewableTextFile);
+    const files = listGitVisibleFiles(cwd).filter((file) => isReviewableTextFile(file));
     const measured = await Promise.all(files.map(async (file) => ({
       file,
       lines: countPhysicalLines(await readFile(join(cwd, file), "utf8"))
