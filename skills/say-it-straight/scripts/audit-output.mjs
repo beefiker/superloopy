@@ -8,18 +8,17 @@ const YEAR_PATTERN = String.raw`(?:1[5-9]\d{2}|20\d{2}|21\d{2})[a-z]?`;
 const AUTHOR_PATTERN = String.raw`[A-Z][\p{L}'’-]*(?:\s+et al\.)?`;
 const AUTHOR_LIST_PATTERN = String.raw`${AUTHOR_PATTERN}(?:,\s*(?:&\s+)?${AUTHOR_PATTERN})*(?:\s+(?:&|and)\s+${AUTHOR_PATTERN})?`;
 const AUTHOR_YEAR_CITATION_PATTERN = new RegExp(String.raw`(?:\b${AUTHOR_LIST_PATTERN}\s*\(${YEAR_PATTERN}\)|\(${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN}(?:;\s*${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN})*\)|\[${AUTHOR_LIST_PATTERN}\s*,\s*${YEAR_PATTERN}\])`, "gu");
+const MARKDOWN_AUTOLINK_PATTERN = /<(?:[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\s<>]*|[A-Za-z0-9.!#$%&'*+\/=\?^_`{|}~-]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)>/g;
 const PATH_ATOM = String.raw`[^\u0000-\u0020<>:"/\\|?*]*[^\u0000-\u0020<>:"/\\|?*.,;!?]`;
 const PATH_SEGMENT = String.raw`${PATH_ATOM}(?:[ \t]+${PATH_ATOM})*`;
 const PATH_LEAF = String.raw`(?:${PATH_SEGMENT}\.[\p{L}\p{N}_-]+(?::${PATH_ATOM})?|${PATH_SEGMENT})`;
 const PATH_PATTERN = new RegExp(String.raw`(?<![\p{L}\p{N}_@%+=:.,-])(?:(?:[A-Za-z]:[\\/]|[A-Za-z]:(?![\\/])|\\\\\?(?:[\\/]UNC[\\/]|[\\/][A-Za-z]:[\\/]|[\\/])|\\\\\.[\\/](?:[A-Za-z]:[\\/])?|\\\\)(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|(?:(?:~|\.{1,2})[\\/]|[\\/])(?:${PATH_SEGMENT}[\\/])*${PATH_LEAF}|${PATH_ATOM}(?:[\\/]${PATH_SEGMENT})*[\\/]${PATH_LEAF}|(?:\.[\p{L}\p{N}_-]+|[\p{L}\p{N}_-][\p{L}\p{N}_.-]*\.[\p{L}\p{N}_-]+)(?![\p{L}\p{N}_-]))[\\/]?`, "gu");
 function addRegexCandidates(candidates, text, type, expression) { for (const match of text.matchAll(expression)) candidates.push({ type, value: match[0], start: match.index, end: match.index + match[0].length }); }
-
 function addValueCandidates(candidates, text, protectedValues) {
   for (const value of protectedValues) {
     if (typeof value !== "string" || value.length === 0) continue; for (let start = text.indexOf(value); start !== -1; start = text.indexOf(value, start + 1)) candidates.push({ type: "user-frozen", value, start, end: start + value.length });
   }
 }
-
 function addNumberCandidates(candidates, text) {
   for (const match of text.matchAll(NUMBER_PATTERN)) {
     if (text[match.index - 1] === "." && !match[0].startsWith(".")) continue;
@@ -32,12 +31,10 @@ function addNumberCandidates(candidates, text) {
     candidates.push({ type: "number", value, start: match.index, end });
   }
 }
-
 function addFrontmatterCandidate(candidates, text) {
   const match = FRONTMATTER_PATTERN.exec(text);
   if (match) candidates.push({ type: "frontmatter", value: match[0], start: 0, end: match[0].length });
 }
-
 function textLines(text) {
   const lines = [];
   let start = 0;
@@ -50,7 +47,6 @@ function textLines(text) {
   }
   return lines;
 }
-
 function fencedCodeBlocks(text) {
   const lines = textLines(text);
   const blocks = [];
@@ -85,7 +81,21 @@ function fencedCodeBlocks(text) {
   }
   return blocks;
 }
-
+function addInlineCodeCandidates(candidates, text) {
+  const runs = [];
+  for (let start = text.indexOf("`"); start !== -1;) {
+    let end = start + 1; while (text[end] === "`") end += 1;
+    runs.push({ start, end, size: end - start }); start = text.indexOf("`", end);
+  }
+  const nextSame = Array(runs.length).fill(-1), nextBySize = new Map();
+  for (let index = runs.length - 1; index >= 0; index -= 1) { nextSame[index] = nextBySize.get(runs[index].size) ?? -1; nextBySize.set(runs[index].size, index); }
+  for (let index = 0; index < runs.length;) {
+    const closingIndex = nextSame[index];
+    if (closingIndex === -1) { index += 1; continue; }
+    const start = runs[index].start, end = runs[closingIndex].end;
+    candidates.push({ type: "inline-code", value: text.slice(start, end), start, end }); index = closingIndex + 1;
+  }
+}
 function closingTitleIndex(text, cursor) {
   while (text[cursor] === " " || text[cursor] === "\t") cursor += 1;
   if (text[cursor] === ")") return cursor;
@@ -102,7 +112,6 @@ function closingTitleIndex(text, cursor) {
   }
   return -1;
 }
-
 function closingLinkIndex(text, opening) {
   let cursor = opening + 1;
   if (text[cursor] === "<") {
@@ -122,7 +131,6 @@ function closingLinkIndex(text, opening) {
   }
   return -1;
 }
-
 function addMarkdownLinkCandidates(candidates, text) {
   const referenceLabels = new Set(textLines(text).flatMap((line) => {
     const match = /^(?: {0,3})\[([^\]\r\n]+)\]:[^\r\n]*$/u.exec(line.text);
@@ -151,7 +159,6 @@ function addMarkdownLinkCandidates(candidates, text) {
   }
   for (const line of textLines(text)) if (/^(?: {0,3})\[[^\]\r\n]+\]:[^\r\n]*$/u.test(line.text)) candidates.push({ type: "markdown-reference-definition", value: line.text, start: line.start, end: line.contentEnd });
 }
-
 function addBlockquoteCandidates(candidates, text) {
   const lines = textLines(text);
   for (let index = 0; index < lines.length; index += 1) {
@@ -162,7 +169,6 @@ function addBlockquoteCandidates(candidates, text) {
     index = last;
   }
 }
-
 function tableCells(line) {
   const trimmed = line.trim();
   if (!trimmed.includes("|")) return null;
@@ -170,15 +176,12 @@ function tableCells(line) {
   const content = withoutLeadingPipe.endsWith("|") ? withoutLeadingPipe.slice(0, -1) : withoutLeadingPipe;
   return content.split("|").map((cell) => cell.trim());
 }
-
 function isOuterPipeRow(line) {
   return /^\|.*\|[ \t]*$/u.test(line);
 }
-
 function isTableDivider(cells) {
   return cells?.length > 0 && cells.every((cell) => /^:?-{3,}:?$/u.test(cell));
 }
-
 function tableBlocks(text) {
   const lines = textLines(text);
   const blocks = [];
@@ -203,14 +206,14 @@ function tableBlocks(text) {
   }
   return blocks;
 }
-
 function collectCandidates(text, protectedValues) {
   const candidates = [];
   addFrontmatterCandidate(candidates, text);
   for (const block of fencedCodeBlocks(text)) candidates.push({ type: "fenced-code", value: block.value, start: block.start, end: block.end });
-  addRegexCandidates(candidates, text, "inline-code", /`[^`\r\n]+`/g);
+  addInlineCodeCandidates(candidates, text);
   for (const table of tableBlocks(text)) candidates.push({ type: "table", value: table.value, start: table.start, end: table.end });
   addMarkdownLinkCandidates(candidates, text);
+  addRegexCandidates(candidates, text, "markdown-autolink", MARKDOWN_AUTOLINK_PATTERN);
   addBlockquoteCandidates(candidates, text);
   addRegexCandidates(candidates, text, "bare-url", /\b(?:https?|ftp):\/\/[^\s<>()\[\]{}"']+[^\s<>()\[\]{}"'.,;:!?]/g);
   addRegexCandidates(candidates, text, "path", PATH_PATTERN);
@@ -221,22 +224,20 @@ function collectCandidates(text, protectedValues) {
   addRegexCandidates(candidates, text, "quotation", /"(?:[^"\\\r\n]|\\.)*"|(?<![\p{L}\p{N}])'(?:[^'\\\r\n]|\\.)*'(?![\p{L}\p{N}])|“[^”\r\n]*”|‘[^’\r\n]*’|„[^“\r\n]*“|«[^»\r\n]*»|「[^」\r\n]*」|『[^』\r\n]*』/gu);
   addNumberCandidates(candidates, text);
   addValueCandidates(candidates, text, protectedValues);
-  return candidates;
+  const autolinks = candidates.filter((candidate) => candidate.type === "markdown-autolink");
+  return candidates.filter((candidate) => candidate.type !== "formula" || !autolinks.some((link) => candidate.start < link.end && candidate.end > link.start));
 }
-
 function acceptNonOverlapping(accepted, candidate) {
   const previous = accepted.at(-1);
   if (!previous || candidate.start >= previous.end) accepted.push(candidate);
   return accepted;
 }
-
 export function extractProtectedSpans(text, options = {}) {
   const protectedValues = Array.isArray(options.protectedValues) ? options.protectedValues : [];
   return collectCandidates(text, protectedValues)
     .sort((left, right) => left.start - right.start || right.end - left.end)
     .reduce(acceptNonOverlapping, []);
 }
-
 function countValues(spans, keyForSpan = (span) => `${span.type}\u0000${span.value}`) {
   const counts = new Map();
   for (const span of spans) {
@@ -247,7 +248,6 @@ function countValues(spans, keyForSpan = (span) => `${span.type}\u0000${span.val
   }
   return counts;
 }
-
 function compareCounts(sourceSpans, finalSpans, keyForSpan) {
   const sourceCounts = countValues(sourceSpans, keyForSpan);
   const finalCounts = countValues(finalSpans, keyForSpan);
@@ -360,7 +360,7 @@ function fenceSignatures(text) {
 }
 
 function tableSignatures(text) { return tableBlocks(text).map(({ rows, rowColumns }) => ({ rows, rowColumns })); }
-function listSignatures(text) { return textLines(text).flatMap((line) => { const match = /^( {0,3})([-+*]|\d{1,9}[.)])[ \t]+(?:\[([ xX])\][ \t]+)?/u.exec(line.text); return match ? [{ indent: match[1].length, kind: /^\d/u.test(match[2]) ? "ordered" : "unordered", task: match[3]?.toLowerCase() ?? null }] : []; }); }
+function listSignatures(text) { return textLines(text).flatMap((line) => { const match = /^([ \t]*)([-+*]|\d{1,9}[.)])[ \t]+(?:\[([ xX])\][ \t]+)?/u.exec(line.text); return match ? [{ indent: match[1].length, kind: /^\d/u.test(match[2]) ? "ordered" : "unordered", task: match[3]?.toLowerCase() ?? null }] : []; }); }
 function structureCheck(sourceText, finalText) {
   const frontmatter = compareSignatures(frontmatterBlocks(sourceText), frontmatterBlocks(finalText));
   const headings = compareSignatures(headingSignatures(sourceText), headingSignatures(finalText));
