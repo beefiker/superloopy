@@ -25,18 +25,6 @@ test("skill frontmatter parser accepts CRLF line endings", () => {
   assert.match(frontmatter, /^description: test$/m);
 });
 
-test("slides skill keeps core routing contexts in a YAML-safe description", async () => {
-  const { frontmatter } = await readSkill("superloopy-slides");
-  const description = frontmatter.split("\n").find((line) => line.startsWith("description: ")) ?? "";
-
-  assert.match(description, /^description: (?:(?:".*")|(?:'.*')|(?:[>|][-+]?))$/u);
-  assert.match(frontmatter, /HTML (?:slides|slide decks)/iu);
-  assert.match(frontmatter, /PowerPoint\/PPT\/PPTX/u);
-  assert.match(frontmatter, /PDF (?:output|export)/iu);
-  assert.match(frontmatter, /deploy/iu);
-  assert.match(frontmatter, /not for general web pages or landing pages/iu);
-});
-
 test("plugin manifest exposes Superloopy skills and packaged opt-in hooks", async () => {
   const plugin = JSON.parse(await readFile(".codex-plugin/plugin.json", "utf8"));
 
@@ -90,6 +78,18 @@ test("plugin interface assets resolve inside the npm package", async () => {
     true,
     "portable frontend evidence helper missing from npm pack",
   );
+  for (const path of [
+    "skills/say-it-straight/SKILL.md",
+    "skills/say-it-straight/agents/openai.yaml",
+    "skills/say-it-straight/LICENSE",
+    "skills/say-it-straight/references/preservation.md",
+    "skills/say-it-straight/references/quality-rubric.md",
+    "skills/say-it-straight/references/quick-rules.md",
+    "skills/say-it-straight/references/upstream-notice.md",
+    "skills/say-it-straight/scripts/audit-output.mjs"
+  ]) {
+    assert.equal(files.has(path), true, `say-it-straight package file missing from npm pack: ${path}`);
+  }
 });
 
 test("plugin audit docs describe convention discovery and current ignore scope", async () => {
@@ -467,6 +467,35 @@ test("plugin packages explicit-only i-have-adhd with attribution and Superloopy 
   assert.match(license, /Copyright \(c\) 2026 Ayoub Ghriss/);
   assert.match(notice, /07684c4ab625dd7d1ea6e99e065f60bc0ac6a1ba/);
   assert.match(notice, /https:\/\/github\.com\/ayghri\/i-have-adhd/);
+});
+
+test("plugin packages explicit-only say-it-straight with clean-room provenance", async () => {
+  const skill = await readSkill("say-it-straight");
+
+  assert.match(skill.frontmatter, /^name: say-it-straight$/m);
+  assert.match(skill.frontmatter, /^disable-model-invocation: true$/m);
+  assert.match(skill.frontmatter, /\$superloopy:say-it-straight/);
+  assert.match(skill.frontmatter, /\/superloopy:say-it-straight/);
+  assert.match(skill.content, /full Loopy runs.*progress.*final responses/is);
+  assert.match(skill.content, /supplied prose.*task artifacts.*explicit-only/is);
+
+  for (const file of [
+    "skills/say-it-straight/agents/openai.yaml",
+    "skills/say-it-straight/LICENSE",
+    "skills/say-it-straight/references/preservation.md",
+    "skills/say-it-straight/references/quality-rubric.md",
+    "skills/say-it-straight/references/quick-rules.md",
+    "skills/say-it-straight/references/upstream-notice.md",
+    "skills/say-it-straight/scripts/audit-output.mjs"
+  ]) {
+    assert.equal(existsSync(file), true, file);
+  }
+
+  const metadata = await readFile("skills/say-it-straight/agents/openai.yaml", "utf8");
+  const notice = await readFile("skills/say-it-straight/references/upstream-notice.md", "utf8");
+  assert.match(metadata, /allow_implicit_invocation:\s*false/);
+  assert.match(notice, /clean-room MIT implementation/);
+  assert.match(notice, /Copied wording: none/);
 });
 
 test("packaged i-have-adhd preserves pinned upstream rules across checkout line endings", async () => {

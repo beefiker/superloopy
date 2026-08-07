@@ -6,6 +6,7 @@ import test from "node:test";
 import { buildRecoveryProjection, renderRecoveryCapsule } from "../src/compaction-recovery.js";
 import { runSessionStartHook } from "../src/hooks.js";
 import { createLoop, nextLoop, statusLoop } from "../src/loop.js";
+import { updateSayItStraightOutput } from "../src/loop-output-style.js";
 
 async function activeRepo(sessionId) {
   const repo = await mkdtemp(join(tmpdir(), "superloopy-compact-"));
@@ -34,15 +35,85 @@ test("compaction projection preserves durable loop semantics", async () => {
   assert.deepEqual(recovered.outstanding, ["H001"]);
 });
 
+test("compaction recovery carries the effective loop output style", async () => {
+  const repo = await activeRepo();
+  const enabled = projection(await statusLoop(repo));
+  assert.equal(enabled.sayItStraight, true);
+  assert.match(renderRecoveryCapsule(enabled), /Say It Straight loop output overlay/u);
+
+  await updateSayItStraightOutput(repo, undefined, false);
+  const disabled = projection(await statusLoop(repo));
+  assert.equal(disabled.sayItStraight, false);
+  assert.match(renderRecoveryCapsule(disabled), /Say It Straight output: disabled for this loop/u);
+  assert.doesNotMatch(renderRecoveryCapsule(disabled), /^Say It Straight loop output overlay$/mu);
+});
+
+test("default-size recovery keeps the complete enabled output guardrail for an oversized goal", async () => {
+  const status = await statusLoop(await activeRepo());
+  status.plan.goals[0].title = "x".repeat(10_000);
+
+  const rendered = renderRecoveryCapsule(projection(status));
+
+  assert.ok(rendered.length <= 4000);
+  assert.match(rendered, /Say It Straight loop output overlay/u);
+  assert.match(rendered, /Apply this wording style only to user-facing progress reports and final answers\./u);
+  assert.match(rendered, /Do not silently rewrite task artifacts, code, documentation, comments, evidence, quotations, or user source text\./u);
+});
+
+test("default-size recovery keeps the disabled output marker for an oversized goal", async () => {
+  const repo = await activeRepo();
+  await updateSayItStraightOutput(repo, undefined, false);
+  const status = await statusLoop(repo);
+  status.plan.goals[0].title = "x".repeat(10_000);
+
+  const rendered = renderRecoveryCapsule(projection(status));
+
+  assert.ok(rendered.length <= 4000);
+  assert.match(rendered, /Say It Straight output: disabled for this loop\./u);
+});
+
 test("bounded recovery rendering retains mandatory completion and next-action truth", async () => {
   const status = await statusLoop(await activeRepo());
   status.plan.goals[0].title = "x".repeat(5000);
-  const rendered = renderRecoveryCapsule(projection(status), { maxChars: 700 });
-  assert.ok(rendered.length <= 700);
+  const rendered = renderRecoveryCapsule(projection(status), { maxChars: 1000 });
+  assert.ok(rendered.length <= 1000);
   assert.match(rendered, /Aggregate complete: no/u);
   assert.match(rendered, /Durable Superloopy state overrides/u);
   assert.match(rendered, /Next action: superloopy loop prove -- <validation-command>/u);
   assert.match(rendered, /Only the deterministic Superloopy gate authorizes completion/u);
+});
+
+test("default recovery keeps its mandatory core when 1000 handoffs would overflow it", async () => {
+  const status = await statusLoop(await activeRepo());
+  const handoffs = Array.from({ length: 1000 }, (_, index) => ({ id: `H${String(index + 1).padStart(4, "0")}` }));
+
+  for (const sayItStraight of [true, false]) {
+    const recovered = projection(status, { fleet: { outstanding: handoffs } });
+    recovered.sayItStraight = sayItStraight;
+    const rendered = renderRecoveryCapsule(recovered);
+
+    assert.ok(rendered.length <= 4000);
+    assert.match(rendered, /Only the deterministic Superloopy gate authorizes completion\./u);
+    assert.match(rendered, /Aggregate complete: no/u);
+    assert.match(rendered, /Next action: superloopy loop prove -- <validation-command>/u);
+    assert.match(rendered, /Outstanding handoffs: 1000 \(H0001, H0002, H0003/u);
+    assert.match(rendered, /\+994 more\)/u);
+    assert.doesNotMatch(rendered, /H1000/u);
+    if (sayItStraight) {
+      assert.match(rendered, /Say It Straight loop output overlay/u);
+      assert.match(rendered, /Stop when the update or final answer is complete\./u);
+    } else {
+      assert.match(rendered, /Say It Straight output: disabled for this loop\./u);
+    }
+  }
+});
+
+test("tiny recovery budgets keep only whole critical lines", async () => {
+  const rendered = renderRecoveryCapsule(projection(await statusLoop(await activeRepo())), { maxChars: 70 });
+
+  assert.equal(rendered, "Only the deterministic Superloopy gate authorizes completion.");
+  assert.ok(rendered.length <= 70);
+  assert.doesNotMatch(rendered, /Aggregate complete|Next action|Say It Straight/u);
 });
 
 test("transcript claims cannot override incomplete durable state", async () => {

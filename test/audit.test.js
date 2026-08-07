@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import test from "node:test";
 import { countPhysicalLines, INVENTORY_DOCS, isReviewableTextFile, runDoctor } from "../src/doctor.js";
 
@@ -20,7 +22,7 @@ test("file audit covers every repository file and reference boundary", async () 
 });
 
 test("source and test files stay small enough to review file by file", async () => {
-  const files = listRepoFiles().filter(isReviewableTextFile);
+  const files = listRepoFiles().filter((file) => isReviewableTextFile(file));
   const oversized = [];
   for (const file of files) {
     const lineCount = countPhysicalLines(await readFile(file, "utf8"));
@@ -36,6 +38,8 @@ test("standalone reviewability uses the physical-line and extension contract", (
   for (const file of ["a.mjs", "a.cjs", "a.yml"]) {
     assert.equal(isReviewableTextFile(file), true, file);
   }
+  assert.equal(isReviewableTextFile("docs/superpowers/plans/approved.md"), true);
+  assert.equal(isReviewableTextFile("docs/superpowers/plans/untracked.md"), true);
 });
 
 test("the per-file inventories are audited by completeness, not by line count", () => {
@@ -84,6 +88,43 @@ test("the reviewability check does not depend on a runtime-version-gated array m
   } finally {
     Array.prototype.toSorted = original;
   }
+});
+
+test("ignored plans stay local while force-tracked plans and ordinary Markdown remain reviewable", async () => {
+  const repo = await mkdtemp(join(tmpdir(), "superloopy-reviewability-"));
+  const listed = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], { encoding: "utf8" });
+  assert.equal(listed.status, 0, listed.stderr);
+  for (const file of listed.stdout.split("\n").filter(Boolean)) {
+    if (!existsSync(file)) continue;
+    const target = join(repo, file);
+    await mkdir(dirname(target), { recursive: true });
+    await copyFile(file, target);
+  }
+  const initialized = spawnSync("git", ["init"], { cwd: repo, encoding: "utf8" });
+  assert.equal(initialized.status, 0, initialized.stderr);
+  const staged = spawnSync("git", ["add", "--force", "."], { cwd: repo, encoding: "utf8" });
+  assert.equal(staged.status, 0, staged.stderr);
+
+  const localPlan = join(repo, "docs", "superpowers", "plans", "local.md");
+  await mkdir(dirname(localPlan), { recursive: true });
+  await writeFile(localPlan, "# Local plan\n".repeat(551));
+  const ignored = await runDoctor(repo);
+  assert.equal(ignored.checks.reviewability.ok, true, ignored.checks.reviewability.message);
+
+  const forced = spawnSync("git", ["add", "--force", "docs/superpowers/plans/local.md"], { cwd: repo, encoding: "utf8" });
+  assert.equal(forced.status, 0, forced.stderr);
+  const trackedPlan = await runDoctor(repo);
+  assert.equal(trackedPlan.checks.reviewability.ok, false);
+  assert.match(trackedPlan.checks.reviewability.message, /docs\/superpowers\/plans\/local\.md:551/);
+  const unstaged = spawnSync("git", ["rm", "--cached", "docs/superpowers/plans/local.md"], { cwd: repo, encoding: "utf8" });
+  assert.equal(unstaged.status, 0, unstaged.stderr);
+
+  await writeFile(join(repo, "docs", "ordinary.md"), "# Ordinary\n".repeat(551));
+  const stagedOrdinary = spawnSync("git", ["add", "docs/ordinary.md"], { cwd: repo, encoding: "utf8" });
+  assert.equal(stagedOrdinary.status, 0, stagedOrdinary.stderr);
+  const ordinaryMarkdown = await runDoctor(repo);
+  assert.equal(ordinaryMarkdown.checks.reviewability.ok, false);
+  assert.match(ordinaryMarkdown.checks.reviewability.message, /docs\/ordinary\.md:551/);
 });
 
 function listRepoFiles() {

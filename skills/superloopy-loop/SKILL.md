@@ -22,6 +22,8 @@ Use this skill when the user asks for Superloopy, loopywork, lpy, a loop harness
 - Keep the workflow lightweight unless the task genuinely needs heavier review.
 - A leading `loopy` keyword wakes the loop engineer: take the rest of the prompt as the brief, run the loop yourself, and report progress instead of asking the user to type Superloopy commands.
 - `loopywork`, `$lpy`, and `lpy` are lighter prompt triggers; they inject guidance but never mutate `.superloopy/` state by themselves.
+- Full Loopy runs default to direct, concise, complete user-facing progress and final responses. Exact `say-it-straight off` / `직설 모드 끄기` and `say-it-straight on` / `직설 모드 켜기` controls apply only to the current incomplete loop; new loops reset this default to enabled.
+- This output overlay changes wording only. It never silently rewrites supplied prose, task artifacts, code, documentation, comments, evidence, quotations, or user source text; direct artifact editing remains explicit-only. `i-have-adhd` still owns structure, and `humanize-korean` still owns Korean artifact rewriting.
 
 ## Loop engineer (`loopy` keyword)
 
