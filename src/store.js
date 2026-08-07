@@ -1,6 +1,7 @@
 import { closeSync, openSync, readFileSync, rmSync, statSync, writeSync } from "node:fs";
 import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, join, posix } from "node:path";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 export const SUPERLOOPY_DIR = ".superloopy";
 export const EVIDENCE_DIR = "evidence";
@@ -99,10 +100,10 @@ export async function writeJsonAtomic(path, value) {
   await rename(tmpPath, path);
 }
 
-// Module-level set of lock paths this process currently holds, so a nested
-// withFileLock on the SAME file (e.g. the audit-state accept path calling
-// auditOneCriterion) re-enters instead of self-deadlocking.
-const heldLocks = new Set();
+// Track re-entrancy per async call chain. A process-global set lets an unrelated
+// concurrent operation mistake another chain's lock for its own and enter the
+// critical section without serialization.
+const lockContext = new AsyncLocalStorage();
 let lockSequence = 0;
 
 // Serialize a read-modify-write critical section on `targetPath` across PROCESSES
@@ -112,11 +113,13 @@ let lockSequence = 0;
 // Fail-closed: on timeout it throws rather than proceeding unguarded. A lock is reclaimed
 // only when its holder PROCESS is dead (never on age alone), so a slow-but-alive critical
 // section makes waiters fail closed at the timeout instead of double-entering. Superloopy issues
-// one mutation per process and only nests same-file sections, so process-global re-entrancy
-// is sufficient.
+// Nested same-file operations re-enter only within their async call chain; unrelated chains
+// still serialize through the lock file.
 export async function withFileLock(targetPath, fn, options = {}) {
   const lockPath = `${targetPath}.lock`;
-  if (heldLocks.has(lockPath)) return fn();
+  const parentContext = lockContext.getStore();
+  const inheritedLease = parentContext?.get(lockPath);
+  if (inheritedLease?.active) return fn();
   const timeoutMs = options.timeoutMs ?? 10000;
   const staleMs = options.staleMs ?? 60000;
   const retryMs = options.retryMs ?? 25;
@@ -133,7 +136,7 @@ export async function withFileLock(targetPath, fn, options = {}) {
       }
       break;
     } catch (error) {
-      if (error.code !== "EEXIST") throw error;
+      if (!isFileLockContention(error)) throw error;
       const reclaim = reclaimableLock(lockPath, staleMs);
       if (reclaim.reclaimable) {
         // Compare-and-delete: remove the lock only if it STILL holds the exact (unique) token we
@@ -149,13 +152,20 @@ export async function withFileLock(targetPath, fn, options = {}) {
       await sleep(retryMs);
     }
   }
-  heldLocks.add(lockPath);
+  const lease = { active: true };
+  const childContext = new Map(parentContext);
+  childContext.set(lockPath, lease);
   try {
-    return await fn();
+    return await lockContext.run(childContext, fn);
   } finally {
-    heldLocks.delete(lockPath);
+    lease.active = false;
     releaseIfOwned(lockPath, token);
   }
+}
+
+export function isFileLockContention(error, platform = process.platform) {
+  return error?.code === "EEXIST"
+    || (platform === "win32" && (error?.code === "EPERM" || error?.code === "EACCES"));
 }
 
 // Decide whether a held lock can be reclaimed, returning the exact content inspected so the

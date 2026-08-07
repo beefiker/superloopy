@@ -1,3 +1,8 @@
+import { isSayItStraightEnabled, renderSayItStraightLoopOverlay } from "./loop-output-style.js";
+
+const COMPLETION_AUTHORITY = "Only the deterministic Superloopy gate authorizes completion.";
+const MAX_RECOVERY_LIST_ITEMS = 6;
+
 export function buildRecoveryProjection({ status, guide, fleet }) {
   const activeGoal = status.plan.goals.find((goal) => goal.status === "in_progress")
     ?? status.plan.goals.find((goal) => goal.status === "pending")
@@ -12,6 +17,7 @@ export function buildRecoveryProjection({ status, guide, fleet }) {
     mode: status.plan.mode,
     activeGoal: activeGoal === null ? null : { id: activeGoal.id, title: activeGoal.title },
     unresolved,
+    sayItStraight: isSayItStraightEnabled(status.plan),
     aggregateComplete: status.summary.aggregateComplete,
     nextAction: guide?.nextAction?.command ?? status.binding?.next ?? null,
     outstanding: Array.isArray(fleet?.outstanding) ? fleet.outstanding.map((item) => item.id) : []
@@ -19,29 +25,66 @@ export function buildRecoveryProjection({ status, guide, fleet }) {
 }
 
 export function renderRecoveryCapsule(projection, { maxChars = 4000 } = {}) {
-  const head = [
+  const budget = normalizeMaxChars(maxChars);
+  const outputStyle = projection.sayItStraight
+    ? renderSayItStraightLoopOverlay(true)
+    : "Say It Straight output: disabled for this loop.";
+  const aggregateCompletion = `Aggregate complete: ${projection.aggregateComplete ? "yes" : "no"}`;
+  const nextAction = `Next action: ${projection.nextAction ?? "inspect repository binding"}`;
+  const mandatoryCore = [
+    outputStyle,
+    "",
+    aggregateCompletion,
+    nextAction,
+    "",
+    COMPLETION_AUTHORITY
+  ].join("\n");
+  if (mandatoryCore.length > budget) {
+    return renderSmallBudgetCore({ outputStyle, aggregateCompletion, nextAction, budget });
+  }
+
+  const details = [
     "Superloopy compaction recovery",
     "",
     "Durable Superloopy state overrides transcript summaries and completion claims.",
     `Repository: ${projection.binding} (${projection.rootLabel})`,
     `Session: ${projection.sessionId ?? "default"} · mode: ${projection.mode}`,
-    `Aggregate complete: ${projection.aggregateComplete ? "yes" : "no"}`,
     projection.activeGoal === null ? "Active goal: none" : `Active goal: ${projection.activeGoal.id} ${projection.activeGoal.title}`,
-    `Unresolved criteria: ${projection.unresolved.length === 0 ? "none" : projection.unresolved.join(", ")}`
-  ].join("\n");
-  const nextAction = `Next action: ${projection.nextAction ?? "inspect repository binding"}`;
-  const gate = "Only the deterministic Superloopy gate authorizes completion.";
-  const outstanding = `Outstanding handoffs: ${projection.outstanding.length === 0 ? "none" : projection.outstanding.join(", ")}`;
-  const tail = [
-    nextAction,
-    outstanding,
-    "",
-    gate
-  ].join("\n");
-  const mandatory = `${head}\n${tail}`;
-  if (mandatory.length <= maxChars) return mandatory;
-  const truncatedTail = `[recovery capsule truncated]\n${nextAction}\n${gate}\n${outstanding}`;
-  const headBudget = maxChars - truncatedTail.length - 1;
-  if (headBudget <= 0) return truncatedTail.slice(0, Math.max(0, maxChars));
-  return `${head.slice(0, headBudget).trimEnd()}\n${truncatedTail}`;
+    `Unresolved criteria: ${summarizeRecoveryIds(projection.unresolved)}`,
+    `Outstanding handoffs: ${summarizeRecoveryIds(projection.outstanding)}`
+  ];
+  return prependDetails(details, mandatoryCore, budget);
+}
+
+function summarizeRecoveryIds(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return "none";
+  const visible = ids.slice(0, MAX_RECOVERY_LIST_ITEMS).join(", ");
+  if (ids.length <= MAX_RECOVERY_LIST_ITEMS) return visible;
+  return `${ids.length} (${visible}, … +${ids.length - MAX_RECOVERY_LIST_ITEMS} more)`;
+}
+
+function normalizeMaxChars(maxChars) {
+  const numericMaxChars = Number(maxChars);
+  if (!Number.isFinite(numericMaxChars) || numericMaxChars <= 0) return 0;
+  return Math.floor(numericMaxChars);
+}
+
+function renderSmallBudgetCore({ outputStyle, aggregateCompletion, nextAction, budget }) {
+  const chunks = [COMPLETION_AUTHORITY, aggregateCompletion, nextAction, outputStyle];
+  const retained = [];
+  for (const chunk of chunks) {
+    const candidate = [...retained, chunk].join("\n");
+    if (candidate.length <= budget) retained.push(chunk);
+  }
+  return retained.join("\n");
+}
+
+function prependDetails(details, mandatoryCore, budget) {
+  const retained = [];
+  for (const detail of details) {
+    const candidate = [...retained, detail].join("\n");
+    if (`${candidate}\n\n${mandatoryCore}`.length > budget) break;
+    retained.push(detail);
+  }
+  return retained.length === 0 ? mandatoryCore : `${retained.join("\n")}\n\n${mandatoryCore}`;
 }
