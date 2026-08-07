@@ -21,7 +21,6 @@ async function writeCase(t, sourceText, finalText, protectedText) {
   if (protectedText !== undefined) await writeFile(files.protected, protectedText);
   return files;
 }
-
 // Mutation caught: returning a failing report for text whose protected values are unchanged.
 test("audit accepts unchanged code URL path and number values", () => {
   const text = "Run `npm test` at https://example.test/docs from ./scripts/check.mjs; target 40%.";
@@ -32,7 +31,6 @@ test("audit accepts unchanged code URL path and number values", () => {
   assert.equal(report.checks.numbers.ok, true);
   assert.deepEqual(report.problems, []);
 });
-
 // Mutation caught: omitting a protected syntax matcher or allowing a nested match to duplicate its wider span.
 test("extracts ordered non-overlapping markdown spans", () => {
   const text = [
@@ -44,9 +42,7 @@ test("extracts ordered non-overlapping markdown spans", () => {
     "npm pack",
     "```"
   ].join("\n");
-
   const spans = extractProtectedSpans(text);
-
   assert.deepEqual(
     spans.map(({ type, value }) => [type, value]),
     [
@@ -63,7 +59,6 @@ test("extracts ordered non-overlapping markdown spans", () => {
   );
   assert.ok(spans.every((span, index) => index === 0 || spans[index - 1].end <= span.start));
 });
-
 // Mutation caught: recognizing only slash-prefixed paths or only a relative path suffix.
 test("audit preserves complete Windows and relative paths across CRLF input", () => {
   const fixtures = [
@@ -84,24 +79,20 @@ test("audit preserves complete Windows and relative paths across CRLF input", ()
   const expected = fixtures.map(([path]) => path);
   const paths = extractProtectedSpans(source).filter((span) => span.type === "path").map((span) => span.value);
   const report = auditTexts(source, final);
-
   assert.deepEqual(paths, expected);
   assert.equal(report.ok, false);
   assert.deepEqual(report.checks.protected.missing.values, expected);
 });
-
 // Mutation caught: collapsing repeated protected values into a set and accepting a removed duplicate.
 test("audit rejects a removed repeated protected value", () => {
   const report = auditTexts(
     "Run `npm test`, then `npm test`.",
     "Run `npm test`."
   );
-
   assert.equal(report.ok, false);
   assert.equal(report.checks.protected.count.ok, false);
   assert.deepEqual(report.checks.protected.count.missing, ["`npm test`"]);
 });
-
 // Mutation caught: comparing protected values as unordered multisets and accepting a reordered sequence.
 test("audit rejects reordered repeated protected values", () => {
   const report = auditTexts(
@@ -111,23 +102,19 @@ test("audit rejects reordered repeated protected values", () => {
   assert.equal(report.ok, false);
   assert.equal(report.checks.protected.order.ok, false);
 });
-
 // Mutation caught: checking only source numbers and missing numbers introduced in the final text.
 test("audit rejects a newly introduced number", () => {
   const report = auditTexts("The pilot improved checkout.", "The pilot improved checkout by 40%.");
   assert.equal(report.ok, false);
   assert.deepEqual(report.checks.numbers.added, ["40%"]);
 });
-
 // Mutation caught: beginning a numeric match after a leading decimal point and treating .5% as 5%.
 test("audit rejects removal of a leading decimal point", () => {
   const report = auditTexts("The rate is .5%.", "The rate is 5%.");
-
   assert.equal(report.ok, false);
   assert.deepEqual(report.checks.numbers.missing, [".5%"]);
   assert.deepEqual(report.checks.numbers.added, ["5%"]);
 });
-
 // Mutation caught: skipping numeric suffixes attached to identifiers and accepting a changed version.
 test("audit rejects a changed numeric identifier suffix", () => {
   const report = auditTexts("Use API v2.", "Use API v3.");
@@ -135,21 +122,17 @@ test("audit rejects a changed numeric identifier suffix", () => {
   assert.deepEqual(report.checks.numbers.missing, ["2"]);
   assert.deepEqual(report.checks.numbers.added, ["3"]);
 });
-
 test("audit rejects changed formulas and code-style identifiers", () => {
   assert.equal(auditTexts("Keep retry_count >= 5.", "Keep retry_count > 5.").ok, false);
   assert.equal(auditTexts("Set NODE_ENV safely.", "Set APP_ENV safely.").ok, false);
 });
-
 // Mutation caught: comparing only the numeric portion of a quantity and accepting a changed spaced unit.
 test("audit rejects a changed separated unit", () => {
   const report = auditTexts("The package weighs 12 kg.", "The package weighs 12 lb.");
-
   assert.equal(report.ok, false);
   assert.deepEqual(report.checks.numbers.missing, ["12 kg"]);
   assert.deepEqual(report.checks.numbers.added, ["12 lb"]);
 });
-
 // Mutation caught: ignoring exact user-specified frozen strings that automatic syntax matching cannot infer.
 test("audit preserves user-frozen values", () => {
   const options = { protectedValues: ["Acme Ultra", "Northwind"] };
@@ -158,11 +141,9 @@ test("audit preserves user-frozen values", () => {
     "Acme ships with Northwind.",
     options
   );
-
   assert.equal(report.ok, false);
   assert.deepEqual(report.checks.protected.missing.values, ["Acme Ultra"]);
 });
-
 // Mutation caught: discarding a user-frozen string because it partially overlaps a wider syntax span.
 test("audit preserves user-frozen values independently of syntax overlap", () => {
   const report = auditTexts(
@@ -170,11 +151,9 @@ test("audit preserves user-frozen values independently of syntax overlap", () =>
     "Run `npm test` tomorrow.",
     { protectedValues: ["npm test` today"] }
   );
-
   assert.equal(report.ok, false);
   assert.deepEqual(report.checks.protected.userFrozen.missing.values, ["npm test` today"]);
 });
-
 // Mutation caught: requiring duplicate manifest entries to consume distinct text occurrences.
 test("audit accepts unchanged duplicate user-frozen values", () => {
   const report = auditTexts("Keep Acme.", "Keep Acme.", { protectedValues: ["Acme", "Acme"] });
@@ -253,6 +232,13 @@ test("audit rejects changed code in an unclosed EOF fence", () => {
   assert.equal(report.checks.structure.fences.ok, false);
 });
 
+// Mutation caught: treating only a single-backtick pair as inline code and leaving content after an embedded backtick mutable.
+test("audit preserves matching multi-backtick and multiline inline-code spans", () => {
+  const code = "``foo ` bar\nbaz``", source = `Keep ${code} intact.`;
+  assert.equal(auditTexts(source, `Preserve ${code} exactly.`).ok, true); assert.equal(auditTexts(source, "Keep ``foo ` changed\nbaz`` intact.").ok, false);
+  assert.ok(extractProtectedSpans(source).some((span) => span.type === "inline-code" && span.value === code));
+});
+
 // Mutation caught: stopping a Markdown destination at its first closing parenthesis.
 test("audit rejects a removed delimiter from a balanced-parentheses link", () => {
   const report = auditTexts(
@@ -273,6 +259,14 @@ test("audit rejects changing a Markdown image into a link", () => {
 
   assert.equal(report.ok, false);
   assert.deepEqual(report.checks.protected.missing.values, ["![release diagram](https://example.test/release.png)"]);
+});
+
+// Mutation caught: preserving only the destination inside a CommonMark autolink and accepting removed delimiters.
+test("audit preserves URI and email autolinks as complete Markdown spans", () => {
+  const uri = "<https://example.test/docs>", email = "<support@example.test>", source = `Use ${uri} or ${email}.`;
+  assert.equal(auditTexts(source, `Contact ${email} after reading ${uri}.`).ok, false); assert.equal(auditTexts(source, `See ${uri}; contact ${email}.`).ok, true);
+  assert.equal(auditTexts(source, "Use https://example.test/docs or support@example.test.").ok, false); assert.equal(auditTexts(`> Keep ${uri} safe.`, `> Change ${uri} safe.`).ok, false);
+  assert.deepEqual(extractProtectedSpans(source).filter((span) => span.type === "markdown-autolink").map((span) => span.value), [uri, email]);
 });
 
 // Mutation caught: protecting a citation year alone while allowing its author or reference-style link identity to change.
@@ -424,6 +418,12 @@ test("audit rejects removed list structure and changed task state", () => {
   const removed = auditTexts("- First action\n- Second action\n", "First action. Second action.\n");
   const completed = auditTexts("- [ ] Review before release\n", "- [x] Review before release\n"); assert.equal(removed.checks.structure.lists.ok, false);
   assert.equal(completed.checks.structure.lists.ok, false);
+});
+
+// Mutation caught: treating four-space and tab-indented list items as code or prose instead of nested list structure.
+test("audit preserves nested list markers and task state at deeper indentation", () => {
+  const source = "- Outer\n    - [ ] Nested task\n\t1. Nested step\n", removedMarker = "- Outer\n    Nested task\n\t1. Nested step\n", changedTask = "- Outer\n    - [x] Nested task\n\t1. Nested step\n";
+  assert.equal(auditTexts(source, removedMarker).checks.structure.lists.ok, false); assert.equal(auditTexts(source, changedTask).checks.structure.lists.ok, false);
 });
 // Mutation caught: allowing a source placeholder-shaped literal to share a run tag with generated placeholders.
 test("audit reports a source placeholder collision", () => {
