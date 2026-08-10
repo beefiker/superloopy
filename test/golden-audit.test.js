@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import "./helpers/trust-isolate.js";
 import { existsSync } from "node:fs";
-import { mkdtemp, mkdir, open, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, open, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -224,6 +224,8 @@ test("exclusive evidence output stays unpublished until its durable write comple
   await probe.close();
   await rm(probePath);
   const originalWriteFile = fileHandlePrototype.writeFile;
+  const originalSync = fileHandlePrototype.sync;
+  let directorySyncs = 0;
   let signalEntered;
   let releaseWrite;
   const entered = new Promise((resolve) => { signalEntered = resolve; });
@@ -235,6 +237,10 @@ test("exclusive evidence output stays unpublished until its durable write comple
     }
     return originalWriteFile.call(this, data, options);
   };
+  fileHandlePrototype.sync = async function trackedSync() {
+    if ((await this.stat()).isDirectory()) directorySyncs += 1;
+    return originalSync.call(this);
+  };
 
   let writing;
   try {
@@ -245,6 +251,62 @@ test("exclusive evidence output stays unpublished until its durable write comple
     await writing;
     assert.equal(publishedBeforeWrite, false);
     assert.equal(await readFile(output.absolutePath, "utf8"), "durable report\n");
+    assert.equal(
+      directorySyncs,
+      process.platform === "win32" ? 0 : 2,
+      "staging and publish directories must both be synced where directory handles are supported",
+    );
+  } finally {
+    releaseWrite?.();
+    await writing?.catch(() => {});
+    fileHandlePrototype.writeFile = originalWriteFile;
+    fileHandlePrototype.sync = originalSync;
+  }
+});
+
+test("SECURITY: moving the private staging directory aborts before report content escapes", async (t) => {
+  if (process.platform === "win32") return t.skip("moving an open directory is rejected by Windows");
+  const repo = await tempRepo();
+  const outside = await mkdtemp(join(tmpdir(), "superloopy-exclusive-outside-"));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  t.after(() => rm(outside, { recursive: true, force: true }));
+  const publishRoot = join(repo, ".superloopy", "evidence", "superloopy-backend");
+  await mkdir(publishRoot, { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-moved/backend-skill-report.md",
+    undefined,
+  );
+  const probe = await open(join(repo, "file-handle-race-probe"), "wx");
+  const fileHandlePrototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  const originalWriteFile = fileHandlePrototype.writeFile;
+  let signalEntered;
+  let releaseWrite;
+  const entered = new Promise((resolve) => { signalEntered = resolve; });
+  const released = new Promise((resolve) => { releaseWrite = resolve; });
+  fileHandlePrototype.writeFile = async function delayedWriteFile(data, options) {
+    if (data === "confined report\n") {
+      signalEntered();
+      await released;
+    }
+    return originalWriteFile.call(this, data, options);
+  };
+
+  let writing;
+  try {
+    writing = writeEvidenceOutputFileExclusive(output, "confined report\n");
+    await entered;
+    const [stageName] = (await readdir(publishRoot)).filter((name) => name.startsWith(".run-moved."));
+    assert.ok(stageName, "private staging directory must exist while the write is paused");
+    const movedDirectory = join(outside, stageName);
+    await rename(join(publishRoot, stageName), movedDirectory);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    releaseWrite();
+    await assert.rejects(writing, /directory.*(?:changed|confined)/iu);
+    const escapedReport = join(movedDirectory, "backend-skill-report.md");
+    assert.notEqual(existsSync(escapedReport) ? await readFile(escapedReport, "utf8") : "", "confined report\n");
+    assert.equal(existsSync(output.absolutePath), false);
   } finally {
     releaseWrite?.();
     await writing?.catch(() => {});

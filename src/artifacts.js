@@ -1,4 +1,4 @@
-import { constants, existsSync, lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { constants, existsSync, lstatSync, readFileSync, realpathSync, statSync, watch } from "node:fs";
 import { mkdir, open, rename, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { validateAuditSection } from "./audit-verdict.js";
@@ -121,19 +121,32 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
   await mkdir(publishRoot, { recursive: true });
   rejectOutputTargetForWrite(artifact);
   rejectExistingPublishedDirectory(finalDirectory, artifact.relativePath);
+  const publishRootHandle = await openConfinedDirectory(artifact, publishRoot);
   const stageDirectory = join(
     publishRoot,
     `.${basename(finalDirectory)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`,
   );
-  await mkdir(stageDirectory, { mode: 0o700 });
-  const stageDirectoryStat = lstatSync(stageDirectory, { bigint: true });
-  const stagedArtifact = {
-    ...artifact,
-    absolutePath: join(stageDirectory, basename(artifact.absolutePath)),
-  };
+  let stageDirectoryHandle;
+  let stageDirectoryStat;
   let published = false;
   try {
-    const openedStat = await writeOpenedExclusiveFile(stagedArtifact, content, options);
+    await mkdir(stageDirectory, { mode: 0o700 });
+    stageDirectoryStat = lstatSync(stageDirectory, { bigint: true });
+    stageDirectoryHandle = await openConfinedDirectory(artifact, stageDirectory, stageDirectoryStat);
+    const stagedArtifact = {
+      ...artifact,
+      absolutePath: join(stageDirectory, basename(artifact.absolutePath)),
+    };
+    const openedStat = await guardDirectoryIdentityDuringWrite(
+      artifact,
+      stageDirectory,
+      stageDirectoryStat,
+      async (signal) => {
+        const stat = await writeOpenedExclusiveFile(stagedArtifact, content, options, signal);
+        await syncDirectoryHandle(stageDirectoryHandle);
+        return stat;
+      },
+    );
     assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
     rejectOutputTargetForWrite(artifact);
     rejectExistingPublishedDirectory(finalDirectory, artifact.relativePath);
@@ -146,13 +159,18 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
       throw error;
     }
     published = true;
+    await syncDirectoryHandle(publishRootHandle);
     assertOpenedTargetConfined(artifact, openedStat);
   } finally {
-    if (!published) await removeStageDirectoryIfStillConfined(artifact, stageDirectory, stageDirectoryStat);
+    await stageDirectoryHandle?.close();
+    await publishRootHandle.close();
+    if (!published && stageDirectoryStat) {
+      await removeStageDirectoryIfStillConfined(artifact, stageDirectory, stageDirectoryStat);
+    }
   }
 }
 
-async function writeOpenedExclusiveFile(artifact, content, options) {
+async function writeOpenedExclusiveFile(artifact, content, options, signal) {
   const flags = constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0);
   let handle;
   try {
@@ -168,7 +186,7 @@ async function writeOpenedExclusiveFile(artifact, content, options) {
   let completed = false;
   try {
     assertOpenedTargetConfined(artifact, openedStat);
-    await handle.writeFile(content, options);
+    await handle.writeFile(content, writeOptionsWithSignal(options, signal));
     await handle.sync();
     completed = true;
     return openedStat;
@@ -178,13 +196,93 @@ async function writeOpenedExclusiveFile(artifact, content, options) {
   }
 }
 
+async function openConfinedDirectory(artifact, path, expectedStat = undefined) {
+  const flags = constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0);
+  let handle;
+  try {
+    handle = await open(path, flags);
+  } catch (error) {
+    if (process.platform !== "win32" || !["EACCES", "EISDIR", "EPERM"].includes(error?.code)) throw error;
+    const pathStat = expectedStat ?? lstatSync(path, { bigint: true });
+    assertDirectoryConfined(artifact, path, pathStat);
+    return { close: async () => {}, sync: async () => {} };
+  }
+  try {
+    const openedStat = await handle.stat({ bigint: true });
+    const pathStat = expectedStat ?? lstatSync(path, { bigint: true });
+    if (!openedStat.isDirectory() || !sameFile(openedStat, pathStat)) {
+      throw new Error(`Evidence artifact directory changed during exclusive creation: ${artifact.relativePath}`);
+    }
+    assertDirectoryConfined(artifact, path, openedStat);
+    return handle;
+  } catch (error) {
+    await handle.close();
+    throw error;
+  }
+}
+
+async function guardDirectoryIdentityDuringWrite(artifact, path, expectedStat, operation) {
+  const controller = new AbortController();
+  let guardError;
+  const verify = () => {
+    if (guardError) return;
+    try {
+      assertDirectoryConfined(artifact, path, expectedStat);
+    } catch (error) {
+      guardError = error;
+      controller.abort(error);
+    }
+  };
+  const watcher = watch(dirname(path), { persistent: false }, verify);
+  watcher.on("error", (error) => {
+    if (!guardError) {
+      guardError = error;
+      controller.abort(error);
+    }
+  });
+  const timer = setInterval(verify, 5);
+  timer.unref();
+  try {
+    const result = await operation(controller.signal);
+    verify();
+    if (guardError) throw guardError;
+    return result;
+  } catch (error) {
+    if (guardError) throw guardError;
+    throw error;
+  } finally {
+    clearInterval(timer);
+    watcher.close();
+  }
+}
+
+async function syncDirectoryHandle(handle) {
+  try {
+    await handle.sync();
+  } catch (error) {
+    if (process.platform !== "win32" || !["EBADF", "EINVAL", "ENOTSUP", "EPERM"].includes(error?.code)) {
+      throw error;
+    }
+  }
+}
+
+function writeOptionsWithSignal(options, signal) {
+  if (typeof options === "string") return { encoding: options, signal };
+  return { ...(options ?? {}), signal };
+}
+
 function rejectExistingPublishedDirectory(path, artifactPath) {
   if (lstatNoFollow(path)) throw new Error(`Evidence artifact already exists: ${artifactPath}`);
 }
 
 function assertDirectoryConfined(artifact, path, openedStat) {
   rejectSymlinkInExistingPath(artifact.projectRootPath, path, artifact.relativePath);
-  const directoryStat = lstatSync(path, { bigint: true });
+  let directoryStat;
+  try {
+    directoryStat = lstatSync(path, { bigint: true });
+  } catch {
+    throw new Error(`Evidence artifact directory changed during exclusive creation: ${artifact.relativePath}`);
+  }
   if (!sameFile(openedStat, directoryStat) || !directoryStat.isDirectory()) {
     throw new Error(`Evidence artifact directory changed during exclusive creation: ${artifact.relativePath}`);
   }
