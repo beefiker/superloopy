@@ -116,8 +116,43 @@ export async function writeEvidenceOutputFile(artifact, content, options = "utf8
 }
 
 export async function writeEvidenceOutputFileExclusive(artifact, content, options = "utf8") {
-  await mkdir(dirname(artifact.absolutePath), { recursive: true });
+  const finalDirectory = dirname(artifact.absolutePath);
+  const publishRoot = dirname(finalDirectory);
+  await mkdir(publishRoot, { recursive: true });
   rejectOutputTargetForWrite(artifact);
+  rejectExistingPublishedDirectory(finalDirectory, artifact.relativePath);
+  const stageDirectory = join(
+    publishRoot,
+    `.${basename(finalDirectory)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`,
+  );
+  await mkdir(stageDirectory, { mode: 0o700 });
+  const stageDirectoryStat = lstatSync(stageDirectory, { bigint: true });
+  const stagedArtifact = {
+    ...artifact,
+    absolutePath: join(stageDirectory, basename(artifact.absolutePath)),
+  };
+  let published = false;
+  try {
+    const openedStat = await writeOpenedExclusiveFile(stagedArtifact, content, options);
+    assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
+    rejectOutputTargetForWrite(artifact);
+    rejectExistingPublishedDirectory(finalDirectory, artifact.relativePath);
+    try {
+      await rename(stageDirectory, finalDirectory);
+    } catch (error) {
+      if (error?.code === "EEXIST" || error?.code === "ENOTEMPTY") {
+        throw new Error(`Evidence artifact already exists: ${artifact.relativePath}`);
+      }
+      throw error;
+    }
+    published = true;
+    assertOpenedTargetConfined(artifact, openedStat);
+  } finally {
+    if (!published) await removeStageDirectoryIfStillConfined(artifact, stageDirectory, stageDirectoryStat);
+  }
+}
+
+async function writeOpenedExclusiveFile(artifact, content, options) {
   const flags = constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0);
   let handle;
   try {
@@ -136,9 +171,37 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
     await handle.writeFile(content, options);
     await handle.sync();
     completed = true;
+    return openedStat;
   } finally {
     await handle.close();
     if (!completed) await removeOpenedTargetIfStillConfined(artifact, openedStat);
+  }
+}
+
+function rejectExistingPublishedDirectory(path, artifactPath) {
+  if (lstatNoFollow(path)) throw new Error(`Evidence artifact already exists: ${artifactPath}`);
+}
+
+function assertDirectoryConfined(artifact, path, openedStat) {
+  rejectSymlinkInExistingPath(artifact.projectRootPath, path, artifact.relativePath);
+  const directoryStat = lstatSync(path, { bigint: true });
+  if (!sameFile(openedStat, directoryStat) || !directoryStat.isDirectory()) {
+    throw new Error(`Evidence artifact directory changed during exclusive creation: ${artifact.relativePath}`);
+  }
+  const realProject = realpathSync(artifact.projectRootPath);
+  const realRoot = realpathSync(artifact.rootPath);
+  const realDirectory = realpathSync(path);
+  if (!isPathInsideDirectory(realRoot, realProject) || !isPathInsideDirectory(realDirectory, realRoot)) {
+    throw new Error("Evidence artifact directory must remain confined during exclusive creation.");
+  }
+}
+
+async function removeStageDirectoryIfStillConfined(artifact, stageDirectory, openedStat) {
+  try {
+    assertDirectoryConfined(artifact, stageDirectory, openedStat);
+    await rm(stageDirectory, { recursive: true, force: true });
+  } catch {
+    // Never recursively remove a path whose original directory identity was lost.
   }
 }
 

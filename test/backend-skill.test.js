@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -223,9 +223,16 @@ test("backend evidence helper writes distinct reports through the active evidenc
     canonicalIds.stdout.trim(),
     ".superloopy/evidence/superloopy-backend/goal-g002-criterion-c003-worker-jinbe/backend-skill-report.md",
   );
+  assert.equal(
+    (await readdir(join(sandbox, ".superloopy/evidence/superloopy-backend"))).some((name) => name.startsWith(".")),
+    false,
+  );
 
-  const freshProject = await mkdtemp(join(tmpdir(), "superloopy-backend-fresh-project-"));
-  t.after(() => rm(freshProject, { recursive: true, force: true }));
+  const enclosingGit = await mkdtemp(join(tmpdir(), "superloopy-backend-enclosing-git-"));
+  t.after(() => rm(enclosingGit, { recursive: true, force: true }));
+  const initialized = spawnSync("git", ["init", "-q", enclosingGit], { encoding: "utf8" });
+  assert.equal(initialized.status, 0, initialized.stderr);
+  const freshProject = join(enclosingGit, "nested-non-git-project");
   const freshChild = join(freshProject, "packages", "api");
   await mkdir(freshChild, { recursive: true });
   const firstStandalone = spawnSync(process.execPath, [

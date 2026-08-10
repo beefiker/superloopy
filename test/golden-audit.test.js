@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import "./helpers/trust-isolate.js";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdtemp, mkdir, open, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
 import { auditLoop } from "../src/audit.js";
-import { resolveEvidenceOutputPath, validateQualityGate, writeEvidenceOutputFile } from "../src/artifacts.js";
+import { resolveEvidenceOutputPath, validateQualityGate, writeEvidenceOutputFile, writeEvidenceOutputFileExclusive } from "../src/artifacts.js";
 import { captureLoop } from "../src/capture.js";
 import { createLoop, evidenceLoop, nextLoop } from "../src/loop.js";
 import { isTrustedCommand, recordTrustedCommand, trustLoop } from "../src/plan-trust.js";
@@ -207,6 +208,48 @@ test("SECURITY: evidence output write rejects a symlink swapped in after path re
     /symlink|ELOOP|not follow/i
   );
   assert.equal(await readFile(outsideTarget, "utf8"), "original\n");
+});
+
+test("exclusive evidence output stays unpublished until its durable write completes", async () => {
+  const repo = await tempRepo();
+  await mkdir(join(repo, ".superloopy", "evidence", "superloopy-backend"), { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-one/backend-skill-report.md",
+    undefined,
+  );
+  const probePath = join(repo, "file-handle-probe");
+  const probe = await open(probePath, "wx");
+  const fileHandlePrototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  await rm(probePath);
+  const originalWriteFile = fileHandlePrototype.writeFile;
+  let signalEntered;
+  let releaseWrite;
+  const entered = new Promise((resolve) => { signalEntered = resolve; });
+  const released = new Promise((resolve) => { releaseWrite = resolve; });
+  fileHandlePrototype.writeFile = async function delayedWriteFile(data, options) {
+    if (data === "durable report\n") {
+      signalEntered();
+      await released;
+    }
+    return originalWriteFile.call(this, data, options);
+  };
+
+  let writing;
+  try {
+    writing = writeEvidenceOutputFileExclusive(output, "durable report\n");
+    await entered;
+    const publishedBeforeWrite = existsSync(output.absolutePath);
+    releaseWrite();
+    await writing;
+    assert.equal(publishedBeforeWrite, false);
+    assert.equal(await readFile(output.absolutePath, "utf8"), "durable report\n");
+  } finally {
+    releaseWrite?.();
+    await writing?.catch(() => {});
+    fileHandlePrototype.writeFile = originalWriteFile;
+  }
 });
 
 test("SECURITY: evidence output path rejects a symlinked evidence root", async () => {

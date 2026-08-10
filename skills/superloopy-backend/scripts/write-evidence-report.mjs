@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-import { realpathSync } from "node:fs";
+import { realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { resolveEvidenceOutputPath, writeEvidenceOutputFileExclusive } from "../../../src/artifacts.js";
 import { evidenceRelativeDir, scopeFromSessionId } from "../../../src/store.js";
-import { resolveWorkspaceRoot } from "../../../src/workspace-identity.js";
 
 const PORTABLE_REPORT_ID = /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/u;
 const WINDOWS_RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/iu;
@@ -35,7 +35,8 @@ export function scopeForEvidenceRoot(value) {
 }
 
 export async function writeBackendEvidenceReport({ projectRoot, evidenceRoot, reportId, content }) {
-  const workspaceRoot = resolveWorkspaceRoot(projectRoot);
+  const workspaceRoot = realpathSync(resolve(projectRoot));
+  if (!statSync(workspaceRoot).isDirectory()) throw new Error("project root must be an existing directory");
   const resolvedRoot = scopeForEvidenceRoot(evidenceRoot);
   const safeReportId = validateReportId(reportId);
   if (typeof content !== "string" || content.trim().length === 0) {
