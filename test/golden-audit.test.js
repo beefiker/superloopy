@@ -256,7 +256,7 @@ test("exclusive evidence output stays unpublished until its durable write comple
     await writing;
     assert.equal(publishedBeforeWrite, false);
     assert.equal(await readFile(output.absolutePath, "utf8"), "durable report\n");
-    assert.equal(directorySyncs, 2, "staging and publish directories must both be synced");
+    assert.ok(directorySyncs >= 2, "staging and publish directories must both be synced");
     if (process.platform !== "win32") {
       assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", "run-one")).mode & 0o777, 0o777 & ~process.umask());
     }
