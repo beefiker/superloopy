@@ -1,5 +1,5 @@
-import { existsSync, lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { link, mkdir, open, rename, rm } from "node:fs/promises";
+import { constants, existsSync, lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { mkdir, open, rename, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { validateAuditSection } from "./audit-verdict.js";
 import { isMatrixQualityGate, validateMatrixQualityGate } from "./matrix-gate.js";
@@ -88,20 +88,13 @@ export function resolveEvidenceOutputPath(cwd, artifactPath, scope) {
   }
   return {
     absolutePath: resolved,
+    projectRootPath: resolve(cwd),
     rootPath: root,
     relativePath: repoRelativePath(`${evidenceRelativeDir(scope)}/${rel}`)
   };
 }
 
 export async function writeEvidenceOutputFile(artifact, content, options = "utf8") {
-  return writeEvidenceOutput(artifact, content, options, false);
-}
-
-export async function writeEvidenceOutputFileExclusive(artifact, content, options = "utf8") {
-  return writeEvidenceOutput(artifact, content, options, true);
-}
-
-async function writeEvidenceOutput(artifact, content, options, exclusive) {
   const dir = dirname(artifact.absolutePath);
   await mkdir(dir, { recursive: true });
   rejectOutputTargetForWrite(artifact);
@@ -113,19 +106,7 @@ async function writeEvidenceOutput(artifact, content, options, exclusive) {
     await handle.close();
     handle = null;
     rejectOutputTargetForWrite(artifact);
-    if (exclusive) {
-      try {
-        await link(tmpPath, artifact.absolutePath);
-      } catch (error) {
-        if (error?.code === "EEXIST") {
-          throw new Error(`Evidence artifact already exists: ${artifact.relativePath}`);
-        }
-        throw error;
-      }
-      await rm(tmpPath, { force: true }).catch(() => {});
-    } else {
-      await rename(tmpPath, artifact.absolutePath);
-    }
+    await rename(tmpPath, artifact.absolutePath);
   } catch (error) {
     await rm(tmpPath, { force: true }).catch(() => {});
     throw error;
@@ -134,9 +115,65 @@ async function writeEvidenceOutput(artifact, content, options, exclusive) {
   }
 }
 
+export async function writeEvidenceOutputFileExclusive(artifact, content, options = "utf8") {
+  await mkdir(dirname(artifact.absolutePath), { recursive: true });
+  rejectOutputTargetForWrite(artifact);
+  const flags = constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0);
+  let handle;
+  try {
+    handle = await open(artifact.absolutePath, flags, 0o666);
+  } catch (error) {
+    if (error?.code === "EEXIST") {
+      throw new Error(`Evidence artifact already exists: ${artifact.relativePath}`);
+    }
+    throw error;
+  }
+
+  const openedStat = await handle.stat({ bigint: true });
+  let completed = false;
+  try {
+    assertOpenedTargetConfined(artifact, openedStat);
+    await handle.writeFile(content, options);
+    await handle.sync();
+    completed = true;
+  } finally {
+    await handle.close();
+    if (!completed) await removeOpenedTargetIfStillConfined(artifact, openedStat);
+  }
+}
+
+function assertOpenedTargetConfined(artifact, openedStat) {
+  rejectOutputTargetForWrite(artifact);
+  const targetStat = lstatSync(artifact.absolutePath, { bigint: true });
+  if (!sameFile(openedStat, targetStat) || !targetStat.isFile()) {
+    throw new Error(`Evidence artifact changed during exclusive creation: ${artifact.relativePath}`);
+  }
+  const realProject = realpathSync(artifact.projectRootPath ?? dirname(artifact.rootPath));
+  const realRoot = realpathSync(artifact.rootPath);
+  const realTarget = realpathSync(artifact.absolutePath);
+  if (!isPathInsideDirectory(realRoot, realProject) || !isPathInsideDirectory(realTarget, realRoot)) {
+    throw new Error("Evidence artifact must remain confined during exclusive creation.");
+  }
+}
+
+async function removeOpenedTargetIfStillConfined(artifact, openedStat) {
+  try {
+    const targetStat = lstatSync(artifact.absolutePath, { bigint: true });
+    if (!sameFile(openedStat, targetStat)) return;
+    assertOpenedTargetConfined(artifact, openedStat);
+    await rm(artifact.absolutePath, { force: true });
+  } catch {
+    // A failed write is never reported as a receipt; remove only the same confined inode.
+  }
+}
+
+function sameFile(left, right) {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
 function rejectOutputTargetForWrite(artifact) {
-  if (artifact.rootPath) {
-    rejectSymlinkInExistingPath(artifact.rootPath, artifact.absolutePath, artifact.relativePath);
+  if (artifact.projectRootPath || artifact.rootPath) {
+    rejectSymlinkInExistingPath(artifact.projectRootPath ?? artifact.rootPath, artifact.absolutePath, artifact.relativePath);
   }
   const targetStat = lstatNoFollow(artifact.absolutePath);
   if (!targetStat) return;

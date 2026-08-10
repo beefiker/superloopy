@@ -34,8 +34,8 @@ export function scopeForEvidenceRoot(value) {
   return { root: normalized, scope };
 }
 
-export async function writeBackendEvidenceReport({ cwd = process.cwd(), evidenceRoot, reportId, content }) {
-  const workspaceRoot = resolveWorkspaceRoot(cwd);
+export async function writeBackendEvidenceReport({ projectRoot, evidenceRoot, reportId, content }) {
+  const workspaceRoot = resolveWorkspaceRoot(projectRoot);
   const resolvedRoot = scopeForEvidenceRoot(evidenceRoot);
   const safeReportId = validateReportId(reportId);
   if (typeof content !== "string" || content.trim().length === 0) {
@@ -55,11 +55,12 @@ async function readStandardInput() {
 }
 
 async function main(argv) {
-  const [command, evidenceRoot, reportId, ...extra] = argv;
-  if (command !== "write" || !evidenceRoot || !reportId || extra.length > 0) {
-    throw new Error("usage: write-evidence-report.mjs write <active-evidence-root> <qualified-report-id> < report.md");
+  const [command, projectRoot, evidenceRoot, reportId, ...extra] = argv;
+  if (command !== "write" || !projectRoot || !evidenceRoot || !reportId || extra.length > 0) {
+    throw new Error("usage: write-evidence-report.mjs write <project-root> <active-evidence-root> <qualified-report-id> < report.md");
   }
   const path = await writeBackendEvidenceReport({
+    projectRoot,
     evidenceRoot,
     reportId,
     content: await readStandardInput(),

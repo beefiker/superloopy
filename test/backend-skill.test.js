@@ -45,6 +45,7 @@ test("backend skill routes a stack-neutral, bounded database workflow", async ()
   assert.match(skill, /standalone.*evidence/isu);
   assert.match(skill, /qualified.*report id|report id.*qualified/isu);
   assert.match(skill, /write-evidence-report\.mjs/u);
+  assert.match(skill, /write-evidence-report\.mjs.*<project-root>/su);
   assert.match(skill, /standard input/iu);
   assert.doesNotMatch(skill, /ai-db-backend-skill-20260805/u);
   assert.doesNotMatch(skill, /always use (PostgreSQL|TypeScript|Python|MongoDB)/iu);
@@ -152,6 +153,7 @@ test("backend evidence helper writes distinct reports through the active evidenc
   const first = spawnSync(process.execPath, [
     helper,
     "write",
+    ".",
     ".superloopy/evidence",
     "goal-g001-criterion-c001-worker-franky",
   ], {
@@ -170,6 +172,7 @@ test("backend evidence helper writes distinct reports through the active evidenc
   const duplicate = spawnSync(process.execPath, [
     helper,
     "write",
+    ".",
     ".superloopy/evidence",
     "goal-g001-criterion-c001-worker-franky",
   ], {
@@ -186,6 +189,7 @@ test("backend evidence helper writes distinct reports through the active evidenc
   const second = spawnSync(process.execPath, [
     helper,
     "write",
+    sandbox,
     ".superloopy/sessions/session-1/evidence",
     "goal-g001-criterion-c001-worker-usopp",
   ], {
@@ -206,6 +210,7 @@ test("backend evidence helper writes distinct reports through the active evidenc
   const canonicalIds = spawnSync(process.execPath, [
     helper,
     "write",
+    ".",
     ".superloopy/evidence",
     "goal-G002-criterion-C003-worker-Jinbe",
   ], {
@@ -218,6 +223,32 @@ test("backend evidence helper writes distinct reports through the active evidenc
     canonicalIds.stdout.trim(),
     ".superloopy/evidence/superloopy-backend/goal-g002-criterion-c003-worker-jinbe/backend-skill-report.md",
   );
+
+  const freshProject = await mkdtemp(join(tmpdir(), "superloopy-backend-fresh-project-"));
+  t.after(() => rm(freshProject, { recursive: true, force: true }));
+  const freshChild = join(freshProject, "packages", "api");
+  await mkdir(freshChild, { recursive: true });
+  const firstStandalone = spawnSync(process.execPath, [
+    helper,
+    "write",
+    freshProject,
+    ".superloopy/evidence",
+    "run-20260810t104000z-api",
+  ], {
+    cwd: freshChild,
+    encoding: "utf8",
+    input: "# First standalone report\n",
+  });
+  assert.equal(firstStandalone.status, 0, firstStandalone.stderr);
+  assert.equal(
+    firstStandalone.stdout.trim(),
+    ".superloopy/evidence/superloopy-backend/run-20260810t104000z-api/backend-skill-report.md",
+  );
+  assert.equal(
+    await readFile(join(freshProject, firstStandalone.stdout.trim()), "utf8"),
+    "# First standalone report\n",
+  );
+  assert.equal(existsSync(join(freshChild, ".superloopy")), false);
 });
 
 test("backend evidence helper rejects unsafe roots, targets, identifiers, and blank reports", {
@@ -234,6 +265,7 @@ test("backend evidence helper rejects unsafe roots, targets, identifiers, and bl
   const escapedRoot = spawnSync(process.execPath, [
     helper,
     "write",
+    ".",
     ".superloopy/evidence",
     "goal-g001-criterion-c001-worker-franky",
   ], { cwd: sandbox, encoding: "utf8", input: "must stay in repository\n" });
@@ -253,6 +285,7 @@ test("backend evidence helper rejects unsafe roots, targets, identifiers, and bl
   const linkedTarget = spawnSync(process.execPath, [
     helper,
     "write",
+    ".",
     ".superloopy/evidence",
     "goal-g001-criterion-c001-worker-franky",
   ], { cwd: sandbox, encoding: "utf8", input: "replacement\n" });
@@ -265,7 +298,7 @@ test("backend evidence helper rejects unsafe roots, targets, identifiers, and bl
     [".superloopy/evidence", "../escape", "report\n"],
     [".superloopy/evidence", "goal-g001", "  \n"],
   ]) {
-    const rejected = spawnSync(process.execPath, [helper, "write", evidenceRoot, reportId], {
+    const rejected = spawnSync(process.execPath, [helper, "write", ".", evidenceRoot, reportId], {
       cwd: sandbox,
       encoding: "utf8",
       input,
