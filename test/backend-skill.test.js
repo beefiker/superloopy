@@ -172,6 +172,26 @@ test("backend evidence helper writes distinct reports through the active evidenc
   );
   assert.equal(await readFile(join(sandbox, firstPath), "utf8"), "# Backend report\n\nworker: franky\n");
 
+  const recovered = spawnSync(process.execPath, [
+    helper,
+    "recover",
+    ".",
+    ".superloopy/evidence",
+    "goal-g001-criterion-c001-worker-franky",
+  ], { cwd: sandbox, encoding: "utf8" });
+  assert.equal(recovered.status, 0, recovered.stderr);
+  assert.equal(recovered.stdout.trim(), firstPath);
+
+  const missingRecovery = spawnSync(process.execPath, [
+    helper,
+    "recover",
+    ".",
+    ".superloopy/evidence",
+    "run-missing-report",
+  ], { cwd: sandbox, encoding: "utf8" });
+  assert.notEqual(missingRecovery.status, 0);
+  assert.match(missingRecovery.stderr, /does not exist/iu);
+
   const duplicate = spawnSync(process.execPath, [
     helper,
     "write",

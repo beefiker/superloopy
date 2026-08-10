@@ -164,6 +164,8 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
       await chmod(stageDirectory, 0o777 & ~process.umask());
     } else {
       await stageDirectoryHandle.chmod(0o777 & ~process.umask());
+      await openedFile.handle.chmod(0o444);
+      await openedFile.handle.sync();
     }
     assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
     await syncDirectoryHandle(stageDirectoryHandle);
@@ -193,6 +195,7 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
       await rm(scrubAnchor);
       scrubAnchor = undefined;
     }
+    if (process.platform === "win32") await chmod(artifact.absolutePath, 0o444);
     await syncDirectoryHandle(publishRootHandle);
     assertOpenedTargetConfined(artifact, openedFile.openedStat);
     published = true;

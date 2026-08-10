@@ -270,6 +270,7 @@ test("exclusive evidence output stays unpublished until its durable write comple
     );
     if (process.platform !== "win32") {
       assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", "run-one")).mode & 0o777, 0o777 & ~process.umask());
+      assert.equal(statSync(output.absolutePath).mode & 0o222, 0, "published report must be read-only");
     }
   } finally {
     releaseWrite?.();

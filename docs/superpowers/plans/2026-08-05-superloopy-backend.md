@@ -363,7 +363,7 @@ git commit -m "docs: publish backend skill discovery"
 
 - [ ] **Step 1: Repeat baseline scenarios with the skill**
 
-Use fresh contexts and the five exact baseline tasks, prefixed with `Use $superloopy-backend at /Users/bee/Documents/Personal/superloopy/skills/superloopy-backend to solve this task.` Do not leak the expected output or baseline diagnosis. Save raw responses and a scored comparison under `evidence/forward/`.
+Use fresh contexts and the five exact baseline tasks, prefixed with `Use $superloopy:superloopy-backend from the installed skill directory resolved by the current host to solve this task.` Do not leak the expected output or baseline diagnosis. Save raw responses and a scored comparison under `evidence/forward/`.
 
 - [ ] **Step 2: Refactor only reproduced gaps**
 

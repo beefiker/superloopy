@@ -4,7 +4,7 @@ import { realpathSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { resolveEvidenceOutputPath, writeEvidenceOutputFileExclusive } from "../../../src/artifacts.js";
+import { resolveEvidenceArtifact, resolveEvidenceOutputPath, writeEvidenceOutputFileExclusive } from "../../../src/artifacts.js";
 import { evidenceRelativeDir, scopeFromSessionId } from "../../../src/store.js";
 
 const PORTABLE_REPORT_ID = /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/u;
@@ -48,6 +48,15 @@ export async function writeBackendEvidenceReport({ projectRoot, evidenceRoot, re
   return artifact.relativePath;
 }
 
+export function recoverBackendEvidenceReport({ projectRoot, evidenceRoot, reportId }) {
+  const workspaceRoot = realpathSync(resolve(projectRoot));
+  if (!statSync(workspaceRoot).isDirectory()) throw new Error("project root must be an existing directory");
+  const resolvedRoot = scopeForEvidenceRoot(evidenceRoot);
+  const safeReportId = validateReportId(reportId);
+  const path = `${resolvedRoot.root}/superloopy-backend/${safeReportId}/backend-skill-report.md`;
+  return resolveEvidenceArtifact(workspaceRoot, path, resolvedRoot.scope).relativePath;
+}
+
 async function readStandardInput() {
   process.stdin.setEncoding("utf8");
   let content = "";
@@ -57,15 +66,12 @@ async function readStandardInput() {
 
 async function main(argv) {
   const [command, projectRoot, evidenceRoot, reportId, ...extra] = argv;
-  if (command !== "write" || !projectRoot || !evidenceRoot || !reportId || extra.length > 0) {
-    throw new Error("usage: write-evidence-report.mjs write <project-root> <active-evidence-root> <qualified-report-id> < report.md");
+  if (!projectRoot || !evidenceRoot || !reportId || extra.length > 0 || !["recover", "write"].includes(command)) {
+    throw new Error("usage: write-evidence-report.mjs <write|recover> <project-root> <active-evidence-root> <qualified-report-id> [< report.md]");
   }
-  const path = await writeBackendEvidenceReport({
-    projectRoot,
-    evidenceRoot,
-    reportId,
-    content: await readStandardInput(),
-  });
+  const path = command === "write"
+    ? await writeBackendEvidenceReport({ projectRoot, evidenceRoot, reportId, content: await readStandardInput() })
+    : recoverBackendEvidenceReport({ projectRoot, evidenceRoot, reportId });
   process.stdout.write(`${path}\n`);
 }
 
