@@ -153,6 +153,11 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
     rejectExistingPublishedDirectory(finalDirectory, artifact.relativePath);
     await chmod(stageDirectory, 0o777 & ~process.umask());
     assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
+    if (process.platform === "win32") {
+      await openedFile.handle.close();
+      openedFile.handle = null;
+      assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
+    }
     try {
       await rename(stageDirectory, finalDirectory);
     } catch (error) {
@@ -165,8 +170,8 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
     assertOpenedTargetConfined(artifact, openedFile.openedStat);
     published = true;
   } finally {
-    if (!published && openedFile) await scrubOpenedFile(openedFile.handle);
-    await openedFile?.handle.close().catch(() => {});
+    if (!published && openedFile?.handle) await scrubOpenedFile(openedFile.handle);
+    await openedFile?.handle?.close().catch(() => {});
     await stageDirectoryHandle?.close().catch(() => {});
     await publishRootHandle.close().catch(() => {});
     if (!published && stageDirectoryStat) {
