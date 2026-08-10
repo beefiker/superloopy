@@ -4,7 +4,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from "node:pat
 import { validateAuditSection } from "./audit-verdict.js";
 import { isMatrixQualityGate, validateMatrixQualityGate } from "./matrix-gate.js";
 import { isReviewQualityGate, validateReviewQualityGate } from "./review-gate.js";
-import { evidenceDir, evidenceRelativeDir, repoRelativePath } from "./store.js";
+import { evidenceDir, evidenceRelativeDir, repoRelativePath, withFileLock } from "./store.js";
 
 // An artifact up to this size must contain non-whitespace to satisfy the content floor;
 // larger artifacts (assumed non-trivial) skip the read. Mirrors the SubagentStop hook.
@@ -121,31 +121,28 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
   rejectOutputTargetForWrite(artifact);
   await mkdir(publishRoot, { recursive: true });
   rejectOutputTargetForWrite(artifact);
+  return withFileLock(publishRoot, () => writeEvidenceOutputFileExclusiveLocked(artifact, content, options, finalDirectory, publishRoot));
+}
+
+async function writeEvidenceOutputFileExclusiveLocked(artifact, content, options, finalDirectory, publishRoot) {
+  rejectOutputTargetForWrite(artifact);
   rejectExistingPublishedDirectory(finalDirectory, artifact.relativePath);
   const publishRootHandle = await openConfinedDirectory(artifact, publishRoot);
   const stageDirectory = join(
     publishRoot,
     `.${basename(finalDirectory)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`,
   );
-  let stageDirectoryHandle;
-  let stageDirectoryStat;
-  let stagedArtifact;
-  let openedFile;
-  let scrubAnchor;
-  let scrubHandle;
-  let scrubPath;
-  let publishRootOriginalMode;
-  let publishRootWriteEnabled = false;
+  let stageDirectoryHandle, stageDirectoryStat, stagedArtifact, openedFile;
+  let scrubAnchor, scrubHandle, scrubPath;
+  let publishRootOriginalMode, publishRootStat;
   let published = false;
   try {
     if (process.platform !== "win32") {
-      const publishRootStat = await publishRootHandle.stat({ bigint: true });
+      publishRootStat = await publishRootHandle.stat({ bigint: true });
       publishRootOriginalMode = Number(publishRootStat.mode & 0o777n);
-      if ((publishRootOriginalMode & 0o200) === 0) {
-        await publishRootHandle.chmod(publishRootOriginalMode | 0o200);
-        publishRootWriteEnabled = true;
-      }
+      if ((publishRootOriginalMode & 0o200) === 0) await publishRootHandle.chmod(publishRootOriginalMode | 0o200);
     }
+    if (publishRootStat) assertDirectoryConfined(artifact, publishRoot, publishRootStat);
     await mkdir(stageDirectory, { mode: 0o700 });
     stageDirectoryStat = lstatSync(stageDirectory, { bigint: true });
     stageDirectoryHandle = await openConfinedDirectory(artifact, stageDirectory, stageDirectoryStat);
@@ -244,12 +241,15 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
     await scrubHandle?.close().catch(() => {});
     if (!published && process.platform !== "win32") await stageDirectoryHandle?.chmod(0o700).catch(() => {});
     await stageDirectoryHandle?.close().catch(() => {});
+    if (!published && process.platform !== "win32" && publishRootOriginalMode !== undefined) {
+      await publishRootHandle.chmod(publishRootOriginalMode | 0o200).catch(() => {});
+    }
     if (!published && stageDirectoryStat) {
       await removeStageDirectoryIfStillConfined(artifact, finalDirectory, stageDirectoryStat);
       await removeStageDirectoryIfStillConfined(artifact, stageDirectory, stageDirectoryStat);
     }
     if (scrubAnchor) await rm(scrubAnchor, { force: true }).catch(() => {});
-    if (!published && process.platform !== "win32" && publishRootWriteEnabled) {
+    if (!published && process.platform !== "win32" && publishRootOriginalMode !== undefined) {
       await publishRootHandle.chmod(publishRootOriginalMode).catch(() => {});
     }
     await publishRootHandle.close().catch(() => {});

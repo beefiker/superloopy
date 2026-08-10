@@ -59,12 +59,15 @@ export async function recoverBackendEvidenceReport({ projectRoot, evidenceRoot, 
   const artifactStat = committedArtifactStat(artifact);
   const publishedDirectory = dirname(artifact.absolutePath);
   const directoryStat = committedDirectoryStat(publishedDirectory);
+  const publicationRoot = dirname(publishedDirectory);
+  const publicationRootStat = committedDirectoryStat(publicationRoot);
   await syncCommittedDirectory(publishedDirectory);
-  await syncCommittedDirectory(dirname(publishedDirectory));
+  await syncCommittedDirectory(publicationRoot);
   const verified = resolveEvidenceArtifact(workspaceRoot, path, resolvedRoot.scope);
   const verifiedArtifactStat = committedArtifactStat(verified);
   const verifiedDirectoryStat = committedDirectoryStat(dirname(verified.absolutePath));
-  if (!sameFile(artifactStat, verifiedArtifactStat) || !sameFile(directoryStat, verifiedDirectoryStat)) {
+  const verifiedPublicationRootStat = committedDirectoryStat(dirname(dirname(verified.absolutePath)));
+  if (!sameFile(artifactStat, verifiedArtifactStat) || !sameFile(directoryStat, verifiedDirectoryStat) || !sameFile(publicationRootStat, verifiedPublicationRootStat)) {
     throw new Error("existing backend evidence report changed while confirming its committed state");
   }
   return verified.relativePath;

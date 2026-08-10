@@ -297,7 +297,7 @@ test("exclusive evidence publication rolls back when the publish-directory sync 
   const originalSync = fileHandlePrototype.sync;
   let directorySyncs = 0;
   fileHandlePrototype.sync = async function failPublishDirectorySync() {
-    if ((await this.stat()).isDirectory() && ++directorySyncs === (process.platform === "win32" ? 4 : 3)) {
+    if ((await this.stat()).isDirectory() && ++directorySyncs === 4) {
       throw Object.assign(new Error("injected publish directory sync failure"), { code: "EIO" });
     }
     return originalSync.call(this);
