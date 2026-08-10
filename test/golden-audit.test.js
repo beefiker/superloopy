@@ -251,11 +251,7 @@ test("exclusive evidence output stays unpublished until its durable write comple
     await writing;
     assert.equal(publishedBeforeWrite, false);
     assert.equal(await readFile(output.absolutePath, "utf8"), "durable report\n");
-    assert.equal(
-      directorySyncs,
-      process.platform === "win32" ? 0 : 2,
-      "staging and publish directories must both be synced where directory handles are supported",
-    );
+    assert.equal(directorySyncs, 2, "staging and publish directories must both be synced");
   } finally {
     releaseWrite?.();
     await writing?.catch(() => {});
