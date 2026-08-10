@@ -423,6 +423,22 @@ test("Windows recovery rejects swapped qualified report directories", async (t) 
   }
 });
 
+test("backend evidence publication preserves publication-root special mode bits", async (t) => {
+  if (process.platform === "win32") return t.skip("POSIX special mode bits are not available on Windows");
+  const helperModule = await import(pathToFileURL(join(process.cwd(), root, "scripts/write-evidence-report.mjs")));
+  const sandbox = await mkdtemp(join(tmpdir(), "superloopy-backend-setgid-"));
+  const publicationRoot = join(sandbox, ".superloopy/evidence/superloopy-backend");
+  t.after(() => removePublishedTestTree(sandbox));
+  await mkdir(publicationRoot, { recursive: true });
+  await chmod(publicationRoot, 0o2550);
+
+  await helperModule.writeBackendEvidenceReport({
+    projectRoot: sandbox, evidenceRoot: ".superloopy/evidence", reportId: "run-setgid", content: "setgid-preserving report\n",
+  });
+
+  assert.equal(statSync(publicationRoot).mode & 0o7777, 0o2550);
+});
+
 test("backend evidence helper rejects unsafe roots, targets, identifiers, and blank reports", {
   skip: process.platform === "win32" ? "file symlink creation is not reliably available on Windows CI" : false,
 }, async (t) => {

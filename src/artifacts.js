@@ -121,7 +121,7 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
   rejectOutputTargetForWrite(artifact);
   await mkdir(publishRoot, { recursive: true });
   rejectOutputTargetForWrite(artifact);
-  return withFileLock(publishRoot, () => writeEvidenceOutputFileExclusiveLocked(artifact, content, options, finalDirectory, publishRoot));
+  return withFileLock(join(realpathSync(artifact.projectRootPath), ".superloopy-evidence-publication"), () => writeEvidenceOutputFileExclusiveLocked(artifact, content, options, finalDirectory, publishRoot));
 }
 
 async function writeEvidenceOutputFileExclusiveLocked(artifact, content, options, finalDirectory, publishRoot) {
@@ -139,7 +139,7 @@ async function writeEvidenceOutputFileExclusiveLocked(artifact, content, options
   try {
     if (process.platform !== "win32") {
       publishRootStat = await publishRootHandle.stat({ bigint: true });
-      publishRootOriginalMode = Number(publishRootStat.mode & 0o777n);
+      publishRootOriginalMode = Number(publishRootStat.mode & 0o7777n);
       if ((publishRootOriginalMode & 0o200) === 0) await publishRootHandle.chmod(publishRootOriginalMode | 0o200);
     }
     if (publishRootStat) assertDirectoryConfined(artifact, publishRoot, publishRootStat);

@@ -247,12 +247,12 @@ test("exclusive evidence output stays unpublished until its durable write comple
     if ((await this.stat()).isDirectory()) directoryChmods += 1;
     return originalChmod.call(this, mode);
   };
-
   let writing;
   try {
     writing = writeEvidenceOutputFileExclusive(output, "durable report\n");
     await entered;
     const publishedBeforeWrite = existsSync(output.absolutePath);
+    assert.deepEqual([existsSync(join(repo, ".superloopy-evidence-publication.lock")), existsSync(`${join(repo, ".superloopy", "evidence", "superloopy-backend")}.lock`)], [true, false], "publication lock must use the canonical project root, not mutable evidence ancestry");
     if (process.platform !== "win32") {
       const [stageName] = readdirSync(join(repo, ".superloopy", "evidence", "superloopy-backend"))
         .filter((name) => name.startsWith(".run-one."));
