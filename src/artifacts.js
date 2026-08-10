@@ -16,6 +16,7 @@ export function resolveEvidenceArtifact(cwd, artifactPath, scope) {
   }
   const root = resolve(evidenceDir(cwd, scope));
   const resolved = isAbsolute(artifactPath) ? resolve(artifactPath) : resolve(cwd, artifactPath);
+  rejectSymlinkInExistingPath(cwd, resolved, artifactPath);
   const rel = relative(root, resolved);
   if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) {
     throw new Error("Evidence artifact must live under .superloopy/evidence.");
@@ -27,6 +28,7 @@ export function resolveEvidenceArtifact(cwd, artifactPath, scope) {
     throw new Error(`Evidence artifact must not be a symlink: ${artifactPath}`);
   }
   const realRoot = realpathSync(root);
+  if (!isPathInsideDirectory(realRoot, realpathSync(cwd))) throw new Error("Evidence root must resolve inside the project.");
   const realArtifact = realpathSync(resolved);
   if (!isPathInsideDirectory(realArtifact, realRoot)) {
     throw new Error("Evidence artifact must resolve under .superloopy/evidence.");
@@ -38,9 +40,7 @@ export function resolveEvidenceArtifact(cwd, artifactPath, scope) {
   if (stat.size <= 0) {
     throw new Error(`Evidence artifact is empty: ${artifactPath}`);
   }
-  // Content floor: a small artifact must carry non-whitespace, so a blank/whitespace-only
-  // placeholder cannot satisfy the gate via the CLI (evidence/check/finish) any more than via
-  // the SubagentStop hook. Only artifacts above the threshold (assumed non-trivial) skip the read.
+  // A small artifact must carry non-whitespace; larger artifacts skip this read.
   if (stat.size <= MAX_BLANK_CHECK_BYTES && readFileSync(resolved, "utf8").trim().length === 0) {
     throw new Error(`Evidence artifact is blank: ${artifactPath}`);
   }

@@ -3,11 +3,12 @@ import { existsSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { chmod, link, mkdir, mkdtemp, open, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 const root = "skills/superloopy-backend";
+const boundReport = (id, content) => `<!-- superloopy-backend-report-id: ${id.toLowerCase()} -->\n${content}`;
 const referenceNames = [
   "architecture",
   "data-safety",
@@ -179,7 +180,7 @@ test("backend evidence helper writes distinct reports through the active evidenc
     firstPath,
     ".superloopy/evidence/superloopy-backend/goal-g001-criterion-c001-worker-franky/backend-skill-report.md",
   );
-  assert.equal(await readFile(join(sandbox, firstPath), "utf8"), "# Backend report\n\nworker: franky\n");
+  assert.equal(await readFile(join(sandbox, firstPath), "utf8"), boundReport("goal-g001-criterion-c001-worker-franky", "# Backend report\n\nworker: franky\n"));
   const firstDirectory = join(sandbox, ".superloopy/evidence/superloopy-backend/goal-g001-criterion-c001-worker-franky");
   if (process.platform !== "win32") {
     assert.equal(statSync(firstDirectory).mode & 0o222, 0, "published report directory must be read-only");
@@ -297,7 +298,7 @@ test("backend evidence helper writes distinct reports through the active evidenc
   });
   assert.notEqual(duplicate.status, 0);
   assert.match(duplicate.stderr, /already exists/iu);
-  assert.equal(await readFile(join(sandbox, firstPath), "utf8"), "# Backend report\n\nworker: franky\n");
+  assert.equal(await readFile(join(sandbox, firstPath), "utf8"), boundReport("goal-g001-criterion-c001-worker-franky", "# Backend report\n\nworker: franky\n"));
 
   const child = join(sandbox, "packages", "api");
   await mkdir(child, { recursive: true });
@@ -318,7 +319,7 @@ test("backend evidence helper writes distinct reports through the active evidenc
     secondPath,
     ".superloopy/sessions/session-1/evidence/superloopy-backend/goal-g001-criterion-c001-worker-usopp/backend-skill-report.md",
   );
-  assert.equal(await readFile(join(sandbox, secondPath), "utf8"), "# Backend report\n\nworker: usopp\n");
+  assert.equal(await readFile(join(sandbox, secondPath), "utf8"), boundReport("goal-g001-criterion-c001-worker-usopp", "# Backend report\n\nworker: usopp\n"));
   assert.equal(existsSync(join(child, ".superloopy")), false);
   assert.notEqual(firstPath, secondPath);
 
@@ -375,9 +376,51 @@ test("backend evidence helper writes distinct reports through the active evidenc
   );
   assert.equal(
     await readFile(join(freshProject, firstStandalone.stdout.trim()), "utf8"),
-    "# First standalone report\n",
+    boundReport("run-20260810t104000z-api", "# First standalone report\n"),
   );
   assert.equal(existsSync(join(freshChild, ".superloopy")), false);
+});
+
+test("Windows recovery rejects swapped qualified report directories", async (t) => {
+  const helper = join(process.cwd(), root, "scripts/write-evidence-report.mjs");
+  const helperModule = await import(pathToFileURL(helper));
+  const sandbox = await mkdtemp(join(tmpdir(), "superloopy-backend-windows-swap-"));
+  const platformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
+  t.after(() => removePublishedTestTree(sandbox));
+  Object.defineProperty(process, "platform", { ...platformDescriptor, value: "win32" });
+
+  try {
+    await helperModule.writeBackendEvidenceReport({
+      projectRoot: sandbox,
+      evidenceRoot: ".superloopy/evidence",
+      reportId: "run-windows-one",
+      content: "# Windows report one\n",
+    });
+    await helperModule.writeBackendEvidenceReport({
+      projectRoot: sandbox,
+      evidenceRoot: ".superloopy/evidence",
+      reportId: "run-windows-two",
+      content: "# Windows report two\n",
+    });
+    const publicationRoot = join(sandbox, ".superloopy/evidence/superloopy-backend");
+    const firstDirectory = join(publicationRoot, "run-windows-one");
+    const secondDirectory = join(publicationRoot, "run-windows-two");
+    const swapDirectory = join(publicationRoot, "run-windows-swap");
+    await rename(firstDirectory, swapDirectory);
+    await rename(secondDirectory, firstDirectory);
+    await rename(swapDirectory, secondDirectory);
+
+    await assert.rejects(
+      helperModule.recoverBackendEvidenceReport({
+        projectRoot: sandbox,
+        evidenceRoot: ".superloopy/evidence",
+        reportId: "run-windows-one",
+      }),
+      /binding|identity|report id/iu,
+    );
+  } finally {
+    Object.defineProperty(process, "platform", platformDescriptor);
+  }
 });
 
 test("backend evidence helper rejects unsafe roots, targets, identifiers, and blank reports", {
@@ -387,8 +430,8 @@ test("backend evidence helper rejects unsafe roots, targets, identifiers, and bl
   const helper = join(repoRoot, root, "scripts/write-evidence-report.mjs");
   const sandbox = await mkdtemp(join(tmpdir(), "superloopy-backend-evidence-symlink-"));
   const outside = await mkdtemp(join(tmpdir(), "superloopy-backend-evidence-outside-"));
-  t.after(() => rm(sandbox, { recursive: true, force: true }));
-  t.after(() => rm(outside, { recursive: true, force: true }));
+  t.after(() => removePublishedTestTree(sandbox));
+  t.after(() => removePublishedTestTree(outside));
 
   await symlink(outside, join(sandbox, ".superloopy"));
   const escapedRoot = spawnSync(process.execPath, [
@@ -401,6 +444,18 @@ test("backend evidence helper rejects unsafe roots, targets, identifiers, and bl
   assert.notEqual(escapedRoot.status, 0);
   assert.match(escapedRoot.stderr, /must not cross a symlink/u);
   assert.equal(existsSync(join(outside, "evidence")), false);
+
+  const escapedReportDirectory = join(outside, "evidence/superloopy-backend/run-external");
+  await mkdir(escapedReportDirectory, { recursive: true });
+  await writeFile(join(escapedReportDirectory, "backend-skill-report.md"), "external report\n", "utf8");
+  await chmod(join(escapedReportDirectory, "backend-skill-report.md"), 0o444);
+  await chmod(escapedReportDirectory, 0o555);
+  await chmod(dirname(escapedReportDirectory), 0o555);
+  const escapedRecovery = spawnSync(process.execPath, [
+    helper, "recover", ".", ".superloopy/evidence", "run-external",
+  ], { cwd: sandbox, encoding: "utf8" });
+  assert.notEqual(escapedRecovery.status, 0);
+  assert.match(escapedRecovery.stderr, /symlink|outside|confined|project/iu);
 
   await rm(join(sandbox, ".superloopy"));
   const reportDir = join(

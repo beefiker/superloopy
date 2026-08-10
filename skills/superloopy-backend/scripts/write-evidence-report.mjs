@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { constants, realpathSync, statSync } from "node:fs";
+import { constants, readFileSync, realpathSync, statSync } from "node:fs";
 import { open } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +10,7 @@ import { evidenceRelativeDir, scopeFromSessionId } from "../../../src/store.js";
 
 const PORTABLE_REPORT_ID = /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/u;
 const WINDOWS_RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/iu;
+const REPORT_BINDING_PREFIX = "<!-- superloopy-backend-report-id: ";
 
 export function validateReportId(value) {
   if (
@@ -45,7 +46,7 @@ export async function writeBackendEvidenceReport({ projectRoot, evidenceRoot, re
   }
   const path = `${resolvedRoot.root}/superloopy-backend/${safeReportId}/backend-skill-report.md`;
   const artifact = resolveEvidenceOutputPath(workspaceRoot, path, resolvedRoot.scope);
-  await writeEvidenceOutputFileExclusive(artifact, content, "utf8");
+  await writeEvidenceOutputFileExclusive(artifact, `${REPORT_BINDING_PREFIX}${safeReportId} -->\n${content}`, "utf8");
   return artifact.relativePath;
 }
 
@@ -56,6 +57,7 @@ export async function recoverBackendEvidenceReport({ projectRoot, evidenceRoot, 
   const safeReportId = validateReportId(reportId);
   const path = `${resolvedRoot.root}/superloopy-backend/${safeReportId}/backend-skill-report.md`;
   const artifact = resolveEvidenceArtifact(workspaceRoot, path, resolvedRoot.scope);
+  assertReportBinding(artifact, safeReportId);
   const artifactStat = committedArtifactStat(artifact);
   const publishedDirectory = dirname(artifact.absolutePath);
   const directoryStat = committedDirectoryStat(publishedDirectory);
@@ -64,6 +66,7 @@ export async function recoverBackendEvidenceReport({ projectRoot, evidenceRoot, 
   await syncCommittedDirectory(publishedDirectory);
   await syncCommittedDirectory(publicationRoot);
   const verified = resolveEvidenceArtifact(workspaceRoot, path, resolvedRoot.scope);
+  assertReportBinding(verified, safeReportId);
   const verifiedArtifactStat = committedArtifactStat(verified);
   const verifiedDirectoryStat = committedDirectoryStat(dirname(verified.absolutePath));
   const verifiedPublicationRootStat = committedDirectoryStat(dirname(dirname(verified.absolutePath)));
@@ -71,6 +74,12 @@ export async function recoverBackendEvidenceReport({ projectRoot, evidenceRoot, 
     throw new Error("existing backend evidence report changed while confirming its committed state");
   }
   return verified.relativePath;
+}
+
+function assertReportBinding(artifact, reportId) {
+  if (!readFileSync(artifact.absolutePath, "utf8").startsWith(`${REPORT_BINDING_PREFIX}${reportId} -->\n`)) {
+    throw new Error("existing backend evidence report does not match its qualified report id binding");
+  }
 }
 
 function committedArtifactStat(artifact) {
