@@ -181,7 +181,9 @@ test("backend evidence helper writes distinct reports through the active evidenc
   );
   assert.equal(await readFile(join(sandbox, firstPath), "utf8"), "# Backend report\n\nworker: franky\n");
   const firstDirectory = join(sandbox, ".superloopy/evidence/superloopy-backend/goal-g001-criterion-c001-worker-franky");
-  assert.equal(statSync(firstDirectory).mode & 0o222, 0, "published report directory must be read-only");
+  if (process.platform !== "win32") {
+    assert.equal(statSync(firstDirectory).mode & 0o222, 0, "published report directory must be read-only");
+  }
 
   const recovered = spawnSync(process.execPath, [
     helper,
@@ -193,41 +195,43 @@ test("backend evidence helper writes distinct reports through the active evidenc
   assert.equal(recovered.status, 0, recovered.stderr);
   assert.equal(recovered.stdout.trim(), firstPath);
 
-  await chmod(firstDirectory, 0o755);
-  const writableDirectoryRecovery = spawnSync(process.execPath, [
-    helper,
-    "recover",
-    ".",
-    ".superloopy/evidence",
-    "goal-g001-criterion-c001-worker-franky",
-  ], { cwd: sandbox, encoding: "utf8" });
-  assert.notEqual(writableDirectoryRecovery.status, 0);
-  assert.match(writableDirectoryRecovery.stderr, /committed|directory|writable/iu);
-  await chmod(firstDirectory, 0o555);
+  if (process.platform !== "win32") {
+    await chmod(firstDirectory, 0o755);
+    const writableDirectoryRecovery = spawnSync(process.execPath, [
+      helper,
+      "recover",
+      ".",
+      ".superloopy/evidence",
+      "goal-g001-criterion-c001-worker-franky",
+    ], { cwd: sandbox, encoding: "utf8" });
+    assert.notEqual(writableDirectoryRecovery.status, 0);
+    assert.match(writableDirectoryRecovery.stderr, /committed|directory|writable/iu);
+    await chmod(firstDirectory, 0o555);
 
-  const probe = await open(join(sandbox, "recovery-directory-sync-probe"), "wx");
-  const fileHandlePrototype = Object.getPrototypeOf(probe);
-  await probe.close();
-  const originalSync = fileHandlePrototype.sync;
-  let recoveryDirectorySyncs = 0;
-  fileHandlePrototype.sync = async function trackRecoveryDirectorySync() {
-    if ((await this.stat()).isDirectory()) recoveryDirectorySyncs += 1;
-    return originalSync.call(this);
-  };
-  try {
-    const helperModule = await import(pathToFileURL(helper));
-    assert.equal(
-      await helperModule.recoverBackendEvidenceReport({
-        projectRoot: sandbox,
-        evidenceRoot: ".superloopy/evidence",
-        reportId: "goal-g001-criterion-c001-worker-franky",
-      }),
-      firstPath,
-    );
-  } finally {
-    fileHandlePrototype.sync = originalSync;
+    const probe = await open(join(sandbox, "recovery-directory-sync-probe"), "wx");
+    const fileHandlePrototype = Object.getPrototypeOf(probe);
+    await probe.close();
+    const originalSync = fileHandlePrototype.sync;
+    let recoveryDirectorySyncs = 0;
+    fileHandlePrototype.sync = async function trackRecoveryDirectorySync() {
+      if ((await this.stat()).isDirectory()) recoveryDirectorySyncs += 1;
+      return originalSync.call(this);
+    };
+    try {
+      const helperModule = await import(pathToFileURL(helper));
+      assert.equal(
+        await helperModule.recoverBackendEvidenceReport({
+          projectRoot: sandbox,
+          evidenceRoot: ".superloopy/evidence",
+          reportId: "goal-g001-criterion-c001-worker-franky",
+        }),
+        firstPath,
+      );
+    } finally {
+      fileHandlePrototype.sync = originalSync;
+    }
+    assert.equal(recoveryDirectorySyncs, 1, "recovery must sync the directory containing the published report directory");
   }
-  assert.equal(recoveryDirectorySyncs, 1, "recovery must sync the directory containing the published report directory");
 
   const incompleteAnchor = join(sandbox, ".incomplete-report.scrub");
   await link(join(sandbox, firstPath), incompleteAnchor);
