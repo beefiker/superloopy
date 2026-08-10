@@ -268,9 +268,9 @@ async function writeOpenedExclusiveFile(artifact, content, options, signal, asse
     throw error;
   }
 
-  const openedStat = await handle.stat({ bigint: true });
-  let completed = false;
+  let openedStat, completed = false;
   try {
+    openedStat = await handle.stat({ bigint: true });
     assertOpenedTargetConfined(artifact, openedStat);
     await handle.writeFile(content, writeOptionsWithSignal(options, signal));
     await handle.sync();
@@ -281,7 +281,7 @@ async function writeOpenedExclusiveFile(artifact, content, options, signal, asse
     if (!completed) {
       await scrubOpenedFile(handle);
       await handle.close();
-      await removeOpenedTargetIfStillConfined(artifact, openedStat);
+      if (openedStat) await removeOpenedTargetIfStillConfined(artifact, openedStat);
     }
   }
 }

@@ -416,6 +416,44 @@ test("a staging-directory sync failure closes the opened report before rollback"
   assert.equal(await readFile(output.absolutePath, "utf8"), "retry after staging sync failure\n");
 });
 
+test("an initial report stat failure closes the opened report before rollback", async () => {
+  const repo = await tempRepo();
+  const publishRoot = join(repo, ".superloopy", "evidence", "superloopy-backend");
+  await mkdir(publishRoot, { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-stat-failure/backend-skill-report.md",
+    undefined,
+  );
+  const probe = await open(join(repo, "file-handle-stat-probe"), "wx");
+  const fileHandlePrototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  const originalStat = fileHandlePrototype.stat;
+  let reportHandle;
+  fileHandlePrototype.stat = async function failInitialReportStat(options) {
+    const result = await originalStat.call(this, options);
+    if (!reportHandle && result.isFile()) {
+      reportHandle = this;
+      throw Object.assign(new Error("injected initial report stat failure"), { code: "EIO" });
+    }
+    return result;
+  };
+
+  try {
+    await assert.rejects(
+      writeEvidenceOutputFileExclusive(output, "report whose initial stat fails\n"),
+      /initial report stat failure/u,
+    );
+  } finally {
+    fileHandlePrototype.stat = originalStat;
+  }
+  assert.equal(reportHandle.fd, -1);
+  assert.equal(existsSync(output.absolutePath), false);
+  assert.equal(readdirSync(publishRoot).some((name) => name.startsWith(".run-stat-failure.")), false);
+  await writeEvidenceOutputFileExclusive(output, "retry after initial stat failure\n");
+  assert.equal(await readFile(output.absolutePath, "utf8"), "retry after initial stat failure\n");
+});
+
 test("SECURITY: synchronously moving staging immediately before write leaves no report content outside", async (t) => {
   if (process.platform === "win32") return t.skip("moving an open directory is rejected by Windows");
   const repo = await tempRepo();
