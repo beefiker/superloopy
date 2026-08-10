@@ -163,7 +163,6 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
     if (process.platform === "win32") {
       await chmod(stageDirectory, 0o777 & ~process.umask());
     } else {
-      await stageDirectoryHandle.chmod(0o777 & ~process.umask());
       await openedFile.handle.chmod(0o444);
       await openedFile.handle.sync();
     }
@@ -190,12 +189,17 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
       }
       throw error;
     }
-    if (process.platform === "win32") await chmod(artifact.absolutePath, 0o444);
+    if (process.platform !== "win32") {
+      await stageDirectoryHandle.chmod(0o555);
+      await syncDirectoryHandle(stageDirectoryHandle);
+    }
+    if (process.platform === "win32") await chmodAnchorIfSame(scrubAnchor, openedFile.openedStat, 0o444);
     await syncDirectoryHandle(publishRootHandle);
     assertOpenedTargetConfined(artifact, openedFile.openedStat);
     if (scrubAnchor) {
       await rm(scrubAnchor);
       scrubAnchor = undefined;
+      await syncDirectoryHandle(publishRootHandle);
     }
     published = true;
   } finally {
@@ -204,6 +208,7 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
       await scrubAnchorIfSame(scrubPath, openedFile.openedStat);
     }
     await openedFile?.handle?.close().catch(() => {});
+    if (!published && process.platform !== "win32") await stageDirectoryHandle?.chmod(0o700).catch(() => {});
     await stageDirectoryHandle?.close().catch(() => {});
     if (!published && stageDirectoryStat) {
       await removeStageDirectoryIfStillConfined(artifact, finalDirectory, stageDirectoryStat);
@@ -265,6 +270,22 @@ async function scrubAnchorIfSame(path, openedStat) {
     await scrubOpenedFile(handle);
   } catch {
     // Preserve the publication failure; never follow or scrub a replacement anchor.
+  } finally {
+    await handle?.close().catch(() => {});
+  }
+}
+
+async function chmodAnchorIfSame(path, openedStat, mode) {
+  let handle;
+  try {
+    const flags = constants.O_WRONLY | (constants.O_NOFOLLOW ?? 0);
+    handle = await open(path, flags);
+    const anchorStat = await handle.stat({ bigint: true });
+    if (!sameFile(openedStat, anchorStat) || !anchorStat.isFile()) {
+      throw new Error("Evidence artifact scrub anchor changed during exclusive creation.");
+    }
+    await handle.chmod(mode);
+    await handle.sync();
   } finally {
     await handle?.close().catch(() => {});
   }

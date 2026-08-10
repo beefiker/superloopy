@@ -269,7 +269,7 @@ test("exclusive evidence output stays unpublished until its durable write comple
       "POSIX final permissions must be applied through the verified directory handle",
     );
     if (process.platform !== "win32") {
-      assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", "run-one")).mode & 0o777, 0o777 & ~process.umask());
+      assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", "run-one")).mode & 0o222, 0, "published report directory must be read-only");
       assert.equal(statSync(output.absolutePath).mode & 0o222, 0, "published report must be read-only");
     }
   } finally {
@@ -328,8 +328,10 @@ test("Windows exclusive publication retains its scrub anchor through commit chec
   const fileHandlePrototype = Object.getPrototypeOf(probe);
   await probe.close();
   const originalSync = fileHandlePrototype.sync;
+  const originalChmod = fileHandlePrototype.chmod;
   const platformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
   let directorySyncs = 0;
+  let fileHandleChmods = 0;
   fileHandlePrototype.sync = async function inspectFinalPublishSync() {
     if ((await this.stat()).isDirectory() && ++directorySyncs === 4) {
       assert.equal(
@@ -337,8 +339,18 @@ test("Windows exclusive publication retains its scrub anchor through commit chec
         true,
         "the pinned scrub link must survive until the final publish-root sync",
       );
+    } else if (directorySyncs === 5) {
+      assert.equal(
+        readdirSync(publishRoot).some((name) => name.endsWith(".scrub")),
+        false,
+        "scrub-link removal must be followed by a publish-root sync",
+      );
     }
     return originalSync.call(this);
+  };
+  fileHandlePrototype.chmod = async function trackPinnedFileChmod(mode) {
+    if (!(await this.stat()).isDirectory()) fileHandleChmods += 1;
+    return originalChmod.call(this, mode);
   };
   Object.defineProperty(process, "platform", { ...platformDescriptor, value: "win32" });
 
@@ -346,9 +358,11 @@ test("Windows exclusive publication retains its scrub anchor through commit chec
     await writeEvidenceOutputFileExclusive(output, "Windows anchor report\n");
   } finally {
     fileHandlePrototype.sync = originalSync;
+    fileHandlePrototype.chmod = originalChmod;
     Object.defineProperty(process, "platform", platformDescriptor);
   }
-  assert.equal(directorySyncs, 4);
+  assert.equal(directorySyncs, 5);
+  assert.equal(fileHandleChmods, 1, "Windows report mode must be changed through the verified scrub-anchor handle");
   assert.equal(readdirSync(publishRoot).some((name) => name.endsWith(".scrub")), false);
   assert.equal(await readFile(output.absolutePath, "utf8"), "Windows anchor report\n");
 });

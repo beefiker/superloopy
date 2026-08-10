@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-import { realpathSync, statSync } from "node:fs";
-import { resolve } from "node:path";
+import { constants, realpathSync, statSync } from "node:fs";
+import { open } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { resolveEvidenceArtifact, resolveEvidenceOutputPath, writeEvidenceOutputFileExclusive } from "../../../src/artifacts.js";
@@ -48,18 +49,58 @@ export async function writeBackendEvidenceReport({ projectRoot, evidenceRoot, re
   return artifact.relativePath;
 }
 
-export function recoverBackendEvidenceReport({ projectRoot, evidenceRoot, reportId }) {
+export async function recoverBackendEvidenceReport({ projectRoot, evidenceRoot, reportId }) {
   const workspaceRoot = realpathSync(resolve(projectRoot));
   if (!statSync(workspaceRoot).isDirectory()) throw new Error("project root must be an existing directory");
   const resolvedRoot = scopeForEvidenceRoot(evidenceRoot);
   const safeReportId = validateReportId(reportId);
   const path = `${resolvedRoot.root}/superloopy-backend/${safeReportId}/backend-skill-report.md`;
   const artifact = resolveEvidenceArtifact(workspaceRoot, path, resolvedRoot.scope);
-  const artifactStat = statSync(artifact.absolutePath);
-  if (artifactStat.nlink !== 1 || (artifactStat.mode & 0o222) !== 0) {
+  const artifactStat = committedArtifactStat(artifact);
+  const publishedDirectory = dirname(artifact.absolutePath);
+  const directoryStat = committedDirectoryStat(publishedDirectory);
+  await syncPublishedDirectoryParent(dirname(publishedDirectory));
+  const verified = resolveEvidenceArtifact(workspaceRoot, path, resolvedRoot.scope);
+  const verifiedArtifactStat = committedArtifactStat(verified);
+  const verifiedDirectoryStat = committedDirectoryStat(dirname(verified.absolutePath));
+  if (!sameFile(artifactStat, verifiedArtifactStat) || !sameFile(directoryStat, verifiedDirectoryStat)) {
+    throw new Error("existing backend evidence report changed while confirming its committed state");
+  }
+  return verified.relativePath;
+}
+
+function committedArtifactStat(artifact) {
+  const stat = statSync(artifact.absolutePath, { bigint: true });
+  if (stat.nlink !== 1n || (stat.mode & 0o222n) !== 0n) {
     throw new Error("existing backend evidence report is not fully committed: expected one read-only file link");
   }
-  return artifact.relativePath;
+  return stat;
+}
+
+function committedDirectoryStat(path) {
+  const stat = statSync(path, { bigint: true });
+  if (!stat.isDirectory() || (process.platform !== "win32" && (stat.mode & 0o222n) !== 0n)) {
+    throw new Error("existing backend evidence report is not fully committed: expected a read-only report directory");
+  }
+  return stat;
+}
+
+async function syncPublishedDirectoryParent(path) {
+  let handle;
+  try {
+    handle = await open(path, constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0));
+    await handle.sync();
+  } catch (error) {
+    if (process.platform !== "win32" || !["EACCES", "EBADF", "EINVAL", "EISDIR", "ENOTSUP", "EPERM"].includes(error?.code)) {
+      throw error;
+    }
+  } finally {
+    await handle?.close().catch(() => {});
+  }
+}
+
+function sameFile(left, right) {
+  return left.dev === right.dev && left.ino === right.ino;
 }
 
 async function readStandardInput() {
@@ -76,7 +117,7 @@ async function main(argv) {
   }
   const path = command === "write"
     ? await writeBackendEvidenceReport({ projectRoot, evidenceRoot, reportId, content: await readStandardInput() })
-    : recoverBackendEvidenceReport({ projectRoot, evidenceRoot, reportId });
+    : await recoverBackendEvidenceReport({ projectRoot, evidenceRoot, reportId });
   process.stdout.write(`${path}\n`);
 }
 

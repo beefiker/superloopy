@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { chmod, link, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, link, mkdir, mkdtemp, open, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 const root = "skills/superloopy-backend";
@@ -17,6 +18,14 @@ const referenceNames = [
 
 async function read(path) {
   return (await readFile(path, "utf8")).replace(/\r\n?/gu, "\n");
+}
+
+async function removePublishedTestTree(path) {
+  await chmod(path, 0o700).catch(() => {});
+  for (const entry of await readdir(path, { withFileTypes: true }).catch(() => [])) {
+    if (entry.isDirectory()) await removePublishedTestTree(join(path, entry.name));
+  }
+  await rm(path, { recursive: true, force: true });
 }
 
 test("backend skill routes a stack-neutral, bounded database workflow", async () => {
@@ -151,7 +160,7 @@ test("backend evidence helper writes distinct reports through the active evidenc
   const repoRoot = process.cwd();
   const helper = join(repoRoot, root, "scripts/write-evidence-report.mjs");
   const sandbox = await mkdtemp(join(tmpdir(), "superloopy-backend-evidence-"));
-  t.after(() => rm(sandbox, { recursive: true, force: true }));
+  t.after(() => removePublishedTestTree(sandbox));
 
   const first = spawnSync(process.execPath, [
     helper,
@@ -171,6 +180,8 @@ test("backend evidence helper writes distinct reports through the active evidenc
     ".superloopy/evidence/superloopy-backend/goal-g001-criterion-c001-worker-franky/backend-skill-report.md",
   );
   assert.equal(await readFile(join(sandbox, firstPath), "utf8"), "# Backend report\n\nworker: franky\n");
+  const firstDirectory = join(sandbox, ".superloopy/evidence/superloopy-backend/goal-g001-criterion-c001-worker-franky");
+  assert.equal(statSync(firstDirectory).mode & 0o222, 0, "published report directory must be read-only");
 
   const recovered = spawnSync(process.execPath, [
     helper,
@@ -181,6 +192,42 @@ test("backend evidence helper writes distinct reports through the active evidenc
   ], { cwd: sandbox, encoding: "utf8" });
   assert.equal(recovered.status, 0, recovered.stderr);
   assert.equal(recovered.stdout.trim(), firstPath);
+
+  await chmod(firstDirectory, 0o755);
+  const writableDirectoryRecovery = spawnSync(process.execPath, [
+    helper,
+    "recover",
+    ".",
+    ".superloopy/evidence",
+    "goal-g001-criterion-c001-worker-franky",
+  ], { cwd: sandbox, encoding: "utf8" });
+  assert.notEqual(writableDirectoryRecovery.status, 0);
+  assert.match(writableDirectoryRecovery.stderr, /committed|directory|writable/iu);
+  await chmod(firstDirectory, 0o555);
+
+  const probe = await open(join(sandbox, "recovery-directory-sync-probe"), "wx");
+  const fileHandlePrototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  const originalSync = fileHandlePrototype.sync;
+  let recoveryDirectorySyncs = 0;
+  fileHandlePrototype.sync = async function trackRecoveryDirectorySync() {
+    if ((await this.stat()).isDirectory()) recoveryDirectorySyncs += 1;
+    return originalSync.call(this);
+  };
+  try {
+    const helperModule = await import(pathToFileURL(helper));
+    assert.equal(
+      await helperModule.recoverBackendEvidenceReport({
+        projectRoot: sandbox,
+        evidenceRoot: ".superloopy/evidence",
+        reportId: "goal-g001-criterion-c001-worker-franky",
+      }),
+      firstPath,
+    );
+  } finally {
+    fileHandlePrototype.sync = originalSync;
+  }
+  assert.equal(recoveryDirectorySyncs, 1, "recovery must sync the directory containing the published report directory");
 
   const incompleteAnchor = join(sandbox, ".incomplete-report.scrub");
   await link(join(sandbox, firstPath), incompleteAnchor);
@@ -277,7 +324,7 @@ test("backend evidence helper writes distinct reports through the active evidenc
   );
 
   const enclosingGit = await mkdtemp(join(tmpdir(), "superloopy-backend-enclosing-git-"));
-  t.after(() => rm(enclosingGit, { recursive: true, force: true }));
+  t.after(() => removePublishedTestTree(enclosingGit));
   const initialized = spawnSync("git", ["init", "-q", enclosingGit], { encoding: "utf8" });
   assert.equal(initialized.status, 0, initialized.stderr);
   const freshProject = join(enclosingGit, "nested-non-git-project");
