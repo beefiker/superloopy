@@ -1,5 +1,5 @@
 import { constants, existsSync, lstatSync, readFileSync, realpathSync, statSync, watch } from "node:fs";
-import { chmod, mkdir, open, rename, rm } from "node:fs/promises";
+import { chmod, link, mkdir, open, rename, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { validateAuditSection } from "./audit-verdict.js";
 import { isMatrixQualityGate, validateMatrixQualityGate } from "./matrix-gate.js";
@@ -128,13 +128,15 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
   );
   let stageDirectoryHandle;
   let stageDirectoryStat;
+  let stagedArtifact;
   let openedFile;
+  let scrubAnchor;
   let published = false;
   try {
     await mkdir(stageDirectory, { mode: 0o700 });
     stageDirectoryStat = lstatSync(stageDirectory, { bigint: true });
     stageDirectoryHandle = await openConfinedDirectory(artifact, stageDirectory, stageDirectoryStat);
-    const stagedArtifact = {
+    stagedArtifact = {
       ...artifact,
       absolutePath: join(stageDirectory, basename(artifact.absolutePath)),
     };
@@ -154,6 +156,13 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
     await chmod(stageDirectory, 0o777 & ~process.umask());
     assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
     if (process.platform === "win32") {
+      scrubAnchor = `${stageDirectory}.scrub`;
+      await link(stagedArtifact.absolutePath, scrubAnchor);
+      const anchorStat = lstatSync(scrubAnchor, { bigint: true });
+      if (!sameFile(openedFile.openedStat, anchorStat) || !anchorStat.isFile()) {
+        throw new Error(`Evidence artifact scrub anchor changed during exclusive creation: ${artifact.relativePath}`);
+      }
+      await syncDirectoryHandle(publishRootHandle);
       await openedFile.handle.close();
       openedFile.handle = null;
       assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
@@ -171,13 +180,20 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
     published = true;
   } finally {
     if (!published && openedFile?.handle) await scrubOpenedFile(openedFile.handle);
+    if (!published && !openedFile?.handle && scrubAnchor && openedFile) {
+      await scrubAnchorIfSame(scrubAnchor, openedFile.openedStat);
+    }
     await openedFile?.handle?.close().catch(() => {});
     await stageDirectoryHandle?.close().catch(() => {});
-    await publishRootHandle.close().catch(() => {});
     if (!published && stageDirectoryStat) {
       await removeStageDirectoryIfStillConfined(artifact, finalDirectory, stageDirectoryStat);
       await removeStageDirectoryIfStillConfined(artifact, stageDirectory, stageDirectoryStat);
     }
+    if (scrubAnchor) {
+      await rm(scrubAnchor, { force: true }).catch(() => {});
+      if (published) await syncDirectoryHandle(publishRootHandle).catch(() => {});
+    }
+    await publishRootHandle.close().catch(() => {});
   }
 }
 
@@ -217,6 +233,21 @@ async function scrubOpenedFile(handle) {
     await handle.sync();
   } catch {
     // Preserve the original failure; the same writable descriptor gets the safest cleanup available.
+  }
+}
+
+async function scrubAnchorIfSame(path, openedStat) {
+  let handle;
+  try {
+    const flags = constants.O_WRONLY | (constants.O_NOFOLLOW ?? 0);
+    handle = await open(path, flags);
+    const anchorStat = await handle.stat({ bigint: true });
+    if (!sameFile(openedStat, anchorStat) || !anchorStat.isFile()) return;
+    await scrubOpenedFile(handle);
+  } catch {
+    // Preserve the publication failure; never follow or scrub a replacement anchor.
+  } finally {
+    await handle?.close().catch(() => {});
   }
 }
 
