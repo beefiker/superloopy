@@ -154,7 +154,11 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
     assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
     rejectOutputTargetForWrite(artifact);
     rejectExistingPublishedDirectory(finalDirectory, artifact.relativePath);
-    await stageDirectoryHandle.chmod(0o777 & ~process.umask());
+    if (process.platform === "win32") {
+      await chmod(stageDirectory, 0o777 & ~process.umask());
+    } else {
+      await stageDirectoryHandle.chmod(0o777 & ~process.umask());
+    }
     assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
     if (process.platform === "win32") {
       scrubAnchor = `${stageDirectory}.scrub`;

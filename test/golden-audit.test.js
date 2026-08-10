@@ -263,7 +263,11 @@ test("exclusive evidence output stays unpublished until its durable write comple
     assert.equal(publishedBeforeWrite, false);
     assert.equal(await readFile(output.absolutePath, "utf8"), "durable report\n");
     assert.ok(directorySyncs >= 2, "staging and publish directories must both be synced");
-    assert.equal(directoryChmods, 1, "final permissions must be applied through the verified directory handle");
+    assert.equal(
+      directoryChmods,
+      process.platform === "win32" ? 0 : 1,
+      "POSIX final permissions must be applied through the verified directory handle",
+    );
     if (process.platform !== "win32") {
       assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", "run-one")).mode & 0o777, 0o777 & ~process.umask());
     }
