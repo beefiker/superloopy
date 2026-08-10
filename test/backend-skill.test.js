@@ -45,7 +45,10 @@ test("backend skill routes a stack-neutral, bounded database workflow", async ()
   assert.match(skill, /standalone.*evidence/isu);
   assert.match(skill, /qualified.*report id|report id.*qualified/isu);
   assert.match(skill, /write-evidence-report\.mjs/u);
-  assert.match(skill, /write-evidence-report\.mjs.*<project-root>/su);
+  assert.match(
+    skill,
+    /write-evidence-report\.mjs" write "<project-root>" "<active-evidence-root>" "<qualified-report-id>"/su,
+  );
   assert.match(skill, /standard input/iu);
   assert.doesNotMatch(skill, /ai-db-backend-skill-20260805/u);
   assert.doesNotMatch(skill, /always use (PostgreSQL|TypeScript|Python|MongoDB)/iu);

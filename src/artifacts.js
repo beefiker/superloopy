@@ -141,8 +141,8 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
       artifact,
       stageDirectory,
       stageDirectoryStat,
-      async (signal) => {
-        const stat = await writeOpenedExclusiveFile(stagedArtifact, content, options, signal);
+      async (signal, assertGuard) => {
+        const stat = await writeOpenedExclusiveFile(stagedArtifact, content, options, signal, assertGuard);
         await syncDirectoryHandle(stageDirectoryHandle);
         return stat;
       },
@@ -170,7 +170,7 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
   }
 }
 
-async function writeOpenedExclusiveFile(artifact, content, options, signal) {
+async function writeOpenedExclusiveFile(artifact, content, options, signal, assertGuard) {
   const flags = constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0);
   let handle;
   try {
@@ -188,11 +188,22 @@ async function writeOpenedExclusiveFile(artifact, content, options, signal) {
     assertOpenedTargetConfined(artifact, openedStat);
     await handle.writeFile(content, writeOptionsWithSignal(options, signal));
     await handle.sync();
+    assertGuard();
     completed = true;
     return openedStat;
   } finally {
+    if (!completed) await scrubOpenedFile(handle);
     await handle.close();
     if (!completed) await removeOpenedTargetIfStillConfined(artifact, openedStat);
+  }
+}
+
+async function scrubOpenedFile(handle) {
+  try {
+    await handle.truncate(0);
+    await handle.sync();
+  } catch {
+    // Preserve the original failure; the same writable descriptor gets the safest cleanup available.
   }
 }
 
@@ -233,26 +244,32 @@ async function guardDirectoryIdentityDuringWrite(artifact, path, expectedStat, o
       controller.abort(error);
     }
   };
-  const watcher = watch(dirname(path), { persistent: false }, verify);
-  watcher.on("error", (error) => {
-    if (!guardError) {
-      guardError = error;
-      controller.abort(error);
-    }
-  });
+  let watcher;
+  try {
+    watcher = watch(dirname(path), { persistent: false }, verify);
+    watcher.on("error", () => {
+      watcher?.close();
+      watcher = undefined;
+    });
+  } catch {
+    // Polling below remains the portable identity guard when watching is unavailable.
+  }
   const timer = setInterval(verify, 5);
   timer.unref();
-  try {
-    const result = await operation(controller.signal);
+  const assertGuard = () => {
     verify();
     if (guardError) throw guardError;
+  };
+  try {
+    const result = await operation(controller.signal, assertGuard);
+    assertGuard();
     return result;
   } catch (error) {
     if (guardError) throw guardError;
     throw error;
   } finally {
     clearInterval(timer);
-    watcher.close();
+    watcher?.close();
   }
 }
 

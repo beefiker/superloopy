@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import "./helpers/trust-isolate.js";
-import { existsSync } from "node:fs";
-import { mkdtemp, mkdir, open, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { existsSync, readdirSync, renameSync } from "node:fs";
+import { mkdtemp, mkdir, open, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -260,7 +260,7 @@ test("exclusive evidence output stays unpublished until its durable write comple
   }
 });
 
-test("SECURITY: moving the private staging directory aborts before report content escapes", async (t) => {
+test("SECURITY: synchronously moving staging immediately before write leaves no report content outside", async (t) => {
   if (process.platform === "win32") return t.skip("moving an open directory is rejected by Windows");
   const repo = await tempRepo();
   const outside = await mkdtemp(join(tmpdir(), "superloopy-exclusive-outside-"));
@@ -277,35 +277,26 @@ test("SECURITY: moving the private staging directory aborts before report conten
   const fileHandlePrototype = Object.getPrototypeOf(probe);
   await probe.close();
   const originalWriteFile = fileHandlePrototype.writeFile;
-  let signalEntered;
-  let releaseWrite;
-  const entered = new Promise((resolve) => { signalEntered = resolve; });
-  const released = new Promise((resolve) => { releaseWrite = resolve; });
-  fileHandlePrototype.writeFile = async function delayedWriteFile(data, options) {
+  let movedDirectory;
+  fileHandlePrototype.writeFile = function moveThenWrite(data, options) {
     if (data === "confined report\n") {
-      signalEntered();
-      await released;
+      const [stageName] = readdirSync(publishRoot).filter((name) => name.startsWith(".run-moved."));
+      assert.ok(stageName, "private staging directory must exist immediately before the write");
+      movedDirectory = join(outside, stageName);
+      renameSync(join(publishRoot, stageName), movedDirectory);
     }
     return originalWriteFile.call(this, data, options);
   };
 
-  let writing;
   try {
-    writing = writeEvidenceOutputFileExclusive(output, "confined report\n");
-    await entered;
-    const [stageName] = (await readdir(publishRoot)).filter((name) => name.startsWith(".run-moved."));
-    assert.ok(stageName, "private staging directory must exist while the write is paused");
-    const movedDirectory = join(outside, stageName);
-    await rename(join(publishRoot, stageName), movedDirectory);
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    releaseWrite();
-    await assert.rejects(writing, /directory.*(?:changed|confined)/iu);
+    await assert.rejects(
+      writeEvidenceOutputFileExclusive(output, "confined report\n"),
+      /directory.*(?:changed|confined)/iu,
+    );
     const escapedReport = join(movedDirectory, "backend-skill-report.md");
     assert.notEqual(existsSync(escapedReport) ? await readFile(escapedReport, "utf8") : "", "confined report\n");
     assert.equal(existsSync(output.absolutePath), false);
   } finally {
-    releaseWrite?.();
-    await writing?.catch(() => {});
     fileHandlePrototype.writeFile = originalWriteFile;
   }
 });
