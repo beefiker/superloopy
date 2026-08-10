@@ -88,7 +88,7 @@ test("plugin interface assets resolve inside the npm package", async () => {
     "skills/say-it-straight/references/upstream-notice.md",
     "skills/say-it-straight/scripts/audit-output.mjs",
     ...["SKILL.md", "agents/openai.yaml"].map((name) => `skills/superloopy-backend/${name}`),
-    ...["architecture", "data-safety", "runtime-agents", "testing-and-operations", "upstream-notice"].map((name) => `skills/superloopy-backend/references/${name}.md`)
+    ...["architecture", "data-safety", "runtime-agents", "testing-and-operations", "upstream-notice"].map((name) => `skills/superloopy-backend/references/${name}.md`), "skills/superloopy-backend/scripts/write-evidence-report.mjs"
   ]) {
     assert.equal(files.has(path), true, `skill package file missing from npm pack: ${path}`);
   }
