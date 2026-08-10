@@ -225,7 +225,9 @@ test("exclusive evidence output stays unpublished until its durable write comple
   await rm(probePath);
   const originalWriteFile = fileHandlePrototype.writeFile;
   const originalSync = fileHandlePrototype.sync;
+  const originalChmod = fileHandlePrototype.chmod;
   let directorySyncs = 0;
+  let directoryChmods = 0;
   let signalEntered;
   let releaseWrite;
   const entered = new Promise((resolve) => { signalEntered = resolve; });
@@ -240,6 +242,10 @@ test("exclusive evidence output stays unpublished until its durable write comple
   fileHandlePrototype.sync = async function trackedSync() {
     if ((await this.stat()).isDirectory()) directorySyncs += 1;
     return originalSync.call(this);
+  };
+  fileHandlePrototype.chmod = async function trackedChmod(mode) {
+    if ((await this.stat()).isDirectory()) directoryChmods += 1;
+    return originalChmod.call(this, mode);
   };
 
   let writing;
@@ -257,6 +263,7 @@ test("exclusive evidence output stays unpublished until its durable write comple
     assert.equal(publishedBeforeWrite, false);
     assert.equal(await readFile(output.absolutePath, "utf8"), "durable report\n");
     assert.ok(directorySyncs >= 2, "staging and publish directories must both be synced");
+    assert.equal(directoryChmods, 1, "final permissions must be applied through the verified directory handle");
     if (process.platform !== "win32") {
       assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", "run-one")).mode & 0o777, 0o777 & ~process.umask());
     }
@@ -265,6 +272,7 @@ test("exclusive evidence output stays unpublished until its durable write comple
     await writing?.catch(() => {});
     fileHandlePrototype.writeFile = originalWriteFile;
     fileHandlePrototype.sync = originalSync;
+    fileHandlePrototype.chmod = originalChmod;
   }
 });
 

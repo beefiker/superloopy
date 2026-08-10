@@ -131,6 +131,7 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
   let stagedArtifact;
   let openedFile;
   let scrubAnchor;
+  let scrubPath;
   let published = false;
   try {
     await mkdir(stageDirectory, { mode: 0o700 });
@@ -153,10 +154,11 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
     assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
     rejectOutputTargetForWrite(artifact);
     rejectExistingPublishedDirectory(finalDirectory, artifact.relativePath);
-    await chmod(stageDirectory, 0o777 & ~process.umask());
+    await stageDirectoryHandle.chmod(0o777 & ~process.umask());
     assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
     if (process.platform === "win32") {
       scrubAnchor = `${stageDirectory}.scrub`;
+      scrubPath = scrubAnchor;
       await link(stagedArtifact.absolutePath, scrubAnchor);
       const anchorStat = lstatSync(scrubAnchor, { bigint: true });
       if (!sameFile(openedFile.openedStat, anchorStat) || !anchorStat.isFile()) {
@@ -175,13 +177,18 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
       }
       throw error;
     }
+    if (scrubAnchor) {
+      scrubPath = artifact.absolutePath;
+      await rm(scrubAnchor);
+      scrubAnchor = undefined;
+    }
     await syncDirectoryHandle(publishRootHandle);
     assertOpenedTargetConfined(artifact, openedFile.openedStat);
     published = true;
   } finally {
     if (!published && openedFile?.handle) await scrubOpenedFile(openedFile.handle);
-    if (!published && !openedFile?.handle && scrubAnchor && openedFile) {
-      await scrubAnchorIfSame(scrubAnchor, openedFile.openedStat);
+    if (!published && !openedFile?.handle && scrubPath && openedFile) {
+      await scrubAnchorIfSame(scrubPath, openedFile.openedStat);
     }
     await openedFile?.handle?.close().catch(() => {});
     await stageDirectoryHandle?.close().catch(() => {});
@@ -191,7 +198,6 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
     }
     if (scrubAnchor) {
       await rm(scrubAnchor, { force: true }).catch(() => {});
-      if (published) await syncDirectoryHandle(publishRootHandle).catch(() => {});
     }
     await publishRootHandle.close().catch(() => {});
   }
@@ -260,7 +266,7 @@ async function openConfinedDirectory(artifact, path, expectedStat = undefined) {
     if (process.platform !== "win32" || !["EACCES", "EISDIR", "EPERM"].includes(error?.code)) throw error;
     const pathStat = expectedStat ?? lstatSync(path, { bigint: true });
     assertDirectoryConfined(artifact, path, pathStat);
-    return { close: async () => {}, sync: async () => {} };
+    return { chmod: async (mode) => chmod(path, mode), close: async () => {}, sync: async () => {} };
   }
   try {
     const openedStat = await handle.stat({ bigint: true });
