@@ -3,10 +3,11 @@
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { resolveEvidenceOutputPath, writeEvidenceOutputFile } from "../../../src/artifacts.js";
+import { resolveEvidenceOutputPath, writeEvidenceOutputFileExclusive } from "../../../src/artifacts.js";
 import { evidenceRelativeDir, scopeFromSessionId } from "../../../src/store.js";
+import { resolveWorkspaceRoot } from "../../../src/workspace-identity.js";
 
-const PORTABLE_REPORT_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+const PORTABLE_REPORT_ID = /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/u;
 const WINDOWS_RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/iu;
 
 export function validateReportId(value) {
@@ -16,9 +17,9 @@ export function validateReportId(value) {
     || !PORTABLE_REPORT_ID.test(value)
     || WINDOWS_RESERVED.test(value)
   ) {
-    throw new Error("report id must be 1-128 lowercase ASCII letters/digits joined by single hyphens and must not be a Windows reserved name");
+    throw new Error("report id must be 1-128 ASCII letters/digits joined by single hyphens and must not be a Windows reserved name");
   }
-  return value;
+  return value.toLowerCase();
 }
 
 export function scopeForEvidenceRoot(value) {
@@ -34,14 +35,15 @@ export function scopeForEvidenceRoot(value) {
 }
 
 export async function writeBackendEvidenceReport({ cwd = process.cwd(), evidenceRoot, reportId, content }) {
+  const workspaceRoot = resolveWorkspaceRoot(cwd);
   const resolvedRoot = scopeForEvidenceRoot(evidenceRoot);
   const safeReportId = validateReportId(reportId);
   if (typeof content !== "string" || content.trim().length === 0) {
     throw new Error("backend evidence report must contain non-whitespace content");
   }
   const path = `${resolvedRoot.root}/superloopy-backend/${safeReportId}/backend-skill-report.md`;
-  const artifact = resolveEvidenceOutputPath(cwd, path, resolvedRoot.scope);
-  await writeEvidenceOutputFile(artifact, content, "utf8");
+  const artifact = resolveEvidenceOutputPath(workspaceRoot, path, resolvedRoot.scope);
+  await writeEvidenceOutputFileExclusive(artifact, content, "utf8");
   return artifact.relativePath;
 }
 

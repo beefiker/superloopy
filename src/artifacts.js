@@ -1,5 +1,5 @@
 import { existsSync, lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { mkdir, open, rename, rm } from "node:fs/promises";
+import { link, mkdir, open, rename, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { validateAuditSection } from "./audit-verdict.js";
 import { isMatrixQualityGate, validateMatrixQualityGate } from "./matrix-gate.js";
@@ -94,6 +94,14 @@ export function resolveEvidenceOutputPath(cwd, artifactPath, scope) {
 }
 
 export async function writeEvidenceOutputFile(artifact, content, options = "utf8") {
+  return writeEvidenceOutput(artifact, content, options, false);
+}
+
+export async function writeEvidenceOutputFileExclusive(artifact, content, options = "utf8") {
+  return writeEvidenceOutput(artifact, content, options, true);
+}
+
+async function writeEvidenceOutput(artifact, content, options, exclusive) {
   const dir = dirname(artifact.absolutePath);
   await mkdir(dir, { recursive: true });
   rejectOutputTargetForWrite(artifact);
@@ -105,7 +113,19 @@ export async function writeEvidenceOutputFile(artifact, content, options = "utf8
     await handle.close();
     handle = null;
     rejectOutputTargetForWrite(artifact);
-    await rename(tmpPath, artifact.absolutePath);
+    if (exclusive) {
+      try {
+        await link(tmpPath, artifact.absolutePath);
+      } catch (error) {
+        if (error?.code === "EEXIST") {
+          throw new Error(`Evidence artifact already exists: ${artifact.relativePath}`);
+        }
+        throw error;
+      }
+      await rm(tmpPath, { force: true }).catch(() => {});
+    } else {
+      await rename(tmpPath, artifact.absolutePath);
+    }
   } catch (error) {
     await rm(tmpPath, { force: true }).catch(() => {});
     throw error;

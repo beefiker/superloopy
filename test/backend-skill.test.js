@@ -167,13 +167,29 @@ test("backend evidence helper writes distinct reports through the active evidenc
   );
   assert.equal(await readFile(join(sandbox, firstPath), "utf8"), "# Backend report\n\nworker: franky\n");
 
+  const duplicate = spawnSync(process.execPath, [
+    helper,
+    "write",
+    ".superloopy/evidence",
+    "goal-g001-criterion-c001-worker-franky",
+  ], {
+    cwd: sandbox,
+    encoding: "utf8",
+    input: "# Replacement report\n",
+  });
+  assert.notEqual(duplicate.status, 0);
+  assert.match(duplicate.stderr, /already exists/iu);
+  assert.equal(await readFile(join(sandbox, firstPath), "utf8"), "# Backend report\n\nworker: franky\n");
+
+  const child = join(sandbox, "packages", "api");
+  await mkdir(child, { recursive: true });
   const second = spawnSync(process.execPath, [
     helper,
     "write",
     ".superloopy/sessions/session-1/evidence",
     "goal-g001-criterion-c001-worker-usopp",
   ], {
-    cwd: sandbox,
+    cwd: child,
     encoding: "utf8",
     input: "# Backend report\n\nworker: usopp\n",
   });
@@ -184,7 +200,24 @@ test("backend evidence helper writes distinct reports through the active evidenc
     ".superloopy/sessions/session-1/evidence/superloopy-backend/goal-g001-criterion-c001-worker-usopp/backend-skill-report.md",
   );
   assert.equal(await readFile(join(sandbox, secondPath), "utf8"), "# Backend report\n\nworker: usopp\n");
+  assert.equal(existsSync(join(child, ".superloopy")), false);
   assert.notEqual(firstPath, secondPath);
+
+  const canonicalIds = spawnSync(process.execPath, [
+    helper,
+    "write",
+    ".superloopy/evidence",
+    "goal-G002-criterion-C003-worker-Jinbe",
+  ], {
+    cwd: sandbox,
+    encoding: "utf8",
+    input: "# Backend report\n\ncanonical loop ids\n",
+  });
+  assert.equal(canonicalIds.status, 0, canonicalIds.stderr);
+  assert.equal(
+    canonicalIds.stdout.trim(),
+    ".superloopy/evidence/superloopy-backend/goal-g002-criterion-c003-worker-jinbe/backend-skill-report.md",
+  );
 });
 
 test("backend evidence helper rejects unsafe roots, targets, identifiers, and blank reports", {
