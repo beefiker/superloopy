@@ -54,7 +54,12 @@ export function recoverBackendEvidenceReport({ projectRoot, evidenceRoot, report
   const resolvedRoot = scopeForEvidenceRoot(evidenceRoot);
   const safeReportId = validateReportId(reportId);
   const path = `${resolvedRoot.root}/superloopy-backend/${safeReportId}/backend-skill-report.md`;
-  return resolveEvidenceArtifact(workspaceRoot, path, resolvedRoot.scope).relativePath;
+  const artifact = resolveEvidenceArtifact(workspaceRoot, path, resolvedRoot.scope);
+  const artifactStat = statSync(artifact.absolutePath);
+  if (artifactStat.nlink !== 1 || (artifactStat.mode & 0o222) !== 0) {
+    throw new Error("existing backend evidence report is not fully committed: expected one read-only file link");
+  }
+  return artifact.relativePath;
 }
 
 async function readStandardInput() {

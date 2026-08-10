@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, link, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -181,6 +181,31 @@ test("backend evidence helper writes distinct reports through the active evidenc
   ], { cwd: sandbox, encoding: "utf8" });
   assert.equal(recovered.status, 0, recovered.stderr);
   assert.equal(recovered.stdout.trim(), firstPath);
+
+  const incompleteAnchor = join(sandbox, ".incomplete-report.scrub");
+  await link(join(sandbox, firstPath), incompleteAnchor);
+  const linkedRecovery = spawnSync(process.execPath, [
+    helper,
+    "recover",
+    ".",
+    ".superloopy/evidence",
+    "goal-g001-criterion-c001-worker-franky",
+  ], { cwd: sandbox, encoding: "utf8" });
+  assert.notEqual(linkedRecovery.status, 0);
+  assert.match(linkedRecovery.stderr, /committed|hard link|link count/iu);
+  await rm(incompleteAnchor);
+
+  await chmod(join(sandbox, firstPath), 0o644);
+  const writableRecovery = spawnSync(process.execPath, [
+    helper,
+    "recover",
+    ".",
+    ".superloopy/evidence",
+    "goal-g001-criterion-c001-worker-franky",
+  ], { cwd: sandbox, encoding: "utf8" });
+  assert.notEqual(writableRecovery.status, 0);
+  assert.match(writableRecovery.stderr, /committed|read-only|writable/iu);
+  await chmod(join(sandbox, firstPath), 0o444);
 
   const missingRecovery = spawnSync(process.execPath, [
     helper,

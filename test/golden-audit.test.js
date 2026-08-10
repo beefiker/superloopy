@@ -315,6 +315,44 @@ test("exclusive evidence publication rolls back when the publish-directory sync 
   assert.equal(await readFile(output.absolutePath, "utf8"), "retry after reconciled failure\n");
 });
 
+test("Windows exclusive publication retains its scrub anchor through commit checks", async () => {
+  const repo = await tempRepo();
+  const publishRoot = join(repo, ".superloopy", "evidence", "superloopy-backend");
+  await mkdir(publishRoot, { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-windows-anchor/backend-skill-report.md",
+    undefined,
+  );
+  const probe = await open(join(repo, "file-handle-windows-anchor-probe"), "wx");
+  const fileHandlePrototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  const originalSync = fileHandlePrototype.sync;
+  const platformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
+  let directorySyncs = 0;
+  fileHandlePrototype.sync = async function inspectFinalPublishSync() {
+    if ((await this.stat()).isDirectory() && ++directorySyncs === 4) {
+      assert.equal(
+        readdirSync(publishRoot).some((name) => name.endsWith(".scrub")),
+        true,
+        "the pinned scrub link must survive until the final publish-root sync",
+      );
+    }
+    return originalSync.call(this);
+  };
+  Object.defineProperty(process, "platform", { ...platformDescriptor, value: "win32" });
+
+  try {
+    await writeEvidenceOutputFileExclusive(output, "Windows anchor report\n");
+  } finally {
+    fileHandlePrototype.sync = originalSync;
+    Object.defineProperty(process, "platform", platformDescriptor);
+  }
+  assert.equal(directorySyncs, 4);
+  assert.equal(readdirSync(publishRoot).some((name) => name.endsWith(".scrub")), false);
+  assert.equal(await readFile(output.absolutePath, "utf8"), "Windows anchor report\n");
+});
+
 test("a staging-directory sync failure closes the opened report before rollback", async () => {
   const repo = await tempRepo();
   const publishRoot = join(repo, ".superloopy", "evidence", "superloopy-backend");

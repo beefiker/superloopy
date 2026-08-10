@@ -190,14 +190,13 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
       }
       throw error;
     }
-    if (scrubAnchor) {
-      scrubPath = artifact.absolutePath;
-      await rm(scrubAnchor);
-      scrubAnchor = undefined;
-    }
     if (process.platform === "win32") await chmod(artifact.absolutePath, 0o444);
     await syncDirectoryHandle(publishRootHandle);
     assertOpenedTargetConfined(artifact, openedFile.openedStat);
+    if (scrubAnchor) {
+      await rm(scrubAnchor);
+      scrubAnchor = undefined;
+    }
     published = true;
   } finally {
     if (!published && openedFile?.handle) await scrubOpenedFile(openedFile.handle);
