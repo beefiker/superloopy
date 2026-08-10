@@ -146,9 +146,15 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
       stageDirectory,
       stageDirectoryStat,
       async (signal, assertGuard) => {
-        const stat = await writeOpenedExclusiveFile(stagedArtifact, content, options, signal, assertGuard);
-        await syncDirectoryHandle(stageDirectoryHandle);
-        return stat;
+        const file = await writeOpenedExclusiveFile(stagedArtifact, content, options, signal, assertGuard);
+        try {
+          await syncDirectoryHandle(stageDirectoryHandle);
+          return file;
+        } catch (error) {
+          await scrubOpenedFile(file.handle);
+          await file.handle.close().catch(() => {});
+          throw error;
+        }
       },
     );
     assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
@@ -160,6 +166,7 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
       await stageDirectoryHandle.chmod(0o777 & ~process.umask());
     }
     assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
+    await syncDirectoryHandle(stageDirectoryHandle);
     if (process.platform === "win32") {
       scrubAnchor = `${stageDirectory}.scrub`;
       scrubPath = scrubAnchor;

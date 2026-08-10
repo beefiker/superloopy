@@ -295,7 +295,7 @@ test("exclusive evidence publication rolls back when the publish-directory sync 
   const originalSync = fileHandlePrototype.sync;
   let directorySyncs = 0;
   fileHandlePrototype.sync = async function failPublishDirectorySync() {
-    if ((await this.stat()).isDirectory() && ++directorySyncs === 2) {
+    if ((await this.stat()).isDirectory() && ++directorySyncs === (process.platform === "win32" ? 4 : 3)) {
       throw Object.assign(new Error("injected publish directory sync failure"), { code: "EIO" });
     }
     return originalSync.call(this);
@@ -312,6 +312,49 @@ test("exclusive evidence publication rolls back when the publish-directory sync 
   assert.equal(existsSync(output.absolutePath), false);
   await writeEvidenceOutputFileExclusive(output, "retry after reconciled failure\n");
   assert.equal(await readFile(output.absolutePath, "utf8"), "retry after reconciled failure\n");
+});
+
+test("a staging-directory sync failure closes the opened report before rollback", async () => {
+  const repo = await tempRepo();
+  const publishRoot = join(repo, ".superloopy", "evidence", "superloopy-backend");
+  await mkdir(publishRoot, { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-stage-sync-failure/backend-skill-report.md",
+    undefined,
+  );
+  const probe = await open(join(repo, "file-handle-stage-sync-probe"), "wx");
+  const fileHandlePrototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  const originalSync = fileHandlePrototype.sync;
+  const originalWriteFile = fileHandlePrototype.writeFile;
+  let directorySyncs = 0;
+  let reportHandle;
+  fileHandlePrototype.sync = async function failFirstDirectorySync() {
+    if ((await this.stat()).isDirectory() && ++directorySyncs === 1) {
+      throw Object.assign(new Error("injected staging directory sync failure"), { code: "EIO" });
+    }
+    return originalSync.call(this);
+  };
+  fileHandlePrototype.writeFile = function captureReportHandle(data, options) {
+    if (data === "report whose staging sync fails\n") reportHandle = this;
+    return originalWriteFile.call(this, data, options);
+  };
+
+  try {
+    await assert.rejects(
+      writeEvidenceOutputFileExclusive(output, "report whose staging sync fails\n"),
+      /staging directory sync failure/u,
+    );
+  } finally {
+    fileHandlePrototype.sync = originalSync;
+    fileHandlePrototype.writeFile = originalWriteFile;
+  }
+  assert.equal(reportHandle.fd, -1);
+  assert.equal(existsSync(output.absolutePath), false);
+  assert.equal(readdirSync(publishRoot).some((name) => name.startsWith(".run-stage-sync-failure.")), false);
+  await writeEvidenceOutputFileExclusive(output, "retry after staging sync failure\n");
+  assert.equal(await readFile(output.absolutePath, "utf8"), "retry after staging sync failure\n");
 });
 
 test("SECURITY: synchronously moving staging immediately before write leaves no report content outside", async (t) => {
