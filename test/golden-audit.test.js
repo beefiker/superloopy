@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import "./helpers/trust-isolate.js";
-import { existsSync, readdirSync, renameSync } from "node:fs";
+import { existsSync, readdirSync, renameSync, statSync } from "node:fs";
 import { mkdtemp, mkdir, open, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -247,17 +247,59 @@ test("exclusive evidence output stays unpublished until its durable write comple
     writing = writeEvidenceOutputFileExclusive(output, "durable report\n");
     await entered;
     const publishedBeforeWrite = existsSync(output.absolutePath);
+    if (process.platform !== "win32") {
+      const [stageName] = readdirSync(join(repo, ".superloopy", "evidence", "superloopy-backend"))
+        .filter((name) => name.startsWith(".run-one."));
+      assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", stageName)).mode & 0o777, 0o700);
+    }
     releaseWrite();
     await writing;
     assert.equal(publishedBeforeWrite, false);
     assert.equal(await readFile(output.absolutePath, "utf8"), "durable report\n");
     assert.equal(directorySyncs, 2, "staging and publish directories must both be synced");
+    if (process.platform !== "win32") {
+      assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", "run-one")).mode & 0o777, 0o777 & ~process.umask());
+    }
   } finally {
     releaseWrite?.();
     await writing?.catch(() => {});
     fileHandlePrototype.writeFile = originalWriteFile;
     fileHandlePrototype.sync = originalSync;
   }
+});
+
+test("exclusive evidence publication rolls back when the publish-directory sync fails", async () => {
+  const repo = await tempRepo();
+  const publishRoot = join(repo, ".superloopy", "evidence", "superloopy-backend");
+  await mkdir(publishRoot, { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-sync-failure/backend-skill-report.md",
+    undefined,
+  );
+  const probe = await open(join(repo, "file-handle-sync-probe"), "wx");
+  const fileHandlePrototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  const originalSync = fileHandlePrototype.sync;
+  let directorySyncs = 0;
+  fileHandlePrototype.sync = async function failPublishDirectorySync() {
+    if ((await this.stat()).isDirectory() && ++directorySyncs === 2) {
+      throw Object.assign(new Error("injected publish directory sync failure"), { code: "EIO" });
+    }
+    return originalSync.call(this);
+  };
+
+  try {
+    await assert.rejects(
+      writeEvidenceOutputFileExclusive(output, "report needing durable publication\n"),
+      /publish directory sync failure/u,
+    );
+  } finally {
+    fileHandlePrototype.sync = originalSync;
+  }
+  assert.equal(existsSync(output.absolutePath), false);
+  await writeEvidenceOutputFileExclusive(output, "retry after reconciled failure\n");
+  assert.equal(await readFile(output.absolutePath, "utf8"), "retry after reconciled failure\n");
 });
 
 test("SECURITY: synchronously moving staging immediately before write leaves no report content outside", async (t) => {

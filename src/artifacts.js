@@ -1,5 +1,5 @@
 import { constants, existsSync, lstatSync, readFileSync, realpathSync, statSync, watch } from "node:fs";
-import { mkdir, open, rename, rm } from "node:fs/promises";
+import { chmod, mkdir, open, rename, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { validateAuditSection } from "./audit-verdict.js";
 import { isMatrixQualityGate, validateMatrixQualityGate } from "./matrix-gate.js";
@@ -128,6 +128,7 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
   );
   let stageDirectoryHandle;
   let stageDirectoryStat;
+  let openedFile;
   let published = false;
   try {
     await mkdir(stageDirectory, { mode: 0o700 });
@@ -137,7 +138,7 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
       ...artifact,
       absolutePath: join(stageDirectory, basename(artifact.absolutePath)),
     };
-    const openedStat = await guardDirectoryIdentityDuringWrite(
+    openedFile = await guardDirectoryIdentityDuringWrite(
       artifact,
       stageDirectory,
       stageDirectoryStat,
@@ -150,6 +151,8 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
     assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
     rejectOutputTargetForWrite(artifact);
     rejectExistingPublishedDirectory(finalDirectory, artifact.relativePath);
+    await chmod(stageDirectory, 0o777 & ~process.umask());
+    assertDirectoryConfined(artifact, stageDirectory, stageDirectoryStat);
     try {
       await rename(stageDirectory, finalDirectory);
     } catch (error) {
@@ -158,13 +161,16 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
       }
       throw error;
     }
-    published = true;
     await syncDirectoryHandle(publishRootHandle);
-    assertOpenedTargetConfined(artifact, openedStat);
+    assertOpenedTargetConfined(artifact, openedFile.openedStat);
+    published = true;
   } finally {
-    await stageDirectoryHandle?.close();
-    await publishRootHandle.close();
+    if (!published && openedFile) await scrubOpenedFile(openedFile.handle);
+    await openedFile?.handle.close().catch(() => {});
+    await stageDirectoryHandle?.close().catch(() => {});
+    await publishRootHandle.close().catch(() => {});
     if (!published && stageDirectoryStat) {
+      await removeStageDirectoryIfStillConfined(artifact, finalDirectory, stageDirectoryStat);
       await removeStageDirectoryIfStillConfined(artifact, stageDirectory, stageDirectoryStat);
     }
   }
@@ -190,11 +196,13 @@ async function writeOpenedExclusiveFile(artifact, content, options, signal, asse
     await handle.sync();
     assertGuard();
     completed = true;
-    return openedStat;
+    return { handle, openedStat };
   } finally {
-    if (!completed) await scrubOpenedFile(handle);
-    await handle.close();
-    if (!completed) await removeOpenedTargetIfStillConfined(artifact, openedStat);
+    if (!completed) {
+      await scrubOpenedFile(handle);
+      await handle.close();
+      await removeOpenedTargetIfStillConfined(artifact, openedStat);
+    }
   }
 }
 
