@@ -578,7 +578,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 
 ## Weight Notes
 
-- Current largest source file: `src/hooks.js`, at the reviewability cap (550 lines). Keep new hook routing and control mechanics in focused helpers or extract an existing concern before growing the hook surface further.
+- Current largest source file: `src/artifacts.js`, at the reviewability cap (550 lines). Keep new evidence-path and publication mechanics in focused helpers or extract an existing concern before growing the artifact surface further.
 - No package dependencies are added; `package.json` stays dependency-free and `superloopy doctor --json` checks that boundary.
 - Marketplace update checks are advisory and self-update only runs for a future npx-local snapshot; current marketplace and checkout installs keep their documented update commands.
 - Runtime state is ignored under `.superloopy/`; `superloopy doctor --json` verifies runtime samples are ignored and not tracked.

@@ -265,10 +265,11 @@ test("exclusive evidence output stays unpublished until its durable write comple
     assert.ok(directorySyncs >= 2, "staging and publish directories must both be synced");
     assert.equal(
       directoryChmods,
-      process.platform === "win32" ? 0 : 1,
-      "POSIX final permissions must be applied through the verified directory handle",
+      process.platform === "win32" ? 0 : 2,
+      "POSIX report and publication-root permissions must be applied through verified directory handles",
     );
     if (process.platform !== "win32") {
+      assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend")).mode & 0o222, 0, "publication root must protect published directory entries");
       assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", "run-one")).mode & 0o222, 0, "published report directory must be read-only");
       assert.equal(statSync(output.absolutePath).mode & 0o222, 0, "published report must be read-only");
     }
@@ -454,6 +455,28 @@ test("SECURITY: synchronously moving staging immediately before write leaves no 
   } finally {
     fileHandlePrototype.writeFile = originalWriteFile;
   }
+});
+
+test("SECURITY: exclusive publication rejects a swapped ancestor before creating directories", async (t) => {
+  if (process.platform === "win32") return t.skip("directory symlink creation is not reliably available on Windows CI");
+  const { rename: renamePath, symlink } = await import("node:fs/promises");
+  const repo = await tempRepo();
+  const outside = await mkdtemp(join(tmpdir(), "superloopy-exclusive-ancestor-outside-"));
+  t.after(() => rm(outside, { recursive: true, force: true }));
+  await mkdir(join(repo, ".superloopy"), { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-swapped-ancestor/backend-skill-report.md",
+    undefined,
+  );
+  await renamePath(join(repo, ".superloopy"), join(repo, ".superloopy-original"));
+  await symlink(outside, join(repo, ".superloopy"), "dir");
+
+  await assert.rejects(
+    writeEvidenceOutputFileExclusive(output, "must remain confined\n"),
+    /symlink|confined|resolve under/iu,
+  );
+  assert.equal(existsSync(join(outside, "evidence")), false, "rejection must precede external directory creation");
 });
 
 test("SECURITY: evidence output path rejects a symlinked evidence root", async () => {

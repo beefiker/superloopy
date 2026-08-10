@@ -118,6 +118,7 @@ export async function writeEvidenceOutputFile(artifact, content, options = "utf8
 export async function writeEvidenceOutputFileExclusive(artifact, content, options = "utf8") {
   const finalDirectory = dirname(artifact.absolutePath);
   const publishRoot = dirname(finalDirectory);
+  rejectOutputTargetForWrite(artifact);
   await mkdir(publishRoot, { recursive: true });
   rejectOutputTargetForWrite(artifact);
   rejectExistingPublishedDirectory(finalDirectory, artifact.relativePath);
@@ -133,8 +134,18 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
   let scrubAnchor;
   let scrubHandle;
   let scrubPath;
+  let publishRootOriginalMode;
+  let publishRootWriteEnabled = false;
   let published = false;
   try {
+    if (process.platform !== "win32") {
+      const publishRootStat = await publishRootHandle.stat({ bigint: true });
+      publishRootOriginalMode = Number(publishRootStat.mode & 0o777n);
+      if ((publishRootOriginalMode & 0o200) === 0) {
+        await publishRootHandle.chmod(publishRootOriginalMode | 0o200);
+        publishRootWriteEnabled = true;
+      }
+    }
     await mkdir(stageDirectory, { mode: 0o700 });
     stageDirectoryStat = lstatSync(stageDirectory, { bigint: true });
     stageDirectoryHandle = await openConfinedDirectory(artifact, stageDirectory, stageDirectoryStat);
@@ -215,6 +226,13 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
     }
     await scrubHandle?.close();
     scrubHandle = null;
+    if (process.platform !== "win32") {
+      await publishRootHandle.chmod(publishRootOriginalMode & ~0o222);
+      await syncDirectoryHandle(publishRootHandle);
+      const protectedRootStat = await publishRootHandle.stat({ bigint: true });
+      if ((protectedRootStat.mode & 0o222n) !== 0n) throw new Error(`Evidence publication root did not become read-only: ${artifact.relativePath}`);
+      assertOpenedTargetConfined(artifact, openedFile.openedStat);
+    }
     published = true;
   } finally {
     if (!published && openedFile?.handle) await scrubOpenedFile(openedFile.handle);
@@ -230,8 +248,9 @@ export async function writeEvidenceOutputFileExclusive(artifact, content, option
       await removeStageDirectoryIfStillConfined(artifact, finalDirectory, stageDirectoryStat);
       await removeStageDirectoryIfStillConfined(artifact, stageDirectory, stageDirectoryStat);
     }
-    if (scrubAnchor) {
-      await rm(scrubAnchor, { force: true }).catch(() => {});
+    if (scrubAnchor) await rm(scrubAnchor, { force: true }).catch(() => {});
+    if (!published && process.platform !== "win32" && publishRootWriteEnabled) {
+      await publishRootHandle.chmod(publishRootOriginalMode).catch(() => {});
     }
     await publishRootHandle.close().catch(() => {});
   }
@@ -297,9 +316,7 @@ async function openVerifiedAnchor(path, openedStat) {
     const flags = constants.O_WRONLY | (constants.O_NOFOLLOW ?? 0);
     handle = await open(path, flags);
     const anchorStat = await handle.stat({ bigint: true });
-    if (!sameFile(openedStat, anchorStat) || !anchorStat.isFile()) {
-      throw new Error("Evidence artifact scrub anchor changed during exclusive creation.");
-    }
+    if (!sameFile(openedStat, anchorStat) || !anchorStat.isFile()) throw new Error("Evidence artifact scrub anchor changed during exclusive creation.");
     return handle;
   } catch (error) {
     await handle?.close().catch(() => {});

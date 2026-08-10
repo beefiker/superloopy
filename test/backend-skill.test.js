@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { chmod, link, mkdir, mkdtemp, open, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, link, mkdir, mkdtemp, open, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -183,6 +183,11 @@ test("backend evidence helper writes distinct reports through the active evidenc
   const firstDirectory = join(sandbox, ".superloopy/evidence/superloopy-backend/goal-g001-criterion-c001-worker-franky");
   if (process.platform !== "win32") {
     assert.equal(statSync(firstDirectory).mode & 0o222, 0, "published report directory must be read-only");
+    await assert.rejects(
+      rename(firstDirectory, `${firstDirectory}-moved`),
+      /EACCES|EPERM|permission denied/iu,
+      "publication root must protect the published report directory entry",
+    );
   }
 
   const recovered = spawnSync(process.execPath, [
@@ -230,7 +235,7 @@ test("backend evidence helper writes distinct reports through the active evidenc
     } finally {
       fileHandlePrototype.sync = originalSync;
     }
-    assert.equal(recoveryDirectorySyncs, 1, "recovery must sync the directory containing the published report directory");
+    assert.equal(recoveryDirectorySyncs, 2, "recovery must sync the published report directory and its parent");
   }
 
   const incompleteAnchor = join(sandbox, ".incomplete-report.scrub");

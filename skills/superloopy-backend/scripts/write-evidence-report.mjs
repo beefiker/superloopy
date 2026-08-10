@@ -59,7 +59,8 @@ export async function recoverBackendEvidenceReport({ projectRoot, evidenceRoot, 
   const artifactStat = committedArtifactStat(artifact);
   const publishedDirectory = dirname(artifact.absolutePath);
   const directoryStat = committedDirectoryStat(publishedDirectory);
-  await syncPublishedDirectoryParent(dirname(publishedDirectory));
+  await syncCommittedDirectory(publishedDirectory);
+  await syncCommittedDirectory(dirname(publishedDirectory));
   const verified = resolveEvidenceArtifact(workspaceRoot, path, resolvedRoot.scope);
   const verifiedArtifactStat = committedArtifactStat(verified);
   const verifiedDirectoryStat = committedDirectoryStat(dirname(verified.absolutePath));
@@ -85,7 +86,7 @@ function committedDirectoryStat(path) {
   return stat;
 }
 
-async function syncPublishedDirectoryParent(path) {
+async function syncCommittedDirectory(path) {
   let handle;
   try {
     handle = await open(path, constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0));
