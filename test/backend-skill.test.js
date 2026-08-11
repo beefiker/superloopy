@@ -184,13 +184,6 @@ test("backend evidence helper writes distinct reports through the active evidenc
   const firstDirectory = join(sandbox, ".superloopy/evidence/superloopy-backend/goal-g001-criterion-c001-worker-franky");
   if (process.platform !== "win32") {
     assert.equal(statSync(firstDirectory).mode & 0o222, 0, "published report directory must be read-only");
-    if (process.getuid?.() !== 0) {
-      await assert.rejects(
-        rename(firstDirectory, `${firstDirectory}-moved`),
-        /EACCES|EPERM|permission denied/iu,
-        "publication root must protect the published report directory entry",
-      );
-    }
   }
 
   const recovered = spawnSync(process.execPath, [
@@ -221,9 +214,8 @@ test("backend evidence helper writes distinct reports through the active evidenc
     const writableRootRecovery = spawnSync(process.execPath, [
       helper, "recover", ".", ".superloopy/evidence", "goal-g001-criterion-c001-worker-franky",
     ], { cwd: sandbox, encoding: "utf8" });
-    assert.notEqual(writableRootRecovery.status, 0);
-    assert.match(writableRootRecovery.stderr, /committed|directory|writable/iu);
-    await chmod(publicationRoot, 0o555);
+    assert.equal(writableRootRecovery.status, 0, writableRootRecovery.stderr);
+    assert.equal(writableRootRecovery.stdout.trim(), firstPath);
 
     const probe = await open(join(sandbox, "recovery-directory-sync-probe"), "wx");
     const fileHandlePrototype = Object.getPrototypeOf(probe);
@@ -423,20 +415,24 @@ test("Windows recovery rejects swapped qualified report directories", async (t) 
   }
 });
 
-test("backend evidence publication preserves publication-root special mode bits", async (t) => {
+test("backend evidence publication preserves shared publication-root permissions", async (t) => {
   if (process.platform === "win32") return t.skip("POSIX special mode bits are not available on Windows");
   const helperModule = await import(pathToFileURL(join(process.cwd(), root, "scripts/write-evidence-report.mjs")));
   const sandbox = await mkdtemp(join(tmpdir(), "superloopy-backend-setgid-"));
   const publicationRoot = join(sandbox, ".superloopy/evidence/superloopy-backend");
   t.after(() => removePublishedTestTree(sandbox));
   await mkdir(publicationRoot, { recursive: true });
-  await chmod(publicationRoot, 0o2550);
+  await chmod(publicationRoot, 0o2770);
 
   await helperModule.writeBackendEvidenceReport({
     projectRoot: sandbox, evidenceRoot: ".superloopy/evidence", reportId: "run-setgid", content: "setgid-preserving report\n",
   });
+  assert.equal(statSync(publicationRoot).mode & 0o7777, 0o2770);
 
-  assert.equal(statSync(publicationRoot).mode & 0o7777, 0o2550);
+  await helperModule.writeBackendEvidenceReport({
+    projectRoot: sandbox, evidenceRoot: ".superloopy/evidence", reportId: "run-setgid-two", content: "second shared report\n",
+  });
+  assert.equal(statSync(publicationRoot).mode & 0o7777, 0o2770);
 });
 
 test("backend evidence helper rejects unsafe roots, targets, identifiers, and blank reports", {

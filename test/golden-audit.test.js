@@ -265,11 +265,10 @@ test("exclusive evidence output stays unpublished until its durable write comple
     assert.ok(directorySyncs >= 2, "staging and publish directories must both be synced");
     assert.equal(
       directoryChmods,
-      process.platform === "win32" ? 0 : 2,
-      "POSIX report and publication-root permissions must be applied through verified directory handles",
+      process.platform === "win32" ? 0 : 1,
+      "POSIX report-directory permissions must be applied through a verified directory handle",
     );
     if (process.platform !== "win32") {
-      assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend")).mode & 0o222, 0, "publication root must protect published directory entries");
       assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", "run-one")).mode & 0o222, 0, "published report directory must be read-only");
       assert.equal(statSync(output.absolutePath).mode & 0o222, 0, "published report must be read-only");
     }

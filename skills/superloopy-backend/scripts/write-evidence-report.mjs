@@ -62,14 +62,14 @@ export async function recoverBackendEvidenceReport({ projectRoot, evidenceRoot, 
   const publishedDirectory = dirname(artifact.absolutePath);
   const directoryStat = committedDirectoryStat(publishedDirectory);
   const publicationRoot = dirname(publishedDirectory);
-  const publicationRootStat = committedDirectoryStat(publicationRoot);
+  const publicationRootStat = existingDirectoryStat(publicationRoot);
   await syncCommittedDirectory(publishedDirectory);
   await syncCommittedDirectory(publicationRoot);
   const verified = resolveEvidenceArtifact(workspaceRoot, path, resolvedRoot.scope);
   assertReportBinding(verified, safeReportId);
   const verifiedArtifactStat = committedArtifactStat(verified);
   const verifiedDirectoryStat = committedDirectoryStat(dirname(verified.absolutePath));
-  const verifiedPublicationRootStat = committedDirectoryStat(dirname(dirname(verified.absolutePath)));
+  const verifiedPublicationRootStat = existingDirectoryStat(dirname(dirname(verified.absolutePath)));
   if (!sameFile(artifactStat, verifiedArtifactStat) || !sameFile(directoryStat, verifiedDirectoryStat) || !sameFile(publicationRootStat, verifiedPublicationRootStat)) {
     throw new Error("existing backend evidence report changed while confirming its committed state");
   }
@@ -94,6 +94,14 @@ function committedDirectoryStat(path) {
   const stat = statSync(path, { bigint: true });
   if (!stat.isDirectory() || (process.platform !== "win32" && (stat.mode & 0o222n) !== 0n)) {
     throw new Error("existing backend evidence report is not fully committed: expected a read-only report directory");
+  }
+  return stat;
+}
+
+function existingDirectoryStat(path) {
+  const stat = statSync(path, { bigint: true });
+  if (!stat.isDirectory()) {
+    throw new Error("existing backend evidence publication root is not a directory");
   }
   return stat;
 }

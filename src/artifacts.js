@@ -134,15 +134,8 @@ async function writeEvidenceOutputFileExclusiveLocked(artifact, content, options
   );
   let stageDirectoryHandle, stageDirectoryStat, stagedArtifact, openedFile;
   let scrubAnchor, scrubHandle, scrubPath;
-  let publishRootOriginalMode, publishRootStat;
   let published = false;
   try {
-    if (process.platform !== "win32") {
-      publishRootStat = await publishRootHandle.stat({ bigint: true });
-      publishRootOriginalMode = Number(publishRootStat.mode & 0o7777n);
-      if ((publishRootOriginalMode & 0o200) === 0) await publishRootHandle.chmod(publishRootOriginalMode | 0o200);
-    }
-    if (publishRootStat) assertDirectoryConfined(artifact, publishRoot, publishRootStat);
     await mkdir(stageDirectory, { mode: 0o700 });
     stageDirectoryStat = lstatSync(stageDirectory, { bigint: true });
     stageDirectoryHandle = await openConfinedDirectory(artifact, stageDirectory, stageDirectoryStat);
@@ -223,13 +216,6 @@ async function writeEvidenceOutputFileExclusiveLocked(artifact, content, options
     }
     await scrubHandle?.close();
     scrubHandle = null;
-    if (process.platform !== "win32") {
-      await publishRootHandle.chmod(publishRootOriginalMode & ~0o222);
-      await syncDirectoryHandle(publishRootHandle);
-      const protectedRootStat = await publishRootHandle.stat({ bigint: true });
-      if ((protectedRootStat.mode & 0o222n) !== 0n) throw new Error(`Evidence publication root did not become read-only: ${artifact.relativePath}`);
-      assertOpenedTargetConfined(artifact, openedFile.openedStat);
-    }
     published = true;
   } finally {
     if (!published && openedFile?.handle) await scrubOpenedFile(openedFile.handle);
@@ -241,17 +227,11 @@ async function writeEvidenceOutputFileExclusiveLocked(artifact, content, options
     await scrubHandle?.close().catch(() => {});
     if (!published && process.platform !== "win32") await stageDirectoryHandle?.chmod(0o700).catch(() => {});
     await stageDirectoryHandle?.close().catch(() => {});
-    if (!published && process.platform !== "win32" && publishRootOriginalMode !== undefined) {
-      await publishRootHandle.chmod(publishRootOriginalMode | 0o200).catch(() => {});
-    }
     if (!published && stageDirectoryStat) {
       await removeStageDirectoryIfStillConfined(artifact, finalDirectory, stageDirectoryStat);
       await removeStageDirectoryIfStillConfined(artifact, stageDirectory, stageDirectoryStat);
     }
     if (scrubAnchor) await rm(scrubAnchor, { force: true }).catch(() => {});
-    if (!published && process.platform !== "win32" && publishRootOriginalMode !== undefined) {
-      await publishRootHandle.chmod(publishRootOriginalMode).catch(() => {});
-    }
     await publishRootHandle.close().catch(() => {});
   }
 }

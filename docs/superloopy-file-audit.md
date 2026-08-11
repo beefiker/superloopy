@@ -466,7 +466,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 | `src/agent-names.js` | Shared six-agent name inventory for policy, cached resolution, and installation modules. | Data-only extraction that prevents an ESM cycle; adds no launch or installation behavior. |
 | `src/agents.js` | Resolves and installs the managed Codex fleet under ordered locks for canonical target/state identities, installs the command wrapper, and coordinates plugin startup bootstrap. | Conservative installer; accepts only a complete hash-known legacy fleet without force and preserves all other conflicts. |
 | `src/args.js` | Shared flag/stdin/JSON parsing helpers. | Generic Superloopy CLI utility. |
-| `src/artifacts.js` | Evidence path confinement, symlink rejection, atomic replace writes, private-directory-staged exclusive publication, and quality-gate dispatch. | Dispatches Superloopy review, matrix, and default gates while allowing immutable receipts to verify and sync a no-follow staging inode before atomically exposing the final directory without partial final paths; POSIX publication is hard-link-free, while Windows requires a hard-link-capable filesystem for its confined scrub anchor. |
+| `src/artifacts.js` | Evidence path confinement, symlink rejection, atomic replace writes, private-directory-staged exclusive publication, and quality-gate dispatch. | Dispatches Superloopy review, matrix, and default gates while allowing read-only receipts to verify and sync a no-follow staging inode before atomically exposing the final directory without partial final paths or changing shared publication-root permissions; POSIX publication is hard-link-free, while Windows requires a hard-link-capable filesystem for its confined scrub anchor. |
 | `src/audit-gate-verify.js` | Completion-time provenance: re-derives every cited audit verdict so the deterministic spine actually gates aggregate completion. | Superloopy-native; closes the gate-decoupling gap. |
 | `src/audit-hooks.js` | Validates robin verdict receipts by RE-DERIVING the floor in-process (never trusting worker-writable recorded state), then hash-binding and floor-dominance; idempotent on replay. | Superloopy-native; LLM verdict advisory and downgrade-only. |
 | `src/audit-verdict.js` | Structural verdict + gate-section validators and the symmetric floor-dominance cross-check (a non-pass floor surfaces, is never flipped by the LLM). | Deterministic; independence limits documented. |
@@ -578,7 +578,7 @@ Superloopy is its own lightweight loop harness: one small CLI, repo-local `.supe
 
 ## Weight Notes
 
-- Current largest source file: `src/artifacts.js`, at the reviewability cap (550 lines). Keep new evidence-path and publication mechanics in focused helpers or extract an existing concern before growing the artifact surface further.
+- Current largest source file: `src/hooks.js`, at the reviewability cap (550 lines). Keep new hook routing and control mechanics in focused helpers or extract an existing concern before growing the hook surface further.
 - No package dependencies are added; `package.json` stays dependency-free and `superloopy doctor --json` checks that boundary.
 - Marketplace update checks are advisory and self-update only runs for a future npx-local snapshot; current marketplace and checkout installs keep their documented update commands.
 - Runtime state is ignored under `.superloopy/`; `superloopy doctor --json` verifies runtime samples are ignored and not tracked.
