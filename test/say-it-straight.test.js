@@ -52,3 +52,37 @@ test("say-it-straight keeps non-Korean language boundaries and explicit uncertai
   assert.match(skill, /pressure.*remove.*qualification.*uncertainty.*preserve.*briefly nam(?:e|es)/is);
   assert.match(skill, /^6\. .*literal word `uncertainty`.*retained.*first-person perspective/m);
 });
+
+test("say-it-straight names periphrasis as a defect and guards the modality it collapses", async () => {
+  const skill = await readFile(`${skillRoot}/SKILL.md`, "utf8");
+  const rules = await readFile(`${skillRoot}/references/quick-rules.md`, "utf8");
+
+  assert.match(skill, /periphrastic construction/i);
+  assert.match(skill, /every qualifier survives/i);
+  assert.match(skill, /term of art/i);
+  assert.match(rules, /^\| Periphrastic construction \|/m);
+  assert.match(rules, /light verb/i);
+  assert.match(rules, /dropped modality or raised certainty/i);
+});
+
+test("say-it-straight pressure scenarios stay well formed and cover the periphrasis guard", async () => {
+  const scenarios = JSON.parse(await readFile("test/fixtures/say-it-straight/scenarios.json", "utf8"));
+  assert.ok(Array.isArray(scenarios), "scenarios fixture must be an array");
+  assert.ok(scenarios.length >= 8, `expected at least 8 scenarios, found ${scenarios.length}`);
+
+  const ids = new Set();
+  for (const scenario of scenarios) {
+    assert.equal(typeof scenario.id, "string", JSON.stringify(scenario).slice(0, 60));
+    assert.equal(ids.has(scenario.id), false, `duplicate scenario id: ${scenario.id}`);
+    ids.add(scenario.id);
+    assert.ok(scenario.prompt?.length > 0, scenario.id);
+    assert.ok(Array.isArray(scenario.must_preserve) && scenario.must_preserve.length > 0, scenario.id);
+    assert.equal(typeof scenario.allow_unchanged, "boolean", scenario.id);
+  }
+
+  const periphrasis = scenarios.find((scenario) => scenario.id === "periphrasis-with-modality");
+  assert.ok(periphrasis, "periphrasis scenario must exist");
+  // Collapsing "it is possible that saving may become slower" must not drop "may".
+  assert.ok(periphrasis.must_preserve.includes("may"), "must pin the modality the collapse could drop");
+  assert.equal(periphrasis.allow_unchanged, false);
+});
