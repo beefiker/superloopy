@@ -6,7 +6,11 @@ import { createInterface } from "node:readline";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-const controllerModule = import(new URL("../app.mjs", import.meta.url)).catch(() => ({}));
+// Surface a real import failure. Swallowing it turned a broken module into a
+// confusing "X is not a function" several assertions later.
+const controllerModule = import(new URL("../app.mjs", import.meta.url)).catch((error) => {
+  throw new Error(`app.mjs failed to load: ${error?.message ?? error}`, { cause: error });
+});
 
 function makeSelectDouble() {
   const attributes = new Map();

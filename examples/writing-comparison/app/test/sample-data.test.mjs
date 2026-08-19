@@ -206,3 +206,26 @@ test("does not repeat normalized semantic content units in transformed samples",
     }
   }
 });
+
+test("generated modules match samples/ on disk", async () => {
+  // Without this, editing a sample and forgetting `node build-data.mjs` ships
+  // stale content that every other assertion here still passes.
+  const { buildSamples, SAMPLE_IDS } = await import("../build-data.mjs");
+  const built = await buildSamples();
+
+  assert.deepEqual(SAMPLE_IDS, SAMPLE_ORDER, "sample order drifted from the builder");
+  for (const sampleId of SAMPLE_ORDER) {
+    const fresh = built[sampleId];
+    const embedded = SAMPLES[sampleId];
+    assert.ok(fresh, `${sampleId} missing from a fresh build`);
+    assert.deepEqual(Object.keys(embedded.versions), Object.keys(fresh.versions), sampleId);
+    for (const versionId of Object.keys(fresh.versions)) {
+      assert.equal(
+        embedded.versions[versionId].text,
+        fresh.versions[versionId].text,
+        `${sampleId}/${versionId} is stale — run: node examples/writing-comparison/app/build-data.mjs`
+      );
+      assert.deepEqual(embedded.versions[versionId].metrics, fresh.versions[versionId].metrics, `${sampleId}/${versionId}`);
+    }
+  }
+});

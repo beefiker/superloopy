@@ -1,4 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { argv } from "node:process";
+import { pathToFileURL } from "node:url";
 
 const outputFile = new URL("./data.generated.mjs", import.meta.url);
 const sampleModuleDirectory = new URL("./data/", import.meta.url);
@@ -56,6 +58,12 @@ async function buildSample(definition) {
   return { ...definition, versions };
 }
 
+export async function buildSamples() {
+  return Object.fromEntries(await Promise.all(sampleDefinitions.map(async (definition) => [definition.id, await buildSample(definition)])));
+}
+
+export const SAMPLE_IDS = sampleDefinitions.map(({ id }) => id);
+
 async function buildData() {
   const samples = await Promise.all(sampleDefinitions.map(async (definition) => [definition.id, await buildSample(definition)]));
 
@@ -88,4 +96,5 @@ async function buildData() {
   await writeFile(outputFile, index, "utf8");
 }
 
-await buildData();
+// Importing this module must not write files; the staleness test imports it.
+if (argv[1] && import.meta.url === pathToFileURL(argv[1]).href) await buildData();

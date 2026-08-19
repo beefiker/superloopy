@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { SAMPLE_ORDER, VERSION_ORDER } from "../data.generated.mjs";
+import { SAMPLE_ORDER, SAMPLES, VERSION_ORDER } from "../data.generated.mjs";
 import {
   VALID_MODES,
   parseViewState,
@@ -128,4 +128,39 @@ test("round-trips every ordered pair through its hand-derived canonical URL", ()
     assert.deepEqual(parseViewState(search), expectedState, search);
     assert.equal(serializeViewState(expectedState), search, search);
   }
+});
+
+test("switching samples never selects a version the target sample lacks", () => {
+  // English samples have no Humanize Korean version, so carrying `a` across
+  // produced a "valid" state whose document does not exist.
+  const englishSamples = SAMPLE_ORDER.filter((id) => id.endsWith("-en"));
+  assert.ok(englishSamples.length > 0, "fixture must include English samples");
+
+  for (const target of englishSamples) {
+    for (const left of VERSION_ORDER) {
+      for (const right of VERSION_ORDER) {
+        if (left === right) continue;
+        const next = selectSample({ sample: "release-note", left, right, mode: "rendered" }, target);
+        const versions = SAMPLES[next.sample].versions;
+        assert.ok(versions[next.left]?.text, `${target}: left ${next.left} has no document`);
+        assert.ok(versions[next.right]?.text, `${target}: right ${next.right} has no document`);
+        assert.notEqual(next.left, next.right, `${target}: pair collapsed`);
+      }
+    }
+  }
+});
+
+test("switching between samples that share every version keeps the pair", () => {
+  assert.deepEqual(
+    selectSample({ sample: "release-note", left: "a", right: "b", mode: "source" }, "incident-review"),
+    { sample: "incident-review", left: "a", right: "b", mode: "source" }
+  );
+});
+
+test("the default state is derived from the embedded data, not hard-coded", () => {
+  const fallback = parseViewState("?left=bad&right=bad&mode=x");
+  assert.equal(fallback.sample, SAMPLE_ORDER[0]);
+  assert.ok(SAMPLES[fallback.sample], "the default sample must exist");
+  assert.ok(SAMPLES[fallback.sample].versions[fallback.left]?.text);
+  assert.ok(SAMPLES[fallback.sample].versions[fallback.right]?.text);
 });

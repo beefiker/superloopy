@@ -172,3 +172,33 @@ test("uses conservative prefix and suffix alignment when documents exceed the bl
   assert.equal(hunks[0].left.blocks.length, 221);
   assert.equal(hunks[0].right.blocks.length, 2);
 });
+
+test("numeric edits are detected when digits are glued to non-Latin characters", () => {
+  const kindOf = (left, right) => diffDocuments(left, right).find((hunk) => hunk.op === "replace")?.kind;
+
+  // TOKEN_PATTERN groups letters and digits, so "18427건" is a single token and
+  // a whole-token digit test never fired in the app's primary sample language.
+  assert.equal(kindOf("주문번호 18427건", "주문번호 18428건"), "number/protected");
+  assert.equal(kindOf("오후 3시에 배포", "오후 5시에 배포"), "number/protected");
+  assert.equal(kindOf("Use 25%.", "Use 50%."), "number/protected");
+  assert.equal(kindOf("The build failed badly.", "The build failed hard."), "wording");
+  assert.equal(kindOf("5 items were slow.", "5 items were sluggish."), "wording");
+});
+
+test("an unclosed leading rule is not frontmatter", () => {
+  const blocks = splitBlocks("---\n\n# Title\n\nBody.");
+  assert.notEqual(blocks[0].type, "frontmatter", "an unclosed --- must not swallow the document");
+  assert.ok(blocks.some((block) => block.type === "heading"));
+
+  const closed = splitBlocks("---\ntitle: x\n---\n\n# Title");
+  assert.equal(closed[0].type, "frontmatter");
+  assert.ok(closed.some((block) => block.type === "heading"));
+});
+
+test("token alignment stays bounded on large inputs", () => {
+  const left = Array.from({ length: 2600 }, (_, index) => `word${index}`).join(" ");
+  const started = Date.now();
+  const tokens = diffTokens(left, `${left} tail`);
+  assert.ok(tokens.length > 0);
+  assert.ok(Date.now() - started < 10_000, "the token LCS must not run unbounded");
+});
