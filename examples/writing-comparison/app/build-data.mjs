@@ -42,7 +42,10 @@ async function buildSample(definition) {
     // the gap as a disabled "Unavailable" option.
     let text;
     try {
-      text = await readFile(new URL(`../samples/${definition.id}/${versionId}.md`, import.meta.url), "utf8");
+      // Normalise newlines: a Windows checkout yields CRLF, which would change
+      // both the embedded text and its metrics against the committed modules.
+      text = (await readFile(new URL(`../samples/${definition.id}/${versionId}.md`, import.meta.url), "utf8"))
+        .replace(/\r\n/gu, "\n");
     } catch (error) {
       if (error.code === "ENOENT") continue;
       throw error;
