@@ -1,0 +1,1153 @@
+:root {
+  --canvas: #f7f7f6;
+  --surface: #fff;
+  --ink: #20242a;
+  --muted-ink: #707780;
+  --line: #dfe2e5;
+  --accent: #202830;
+  --rose: #9a4658;
+  --rose-soft: #f7d9df;
+  --mint: #2f7359;
+  --mint-soft: #cce9db;
+  --radius: 8px;
+  --dock-clearance: 82px;
+  /* Must exceed the wrapped dock's full height (three rows + offset),
+     otherwise the end of the document sits underneath it. */
+  --dock-clearance-narrow: 168px;
+
+  /* Floating dock: a self-contained dark surface layered over the light page. */
+  --dock-bg: rgb(24 26 31 / 92%);
+  --dock-edge: rgb(255 255 255 / 14%);
+  --dock-edge-top: rgb(255 255 255 / 22%);
+  --dock-control: rgb(255 255 255 / 8%);
+  --dock-control-hover: rgb(255 255 255 / 15%);
+  --dock-control-edge: rgb(255 255 255 / 14%);
+  --dock-text: #f2f4f7;
+  --dock-label: rgb(232 236 242 / 68%);
+  --dock-divider: rgb(255 255 255 / 12%);
+  --dock-focus: #8fb4ff;
+  --dock-control-height: 34px;
+  font-family: Roboto, "Noto Sans KR", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--canvas);
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+label,
+input[type="checkbox"] {
+  cursor: pointer;
+}
+
+button,
+select,
+input,
+textarea {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+button {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+button:hover:not(:disabled),
+select:hover,
+input:hover,
+textarea:hover {
+  border-color: #aab0b6;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #9fa8b1;
+  outline-offset: 2px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  padding: 7px 10px;
+  background: var(--accent);
+  color: #fff;
+  transform: translateY(-160%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+}
+
+.comparison-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.comparison-title-row h1 {
+  grid-column: 1;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.comparison-title-row .pair-meta {
+  grid-column: 1;
+  margin: 0;
+}
+
+.comparison-title-row #search-toggle {
+  grid-column: 2;
+  grid-row: 1 / 3;
+}
+
+.comparison-title-row #more-tools {
+  grid-column: 3;
+  grid-row: 1 / 3;
+}
+
+.comparison-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr) auto auto auto;
+  align-items: end;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.version-select {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  color: var(--muted-ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.version-select select {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 5px 7px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.mode-tabs {
+  display: flex;
+  align-items: center;
+  align-self: end;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.mode-tabs button {
+  min-height: 32px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--muted-ink);
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.mode-tabs button:focus-visible {
+  outline-offset: -3px;
+}
+
+.mode-tabs button:last-child {
+  border-right: 0;
+}
+
+.mode-tabs button[aria-selected="true"] {
+  background: var(--accent);
+  color: #fff;
+}
+
+#search-toggle,
+#more-tools {
+  align-self: end;
+  white-space: nowrap;
+}
+
+.search-panel {
+  display: grid;
+  grid-template-columns: auto minmax(12rem, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  margin-inline: 12px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted-ink);
+  font-size: 0.8rem;
+}
+
+#document-search {
+  min-width: 0;
+  min-height: 34px;
+  padding: 5px 8px;
+}
+
+#search-results,
+#search-empty {
+  white-space: nowrap;
+}
+
+#search-empty {
+  color: var(--muted-ink);
+}
+
+.pair-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 14px;
+  margin: 8px 1px;
+  color: var(--muted-ink);
+  font-size: 0.76rem;
+}
+
+.pair-meta p {
+  margin: 0;
+}
+
+.document-workspace {
+  min-height: 0;
+  min-width: 0;
+  /* Inline/top padding lets the document card sit on the canvas rather than
+     bleeding to the viewport edge. It also separates the card's top border
+     from the header, which previously read as one doubled rule. */
+  padding: 12px 12px var(--dock-clearance);
+  overflow: hidden;
+}
+
+.comparison-dock {
+  position: fixed;
+  left: 50%;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 20;
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 10px;
+  transform: translateX(-50%);
+  border: 1px solid var(--dock-edge);
+  border-top-color: var(--dock-edge-top);
+  border-radius: 14px;
+  background: var(--dock-bg);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 20%),
+    0 12px 32px -8px rgb(0 0 0 / 38%),
+    0 24px 60px -20px rgb(0 0 0 / 30%);
+  color: var(--dock-text);
+  /* Renders native select popups dark so they match the dock. */
+  color-scheme: dark;
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .comparison-dock {
+    background: rgb(24 26 31 / 82%);
+    backdrop-filter: blur(16px) saturate(140%);
+  }
+}
+
+.comparison-dock :focus-visible {
+  outline: 2px solid var(--dock-focus);
+  outline-offset: 2px;
+}
+
+/* Every control inside the dock reads as one dark component. */
+.comparison-dock select,
+.comparison-dock button {
+  border: 1px solid var(--dock-control-edge);
+  background: var(--dock-control);
+  color: var(--dock-text);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.comparison-dock select:hover,
+.comparison-dock button:hover:not(:disabled) {
+  border-color: rgb(255 255 255 / 26%);
+  background: var(--dock-control-hover);
+}
+
+.comparison-dock button:active:not(:disabled) {
+  background: rgb(255 255 255 / 20%);
+}
+
+.comparison-dock button:disabled {
+  opacity: 0.38;
+}
+
+.dock-select {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  color: var(--dock-label);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dock-select select {
+  min-width: 0;
+  width: 100%;
+  min-height: var(--dock-control-height);
+  padding: 5px 26px 5px 9px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  text-overflow: ellipsis;
+  /* Custom chevron; the native one clashes with the dark surface. */
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1.6 2.2 6 6.2l4.4-4' fill='none' stroke='%23c3c9d4' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  background-size: 10px;
+}
+
+/* Give the version names room so labels stop truncating mid-word.
+   Sized in rem, not ch: ch resolves against the select's own 0.78rem
+   font, which is far narrower than the space the option text needs. */
+.comparison-dock .sample-select {
+  flex: 1 1 10rem;
+  min-width: 9.5rem;
+}
+
+.comparison-dock .dock-select:not(.sample-select) {
+  flex: 1 1 11.5rem;
+  min-width: 10.5rem;
+}
+
+.comparison-dock #swap-versions {
+  align-self: end;
+  width: var(--dock-control-height);
+  min-height: var(--dock-control-height);
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.comparison-dock #swap-versions:hover:not(:disabled) {
+  color: #fff;
+}
+
+.comparison-dock .mode-tabs,
+.comparison-dock .change-navigation {
+  flex: 0 0 auto;
+}
+
+/* Segmented control: a translucent track with a solid selected pill. */
+.comparison-dock .mode-tabs {
+  align-self: end;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--dock-control-edge);
+  border-radius: 10px;
+  background: var(--dock-control);
+  overflow: visible;
+}
+
+.comparison-dock .mode-tabs button {
+  min-height: calc(var(--dock-control-height) - 8px);
+  padding: 4px 11px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dock-label);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.comparison-dock .mode-tabs button:hover:not([aria-selected="true"]) {
+  background: rgb(255 255 255 / 10%);
+  color: var(--dock-text);
+}
+
+.comparison-dock .mode-tabs button[aria-selected="true"] {
+  background: #f2f4f7;
+  color: #1b1e24;
+  font-weight: 650;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+}
+
+.comparison-dock .mode-tabs button:focus-visible {
+  outline-offset: -2px;
+}
+
+.comparison-dock .change-navigation {
+  align-self: end;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--dock-control-edge);
+  border-radius: 10px;
+  background: var(--dock-control);
+  grid-template-columns: auto minmax(4.5ch, auto) auto;
+}
+
+.comparison-dock .change-navigation button {
+  min-width: calc(var(--dock-control-height) - 8px);
+  min-height: calc(var(--dock-control-height) - 8px);
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 0.9rem;
+}
+
+.comparison-dock #change-position {
+  padding-inline: 2px;
+  color: var(--dock-label);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Coarse pointers get full-size touch targets. */
+@media (pointer: coarse) {
+  .comparison-dock .change-navigation button,
+  .comparison-dock .mode-tabs button {
+    min-height: 40px;
+  }
+
+  .comparison-dock .change-navigation button {
+    min-width: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comparison-dock select,
+  .comparison-dock button {
+    transition: none;
+  }
+}
+
+.state-panel {
+  margin-bottom: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted-ink);
+}
+
+.state-panel p {
+  margin: 0;
+}
+
+#error-state {
+  border-color: #aab0b6;
+}
+
+.document-view {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.diff-panes,
+.source-panes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  height: 100%;
+  min-height: 0;
+}
+
+.diff-pane,
+.source-pane {
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--surface);
+}
+
+.diff-pane + .diff-pane,
+.source-pane + .source-pane {
+  border-left: 1px solid var(--line);
+}
+
+.pane-label {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted-ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.diff-pane {
+  font-family: Roboto, "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.9;
+}
+
+.document-view[data-type-size="small"] .diff-pane {
+  font-size: 0.9rem;
+}
+
+.document-view[data-type-size="large"] .diff-pane {
+  font-size: 1.12rem;
+}
+
+.source-pane,
+.unified-stream {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  line-height: 1.58;
+}
+
+.document-view[data-type-size="small"] :is(.source-pane, .unified-stream) {
+  font-size: 0.7rem;
+}
+
+.document-view[data-type-size="large"] :is(.source-pane, .unified-stream) {
+  font-size: 0.9rem;
+}
+
+.diff-hunk {
+  position: relative;
+  /* Inset from the pane edges so a selected hunk's ring never lands on the
+     pane divider. Text keeps its ~20px inset via the padding below. */
+  margin-inline: 9px;
+  padding: 14px 11px;
+  border-inline-start: 3px solid transparent;
+  border-radius: 4px;
+}
+
+/* The screen-reader label is the real first child, so the plain
+   :first-child reset never reached the visible block. */
+.diff-hunk > :first-child:not(.visually-hidden),
+.diff-hunk > .visually-hidden + * {
+  margin-top: 0;
+}
+
+.diff-hunk > :last-child {
+  margin-bottom: 0;
+}
+
+.diff-hunk.diff-remove,
+.source-row.diff-remove:not(.diff-change) {
+  border-inline-start-color: var(--rose);
+  background: var(--rose-soft);
+}
+
+.diff-hunk.diff-add,
+.source-row.diff-add:not(.diff-change) {
+  border-inline-start-color: var(--mint);
+  background: var(--mint-soft);
+}
+
+.diff-empty {
+  background: var(--canvas);
+}
+
+/* Current change. A hard stroke competes with the rose/mint diff colours it
+   sits next to, so the selection reads as elevation instead: a hairline ring,
+   a soft ambient lift, and a rounded edge. */
+/* Current change: a single mark in the gutter, full height of the block. */
+.diff-hunk.selected-change {
+  scroll-margin: 14px;
+}
+
+.diff-hunk::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -6px;
+  width: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transform: scaleY(0.3);
+  transform-origin: center;
+  transition:
+    opacity 150ms ease,
+    transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Grows from the centre as the smooth scroll settles, so the mark reads as
+   arriving rather than blinking on. */
+.diff-hunk.selected-change::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+/* Source and unified views are single lines, where a drop shadow would read as
+   clutter. They get the ring and a whisper of tint, no lift. */
+.source-row,
+.unified-row {
+  box-shadow: inset 2px 0 0 transparent;
+}
+
+.source-row.selected-change,
+.unified-row.selected-change {
+  box-shadow: inset 2px 0 0 var(--accent);
+  scroll-margin: 14px;
+}
+
+.diff-hunk,
+.source-row,
+.unified-row {
+  transition: box-shadow 160ms ease, background-color 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diff-hunk,
+  .source-row,
+  .unified-row,
+  .diff-hunk::before {
+    transition: none;
+  }
+
+  .diff-hunk::before {
+    transform: none;
+  }
+}
+
+/* Padding separates neighbouring highlights and lets the radius read. The
+   negative margin keeps the text on its original rhythm. */
+.diff-pane .token-remove,
+.diff-pane .token-add {
+  padding: 0.06em 0.22em;
+  margin-inline: -0.08em;
+}
+
+.diff-pane table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: Roboto, "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.78rem;
+}
+
+.diff-pane th,
+.diff-pane td {
+  padding: 7px;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+.diff-pane pre,
+.diff-pane code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.diff-pane pre {
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f2f3f4;
+  color: var(--ink);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.diff-pane :not(pre) > code {
+  padding: 0.08em 0.25em;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #f2f3f4;
+  font-size: 0.84em;
+}
+
+.diff-pane blockquote {
+  margin-inline: 0;
+  padding-inline: 12px;
+  border-inline-start: 3px solid var(--line);
+  color: var(--muted-ink);
+}
+
+.source-row,
+.unified-row {
+  min-height: 1.58em;
+  margin: 0;
+  padding: 0 12px;
+  overflow: visible;
+  border-inline-start: 3px solid transparent;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.source-row::before {
+  content: attr(data-line);
+  display: inline-block;
+  width: 3.3em;
+  margin-right: 10px;
+  color: var(--muted-ink);
+  text-align: right;
+  user-select: none;
+}
+
+.unified-stream {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 0;
+}
+
+.unified-stream > .pane-label {
+  margin-top: -8px;
+  margin-bottom: 8px;
+}
+
+.unified-row {
+  display: grid;
+  grid-template-columns: 2em minmax(0, 1fr);
+}
+
+.unified-gutter {
+  color: var(--muted-ink);
+  font-weight: 800;
+  user-select: none;
+}
+
+.unified-row.diff-remove .unified-gutter {
+  color: var(--rose);
+}
+
+.unified-row.diff-add .unified-gutter {
+  color: var(--mint);
+}
+
+.unified-content {
+  white-space: pre-wrap;
+}
+
+.token-remove {
+  border-radius: 4px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  background: var(--rose-soft);
+  color: #652b38;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.token-add {
+  border-radius: 4px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  background: var(--mint-soft);
+  color: #1d553f;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+.document-view.hide-highlights :is(.diff-remove, .diff-add) {
+  background: var(--surface);
+}
+
+.document-view.hide-highlights :is(.token-remove, .token-add) {
+  background: transparent;
+  color: inherit;
+}
+
+mark.search-match {
+  padding: 0.05em 0.12em;
+  border: 1px solid #b58b25;
+  border-radius: 3px;
+  background: #fff0bd;
+  color: var(--ink);
+}
+
+dialog {
+  width: min(520px, calc(100% - 24px));
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+dialog::backdrop {
+  background: rgba(32, 36, 42, 0.24);
+}
+
+dialog form {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dialog-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.toggle-control,
+.include-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted-ink);
+  font-size: 0.82rem;
+}
+
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.type-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted-ink);
+  font-size: 0.82rem;
+}
+
+.type-control > span {
+  margin-right: 4px;
+}
+
+.type-control button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  min-height: 30px;
+  padding: 0;
+}
+
+.type-control button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.change-navigation {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 6px;
+}
+
+.change-navigation button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+#change-position {
+  color: var(--muted-ink);
+  font-size: 0.76rem;
+}
+
+label[for="review-notes"] {
+  color: var(--muted-ink);
+  font-size: 0.82rem;
+}
+
+#review-notes {
+  width: 100%;
+  min-height: 96px;
+  padding: 8px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dialog-close {
+  width: 100%;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.shortcut-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.shortcut-list div {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.shortcut-list dt,
+.shortcut-list dd {
+  margin: 0;
+}
+
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 26px;
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #f2f3f4;
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@media (max-width: 800px) {
+  .comparison-title-row {
+    padding-inline: 8px;
+  }
+
+  .document-workspace {
+    padding-inline: 8px;
+    padding-bottom: var(--dock-clearance-narrow);
+  }
+
+  .comparison-dock {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    gap: 6px 8px;
+    padding: 8px;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: center;
+  }
+
+  /* Row 1: the three selectors. Row 2: mode + change navigation. */
+  .comparison-dock .sample-select {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .comparison-dock .dock-select:not(.sample-select) {
+    flex: 1 1 8rem;
+    min-width: 0;
+  }
+
+  .comparison-dock #swap-versions {
+    flex: 0 0 var(--dock-control-height);
+    align-self: end;
+  }
+
+  /* Basis under 100% so the change navigation shares this row
+     instead of wrapping onto one of its own. */
+  .comparison-dock .mode-tabs {
+    flex: 1 1 55%;
+    min-width: 0;
+    align-self: center;
+  }
+
+  .comparison-dock .mode-tabs button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 6px;
+    font-size: 0.7rem;
+  }
+
+  .comparison-dock .change-navigation {
+    flex: 0 0 auto;
+    min-width: 0;
+    align-self: center;
+  }
+
+  .comparison-dock #change-position {
+    font-size: 0.68rem;
+    white-space: nowrap;
+  }
+
+  .comparison-toolbar {
+    grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr);
+    align-items: end;
+  }
+
+  .mode-tabs {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+  }
+
+  .mode-tabs button {
+    flex: 1 1 0;
+  }
+
+  #search-toggle {
+    grid-column: 1 / 3;
+    grid-row: 3;
+  }
+
+  #more-tools {
+    grid-column: 3;
+    grid-row: 3;
+  }
+
+  .search-panel {
+    grid-template-columns: 1fr auto;
+  }
+
+  .search-panel label,
+  #document-search {
+    grid-column: 1 / -1;
+  }
+
+  .diff-panes,
+  .source-panes {
+    display: block;
+    height: 100%;
+    overflow: auto;
+  }
+
+  .diff-pane,
+  .source-pane {
+    min-height: 50%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .diff-pane + .diff-pane,
+  .source-pane + .source-pane {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .unified-stream {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .comparison-toolbar {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .version-select {
+    font-size: 0.64rem;
+  }
+
+  .version-select select {
+    font-size: 0.76rem;
+  }
+
+  .search-panel {
+    grid-template-columns: 1fr;
+  }
+
+  #search-results,
+  #search-empty {
+    white-space: normal;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
