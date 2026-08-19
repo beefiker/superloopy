@@ -128,3 +128,37 @@ test("unified rendering provides removed, added, and neutral gutters with token 
   assert.match(html, /<span class="visually-hidden">Removed<\/span>/);
   assert.match(html, /<span class="visually-hidden">Added<\/span>/);
 });
+
+// Highlight sentinels land on structural markers when a change starts at a
+// block's first character. Each of these silently mangled output before.
+test("block markers survive a highlight sentinel at offset 0", () => {
+  const rendered = (left, right) => renderSideBySide(diffDocuments(left, right), {});
+
+  const bullets = rendered("* one\n* two", "- one\n- two");
+  assert.doesNotMatch(bullets, /<ul><\/ul>/, "a marker change must not delete the list");
+  assert.match(bullets, /<li>/);
+
+  const ordered = rendered("1. one\n2. two", "2. one\n3. two");
+  assert.ok((ordered.match(/<li>/gu) ?? []).length >= 4, "renumbering must not delete the list");
+
+  const checklist = rendered("- [ ] ship it", "- [x] ship it");
+  assert.match(checklist, /type="checkbox" checked/);
+  assert.match(checklist, /type="checkbox" disabled/);
+
+  const fence = rendered("```sh\nnpm test\n```", "```js\nnpm test\n```");
+  for (const attribute of fence.match(/class="language-[^"]*"/gu) ?? []) {
+    assert.match(attribute, /^class="language-(sh|js)"$/u, "the info string must never carry markup");
+  }
+  assert.doesNotMatch(fence, /class="language-<span/u);
+});
+
+test("source panes emit the same row count on both sides", () => {
+  const paneRows = (html, index) => (html.split('class="source-pane"')[index]?.match(/<pre /gu) ?? []).length;
+  // An add at the top: the left side spends a blank separator line the filler
+  // count used to ignore, so every row below drifted.
+  const html = renderSource(diffDocuments("A one.\n\nB two.", "X new.\n\nA one.\n\nB two."), {});
+  assert.equal(paneRows(html, 1), paneRows(html, 2));
+
+  const replaced = renderSource(diffDocuments("One.\n\nTwo.", "One line.\nAnd another.\n\nTwo."), {});
+  assert.equal(paneRows(replaced, 1), paneRows(replaced, 2));
+});

@@ -1,12 +1,24 @@
-import { SAMPLE_ORDER } from "./data.generated.mjs";
+import { SAMPLE_ORDER, SAMPLES, VERSION_ORDER } from "./data.generated.mjs";
 
-const VERSION_IDS = ["original", "a", "b", "c"];
+// Derived, not restated: a third hand-written copy of the version list meant a
+// new version would be silently rejected here.
+const VERSION_IDS = VERSION_ORDER;
 const DEFAULT_STATE = Object.freeze({
-  sample: "release-note",
+  sample: SAMPLE_ORDER[0],
   left: "original",
-  right: "c",
+  right: VERSION_IDS.at(-1),
   mode: "rendered"
 });
+
+// A sample may omit a version, so "this id exists" is not the same as
+// "this sample has it".
+function sampleHasVersion(sampleId, versionId) {
+  return Boolean(SAMPLES[sampleId]?.versions?.[versionId]?.text);
+}
+
+function firstAvailableVersion(sampleId, exclude) {
+  return VERSION_IDS.find((id) => id !== exclude && sampleHasVersion(sampleId, id)) ?? null;
+}
 
 export const VALID_MODES = Object.freeze(["rendered", "source", "unified"]);
 
@@ -64,7 +76,18 @@ export function selectVersion(state, side, versionId) {
 
 export function selectSample(state, sampleId) {
   const normalized = normalizedState(state);
-  return SAMPLE_ORDER.includes(sampleId) ? { ...normalized, sample: sampleId } : normalized;
+  if (!SAMPLE_ORDER.includes(sampleId)) return normalized;
+
+  // Carry the pair over only where it exists in the target sample. English
+  // samples have no Humanize Korean version, so keeping `a` would land the
+  // user on the error panel with a disabled option selected.
+  let left = sampleHasVersion(sampleId, normalized.left) ? normalized.left : null;
+  let right = sampleHasVersion(sampleId, normalized.right) ? normalized.right : null;
+  left ??= firstAvailableVersion(sampleId, right);
+  right ??= firstAvailableVersion(sampleId, left);
+
+  if (!left || !right || left === right) return { ...normalized, sample: sampleId };
+  return { ...normalized, sample: sampleId, left, right };
 }
 
 export function swapVersions(state) {
