@@ -31,8 +31,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Name the roots rather than globbing: a shell glob like `test/*.test.js`
-      # does not expand in cmd.exe on Windows, and bare `node --test` walks
-      # every directory including gitignored ones such as local worktrees.
+      # Quoted globs, expanded by Node itself. A bare shell glob does not expand
+      # in cmd.exe on Windows; a directory argument is imported as a module on
+      # Node >= 22 rather than scanned; and bare `node --test` walks every
+      # directory, including gitignored ones such as local worktrees.
       - name: Run tests
-        run: node --test test/ examples/
+        run: node --test "test/**/*.test.js" "test/**/*.test.mjs" "examples/**/*.test.js" "examples/**/*.test.mjs"
