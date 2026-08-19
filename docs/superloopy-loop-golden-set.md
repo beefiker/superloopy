@@ -138,6 +138,7 @@ Total: 100 points.
 | `examples/writing-comparison/app/diff-core.mjs` | Block and token diff engine producing the hunks both panes and the unified stream render. | Must keep the app runnable from a fresh checkout after `node build-data.mjs`. |
 | `examples/writing-comparison/app/index.html` | Single page shell holding the comparison panes, floating control dock, and tool dialogs. | Must keep the app runnable from a fresh checkout after `node build-data.mjs`. |
 | `examples/writing-comparison/app/markdown.mjs` | Minimal Markdown block and inline renderer with HTML escaping and safe-URL checks. | Must keep the app runnable from a fresh checkout after `node build-data.mjs`. |
+| `examples/writing-comparison/app/search.mjs` | Original Superloopy search module; covered by the comparison app suite. | Must mark the matched characters themselves, including where lowercasing changes string length. |
 | `examples/writing-comparison/app/server.mjs` | Loopback-only static file server that serves the app on a chosen port. | Must keep the app runnable from a fresh checkout after `node build-data.mjs`. |
 | `examples/writing-comparison/app/state.mjs` | URL view-state parser and serializer for sample, version pair, and display mode. | Must keep the app runnable from a fresh checkout after `node build-data.mjs`. |
 | `examples/writing-comparison/app/styles.css` | Presentation for the panes, diff tokens, floating dock, and current-change indicator. | Must keep the app runnable from a fresh checkout after `node build-data.mjs`. |

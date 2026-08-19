@@ -1,5 +1,8 @@
 const TOKEN_PATTERN = /\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]+/gu;
 const MAX_BLOCK_LCS = 220;
+// Token alignment allocates left * right cells, so it needs its own ceiling:
+// diffDocuments' fallback funnels an entire document into one replace hunk.
+const MAX_TOKEN_LCS_CELLS = 4_000_000;
 
 function lineText(line) {
   return line.endsWith("\r") ? line.slice(0, -1) : line;
@@ -66,11 +69,13 @@ export function splitBlocks(text) {
     if (index === 0 && lineText(lines[index]) === "---") {
       let end = index + 1;
       while (end < lines.length && lineText(lines[end]) !== "---") end += 1;
-      if (end < lines.length) end += 1;
-      else end = lines.length;
-      append("frontmatter", index, end);
-      index = end;
-      continue;
+      // Only a closed block is frontmatter. An unclosed leading `---` is a
+      // thematic break, and treating it as frontmatter swallowed the document.
+      if (end < lines.length) {
+        append("frontmatter", index, end + 1);
+        index = end + 1;
+        continue;
+      }
     }
 
     const fence = isFenceStart(lines[index]);
@@ -172,7 +177,10 @@ function fallbackAlignment(left, right, equals) {
 }
 
 function align(left, right, equals) {
-  const scores = Array.from({ length: left.length + 1 }, () => new Uint16Array(right.length + 1));
+  // Uint16Array wraps past 65535, which yields a wrong alignment rather than a
+  // slow one, so widen the cell once either side can exceed that.
+  const Scores = Math.min(left.length, right.length) > 65_535 ? Uint32Array : Uint16Array;
+  const scores = Array.from({ length: left.length + 1 }, () => new Scores(right.length + 1));
   for (let leftIndex = left.length - 1; leftIndex >= 0; leftIndex -= 1) {
     for (let rightIndex = right.length - 1; rightIndex >= 0; rightIndex -= 1) {
       scores[leftIndex][rightIndex] = equals(left[leftIndex], right[rightIndex])
@@ -203,6 +211,14 @@ function align(left, right, equals) {
 export function diffTokens(left, right) {
   const leftTokens = tokenize(left);
   const rightTokens = tokenize(right);
+  // Beyond the budget, report the pair as a whole-side replacement instead of
+  // allocating a matrix that would exhaust memory.
+  if (leftTokens.length * rightTokens.length > MAX_TOKEN_LCS_CELLS) {
+    return coalesceTokens([
+      ...leftTokens.map((value) => ({ type: "remove", value })),
+      ...rightTokens.map((value) => ({ type: "add", value }))
+    ]);
+  }
   const operations = align(leftTokens, rightTokens, (a, b) => a === b);
   return coalesceTokens(operations.map((operation) => ({
     type: operation.type,
@@ -248,19 +264,18 @@ function sectionNames(blocks) {
   });
 }
 
+// Only `rightAudits` is ever supplied (app.mjs passes version.audits). The four
+// other accepted shapes were unreachable, so preservation could only ever read
+// "unknown" while looking like a working guard.
 function preservationFor(context) {
-  const audits = Array.isArray(context?.rightAudits) ? context.rightAudits
-    : Array.isArray(context?.right?.audits) ? context.right.audits
-      : Array.isArray(context?.selectedOutput?.audits) ? context.selectedOutput.audits
-        : Array.isArray(context?.audits) ? context.audits
-          : Array.isArray(context) ? context : [];
+  const audits = Array.isArray(context?.rightAudits) ? context.rightAudits : [];
   if (audits.length === 0) return "unknown";
 
   let hasPositiveEvidence = false;
   for (const audit of audits) {
     const protectedCheck = audit?.checks?.protected;
-    const missing = protectedCheck?.missing?.values ?? protectedCheck?.missing ?? audit?.protectedTokens?.missing;
-    const explicitFailure = protectedCheck?.ok === false || protectedCheck?.missing?.ok === false ||
+    const missing = protectedCheck?.missing?.values ?? protectedCheck?.missing;
+    const explicitFailure = protectedCheck?.ok === false ||
       (Array.isArray(missing) && missing.length > 0) || audit?.ok === false;
     if (explicitFailure) return "fail";
     if (protectedCheck?.ok === true || audit?.ok === true) hasPositiveEvidence = true;
@@ -270,7 +285,14 @@ function preservationFor(context) {
 
 function classify(op, left, right, tokens) {
   if (op === "equal") return "wording";
-  const changedNumber = tokens.some((token) => token.type !== "equal" && /^\p{N}+$/u.test(token.value));
+  // Compare the digit runs inside changed tokens: "18427건" is one token, so a
+  // whole-token digit test can never match in Korean.
+  const digitsFor = (type) => tokens
+    .filter((token) => token.type === type || token.type === "equal")
+    .flatMap((token) => token.value.match(/\p{N}+/gu) ?? []);
+  const removedDigits = digitsFor("remove").join("\u0000");
+  const addedDigits = digitsFor("add").join("\u0000");
+  const changedNumber = removedDigits !== addedDigits;
   if (changedNumber) return "number/protected";
   if (!left || !right || left.blocks.length !== right.blocks.length || left.blocks.some((block, index) => block.type !== right.blocks[index]?.type)) return "structure";
   const leftRaw = left.blocks.map((block) => block.raw).join("\n\n");

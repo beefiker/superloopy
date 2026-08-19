@@ -5,6 +5,24 @@
 export const TOKEN_OPEN = "\uE100";
 export const TOKEN_CLOSE = "\uE101";
 const MARK = "[\uE100\uE101]";
+const MARK_GLOBAL = /[\uE100\uE101]/gu;
+const GAP = `[\\s\uE100\uE101]`;
+
+// Sentinels carried out of a structural marker must be put back into the
+// content, or the <span> they open or close is left unpaired.
+function marksIn(value) {
+  return (value.match(MARK_GLOBAL) ?? []).join("");
+}
+
+function withoutMarks(value) {
+  return value.replace(MARK_GLOBAL, "");
+}
+
+// A marker followed by at least one real space. Sentinels may sit anywhere.
+const LIST_UNORDERED = new RegExp(`^(${GAP}*)([-+*])(${GAP}*\\s${GAP}*)(.*)$`, "u");
+const LIST_ORDERED = new RegExp(`^(${GAP}*)((?:\\d${MARK}*)+[.)])(${GAP}*\\s${GAP}*)(.*)$`, "u");
+const CHECKLIST = new RegExp(`^(${MARK}*)\\[(${MARK}*[ xX]${MARK}*)\\](${GAP}*\\s${GAP}*)(.*)$`, "u");
+const FENCE_OPEN = new RegExp(`^${GAP}*((?:\`${MARK}*){3,}|(?:~${MARK}*){3,})(.*)$`, "u");
 
 export function escapeHtml(value) {
   return String(value ?? "")
@@ -54,17 +72,15 @@ export function renderInline(value) {
 
 function renderList(raw) {
   const lines = raw.split("\n");
-  const ordered = /^\s*\d+[.)]\s+/u.test(lines[0] ?? "");
+  const ordered = LIST_ORDERED.test(lines[0] ?? "");
   const items = [];
   let current = null;
 
   for (const line of lines) {
-    const match = ordered
-      ? /^\s*\d+[.)]\s+(.*)$/u.exec(line)
-      : /^\s*[-+*]\s+(.*)$/u.exec(line);
+    const match = (ordered ? LIST_ORDERED : LIST_UNORDERED).exec(line);
     if (match) {
       if (current !== null) items.push(current);
-      current = match[1];
+      current = marksIn(match[1] + match[2] + match[3]) + match[4];
     } else if (current !== null) {
       current += `\n${line.trim()}`;
     }
@@ -72,10 +88,11 @@ function renderList(raw) {
   if (current !== null) items.push(current);
 
   const content = items.map((item) => {
-    const checklist = /^\[([ xX])\]\s+(.*)$/u.exec(item);
+    const checklist = CHECKLIST.exec(item);
     if (!checklist) return `<li>${renderInline(item).replaceAll("\n", "<br>")}</li>`;
-    const checked = checklist[1].toLowerCase() === "x" ? " checked" : "";
-    return `<li><input type="checkbox"${checked} disabled> ${renderInline(checklist[2]).replaceAll("\n", "<br>")}</li>`;
+    const checked = withoutMarks(checklist[2]).toLowerCase() === "x" ? " checked" : "";
+    const carried = marksIn(checklist[1] + checklist[2] + checklist[3]);
+    return `<li><input type="checkbox"${checked} disabled> ${renderInline(carried + checklist[4]).replaceAll("\n", "<br>")}</li>`;
   }).join("");
   return `<${ordered ? "ol" : "ul"}>${content}</${ordered ? "ol" : "ul"}>`;
 }
@@ -102,17 +119,25 @@ export function renderBlock(block) {
     const match = new RegExp(`^([\\s\uE100\uE101]*(?:#${MARK}*){1,6}[\\s\uE100\uE101]*)(.*?)(?:\\s+#+\\s*)?$`, "u").exec(raw);
     if (match) {
       const level = (match[1].match(/#/gu) ?? []).length;
-      const carried = (match[1].match(new RegExp(MARK, "gu")) ?? []).join("");
+      const carried = marksIn(match[1]);
       return `<h${level}>${renderInline(carried + match[2])}</h${level}>`;
     }
   }
   if (type === "frontmatter") return `<pre class="frontmatter"><code>${escapeHtml(raw)}</code></pre>`;
   if (type === "fence") {
     const lines = raw.split("\n");
-    const opening = /^\s*(`{3,}|~{3,})([^\s]*)/u.exec(lines[0] ?? "");
-    const language = opening?.[2] ? ` class="language-${escapeHtml(opening[2])}"` : "";
-    const content = lines.slice(1, opening && lines.at(-1)?.trim().startsWith(opening[1][0]) ? -1 : undefined).join("\n");
-    return `<pre><code${language}>${escapeHtml(content)}</code></pre>`;
+    const opening = FENCE_OPEN.exec(lines[0] ?? "");
+    // The info string names a CSS class, so it must never carry sentinels.
+    const info = withoutMarks(opening?.[2] ?? "").trim().split(/\s+/u)[0] ?? "";
+    const language = info ? ` class="language-${escapeHtml(info)}"` : "";
+    const closer = withoutMarks(opening?.[1] ?? "")[0];
+    const hasCloser = Boolean(opening) && lines.length > 1
+      && withoutMarks(lines.at(-1) ?? "").trim().startsWith(closer);
+    const content = lines.slice(1, hasCloser ? -1 : undefined).join("\n");
+    // The opening line is not rendered, so its sentinels are re-emitted here to
+    // keep every span paired.
+    const carried = marksIn(lines[0] ?? "") + (hasCloser ? marksIn(lines.at(-1) ?? "") : "");
+    return `<pre><code${language}>${carried}${escapeHtml(content)}</code></pre>`;
   }
   if (type === "blockquote") {
     const content = raw.split("\n").map((line) => renderInline(line.replace(/^\s*>\s?/u, ""))).join("<br>");
