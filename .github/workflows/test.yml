@@ -31,8 +31,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Use node --test's own file discovery rather than a shell glob: `npm test`
-      # relies on `test/*.test.js` expanding in the shell, which cmd.exe on Windows
-      # does not do. Discovery finds the same suite on every platform.
+      # Name the roots rather than globbing: a shell glob like `test/*.test.js`
+      # does not expand in cmd.exe on Windows, and bare `node --test` walks
+      # every directory including gitignored ones such as local worktrees.
       - name: Run tests
-        run: node --test
+        run: node --test test/ examples/
