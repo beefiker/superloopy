@@ -1,7 +1,8 @@
 import { SAMPLE_ORDER, SAMPLES, VERSION_ORDER } from "./data.generated.mjs";
 import { diffDocuments, summarizeDiff } from "./diff-core.mjs";
 import { parseViewState, selectSample, selectVersion, serializeViewState, swapVersions } from "./state.mjs";
-import { renderSideBySide, renderSource, renderUnified } from "./views.mjs";
+import { renderSideBySide, renderSource, renderUnified, labelFor } from "./views.mjs";
+import { applySearch } from "./search.mjs";
 
 export function navigateModeTabs(tabs, currentTab, key) {
   if (!["ArrowLeft", "ArrowRight"].includes(key) || tabs.length === 0) return false;
@@ -59,13 +60,6 @@ const elements = browserAvailable ? Object.freeze({
   toolsDialog: document.querySelector("#tools-dialog"),
   status: document.querySelector("#interface-status")
 }) : null;
-
-const operationLabels = Object.freeze({
-  add: "Added",
-  remove: "Removed",
-  replace: "Changed",
-  equal: "Unchanged"
-});
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 const reducedMotion = browserAvailable ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true };
@@ -183,7 +177,7 @@ function clearMetrics() {
 
 function changeMeta(hunk) {
   const tokenCount = hunk.tokens.filter((token) => token.type !== "equal").length;
-  return `${operationLabels[hunk.op]} · ${hunk.kind} · ${tokenCount} span${tokenCount === 1 ? "" : "s"}`;
+  return `${labelFor(hunk.op)} · ${hunk.kind} · ${tokenCount} span${tokenCount === 1 ? "" : "s"}`;
 }
 
 function addPaneLabels(leftVersion, rightVersion) {
@@ -255,59 +249,6 @@ function moveChange(offset) {
   chooseChange(selectedChangeIndex + offset);
 }
 
-function clearSearchMarks() {
-  for (const mark of elements.documentView.querySelectorAll("mark.search-match")) {
-    const parent = mark.parentNode;
-    mark.replaceWith(document.createTextNode(mark.textContent));
-    parent?.normalize();
-  }
-}
-
-function applySearch() {
-  clearSearchMarks();
-  const query = elements.search.value.trim();
-  elements.searchEmpty.hidden = true;
-  if (!query) {
-    elements.searchResults.textContent = "Search both";
-    return;
-  }
-
-  const needle = query.toLocaleLowerCase();
-  const walker = document.createTreeWalker(elements.documentView, NodeFilter.SHOW_TEXT, {
-    acceptNode(node) {
-      if (!node.nodeValue || !node.nodeValue.toLocaleLowerCase().includes(needle)) return NodeFilter.FILTER_REJECT;
-      if (node.parentElement?.closest(".visually-hidden, .pane-label, mark")) return NodeFilter.FILTER_REJECT;
-      return NodeFilter.FILTER_ACCEPT;
-    }
-  });
-  const matches = [];
-  while (walker.nextNode()) matches.push(walker.currentNode);
-
-  let count = 0;
-  for (const textNode of matches) {
-    const text = textNode.nodeValue;
-    const folded = text.toLocaleLowerCase();
-    const fragment = document.createDocumentFragment();
-    let cursor = 0;
-    let matchIndex = folded.indexOf(needle, cursor);
-    while (matchIndex !== -1) {
-      fragment.append(document.createTextNode(text.slice(cursor, matchIndex)));
-      const mark = document.createElement("mark");
-      mark.className = "search-match";
-      mark.textContent = text.slice(matchIndex, matchIndex + query.length);
-      fragment.append(mark);
-      count += 1;
-      cursor = matchIndex + query.length;
-      matchIndex = folded.indexOf(needle, cursor);
-    }
-    fragment.append(document.createTextNode(text.slice(cursor)));
-    textNode.replaceWith(fragment);
-  }
-
-  elements.searchResults.textContent = `${count} match${count === 1 ? "" : "es"}`;
-  elements.searchEmpty.hidden = count !== 0;
-}
-
 function attachSynchronizedScrolling() {
   const panes = [...elements.documentView.querySelectorAll(".diff-pane, .source-pane")];
   if (panes.length !== 2) return;
@@ -371,7 +312,7 @@ function renderInterface() {
     renderDocuments(leftVersion, rightVersion);
     elements.emptyState.hidden = changedHunks.length !== 0;
     updateSelectedChange();
-    applySearch();
+    applySearch(elements);
   } catch (error) {
     showRenderError(error);
   }
@@ -441,10 +382,22 @@ function exportReviewNotes() {
   setStatus(`Review notes exported for ${viewState.left} to ${viewState.right}.`);
 }
 
-function isFormControl(target) {
-  return target instanceof Element && Boolean(target.closest("input, textarea, select, button, [contenteditable='true']"));
+// Buttons are deliberately absent: keeping focus on a dock button must not
+// disable the shortcuts, which is what alternating clicking and keying does.
+// Notes describe one comparison. Carrying them into another one makes the
+// export claim they were written about a document they never mentioned.
+function discardNotesForComparisonChange() {
+  if (elements.notes.value.trim().length === 0) return;
+  const keep = window.confirm("Keep the review notes for this new comparison? Cancel clears them.");
+  if (!keep) elements.notes.value = "";
 }
 
+function isFormControl(target) {
+  return target instanceof Element && Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+}
+
+// Length in the ORIGINAL string whose folded form equals `needle`, or 0 when
+// nothing matches at `start`. Not needle.length: folding can change length.
 function handleShortcut(event) {
   if (event.defaultPrevented || event.repeat || event.altKey || event.ctrlKey || event.metaKey || isFormControl(event.target)) return;
   if (event.key === "[") {
@@ -468,6 +421,7 @@ function handleShortcut(event) {
 function wireEvents() {
   elements.sampleSelector.addEventListener("change", (event) => {
     const sample = SAMPLES[event.target.value];
+    discardNotesForComparisonChange();
     changeState(selectSample(viewState, event.target.value), {
       announcement: `Sample changed to ${sample?.label ?? event.target.value}.`
     });
@@ -493,7 +447,7 @@ function wireEvents() {
     if (elements.searchPanel.hidden) openSearch();
     else closeSearch();
   });
-  elements.search.addEventListener("input", applySearch);
+  elements.search.addEventListener("input", () => applySearch(elements));
   elements.search.addEventListener("keydown", (event) => {
     if (overlayKeyboardAction({ key: event.key, open: !elements.searchPanel.hidden }) !== "close") return;
     event.preventDefault();

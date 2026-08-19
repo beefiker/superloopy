@@ -4,7 +4,7 @@ function safeAttribute(value) {
   return escapeHtml(value);
 }
 
-function labelFor(op) {
+export function labelFor(op) {
   if (op === "add") return "Added";
   if (op === "remove") return "Removed";
   if (op === "replace") return "Changed";
@@ -139,37 +139,52 @@ function emptyRow(hunk) {
   return `<pre class="source-row diff-empty" data-hunk-id="${safeAttribute(hunk.id)}"><span class="visually-hidden">No content</span></pre>`;
 }
 
-function sourceRows(hunks, side, oppositeSide) {
-  const document = sourceDocument(hunks, side);
-  const opposite = sourceDocument(hunks, oppositeSide);
-  if (hunks.length === 0) {
-    return document.lines.map((text, index) => {
-      const line = index + 1;
-      return `<pre class="source-row diff-context" data-line="${line}" aria-label="Unchanged line ${line}">${escapeHtml(text)}</pre>`;
-    }).join("");
-  }
+// One backward pass per side. A line with no entry of its own (a blank
+// separator) belongs to the next hunk that has one; the previous per-line
+// entries.find() rescan made this quadratic in document length.
+function lineAttribution(source, hunks) {
   const entriesByLine = new Map();
   const entriesByHunk = new Map();
-  for (const entry of document.entries) {
+  for (const entry of source.entries) {
     for (let line = entry.startLine; line <= entry.endLine; line += 1) entriesByLine.set(line, entry);
     const group = entriesByHunk.get(entry.hunkIndex) ?? [];
     group.push(entry);
     entriesByHunk.set(entry.hunkIndex, group);
   }
 
+  const hunkByLine = new Map();
+  const counts = new Array(hunks.length).fill(0);
+  let pending = source.entries.at(-1)?.hunkIndex ?? 0;
+  for (let line = source.lines.length; line >= 1; line -= 1) {
+    const entry = entriesByLine.get(line);
+    if (entry) pending = entry.hunkIndex;
+    const hunkIndex = entry?.hunkIndex ?? pending;
+    hunkByLine.set(line, hunkIndex);
+    if (hunkIndex < counts.length) counts[hunkIndex] += 1;
+  }
+  return { entriesByLine, entriesByHunk, hunkByLine, counts };
+}
+
+function sourceRows(hunks, side, source, attribution, targetCounts) {
+  if (hunks.length === 0) {
+    return source.lines.map((text, index) => {
+      const line = index + 1;
+      return `<pre class="source-row diff-context" data-line="${line}" aria-label="Unchanged line ${line}">${escapeHtml(text)}</pre>`;
+    }).join("");
+  }
+
   const tokenMarkup = new Map();
   hunks.forEach((hunk, hunkIndex) => {
     if (hunk.op === "replace") {
-      for (const [line, html] of replacementTokenLines(hunk, side, entriesByHunk.get(hunkIndex) ?? [])) tokenMarkup.set(line, html);
+      for (const [line, html] of replacementTokenLines(hunk, side, attribution.entriesByHunk.get(hunkIndex) ?? [])) tokenMarkup.set(line, html);
     }
   });
 
   const groupedRows = Array.from({ length: hunks.length }, () => []);
-  document.lines.forEach((text, index) => {
+  source.lines.forEach((text, index) => {
     const line = index + 1;
-    const entry = entriesByLine.get(line);
-    const nextEntry = document.entries.find((candidate) => candidate.startLine > line);
-    const hunkIndex = entry?.hunkIndex ?? nextEntry?.hunkIndex ?? document.entries.at(-1)?.hunkIndex ?? 0;
+    const entry = attribution.entriesByLine.get(line);
+    const hunkIndex = attribution.hunkByLine.get(line) ?? 0;
     const hunk = hunks[hunkIndex];
     const classes = entry ? classFor(entry.hunk.op, side) : "diff-context";
     const label = entry ? labelFor(entry.hunk.op) : "Unchanged";
@@ -177,12 +192,13 @@ function sourceRows(hunks, side, oppositeSide) {
     groupedRows[hunkIndex].push(`<pre class="source-row ${classes}" data-hunk-id="${safeAttribute(hunk.id)}" data-line="${line}" aria-label="${label} line ${line}">${content}</pre>`);
   });
 
+  // Pad every hunk to the taller side's row count. Counting block lines alone
+  // ignored the blank separator a side spends inside a hunk, so the panes drifted
+  // apart below the first add or remove.
   return hunks.map((hunk, index) => {
     const rows = groupedRows[index];
-    if (rows.length > 0 || sideRange(hunk, side)) return rows.join("");
-    const oppositeEntries = opposite.entries.filter((entry) => entry.hunkIndex === index);
-    const count = Math.max(1, oppositeEntries.reduce((total, entry) => total + physicalLines(entry.block.raw).length, 0));
-    return Array.from({ length: count }, () => emptyRow(hunk)).join("");
+    const filler = Math.max(0, (targetCounts[index] ?? 0) - rows.length);
+    return rows.join("") + Array.from({ length: filler }, () => emptyRow(hunk)).join("");
   }).join("");
 }
 
@@ -190,7 +206,16 @@ export function renderSource(hunks, options = {}) {
   const changes = Array.isArray(hunks) ? hunks : [];
   const leftLabel = safeAttribute(options.leftLabel ?? "Left source");
   const rightLabel = safeAttribute(options.rightLabel ?? "Right source");
-  return `<section class="source-panes"><article class="source-pane" data-side="left" aria-label="${leftLabel}">${sourceRows(changes, "left", "right")}</article><article class="source-pane" data-side="right" aria-label="${rightLabel}">${sourceRows(changes, "right", "left")}</article></section>`;
+  // Build each side once. sourceRows previously rebuilt both documents on each
+  // of its two calls, so every re-render reconstructed them four times.
+  const leftSource = sourceDocument(changes, "left");
+  const rightSource = sourceDocument(changes, "right");
+  const leftAttribution = lineAttribution(leftSource, changes);
+  const rightAttribution = lineAttribution(rightSource, changes);
+  const targets = changes.map((_, index) =>
+    Math.max(leftAttribution.counts[index] ?? 0, rightAttribution.counts[index] ?? 0, 1));
+
+  return `<section class="source-panes"><article class="source-pane" data-side="left" aria-label="${leftLabel}">${sourceRows(changes, "left", leftSource, leftAttribution, targets)}</article><article class="source-pane" data-side="right" aria-label="${rightLabel}">${sourceRows(changes, "right", rightSource, rightAttribution, targets)}</article></section>`;
 }
 
 function tokenHtml(tokens, side) {
