@@ -7,7 +7,7 @@
     "superloopy": "src/cli.js"
   },
   "scripts": {
-    "test": "node --test test/ examples/",
+    "test": "node --test \"test/**/*.test.js\" \"test/**/*.test.mjs\" \"examples/**/*.test.js\" \"examples/**/*.test.mjs\"",
     "check": "npm test",
     "sync-version": "node scripts/sync-version.mjs"
   },
