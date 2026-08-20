@@ -427,6 +427,7 @@ test("plugin packages the Superloopy Korean humanizer skill with measurable safe
     "skills/humanize-korean/agents/openai.yaml",
     "skills/humanize-korean/references/quick-rules.md",
     "skills/humanize-korean/references/quality-rubric.md",
+    "skills/humanize-korean/references/golden-set.md",
     "skills/humanize-korean/references/upstream-notice.md",
     "skills/humanize-korean/scripts/audit-humanize-output.mjs"
   ]) {
