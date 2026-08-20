@@ -60,9 +60,17 @@ test("backend skill routes a stack-neutral, bounded database workflow", async ()
     /write-evidence-report\.mjs" write "<project-root>" "<active-evidence-root>" "<qualified-report-id>"/su,
   );
   assert.match(skill, /standard input/iu);
+  assert.match(skill, /names one attempt/u, "report ids must be scoped to one attempt");
+  assert.match(skill, /-attempt-2/u);
+  assert.match(skill, /`recover` only for the invocation whose receipt was lost/u);
+  assert.match(skill, /Redact credentials, connection strings, tokens/u);
+  assert.match(skill, /another active Superloopy mode mandates its own first line/u);
+  assert.match(skill, /hard-link/u);
+  assert.match(skill, /never write the target path directly/u);
   assert.doesNotMatch(skill, /ai-db-backend-skill-20260805/u);
   assert.doesNotMatch(skill, /always use (PostgreSQL|TypeScript|Python|MongoDB)/iu);
-  assert.doesNotMatch(metadata, /^policy:/mu);
+  assert.match(metadata, /^policy:$/mu, "explicit-only activation must be enforced by metadata policy");
+  assert.match(metadata, /^ {2}allow_implicit_invocation: false$/mu);
   assert.match(metadata, /Use `\$superloopy:superloopy-backend` only after explicit invocation/u);
   assert.doesNotMatch(metadata, /Use \$superloopy-backend\b/u);
 
@@ -183,7 +191,8 @@ test("backend evidence helper writes distinct reports through the active evidenc
   assert.equal(await readFile(join(sandbox, firstPath), "utf8"), boundReport("goal-g001-criterion-c001-worker-franky", "# Backend report\n\nworker: franky\n"));
   const firstDirectory = join(sandbox, ".superloopy/evidence/superloopy-backend/goal-g001-criterion-c001-worker-franky");
   if (process.platform !== "win32") {
-    assert.equal(statSync(firstDirectory).mode & 0o222, 0, "published report directory must be read-only");
+    assert.notEqual(statSync(firstDirectory).mode & 0o200, 0, "published report directory must stay writable for ordinary cleanup");
+    assert.equal(statSync(join(sandbox, firstPath)).mode & 0o222, 0, "published report file must be read-only");
   }
 
   const recovered = spawnSync(process.execPath, [
@@ -197,18 +206,6 @@ test("backend evidence helper writes distinct reports through the active evidenc
   assert.equal(recovered.stdout.trim(), firstPath);
 
   if (process.platform !== "win32") {
-    await chmod(firstDirectory, 0o755);
-    const writableDirectoryRecovery = spawnSync(process.execPath, [
-      helper,
-      "recover",
-      ".",
-      ".superloopy/evidence",
-      "goal-g001-criterion-c001-worker-franky",
-    ], { cwd: sandbox, encoding: "utf8" });
-    assert.notEqual(writableDirectoryRecovery.status, 0);
-    assert.match(writableDirectoryRecovery.stderr, /committed|directory|writable/iu);
-    await chmod(firstDirectory, 0o555);
-
     const publicationRoot = join(sandbox, ".superloopy/evidence/superloopy-backend");
     await chmod(publicationRoot, 0o755);
     const writableRootRecovery = spawnSync(process.execPath, [
@@ -255,17 +252,44 @@ test("backend evidence helper writes distinct reports through the active evidenc
   assert.match(linkedRecovery.stderr, /committed|hard link|link count/iu);
   await rm(incompleteAnchor);
 
+  // Only Windows finalizes after the rename commit point, so only Windows crash states are
+  // repairable; on POSIX a writable or extra-linked committed report is post-publication
+  // interference and must fail closed instead of being repaired into a certifiable state.
+  const crashedAnchor = join(sandbox, ".superloopy/evidence/superloopy-backend/.goal-g001-criterion-c001-worker-franky.1234.5.abc.tmp.scrub");
   await chmod(join(sandbox, firstPath), 0o644);
-  const writableRecovery = spawnSync(process.execPath, [
-    helper,
-    "recover",
-    ".",
-    ".superloopy/evidence",
-    "goal-g001-criterion-c001-worker-franky",
+  await link(join(sandbox, firstPath), crashedAnchor);
+  if (process.platform !== "win32") {
+    const laundered = spawnSync(process.execPath, [
+      helper, "recover", ".", ".superloopy/evidence", "goal-g001-criterion-c001-worker-franky",
+    ], { cwd: sandbox, encoding: "utf8" });
+    assert.notEqual(laundered.status, 0, "POSIX recover must never repair a writable report");
+    assert.match(laundered.stderr, /hard links|writable/iu);
+    assert.equal(existsSync(crashedAnchor), true, "POSIX recover must not delete anchor-named user hard links");
+  }
+  const repairHelper = await import(pathToFileURL(helper));
+  const repairPlatform = Object.getOwnPropertyDescriptor(process, "platform");
+  Object.defineProperty(process, "platform", { ...repairPlatform, value: "win32" });
+  try {
+    assert.equal(await repairHelper.recoverBackendEvidenceReport({
+      projectRoot: sandbox, evidenceRoot: ".superloopy/evidence", reportId: "goal-g001-criterion-c001-worker-franky",
+    }), firstPath);
+  } finally {
+    Object.defineProperty(process, "platform", repairPlatform);
+  }
+  assert.equal(existsSync(crashedAnchor), false, "Windows recover must remove the crashed same-inode scrub anchor");
+  assert.equal(statSync(join(sandbox, firstPath)).mode & 0o222, 0, "Windows recover must restore the read-only report mode");
+
+  // A hard pre-commit crash leaves this report's staging directory behind; recover sweeps it
+  // under the lock once its recorded owner PID is provably dead.
+  const deadPid = spawnSync(process.execPath, ["-e", ""], { encoding: "utf8" }).pid;
+  const crashedStage = join(sandbox, `.superloopy/evidence/superloopy-backend/.goal-g001-criterion-c001-worker-franky.${deadPid}.5.abc.tmp`);
+  await mkdir(crashedStage, { recursive: true });
+  await writeFile(join(crashedStage, "backend-skill-report.md"), "torn staging content\n", "utf8");
+  const sweptRecovery = spawnSync(process.execPath, [
+    helper, "recover", ".", ".superloopy/evidence", "goal-g001-criterion-c001-worker-franky",
   ], { cwd: sandbox, encoding: "utf8" });
-  assert.notEqual(writableRecovery.status, 0);
-  assert.match(writableRecovery.stderr, /committed|read-only|writable/iu);
-  await chmod(join(sandbox, firstPath), 0o444);
+  assert.equal(sweptRecovery.status, 0, sweptRecovery.stderr);
+  assert.equal(existsSync(crashedStage), false, "recover must sweep this report's dead-owner staging directory");
 
   const missingRecovery = spawnSync(process.execPath, [
     helper,
@@ -290,10 +314,24 @@ test("backend evidence helper writes distinct reports through the active evidenc
   });
   assert.notEqual(duplicate.status, 0);
   assert.match(duplicate.stderr, /already exists/iu);
+  assert.match(duplicate.stderr, /new attempt id/u, "the duplicate error must steer re-attempts away from recover");
   assert.equal(await readFile(join(sandbox, firstPath), "utf8"), boundReport("goal-g001-criterion-c001-worker-franky", "# Backend report\n\nworker: franky\n"));
 
   const child = join(sandbox, "packages", "api");
   await mkdir(child, { recursive: true });
+  const ghostSession = spawnSync(process.execPath, [
+    helper, "write", sandbox, ".superloopy/sessions/ghost-session/evidence", "goal-g001-criterion-c001-worker-usopp",
+  ], { cwd: child, encoding: "utf8", input: "# Report into a session no loop created\n" });
+  assert.notEqual(ghostSession.status, 0, "a scoped root must name an existing session");
+  assert.match(ghostSession.stderr, /no existing session/iu);
+  assert.equal(existsSync(join(sandbox, ".superloopy", "sessions", "ghost-session")), false);
+  const ghostRecovery = spawnSync(process.execPath, [
+    helper, "recover", sandbox, ".superloopy/sessions/ghost-session/evidence", "goal-g001-criterion-c001-worker-usopp",
+  ], { cwd: child, encoding: "utf8" });
+  assert.notEqual(ghostRecovery.status, 0, "recover must not certify evidence in a session no gate reads");
+  assert.match(ghostRecovery.stderr, /no existing session/iu);
+
+  await mkdir(join(sandbox, ".superloopy", "sessions", "session-1"), { recursive: true });
   const second = spawnSync(process.execPath, [
     helper,
     "write",
@@ -467,7 +505,8 @@ test("backend evidence helper rejects unsafe roots, targets, identifiers, and bl
     helper, "recover", ".", ".superloopy/evidence", "run-external",
   ], { cwd: sandbox, encoding: "utf8" });
   assert.notEqual(escapedRecovery.status, 0);
-  assert.match(escapedRecovery.stderr, /symlink|outside|confined|project/iu);
+  assert.match(escapedRecovery.stderr, /must not cross a symlink/u);
+  assert.equal(existsSync(join(outside, "evidence-publication.lock")), false, "recovery must validate confinement before creating its lock");
 
   await rm(join(sandbox, ".superloopy"));
   const reportDir = join(

@@ -252,7 +252,7 @@ test("exclusive evidence output stays unpublished until its durable write comple
     writing = writeEvidenceOutputFileExclusive(output, "durable report\n");
     await entered;
     const publishedBeforeWrite = existsSync(output.absolutePath);
-    assert.deepEqual([existsSync(join(repo, ".superloopy-evidence-publication.lock")), existsSync(`${join(repo, ".superloopy", "evidence", "superloopy-backend")}.lock`)], [true, false], "publication lock must use the canonical project root, not mutable evidence ancestry");
+    assert.deepEqual([existsSync(join(repo, ".superloopy", "evidence-publication.lock")), existsSync(join(repo, ".superloopy-evidence-publication.lock")), existsSync(`${join(repo, ".superloopy", "evidence", "superloopy-backend")}.lock`)], [true, false, false], "publication lock must live under .superloopy so crash residue stays inside the runtime gitignore boundary");
     if (process.platform !== "win32") {
       const [stageName] = readdirSync(join(repo, ".superloopy", "evidence", "superloopy-backend"))
         .filter((name) => name.startsWith(".run-one."));
@@ -263,13 +263,9 @@ test("exclusive evidence output stays unpublished until its durable write comple
     assert.equal(publishedBeforeWrite, false);
     assert.equal(await readFile(output.absolutePath, "utf8"), "durable report\n");
     assert.ok(directorySyncs >= 2, "staging and publish directories must both be synced");
-    assert.equal(
-      directoryChmods,
-      process.platform === "win32" ? 0 : 1,
-      "POSIX report-directory permissions must be applied through a verified directory handle",
-    );
+    assert.equal(directoryChmods, process.platform === "win32" ? 0 : 1, "staging widens to the umask default through the verified handle before the rename commit");
     if (process.platform !== "win32") {
-      assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", "run-one")).mode & 0o222, 0, "published report directory must be read-only");
+      assert.notEqual(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", "run-one")).mode & 0o200, 0, "published report directory must stay owner-writable for ordinary cleanup");
       assert.equal(statSync(output.absolutePath).mode & 0o222, 0, "published report must be read-only");
     }
   } finally {
@@ -281,7 +277,7 @@ test("exclusive evidence output stays unpublished until its durable write comple
   }
 });
 
-test("exclusive evidence publication rolls back when the publish-directory sync fails", async () => {
+test("a post-rename publish-directory sync failure leaves the published report intact", async () => {
   const repo = await tempRepo();
   const publishRoot = join(repo, ".superloopy", "evidence", "superloopy-backend");
   await mkdir(publishRoot, { recursive: true });
@@ -294,9 +290,12 @@ test("exclusive evidence publication rolls back when the publish-directory sync 
   const fileHandlePrototype = Object.getPrototypeOf(probe);
   await probe.close();
   const originalSync = fileHandlePrototype.sync;
+  // Post-rename publish-root sync ordinal: POSIX staging guard (1), staged chmod (2), then (3);
+  // win32 adds a pre-rename publish-root sync after the anchor link, so its first is (4).
+  const postRenamePublishSync = process.platform === "win32" ? 4 : 3;
   let directorySyncs = 0;
   fileHandlePrototype.sync = async function failPublishDirectorySync() {
-    if ((await this.stat()).isDirectory() && ++directorySyncs === 4) {
+    if ((await this.stat()).isDirectory() && ++directorySyncs === postRenamePublishSync) {
       throw Object.assign(new Error("injected publish directory sync failure"), { code: "EIO" });
     }
     return originalSync.call(this);
@@ -310,9 +309,11 @@ test("exclusive evidence publication rolls back when the publish-directory sync 
   } finally {
     fileHandlePrototype.sync = originalSync;
   }
-  assert.equal(existsSync(output.absolutePath), false);
-  await writeEvidenceOutputFileExclusive(output, "retry after reconciled failure\n");
-  assert.equal(await readFile(output.absolutePath, "utf8"), "retry after reconciled failure\n");
+  // rename() is the commit point: a finalization failure surfaces as an error but must never
+  // truncate or remove the already-published report, and the id stays claimed.
+  assert.equal(await readFile(output.absolutePath, "utf8"), "report needing durable publication\n");
+  await assert.rejects(writeEvidenceOutputFileExclusive(output, "must not replace the committed report\n"), /already exists/u);
+  assert.equal(await readFile(output.absolutePath, "utf8"), "report needing durable publication\n");
 });
 
 test("Windows exclusive publication retains its scrub anchor through commit checks", async () => {
