@@ -132,5 +132,68 @@
       "requirement"
     ],
     "allow_unchanged": false
+  },
+  {
+    "id": "compression-keeps-agent-link",
+    "prompt": "Use say-it-straight with humanize-korean to tighten: '민지가 작성한 초안을 운영팀이 실제 문의 사례와 비교한 뒤 다음 회의에서 결정합니다.'",
+    "must_preserve": [
+      "민지가 작성한 초안",
+      "실제 문의 사례"
+    ],
+    "must_not_add": [
+      "bare name-noun compression such as 민지 초안",
+      "new claim"
+    ],
+    "allow_unchanged": true,
+    "must_remain_unchanged_without": "an observable, reader-relevant defect"
+  },
+  {
+    "id": "em-dash-overuse",
+    "prompt": "Make this more direct: The rollout — which starts Monday — will pause nightly jobs — including backups — for two hours — possibly longer.",
+    "must_preserve": [
+      "Monday",
+      "nightly jobs",
+      "backups",
+      "two hours",
+      "possibly"
+    ],
+    "must_not_add": [
+      "certainty",
+      "new number"
+    ],
+    "must_not_weaken": [
+      "possibly"
+    ],
+    "allow_unchanged": false
+  },
+  {
+    "id": "single-em-dash-stays",
+    "prompt": "Remove the AI-sounding em dash: The tracking number is created when the label is printed — before a delivery driver is assigned.",
+    "must_preserve": [
+      "tracking number",
+      "label is printed",
+      "delivery driver"
+    ],
+    "must_not_add": [
+      "new claim"
+    ],
+    "allow_unchanged": true,
+    "must_remain_unchanged_without": "an observable, reader-relevant defect beyond the single em dash"
+  },
+  {
+    "id": "agentless-hedged-consequence",
+    "prompt": "Make this more direct: If the header is missing, the v1 behavior may be selected.",
+    "must_preserve": [
+      "may",
+      "v1"
+    ],
+    "must_not_add": [
+      "certainty",
+      "invented fallback condition"
+    ],
+    "must_not_weaken": [
+      "may"
+    ],
+    "allow_unchanged": false
   }
 ]
