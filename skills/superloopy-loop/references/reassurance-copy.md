@@ -8,7 +8,7 @@ Reject unsupported assurances such as `안전하게 처리합니다`, `안심하
 
 ## RC-2: Incomplete failure outcome
 
-A failure message must name at least one supplied reader-relevant fact: the observable outcome, retained state, active fallback, recovery result, or next action. For example, `저장에 실패해도 이전 버전은 안전하게 남습니다` is insufficient unless the supplied behavior verifies what was retained and what the user can do next. If the fact is unavailable, record it as a blocker or question; never invent a recovery result.
+A failure message must name at least one supplied reader-relevant fact: the observable outcome, retained state, active fallback, recovery result, or next action. For example, `저장에 실패해도 이전 버전은 안전하게 남습니다` is insufficient without at least one supplied fact from that list. If the fact is unavailable, record it as a blocker or question; never invent a recovery result.
 
 ## RC-3: Negative-capability wording
 
