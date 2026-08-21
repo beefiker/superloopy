@@ -59,3 +59,27 @@ FAIL: 저장에 실패했습니다. 변경 사항이 저장되지 않았을 수 
 PASS: 저장 실패 후 실제로 남는 데이터는 무엇입니까?
 
 Return only that one precise question. Do not append a draft or suggest a recovery mechanism.
+
+## PC-5 — name the verified relation
+
+SUPPORT: The selected target computer was identified.
+
+MANUAL REVIEW: 정확한 컴퓨터
+
+PASS: 대상 컴퓨터 확인
+
+SUPPORT: The detected board model is MSI and the model identity was confirmed.
+
+MANUAL REVIEW: 정확한 MSI 보드 확인됨
+
+PASS: MSI 보드 모델 확인
+
+SUPPORT: The firmware image matches the confirmed board.
+
+MANUAL REVIEW: 정확한 펌웨어 이미지
+
+PASS: 보드와 일치하는 펌웨어 이미지
+
+PASS: 정확한 시간, 수치, 사양, 정보
+
+Accuracy belongs to the measurable or informational target. Do not replace these legitimate phrases merely because they contain `정확한`.
