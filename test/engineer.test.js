@@ -143,6 +143,25 @@ test("runUserPromptSubmitHook stays solo on a plain loopy task but advertises te
   assert.match(context, /genuinely independent slices/);
 });
 
+test("runUserPromptSubmitHook gives every Loopy engineer context the conditional reassurance copy gate", async () => {
+  const activeRepo = await tempRepo();
+  await createLoop(activeRepo, ["--brief", "Ship"]);
+
+  for (const [label, prompt, cwd] of [
+    ["start", "loopy add a status message", await tempRepo()],
+    ["empty start", "loopy", await tempRepo()],
+    ["resume", "loopy continue", activeRepo],
+    ["crew start", "loopy team add a status message", await tempRepo()]
+  ]) {
+    const context = await promptContext(prompt, cwd);
+    assert.match(context, /user-visible Korean product copy/iu, label);
+    assert.match(context, /RC-1[\s\S]*RC-4/u, label);
+    assert.match(context, /affected artifact/iu, label);
+    assert.match(context, /humanize-korean/iu, label);
+    assert.doesNotMatch(context, /classify.*안전|keyword trigger/iu, label);
+  }
+});
+
 test("every full loop trigger receives say-it-straight output by default", async () => {
   for (const prompt of [
     "loopy ship login",
