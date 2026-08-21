@@ -2,11 +2,11 @@ import { readFile, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
 const PATTERNS = {
-  "PC-1-safety": /(?<![가-힣])안전(?:하게|하고\s*정확하게)\s*(?:처리|진행)(?:했습니다|합니다|됩니다)|안심하고\s*(?:계속\s*)?사용하세요/gu,
-  "PC-1-accuracy": /(?<![가-힣])정확(?:하게|하고\s*안전하게)\s*(?:계산|처리|진행)(?:했습니다|합니다|됩니다)/gu,
-  "PC-2-vague-failure": /(?:저장|적용|처리)에\s*실패해도\s*[^\r\n]*?안전하게\s*남습니다|저장에\s*실패해도\s*데이터는\s*안전합니다/gu,
-  "PC-3-negative-capability": /[가-힣A-Za-z0-9]+하지\s*않습니다|전송되지\s*않습니다/gu,
-  "PC-2-failure": /(?:실패|오류|할\s*수\s*없습니다|못했습니다)/gu
+  "RC-1-safety": /(?<![가-힣])안전(?:하게|하고\s*정확하게)\s*(?:처리|진행)(?:했습니다|합니다|됩니다)|안심하고\s*(?:계속\s*)?사용하세요/gu,
+  "RC-1-accuracy": /(?<![가-힣])정확(?:하게|하고\s*안전하게)\s*(?:계산|처리|진행)(?:했습니다|합니다|됩니다)/gu,
+  "RC-2-vague-failure": /(?:저장|적용|처리)에\s*실패해도\s*[^\r\n]*?안전하게\s*남습니다|저장에\s*실패해도\s*데이터는\s*안전합니다/gu,
+  "RC-3-negative-capability": /[가-힣A-Za-z0-9]+하지\s*않습니다|전송되지\s*않습니다/gu,
+  "RC-2-failure": /(?:실패|오류|할\s*수\s*없습니다|못했습니다)/gu
 };
 
 const KOREAN_NAME_STOPLIST = new Set([
@@ -140,11 +140,11 @@ export function auditTexts(source, final) {
   const changeRate = levenshtein(sourceText, finalText) / Math.max(sourceText.length, finalText.length, 1);
 
   if (missing.length > 0) problems.push({ id: "protected-token", message: "Protected source tokens are missing", values: missing });
-  if (after["PC-1-safety"] > 0) problems.push({ id: "PC-1-safety", message: "Vague safety reassurance remains" });
-  if (after["PC-1-accuracy"] > 0) problems.push({ id: "PC-1-accuracy", message: "Vague accuracy reassurance remains" });
-  if (after["PC-2-vague-failure"] > 0) problems.push({ id: "PC-2-vague-failure", message: "Failure copy states reassurance without a concrete outcome or action" });
-  if (after["PC-3-negative-capability"] > 0) manualReview.push({ id: "PC-3-negative-capability", message: "Confirm whether this is a privacy, legal, or operational commitment" });
-  if (after["PC-2-failure"] > 0 && after["PC-2-vague-failure"] === 0) manualReview.push({ id: "PC-2-failure", message: "Confirm the message states the supported outcome, fallback, or next action" });
+  if (after["RC-1-safety"] > 0) problems.push({ id: "RC-1-safety", message: "Vague safety reassurance remains" });
+  if (after["RC-1-accuracy"] > 0) problems.push({ id: "RC-1-accuracy", message: "Vague accuracy reassurance remains" });
+  if (after["RC-2-vague-failure"] > 0) problems.push({ id: "RC-2-vague-failure", message: "Failure copy states reassurance without a concrete outcome or action" });
+  if (after["RC-3-negative-capability"] > 0) manualReview.push({ id: "RC-3-negative-capability", message: "Confirm whether this is a privacy, legal, or operational commitment" });
+  if (after["RC-2-failure"] > 0 && after["RC-2-vague-failure"] === 0) manualReview.push({ id: "RC-2-failure", message: "Confirm the message states the supported outcome, fallback, or next action" });
   if (changeRate > 0.5) manualReview.push({ id: "large-rewrite", message: "Review the large rewrite for unsupported product claims" });
 
   return {

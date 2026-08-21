@@ -5,7 +5,6 @@ import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import test from "node:test";
 import { resolveSpawnInvocation } from "../src/spawn-command.js";
-import { assertProductCopyDiscovery, assertProductCopyPackFiles } from "./product-copy-integration-helpers.js";
 async function readSkill(name) {
   const path = `skills/${name}/SKILL.md`;
   const content = await readFile(path, "utf8");
@@ -87,7 +86,8 @@ test("plugin interface assets resolve inside the npm package", async () => {
   ]) {
     assert.equal(files.has(path), true, `say-it-straight package file missing from npm pack: ${path}`);
   }
-  assertProductCopyPackFiles(files);
+  for (const path of ["skills/superloopy-loop/references/reassurance-copy.md", "skills/superloopy-loop/scripts/audit-reassurance-copy.mjs"]) assert.equal(files.has(path), true, `reassurance-copy loop resource missing from npm pack: ${path}`);
+  assert.equal([...files].some((path) => path.startsWith("skills/product-copy/")), false, "standalone product-copy resources must not ship in npm pack");
 });
 
 test("plugin audit docs describe convention discovery and current ignore scope", async () => {
@@ -432,9 +432,6 @@ test("plugin packages the Superloopy Korean humanizer skill with measurable safe
     assert.equal(existsSync(file), true);
   }
 });
-
-// Mutation caught: omitting product-copy from doctor's required inventory lets a partial package report healthy.
-test("plugin packages explicit-only product-copy and doctor requires it", assertProductCopyDiscovery);
 
 test("plugin packages explicit-only i-have-adhd with attribution and Superloopy precedence", async () => {
   const skill = await readSkill("i-have-adhd");
