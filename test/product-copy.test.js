@@ -55,6 +55,27 @@ test("audit sends privacy commitments to manual review", async (t) => {
   assert.ok(privacyCommitment.report.manualReview.some((item) => item.id === "PC-3-negative-capability"));
 });
 
+// Mutation caught: recognizing only active negative clauses hides passive verified privacy commitments.
+test("audit sends passive privacy commitments to manual review", async (t) => {
+  const privacyCommitment = await auditCase(t, "검색어는 서버로 전송되지 않습니다.", "검색어는 서버로 전송되지 않습니다.");
+  assert.equal(privacyCommitment.result.status, 0);
+  assert.ok(privacyCommitment.report.manualReview.some((item) => item.id === "PC-3-negative-capability"));
+});
+
+// Mutation caught: omitting the known incomplete stored-data reassurance allows it to pass as a supported outcome.
+test("audit rejects the known vague stored-data failure reassurance", async (t) => {
+  const vagueFailure = await auditCase(t, "저장 실패 후 동작은 제공하지 않았습니다.", "저장에 실패해도 데이터는 안전합니다.");
+  assert.notEqual(vagueFailure.result.status, 0);
+  assert.ok(vagueFailure.report.problems.some((item) => item.id === "PC-2-vague-failure"));
+});
+
+// Mutation caught: matching a reassurance inside a Korean negative prefix falsely blocks unrelated words.
+test("audit does not match Korean negative prefixes as vague reassurance", async (t) => {
+  const negativePrefixes = await auditCase(t, "불안전하게 처리합니다. 부정확하게 계산합니다.", "불안전하게 처리합니다. 부정확하게 계산합니다.");
+  assert.equal(negativePrefixes.result.status, 0);
+  assert.ok(!negativePrefixes.report.problems.some((item) => item.id === "PC-1-safety" || item.id === "PC-1-accuracy"));
+});
+
 // Mutation caught: failing to collect a quoted product value permits its removal.
 test("audit rejects removal of protected quoted values", async (t) => {
   const protectedRemoval = await auditCase(t, "제품 이름은 \"Northwind\"입니다.", "제품 이름이 변경되었습니다.");
@@ -100,7 +121,5 @@ test("audit writes an error report for malformed flags", async (t) => {
 test("audit gives LF and CRLF input identical decisions", async (t) => {
   const lf = await auditCase(t, "첫 줄\n둘째 줄", "백업을 안전하게 처리합니다.");
   const crlf = await auditCase(t, "첫 줄\r\n둘째 줄", "백업을 안전하게 처리합니다.");
-  assert.deepEqual(crlf.report.problems, lf.report.problems);
-  assert.deepEqual(crlf.report.manualReview, lf.report.manualReview);
-  assert.deepEqual(crlf.report.patterns, lf.report.patterns);
+  assert.deepEqual(crlf.report, lf.report);
 });
