@@ -139,6 +139,34 @@ test("humanize audit preserves 멱등 jargon inside protected code spans", async
   assert.equal(result.status, 0, result.stderr);
 });
 
+test("humanize audit exempts unchanged typographic quoted spans from prose checks", async () => {
+  for (const quoted of ["\"멱등성—정의\"", "“멱등성—정의”", "「멱등성—정의」", "『멱등성—정의』"]) {
+    const files = await writeCase(`${quoted}는 용어집 표제입니다.`, `${quoted}는 용어집 표제입니다.`);
+    const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report], {
+      encoding: "utf8"
+    });
+
+    assert.equal(result.status, 0, `${quoted}: ${result.stderr}`);
+    const report = JSON.parse(await readFile(files.report, "utf8"));
+    assert.equal(report.protectedTokens.missing.length, 0);
+    assert.equal(report.patterns.after["K-1"], 0);
+    assert.equal(report.patterns.after["M-1"], 0);
+  }
+});
+
+test("humanize audit rejects changes to typographic quoted spans", async () => {
+  const files = await writeCase(
+    "「사용자 설정」은 화면 이름입니다.",
+    "「계정 설정」은 화면 이름입니다."
+  );
+  const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report], {
+    encoding: "utf8"
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Protected tokens changed/);
+});
+
 test("humanize audit does not enforce product-copy reassurance policy", async () => {
   const genericSafetyFiles = await writeCase(
     "이 도구는 백업 파일을 안전하게 저장합니다.",

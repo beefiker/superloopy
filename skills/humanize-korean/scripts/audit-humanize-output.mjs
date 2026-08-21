@@ -21,6 +21,7 @@ const REQUIRED_S1_PATTERN_IDS = ["A-2", "A-3", "A-7", "A-8", "C-11", "D-1", "D-2
 // it stays informational and is excluded from grading.
 const GRADE_EXEMPT_IDS = ["J-2"];
 const PROSE_SPAN_FILTERED_IDS = new Set(["K-1", "M-1"]);
+const PROTECTED_PROSE_SPAN_PATTERN = /`[^`\r\n]+`|"[^"\r\n]+"|“[^”\r\n]+”|‘[^’\r\n]+’|「[^」\r\n]+」|『[^』\r\n]+』/gu;
 const KOREAN_NAME_STOPLIST = new Set([
   "광고",
   "계획",
@@ -155,7 +156,7 @@ function collectProtectedTokens(text) {
   const patterns = [
     /https?:\/\/\S+/gu,
     /`[^`]+`/gu,
-    /"[^"]+"/gu,
+    PROTECTED_PROSE_SPAN_PATTERN,
     /\b[A-Z][A-Za-z0-9.-]*\b/gu,
     /\b[A-Z]{2,}\b/gu,
     /\b\d+(?:\.\d+){1,}\b/gu,
@@ -176,7 +177,7 @@ function countPatterns(text) {
 }
 
 function removeProtectedProseSpans(text) {
-  return text.replace(/`[^`]+`|"[^"]+"/gu, "");
+  return text.replace(PROTECTED_PROSE_SPAN_PATTERN, "");
 }
 
 function collectKoreanProductNameCandidates(text) {
