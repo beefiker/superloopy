@@ -7,8 +7,10 @@
 // single source of truth. This module stays dependency-free; the hook runtime
 // injects the helpers it needs.
 
-import { detectSuperpowers } from "./interop.js";
+import { fileURLToPath } from "node:url";
+
 import { loadAdhdFriendlyOutputOverlay as loadDefaultAdhdOverlay } from "./adhd-output.js";
+import { detectSuperpowers } from "./interop.js";
 import { isSayItStraightEnabled, renderSayItStraightLoopOverlay } from "./loop-output-style.js";
 
 // Invocation syntax is intentionally lexical, not semantic: an alias must be the first
@@ -31,6 +33,7 @@ const CONNECTED_CREW_TRIGGER_PATTERN = /^\s*@?loopycrew(?=$|[\s:,])[\s:,]*/iu;
 // crew fan-out, with no `loopy` prefix. Leading-only and boundary-guarded.
 const ULTRAWORK_TRIGGER_PATTERN = /^\s*@?ultrawork(?=$|[\s:,])[\s:,]*/iu;
 const HEADER = "Superloopy loop engineer";
+const REASSURANCE_COPY_AUDIT_PATH = fileURLToPath(new URL("../skills/superloopy-loop/scripts/audit-reassurance-copy.mjs", import.meta.url));
 
 export function hasEngineerTrigger(prompt) {
   if (typeof prompt !== "string") return false;
@@ -194,6 +197,7 @@ export function reassuranceCopyGateLines() {
     "- Decide from the affected artifact: if it creates or changes user-visible Korean product copy about behavior, add a plan criterion for RC-1 through RC-4 and Korean naturalness.",
     "- State supplied outcomes, fallback, recovery, or next action; preserve verified privacy/legal commitments; never invent behavior.",
     "- Apply humanize-korean semantic review for misplaced modifiers.",
+    `- When affected copy is file-backed and source/final artifacts exist, run the bundled audit: \`node ${commandPathArg(REASSURANCE_COPY_AUDIT_PATH)} --source <source-path> --final <final-path> --report <report-path>\`.`,
     "- Ignore internal logs, developer docs, quotations, general/marketing prose, and non-Korean copy."
   ];
 }
