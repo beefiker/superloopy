@@ -501,7 +501,8 @@ test("public docs describe crew lines as presentation-only status", async () => 
 
 test("loop golden set lists every Git-visible file with strict evidence", async () => {
   const golden = await readFile("docs/superloopy-loop-golden-set.md", "utf8");
-  const missing = listRepoFiles().filter((file) => !golden.includes(`\`${file}\``));
+  const inventoryPaths = new Set((golden.split("## File Evidence Inventory\n")[1] ?? "").split("\n").flatMap((line) => [...(line.split("|")[1] ?? "").matchAll(/`([^`]+)`/gu)].map((match) => match[1])));
+  const missing = listRepoFiles().filter((file) => !inventoryPaths.has(file));
 
   assert.deepEqual(missing, []);
   assert.match(golden, /## File Evidence Inventory/);
