@@ -4,20 +4,17 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import test from "node:test";
-
 import { resolveSpawnInvocation } from "../src/spawn-command.js";
-
+import { assertProductCopyDiscovery, assertProductCopyPackFiles } from "./product-copy-integration-helpers.js";
 async function readSkill(name) {
   const path = `skills/${name}/SKILL.md`;
   const content = await readFile(path, "utf8");
   const frontmatter = extractSkillFrontmatter(content);
   return { path, content, frontmatter };
 }
-
 function extractSkillFrontmatter(content) {
   return content.replace(/\r\n?/gu, "\n").match(/^---\n([\s\S]*?)\n---/u)?.[1] ?? "";
 }
-
 test("skill frontmatter parser accepts CRLF line endings", () => {
   const frontmatter = extractSkillFrontmatter("---\r\nname: example\r\ndescription: test\r\n---\r\nbody\r\n");
 
@@ -90,16 +87,7 @@ test("plugin interface assets resolve inside the npm package", async () => {
   ]) {
     assert.equal(files.has(path), true, `say-it-straight package file missing from npm pack: ${path}`);
   }
-  for (const path of [
-    "skills/product-copy/SKILL.md",
-    "skills/product-copy/agents/openai.yaml",
-    "skills/product-copy/references/golden-set.md",
-    "skills/product-copy/references/quality-rubric.md",
-    "skills/product-copy/references/quick-rules.md",
-    "skills/product-copy/scripts/audit-product-copy.mjs"
-  ]) {
-    assert.equal(files.has(path), true, `product-copy package file missing from npm pack: ${path}`);
-  }
+  assertProductCopyPackFiles(files);
 });
 
 test("plugin audit docs describe convention discovery and current ignore scope", async () => {
@@ -444,6 +432,9 @@ test("plugin packages the Superloopy Korean humanizer skill with measurable safe
     assert.equal(existsSync(file), true);
   }
 });
+
+// Mutation caught: omitting product-copy from doctor's required inventory lets a partial package report healthy.
+test("plugin packages explicit-only product-copy and doctor requires it", assertProductCopyDiscovery);
 
 test("plugin packages explicit-only i-have-adhd with attribution and Superloopy precedence", async () => {
   const skill = await readSkill("i-have-adhd");

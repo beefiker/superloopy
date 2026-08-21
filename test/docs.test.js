@@ -3,10 +3,10 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { assertProductCopyDocs } from "./product-copy-integration-helpers.js";
 test("public docs describe hook proof-plan context and active evidence receipts", async () => {
   const readme = await readFile("README.md", "utf8");
   const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");
-
   assert.match(skill, /next command, proof target, recorded evidence.*proof plan, capture template, and evidence template/s);
   assert.match(skill, /SUPERLOOPY_EVIDENCE: <path-under-active-evidence-root>/);
 });
@@ -15,7 +15,6 @@ test("public docs describe guide, trace, report, and check evidence surfaces", a
   const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");
   const notes = await readFile("docs/superloopy-gate-notes.md", "utf8");
   const audit = await readFile("docs/superloopy-file-audit.md", "utf8");
-
   assert.match(skill, /manual evidence notes/i);
   assert.match(skill, /flow checklist/i);
   assert.match(notes, /Evidence trace:.*summary counts/is);
@@ -225,6 +224,8 @@ test("README lists the packaged Superloopy skills and their jobs", async () => {
   }
   const english = await readFile("README.md", "utf8"); assert.match(english, /writing style alone never activates/i); assert.match(english, /does not create.*evidence artifact/i); assert.match(english, /Guidance aliases do not mutate state/); assert.match(await readFile("README.ko.md", "utf8"), /guidance alias는 상태를 바꾸지 않습니다/); for (const file of locales) { const row = (await readFile(file, "utf8")).split("\n").find((line) => line.startsWith("| `say-it-straight` |")); assert.match(row, /full.*loop|full loop|전체 loop|完全な loop|完整 loop|loop completo|full Loopy|Loopy.*progress|Loopy.*進捗|Loopy.*进度|Loopy.*progreso/iu, file); assert.match(row, /explicit|명시|明示|显式|explícit/iu, file); assert.match(row, /artifact|成果物|产物|artefacto/iu, file); }
 });
+
+test("README locales and inventories separate explicit Korean product-copy from humanization", assertProductCopyDocs);
 test("frontend discovery rows publish explicit screen-based scope and claim-shaped evidence", async () => {
   const locales = [
     {
