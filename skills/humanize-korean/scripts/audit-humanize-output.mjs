@@ -14,33 +14,13 @@ const PATTERNS = [
   ["I-1", /인 것이다|인 것입니다|한 것이다|한 것입니다|는 것입니다/gu],
   ["J-2", /"[^"]{1,40}"/gu],
   ["K-1", /멱등(?:성)?/gu],
-  ["L-1", /안전(?:하게|합니다|하며|하고|한|성)|안심(?:하|할|시)/gu],
-  ["L-2", /정확(?:하게|히)\s?(?:계산|처리|수행|동작|작동|반영|분석|파악|진행)|정확하고|정확합니다/gu],
-  ["L-3", /(?:삭제|변경|수정|덮어쓰|전송|업로드|공유|수집|저장|실행)(?:하지|되지)\s?않(?:습니다|는다|아요)/gu],
   ["M-1", /[—–]/gu]
 ];
-const REQUIRED_S1_PATTERN_IDS = ["A-2", "A-3", "A-7", "A-8", "C-11", "D-1", "D-2", "H-1", "I-1", "K-1", "L-1", "M-1"];
-// L-2/L-3 warn and cap the grade instead of hard-failing: precision specs and
-// legally required negative claims can legitimately keep these shapes.
-const REASSURANCE_WARNING_IDS = ["L-2", "L-3"];
+const REQUIRED_S1_PATTERN_IDS = ["A-2", "A-3", "A-7", "A-8", "C-11", "D-1", "D-2", "H-1", "I-1", "K-1", "M-1"];
 // Quoted spans are protected byte-for-byte, so the rewriter cannot repair J-2;
 // it stays informational and is excluded from grading.
 const GRADE_EXEMPT_IDS = ["J-2"];
-const PROSE_SPAN_FILTERED_IDS = new Set(["K-1", "L-1", "L-2", "L-3", "M-1"]);
-// Issue #44 targets product copy. In these declared genres, safety vocabulary is
-// usually content (news topics, narrative, advice), so L-1 demotes from a hard
-// failure to a warning that caps the grade at C. The default (no --genre, or
-// 제품 문구, or an unknown value) stays strict so existing callers keep issue-#44
-// enforcement unless they explicitly declare a non-product genre.
-const RELAXED_L1_GENRES = new Set(["공적", "리포트", "블로그", "칼럼", "대화체"]);
-// The 안전 allowance requires both a real failure and a concrete recovery or
-// fallback outcome. A failure alone does not make vague reassurance useful.
-const FAILURE_CONDITION_PATTERN =
-  /(?:실패|오류|에러|장애|충돌|손상|망가|유실)[가-힣 ]{0,4}?(?:해도|하면|하더라도|했|한 경우|나도|나면|났|난 경우|생겨도|생기면|생겼|발생 시|발생해도|발생하면|발생했|돼도|되면|되어도|됐|된 경우|져도|지면|졌| 시 )/u;
-const CONCRETE_RECOVERY_PATTERNS = [
-  /안전한\s+(?:기존|이전|백업)\s+[^.!?\n]{1,40}?(?:계속\s+사용|사용을\s+계속|로\s+전환|에서\s+재개)/u,
-  /(?:임시|백업|복구된|원본)\s+[^.!?\n]{0,30}?안전하게\s+(?:보관(?:되|하)|복구|복원|되돌)/u
-];
+const PROSE_SPAN_FILTERED_IDS = new Set(["K-1", "M-1"]);
 const KOREAN_NAME_STOPLIST = new Set([
   "광고",
   "계획",
@@ -93,9 +73,6 @@ async function audit(args) {
   const source = await readInputFile("source", args.source);
   const final = await readInputFile("final", args.final);
   const genre = args.genre ?? null;
-  const strictL1 = !RELAXED_L1_GENRES.has(genre ?? "");
-  const requiredIds = strictL1 ? REQUIRED_S1_PATTERN_IDS : REQUIRED_S1_PATTERN_IDS.filter((id) => id !== "L-1");
-  const reassuranceIds = strictL1 ? REASSURANCE_WARNING_IDS : [...REASSURANCE_WARNING_IDS, "L-1"];
   const sourceRatio = koreanRatio(source);
   const finalRatio = koreanRatio(final);
   const protectedTokens = collectProtectedTokens(source);
@@ -108,23 +85,17 @@ async function audit(args) {
   if (missing.length > 0) problems.push("Protected tokens changed");
   if (finalRatio < 0.2) problems.push("Final text is not Korean enough");
   if (changeRate > 0.5) problems.push("Change rate exceeds 50%");
-  if (requiredS1Count(before, requiredIds) > 0 && requiredS1Count(after, requiredIds) >= requiredS1Count(before, requiredIds)) {
+  if (requiredS1Count(before) > 0 && requiredS1Count(after) >= requiredS1Count(before)) {
     problems.push("S1 AI-tell count not reduced");
   }
   if ((after["K-1"] ?? 0) > 0) problems.push("Unnecessary technical jargon remains");
   if ((after["M-1"] ?? 0) > 0) problems.push("Em dash remains in Korean prose");
 
   const warnings = [];
-  if ((after["L-1"] ?? 0) > 0) {
-    if (strictL1) problems.push("Safety-flaunting copy remains");
-    else warnings.push("Safety-flaunting copy remains; delete the boast or state the concrete behavior");
-  }
   if (changeRate > 0.3 && changeRate <= 0.5) warnings.push("Change rate exceeds 30%");
-  if ((after["L-2"] ?? 0) > 0) warnings.push("Accuracy-flaunting copy remains; state the concrete behavior or a measurable spec instead");
-  if ((after["L-3"] ?? 0) > 0) warnings.push("Negative-capability reassurance remains; say what the user should do instead");
   return {
     ok: problems.length === 0,
-    grade: grade({ after, changeRate, missing, problems, requiredIds, reassuranceIds }),
+    grade: grade({ after, changeRate, missing, problems }),
     genre,
     sourceChars: source.length,
     finalChars: final.length,
@@ -199,50 +170,13 @@ function collectProtectedTokens(text) {
 
 function countPatterns(text) {
   return Object.fromEntries(PATTERNS.map(([id, pattern]) => {
-    let input = PROSE_SPAN_FILTERED_IDS.has(id) ? removeProtectedProseSpans(text) : text;
-    // Imperatives are the repair shape issue #44 asks for ("~하세요"), so they
-    // are never counted as reassurance.
-    if (id === "L-1" || id === "L-3") input = removeImperativeSentences(input);
-    if (id === "L-1") input = removeConcreteFailureRecoverySentences(input);
-    // A conditional negative ("지금 나가면 저장되지 않습니다") is a warning to the
-    // reader, not capability reassurance.
-    if (id === "L-3") input = removeConditionalSentences(input);
+    const input = PROSE_SPAN_FILTERED_IDS.has(id) ? removeProtectedProseSpans(text) : text;
     return [id, [...input.matchAll(pattern)].length];
   }));
 }
 
 function removeProtectedProseSpans(text) {
   return text.replace(/`[^`]+`|"[^"]+"/gu, "");
-}
-
-function splitSentences(text) {
-  return text.split(/(?<=[.!?])\s+|\n+/u);
-}
-
-function removeImperativeSentences(text) {
-  return splitSentences(text)
-    .filter((sentence) => !/(?:세요|십시오|시기 바랍니다|시길 바랍니다)[.!?"'」』]*\s*$/u.test(sentence))
-    .join(" ");
-}
-
-// Issue #44: safety wording is allowed only when a stated failure is paired
-// with a concrete recovery action or fallback state. The failure may be in the
-// same sentence or the sentence immediately before the outcome.
-function removeConcreteFailureRecoverySentences(text) {
-  const sentences = splitSentences(text);
-  return sentences
-    .filter((sentence, index) => {
-      if (!CONCRETE_RECOVERY_PATTERNS.some((pattern) => pattern.test(sentence))) return true;
-      const failureContext = `${sentences[index - 1] ?? ""} ${sentence}`;
-      return !FAILURE_CONDITION_PATTERN.test(failureContext);
-    })
-    .join(" ");
-}
-
-function removeConditionalSentences(text) {
-  return splitSentences(text)
-    .filter((sentence) => !/[가-힣]면[\s,]/u.test(sentence))
-    .join(" ");
 }
 
 function collectKoreanProductNameCandidates(text) {
@@ -289,11 +223,11 @@ function levenshtein(left, right) {
   return previous[right.length];
 }
 
-function grade({ after, changeRate, missing, problems, requiredIds, reassuranceIds }) {
+function grade({ after, changeRate, missing, problems }) {
   if (problems.length > 0 || missing.length > 0 || changeRate > 0.5) return "D";
-  const s1After = requiredS1Count(after, requiredIds) + reassuranceIds.reduce((total, id) => total + (after[id] ?? 0), 0);
+  const s1After = requiredS1Count(after);
   const s2After = Object.entries(after)
-    .filter(([id]) => ![...requiredIds, ...reassuranceIds, ...GRADE_EXEMPT_IDS].includes(id))
+    .filter(([id]) => ![...REQUIRED_S1_PATTERN_IDS, ...GRADE_EXEMPT_IDS].includes(id))
     .reduce((total, [, count]) => total + count, 0);
   if (s1After === 0 && changeRate >= 0.1 && changeRate <= 0.3) return "A";
   if (s1After === 0 && s2After <= 4) return "B";

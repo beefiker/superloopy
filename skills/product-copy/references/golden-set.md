@@ -14,6 +14,16 @@ SUPPORT: The backup was stored at `/Backups`, and 42 files were verified.
 
 PASS: 백업 파일을 /Backups에 저장했습니다. 42개 파일을 확인했습니다.  (only when those facts are supplied)
 
+SUPPORT: Memos are encrypted and stored only on the device.
+
+SOURCE: 메모는 안전한 방식으로 암호화되어 기기 안에만 보관됩니다.
+
+PASS: 메모는 암호화되어 기기 안에만 보관됩니다.
+
+SUPPORT: Monthly usage is calculated at midnight.
+
+PASS: 월 사용량은 매일 자정에 계산됩니다.
+
 ## PC-2 — state a supplied fallback
 
 SUPPORT: If firmware application fails, the product continues using the existing boot settings.
@@ -31,6 +41,12 @@ MANUAL REVIEW: 검색어를 서버로 전송하지 않습니다.
 PASS: 검색어를 서버로 전송하지 않습니다.
 
 Do not convert this commitment into an instruction and do not delete it merely because it is negative.
+
+SUPPORT: The privacy commitment has been verified; favorites are processed only in the browser.
+
+MANUAL REVIEW: 즐겨찾기는 브라우저 안에서만 처리되고 서버로 전송되지 않습니다.
+
+PASS: 즐겨찾기는 브라우저 안에서만 처리되고 서버로 전송되지 않습니다.
 
 ## PC-4 — ask for missing behavior
 

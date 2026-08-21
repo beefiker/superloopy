@@ -27,7 +27,7 @@ Use these as calibration examples for the amount of change this skill should mak
 
 These examples scored audit grade `A` with protected tokens preserved and a 29.43% change rate. Do not copy their product claims into unrelated text; use them only as a rewrite-shape reference.
 
-A much larger calibration set lives in `references/golden-set.md`: 40+ before/after pairs covering translationese, endings, transitions, structure, and reassurance-copy repairs, plus must-not-change pairs showing where safety vocabulary is content rather than flaunting. Every pair is verified against the bundled audit script by `test/humanize-korean-golden.test.js`.
+A much larger calibration set lives in `references/golden-set.md`: 28 before/after pairs covering translationese, endings, transitions, and structure. Every pair is verified against the bundled audit script by `test/humanize-korean-golden.test.js`.
 
 ## Contract
 
@@ -36,7 +36,6 @@ A much larger calibration set lives in `references/golden-set.md`: 40+ before/af
 - Preserve register: formal text stays formal, conversational text stays conversational, official text stays official.
 - Prefer fewer, sharper edits over broad smoothing.
 - Do not add examples, metaphors, facts, citations, or marketing claims that were not in the source.
-- Remove reassurance flaunting (안전 과시): `안전`, `안심`, and `정확` boasts and negative-capability lines such as `~하지 않습니다` are tone, not protected claims. Keep `안전` wording only when a stated failure is paired with a concrete recovery action or fallback state; turn "what this will not do" into "what the reader should do". This never applies to safety as subject matter, imperatives, or warnings to the reader — those stay.
 - Remove em dashes and en dashes (`—`, `–`) from Korean prose (M-1): 줄표 is an English carryover and a strong AI tell in modern Korean writing. Restructure with 쉼표, 괄호, a colon, or a sentence split; write ranges with `~`. Dashes inside code spans and quoted spans stay.
 - Load `references/quick-rules.md` before rewriting; load `references/golden-set.md` when you need more calibration pairs.
 - Load `references/quality-rubric.md` before grading or finalizing.
@@ -47,7 +46,7 @@ A much larger calibration set lives in `references/golden-set.md`: 40+ before/af
 
 1. Identify source text from the prompt or from a `.txt` or `.md` path supplied by the user.
 2. Refuse non-Korean source text with `한국어 텍스트만 처리할 수 있습니다.`
-3. Estimate genre as `공적`, `리포트`, `블로그`, `칼럼`, `대화체`, or `제품 문구` (in-product/UI copy, release notes, completion messages); user-provided genre wins. Reassurance rules (L-1 to L-3) apply hardest to `제품 문구`.
+3. Estimate genre as `공적`, `리포트`, `블로그`, `칼럼`, `대화체`, or `제품 문구`; user-provided genre wins. Record it to describe the output register.
 4. Mark protected spans before editing: numbers, dates, units, URLs, emails, code spans, quoted spans, English acronyms, product names, model names, and legal/article references.
 5. Detect AI-tell patterns from `references/quick-rules.md`, prioritizing S1 then repeated S2.
 6. Rewrite paragraph by paragraph in this order: protected spans unchanged, signature phrases, translationese, passive/hedging, structure/list rhythm, sentence endings, visual formatting.
@@ -55,7 +54,7 @@ A much larger calibration set lives in `references/golden-set.md`: 40+ before/af
 8. Write outputs:
    - Active Superloopy loop: `.superloopy/evidence/humanize-korean/<run-id>/source.md`, `final.md`, `summary.md`, `audit.json`.
    - No active loop: `_workspace/humanize-korean/<run-id>/source.md`, `final.md`, `summary.md`, `audit.json`.
-9. Run `node skills/humanize-korean/scripts/audit-humanize-output.mjs --source <source.md> --final <final.md> --report <audit.json> --genre "<genre>"`. The genre scopes the safety gate: `제품 문구` (and the default when omitted) hard-fails remaining 안전 boasts; other genres warn and cap the grade so topic vocabulary is never forcibly deleted. The audit records the genre in the report.
+9. Run `node skills/humanize-korean/scripts/audit-humanize-output.mjs --source <source.md> --final <final.md> --report <audit.json> --genre "<genre>"`. The audit records the genre in the report.
 10. If audit fails, repair once. If it still fails, keep the safest version and report the failing audit reason.
 11. Respond concisely with output path, change rate, grade, preserved-token status, and 3 to 5 before/after highlights. Do not paste the full rewritten body unless the user asks.
 

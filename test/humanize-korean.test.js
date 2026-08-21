@@ -139,105 +139,50 @@ test("humanize audit preserves 멱등 jargon inside protected code spans", async
   assert.equal(result.status, 0, result.stderr);
 });
 
-test("humanize audit rejects lingering safety-flaunting copy", async () => {
-  const files = await writeCase(
+test("humanize audit does not enforce product-copy reassurance policy", async () => {
+  const genericSafetyFiles = await writeCase(
     "이 도구는 백업 파일을 안전하게 저장합니다.",
     "이 도구는 백업 파일을 안전하게 저장합니다."
   );
-  const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report], {
-    encoding: "utf8"
-  });
+  const genericSafety = {
+    result: spawnSync(process.execPath, [
+      script,
+      "--source",
+      genericSafetyFiles.source,
+      "--final",
+      genericSafetyFiles.final,
+      "--report",
+      genericSafetyFiles.report,
+      "--genre",
+      "제품 문구"
+    ], { encoding: "utf8" }),
+    report: JSON.parse(await readFile(genericSafetyFiles.report, "utf8"))
+  };
 
-  assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /Safety-flaunting copy remains/);
+  assert.equal(genericSafety.result.status, 0);
+  assert.equal(genericSafety.report.patterns.after["L-1"], undefined);
+  assert.equal(genericSafety.report.genre, "제품 문구");
 
-  const repaired = await writeCase(
-    "이 도구는 백업 파일을 안전하게 저장합니다.",
-    "이 도구는 백업 파일을 저장합니다."
+  const privacyCommitmentFiles = await writeCase(
+    "검색어를 서버로 전송하지 않습니다.",
+    "검색어를 서버로 전송하지 않습니다."
   );
-  const repairedResult = spawnSync(process.execPath, [
-    script,
-    "--source",
-    repaired.source,
-    "--final",
-    repaired.final,
-    "--report",
-    repaired.report
-  ], { encoding: "utf8" });
+  const privacyCommitment = {
+    result: spawnSync(process.execPath, [
+      script,
+      "--source",
+      privacyCommitmentFiles.source,
+      "--final",
+      privacyCommitmentFiles.final,
+      "--report",
+      privacyCommitmentFiles.report
+    ], { encoding: "utf8" }),
+    report: JSON.parse(await readFile(privacyCommitmentFiles.report, "utf8"))
+  };
 
-  assert.equal(repairedResult.status, 0, repairedResult.stderr);
-  const repairedReport = JSON.parse(await readFile(repaired.report, "utf8"));
-  assert.equal(repairedReport.patterns.before["L-1"], 1);
-  assert.equal(repairedReport.patterns.after["L-1"], 0);
-});
-
-test("humanize audit rejects vague safety wording even when a failure is stated", async () => {
-  const files = await writeCase(
-    "저장에 실패해도 이전 버전은 안전하게 남습니다.",
-    "저장에 실패해도 이전 버전은 안전하게 남습니다."
-  );
-  const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report], {
-    encoding: "utf8"
-  });
-
-  assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /Safety-flaunting copy remains/);
-});
-
-test("humanize audit allows safety wording that names the fallback after a failure", async () => {
-  const files = await writeCase(
-    "펌웨어 설정에 실패했습니다. 안전한 기존 부팅 설정을 계속 사용합니다.",
-    "펌웨어 설정에 실패했습니다. 안전한 기존 부팅 설정을 계속 사용합니다."
-  );
-  const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report], {
-    encoding: "utf8"
-  });
-
-  assert.equal(result.status, 0, result.stderr);
-  const report = JSON.parse(await readFile(files.report, "utf8"));
-  assert.equal(report.patterns.after["L-1"], 0);
-});
-
-test("humanize audit rejects vague safety maintenance after a failure", async () => {
-  const files = await writeCase(
-    "변환에 실패해도 원본 파일은 안전하게 유지됩니다.",
-    "변환에 실패해도 원본 파일은 안전하게 유지됩니다."
-  );
-  const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report], {
-    encoding: "utf8"
-  });
-
-  assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /Safety-flaunting copy remains/);
-});
-
-test("humanize audit does not pair a failure with unrelated safety copy", async () => {
-  const files = await writeCase(
-    "업로드에 실패했습니다. 비밀번호는 안전하게 보관합니다.",
-    "업로드에 실패했습니다. 비밀번호는 안전하게 보관합니다."
-  );
-  const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report], {
-    encoding: "utf8"
-  });
-
-  assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /Safety-flaunting copy remains/);
-});
-
-test("humanize audit warns on remaining negative-capability reassurance and caps the grade", async () => {
-  const files = await writeCase(
-    "이 프로그램은 원본 문서를 수정하지 않습니다.",
-    "이 프로그램은 원본 문서를 수정하지 않습니다."
-  );
-  const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report], {
-    encoding: "utf8"
-  });
-
-  assert.equal(result.status, 0, result.stderr);
-  const report = JSON.parse(await readFile(files.report, "utf8"));
-  assert.equal(report.ok, true);
-  assert.equal(report.grade, "C");
-  assert.ok(report.warnings.some((warning) => /Negative-capability/.test(warning)), JSON.stringify(report.warnings));
+  assert.equal(privacyCommitment.result.status, 0);
+  assert.equal(privacyCommitment.report.patterns.after["L-3"], undefined);
+  assert.ok(!privacyCommitment.report.warnings.some((item) => /reassurance|capability|Safety/i.test(item)));
 });
 
 test("humanize audit detects polite-form AI tells such as 것입니다", async () => {
@@ -257,95 +202,6 @@ test("humanize audit detects polite-form AI tells such as 것입니다", async (
   assert.equal(report.patterns.after["D-2"], 0);
 });
 
-test("humanize audit scopes the safety gate by declared genre", async () => {
-  const newsText = "식약처는 백신 안전성 검토 결과를 어제 공개했다.";
-  const strict = await writeCase(newsText, newsText);
-  const strictResult = spawnSync(process.execPath, [script, "--source", strict.source, "--final", strict.final, "--report", strict.report], {
-    encoding: "utf8"
-  });
-
-  assert.notEqual(strictResult.status, 0);
-  assert.match(strictResult.stderr, /Safety-flaunting copy remains/);
-
-  const relaxed = await writeCase(newsText, newsText);
-  const relaxedResult = spawnSync(process.execPath, [
-    script,
-    "--source",
-    relaxed.source,
-    "--final",
-    relaxed.final,
-    "--report",
-    relaxed.report,
-    "--genre",
-    "리포트"
-  ], { encoding: "utf8" });
-
-  assert.equal(relaxedResult.status, 0, relaxedResult.stderr);
-  const relaxedReport = JSON.parse(await readFile(relaxed.report, "utf8"));
-  assert.equal(relaxedReport.ok, true);
-  assert.equal(relaxedReport.genre, "리포트");
-  assert.equal(relaxedReport.grade, "C");
-  assert.ok(relaxedReport.warnings.some((warning) => /Safety-flaunting/.test(warning)), JSON.stringify(relaxedReport.warnings));
-});
-
-test("humanize audit exempts safety only for concrete outcomes paired with failures, not recovery-feature names", async () => {
-  const flaunt = await writeCase(
-    "복구 기능이 여러분의 데이터를 언제나 안전하게 지켜드립니다.",
-    "복구 기능이 여러분의 데이터를 언제나 안전하게 지켜드립니다."
-  );
-  const flauntResult = spawnSync(process.execPath, [script, "--source", flaunt.source, "--final", flaunt.final, "--report", flaunt.report], {
-    encoding: "utf8"
-  });
-
-  assert.notEqual(flauntResult.status, 0);
-  assert.match(flauntResult.stderr, /Safety-flaunting copy remains/);
-
-  const reported = await writeCase(
-    "업로드에 실패했지만 임시 파일은 안전하게 보관되어 있습니다.",
-    "업로드에 실패했지만 임시 파일은 안전하게 보관되어 있습니다."
-  );
-  const reportedResult = spawnSync(process.execPath, [
-    script,
-    "--source",
-    reported.source,
-    "--final",
-    reported.final,
-    "--report",
-    reported.report
-  ], { encoding: "utf8" });
-
-  assert.equal(reportedResult.status, 0, reportedResult.stderr);
-});
-
-test("humanize audit never counts imperatives as reassurance", async () => {
-  const files = await writeCase(
-    "비밀번호는 안전하게 보관하세요.",
-    "비밀번호는 안전하게 보관하세요."
-  );
-  const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report], {
-    encoding: "utf8"
-  });
-
-  assert.equal(result.status, 0, result.stderr);
-  const report = JSON.parse(await readFile(files.report, "utf8"));
-  assert.equal(report.patterns.after["L-1"], 0);
-});
-
-test("humanize audit treats conditional negatives as warnings to the reader, not L-3 reassurance", async () => {
-  const files = await writeCase(
-    "지금 나가면 변경 사항이 저장되지 않습니다.",
-    "지금 나가면 변경 사항이 저장되지 않습니다."
-  );
-  const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report], {
-    encoding: "utf8"
-  });
-
-  assert.equal(result.status, 0, result.stderr);
-  const report = JSON.parse(await readFile(files.report, "utf8"));
-  assert.equal(report.patterns.after["L-3"], 0);
-  assert.equal(report.grade, "B");
-  assert.ok(!report.warnings.some((warning) => /Negative-capability/.test(warning)), JSON.stringify(report.warnings));
-});
 
 test("humanize audit rejects em dashes left in Korean prose but ignores dashes in code spans", async () => {
   const lingering = await writeCase(
