@@ -27,7 +27,7 @@ Use these as calibration examples for the amount of change this skill should mak
 
 These examples scored audit grade `A` with protected tokens preserved and a 29.43% change rate. Do not copy their product claims into unrelated text; use them only as a rewrite-shape reference.
 
-A much larger calibration set lives in `references/golden-set.md`: 28 before/after pairs covering translationese, endings, transitions, and structure. Every pair is verified against the bundled audit script by `test/humanize-korean-golden.test.js`.
+A much larger calibration set lives in `references/golden-set.md`: 28 established before/after pairs plus one semantic N-1 calibration for misplaced modifier targets. Every pair is verified against the bundled audit script by `test/humanize-korean-golden.test.js`.
 
 ## Contract
 
@@ -37,6 +37,7 @@ A much larger calibration set lives in `references/golden-set.md`: 28 before/aft
 - Prefer fewer, sharper edits over broad smoothing.
 - Do not add examples, metaphors, facts, citations, or marketing claims that were not in the source.
 - Remove em dashes and en dashes (`—`, `–`) from Korean prose (M-1): 줄표 is an English carryover and a strong AI tell in modern Korean writing. Restructure with 쉼표, 괄호, a colon, or a sentence split; write ranges with `~`. Dashes inside code spans and quoted spans stay.
+- N-1 — misplaced modifier target: 정확성은 시간·수치·사양·정보·식별·일치처럼 확인 가능한 대상에 붙인다. 정확한 컴퓨터/보드/펌웨어 이미지는 공급된 관계에 따라 대상 컴퓨터 확인, 보드 모델 확인, 보드와 일치하는 펌웨어로 고친다. 정확한 시간/수치/사양/정보는 보존한다. This is semantic review guidance, not an audit pattern or grade effect.
 - Load `references/quick-rules.md` before rewriting; load `references/golden-set.md` when you need more calibration pairs.
 - Load `references/quality-rubric.md` before grading or finalizing.
 - Use `scripts/audit-humanize-output.mjs` to validate any file-backed output.

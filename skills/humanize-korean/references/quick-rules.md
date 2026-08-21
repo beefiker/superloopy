@@ -10,6 +10,7 @@ This compact rule set adapts Korean AI-tell categories from `epoko77-ai/im-not-a
 - Do not remove all structure from operational, legal, release-note, or support-copy text.
 - Treat repeated English terms differently from standard technical acronyms: `API`, `LLM`, `GPU`, `MCP`, `URL`, and version tags stay unchanged.
 - Prefer Korean-native verbs over noun-heavy rewrites, but do not invent a subject to make a sentence active.
+- N-1 — misplaced modifier target is semantic guidance, not a lexical rule: 정확성은 시간·수치·사양·정보·식별·일치처럼 확인 가능한 대상에 붙인다. 정확한 컴퓨터/보드/펌웨어 이미지는 공급된 관계에 따라 대상 컴퓨터 확인, 보드 모델 확인, 보드와 일치하는 펌웨어로 고친다. 정확한 시간/수치/사양/정보는 보존한다.
 
 ## Protected Spans
 

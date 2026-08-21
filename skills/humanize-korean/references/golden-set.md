@@ -1,6 +1,6 @@
 # Humanize Korean Golden Set
 
-Calibration pairs for the humanize-korean skill. Each `before` is intentionally AI-flavored; each `after` shows the target repair shape at the intended edit size. Every pair must pass `scripts/audit-humanize-output.mjs` — rewrite pairs at grade `A` or `B`, must-not-change pairs accepted with their vocabulary intact; `test/humanize-korean-golden.test.js` enforces this, so keep the format below intact when adding pairs.
+Calibration pairs for the humanize-korean skill. Each `before` is intentionally AI-flavored; each `after` shows the target repair shape at the intended edit size. Every pair must pass `scripts/audit-humanize-output.mjs` — rewrite pairs at grade `A` or `B`, must-not-change pairs accepted with their vocabulary intact; `test/humanize-korean-golden.test.js` enforces this, so keep the format below intact when adding pairs. G-29 is the semantic N-1 calibration: it uses `audit: none` because the audit must not classify Korean noun-phrase relations.
 
 Entry format:
 
@@ -326,4 +326,17 @@ audit: D-1, A-2, I-1, D-2, H-1
 
 ```after
 이번 개편은 성능 개선으로 사용자 경험을 크게 높였습니다. 초기 로딩 시간이 3.2초에서 1.4초로 줄었습니다. 새 캐시 계층은 백그라운드에서 동작합니다. 설정 화면 구성은 예전 그대로입니다.
+```
+
+## Modifier Targets (N Rule)
+
+### G-29 · N-1 · 리포트
+audit: none
+
+```before
+정확한 컴퓨터를 확인했습니다. 정확한 MSI 보드를 확인했습니다. 정확한 펌웨어 이미지를 적용했습니다.
+```
+
+```after
+대상 컴퓨터를 확인했습니다. MSI 보드 모델을 확인했습니다. 보드와 일치하는 펌웨어 이미지를 적용했습니다.
 ```

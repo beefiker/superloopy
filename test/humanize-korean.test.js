@@ -6,7 +6,10 @@ import { join } from "node:path";
 import test from "node:test";
 
 const script = "skills/humanize-korean/scripts/audit-humanize-output.mjs";
+const skill = "skills/humanize-korean/SKILL.md";
 const quickRules = "skills/humanize-korean/references/quick-rules.md";
+const qualityRubric = "skills/humanize-korean/references/quality-rubric.md";
+const goldenSet = "skills/humanize-korean/references/golden-set.md";
 
 async function writeCase(sourceText, finalText) {
   const dir = await mkdtemp(join(tmpdir(), "superloopy-humanize-"));
@@ -137,6 +140,31 @@ test("humanize audit preserves 멱등 jargon inside protected code spans", async
   });
 
   assert.equal(result.status, 0, result.stderr);
+});
+
+test("humanize guidance owns misplaced precision as semantic N-1 without a brittle audit pattern", async () => {
+  const [skillText, rules, rubric, golden] = await Promise.all([
+    readFile(skill, "utf8"),
+    readFile(quickRules, "utf8"),
+    readFile(qualityRubric, "utf8"),
+    readFile(goldenSet, "utf8")
+  ]);
+  for (const text of [skillText, rules, rubric, golden]) {
+    assert.match(text, /N-1/);
+  }
+
+  const files = await writeCase(
+    "정확한 컴퓨터를 확인했습니다. 정확한 MSI 보드를 확인했습니다. 정확한 펌웨어 이미지를 적용했습니다.",
+    "대상 컴퓨터를 확인했습니다. MSI 보드 모델을 확인했습니다. 보드와 일치하는 펌웨어 이미지를 적용했습니다."
+  );
+  const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report], {
+    encoding: "utf8"
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(await readFile(files.report, "utf8"));
+  assert.equal(report.patterns.before["N-1"], undefined);
+  assert.equal(report.patterns.after["N-1"], undefined);
 });
 
 test("humanize audit exempts unchanged typographic quoted spans from prose checks", async () => {
