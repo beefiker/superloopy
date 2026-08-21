@@ -2,9 +2,12 @@ import { existsSync, lstatSync, readFileSync, realpathSync, statSync } from "nod
 import { mkdir, open, rename, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { validateAuditSection } from "./audit-verdict.js";
+import { isPathInsideDirectory, lstatNoFollow, rejectOutputTargetForWrite, rejectSymlinkInExistingPath } from "./evidence-publication.js";
 import { isMatrixQualityGate, validateMatrixQualityGate } from "./matrix-gate.js";
 import { isReviewQualityGate, validateReviewQualityGate } from "./review-gate.js";
 import { evidenceDir, evidenceRelativeDir, repoRelativePath } from "./store.js";
+
+export { evidencePublicationLockTarget, syncEvidenceDirectory, writeEvidenceOutputFileExclusive } from "./evidence-publication.js";
 
 // An artifact up to this size must contain non-whitespace to satisfy the content floor;
 // larger artifacts (assumed non-trivial) skip the read. Mirrors the SubagentStop hook.
@@ -38,9 +41,7 @@ export function resolveEvidenceArtifact(cwd, artifactPath, scope) {
   if (stat.size <= 0) {
     throw new Error(`Evidence artifact is empty: ${artifactPath}`);
   }
-  // Content floor: a small artifact must carry non-whitespace, so a blank/whitespace-only
-  // placeholder cannot satisfy the gate via the CLI (evidence/check/finish) any more than via
-  // the SubagentStop hook. Only artifacts above the threshold (assumed non-trivial) skip the read.
+  // A small artifact must carry non-whitespace; larger artifacts skip this read.
   if (stat.size <= MAX_BLANK_CHECK_BYTES && readFileSync(resolved, "utf8").trim().length === 0) {
     throw new Error(`Evidence artifact is blank: ${artifactPath}`);
   }
@@ -51,9 +52,18 @@ export function resolveEvidenceArtifact(cwd, artifactPath, scope) {
   };
 }
 
-function isPathInsideDirectory(filePath, directoryPath) {
-  const rel = relative(directoryPath, filePath);
-  return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+// Strict read-side resolution for exclusive-report recovery: on top of the base gate, reject any
+// symlink component between the project root and the artifact and require the evidence root to
+// resolve inside the project. Core consumers (check/finish/audit/hooks) keep the base gate so
+// pre-existing symlinked .superloopy layouts remain valid.
+export function resolveConfinedEvidenceArtifact(cwd, artifactPath, scope) {
+  const artifact = resolveEvidenceArtifact(cwd, artifactPath, scope);
+  rejectSymlinkInExistingPath(cwd, artifact.absolutePath, artifactPath);
+  const realRoot = realpathSync(resolve(evidenceDir(cwd, scope)));
+  if (!isPathInsideDirectory(realRoot, realpathSync(cwd))) {
+    throw new Error("Evidence root must resolve inside the project.");
+  }
+  return artifact;
 }
 
 export function resolveEvidenceOutputPath(cwd, artifactPath, scope) {
@@ -88,6 +98,7 @@ export function resolveEvidenceOutputPath(cwd, artifactPath, scope) {
   }
   return {
     absolutePath: resolved,
+    projectRootPath: resolve(cwd),
     rootPath: root,
     relativePath: repoRelativePath(`${evidenceRelativeDir(scope)}/${rel}`)
   };
@@ -111,42 +122,6 @@ export async function writeEvidenceOutputFile(artifact, content, options = "utf8
     throw error;
   } finally {
     if (handle) await handle.close();
-  }
-}
-
-function rejectOutputTargetForWrite(artifact) {
-  if (artifact.rootPath) {
-    rejectSymlinkInExistingPath(artifact.rootPath, artifact.absolutePath, artifact.relativePath);
-  }
-  const targetStat = lstatNoFollow(artifact.absolutePath);
-  if (!targetStat) return;
-  if (targetStat.isSymbolicLink()) {
-    throw new Error(`Evidence artifact write target must not be a symlink: ${artifact.relativePath}`);
-  }
-  if (!targetStat.isFile()) {
-    throw new Error(`Evidence artifact is not a file: ${artifact.relativePath}`);
-  }
-}
-
-function lstatNoFollow(path) {
-  try {
-    return lstatSync(path);
-  } catch {
-    return null;
-  }
-}
-
-function rejectSymlinkInExistingPath(root, target, artifactPath) {
-  const rel = relative(root, target);
-  const segments = rel.split(/[\\/]+/u).filter(Boolean);
-  let cursor = resolve(root);
-  for (const segment of segments) {
-    cursor = join(cursor, segment);
-    const stat = lstatNoFollow(cursor);
-    if (!stat) continue;
-    if (stat.isSymbolicLink()) {
-      throw new Error(`Evidence artifact must not cross a symlink: ${artifactPath}`);
-    }
   }
 }
 
