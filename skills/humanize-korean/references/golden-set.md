@@ -317,7 +317,7 @@ audit: K-1
 
 ## Reassurance Copy (L Rules, Issue #44)
 
-Safety, accuracy, and negative-capability boasts read as advertising. Delete them or replace them with the concrete behavior or the reader's next action. `안전` may stay only where it explains that a real failure did not destroy the user's data or work.
+Safety, accuracy, and negative-capability boasts read as advertising. Delete them or replace them with the concrete behavior or the reader's next action. `안전` may stay only when a stated failure is paired with a concrete recovery action or fallback state.
 
 ### G-28 · L-1 · 제품 문구
 audit: L-1
@@ -360,10 +360,10 @@ audit: L-1
 ```
 
 ```after
-변환에 실패해도 원본 파일은 안전하게 유지됩니다.
+이 변환기는 원본을 지켜 줍니다. 변환에 실패하면 원본 파일을 그대로 사용합니다.
 ```
 
-The second sentence keeps `안전하게` and still passes: it explains a real failure outcome, which is the one allowed use.
+The repair states what happens after the failure instead of merely promising that the original remains safe.
 
 ### G-32 · L-2 · 제품 문구
 audit: L-2
@@ -446,7 +446,7 @@ audit: L-1
 복구 기능이 데이터를 지켜드립니다.
 ```
 
-Naming a recovery feature does not earn the 안전 allowance; only a stated failure condition or event does.
+Naming a recovery feature does not earn the 안전 allowance; a stated failure must lead to a concrete recovery action or fallback state.
 
 ## Must Not Change (Adversarial Pairs)
 
@@ -506,14 +506,14 @@ A conditional negative is a warning to the reader, not capability reassurance.
 audit: none
 
 ```before
-업로드에 실패했지만 임시 파일은 안전하게 보관되어 있습니다.
+펌웨어 설정에 실패했습니다. 안전한 기존 부팅 설정을 계속 사용합니다.
 ```
 
 ```after
-업로드에 실패했지만 임시 파일은 안전하게 보관되어 있습니다.
+펌웨어 설정에 실패했습니다. 안전한 기존 부팅 설정을 계속 사용합니다.
 ```
 
-A reported failure is the one place 안전 belongs; this passes untouched even under the strict gate.
+The failure is explicit and the next sentence names the exact fallback behavior, so this passes untouched even under the strict gate.
 
 ## Combined Repair
 

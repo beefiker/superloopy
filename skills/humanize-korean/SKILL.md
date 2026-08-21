@@ -36,7 +36,7 @@ A much larger calibration set lives in `references/golden-set.md`: 40+ before/af
 - Preserve register: formal text stays formal, conversational text stays conversational, official text stays official.
 - Prefer fewer, sharper edits over broad smoothing.
 - Do not add examples, metaphors, facts, citations, or marketing claims that were not in the source.
-- Remove reassurance flaunting (안전 과시): `안전`, `안심`, and `정확` boasts and negative-capability lines such as `~하지 않습니다` are tone, not protected claims. Keep `안전` wording only where it explains that a real failure did not destroy the user's data or work; turn "what this will not do" into "what the reader should do". This never applies to safety as subject matter, imperatives, or warnings to the reader — those stay.
+- Remove reassurance flaunting (안전 과시): `안전`, `안심`, and `정확` boasts and negative-capability lines such as `~하지 않습니다` are tone, not protected claims. Keep `안전` wording only when a stated failure is paired with a concrete recovery action or fallback state; turn "what this will not do" into "what the reader should do". This never applies to safety as subject matter, imperatives, or warnings to the reader — those stay.
 - Remove em dashes and en dashes (`—`, `–`) from Korean prose (M-1): 줄표 is an English carryover and a strong AI tell in modern Korean writing. Restructure with 쉼표, 괄호, a colon, or a sentence split; write ranges with `~`. Dashes inside code spans and quoted spans stay.
 - Load `references/quick-rules.md` before rewriting; load `references/golden-set.md` when you need more calibration pairs.
 - Load `references/quality-rubric.md` before grading or finalizing.
