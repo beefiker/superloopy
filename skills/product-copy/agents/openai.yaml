@@ -1,0 +1,7 @@
+interface:
+  display_name: "Product Copy"
+  short_description: "Concrete Korean in-product messages without invented behavior"
+  default_prompt: "Use $superloopy:product-copy to rewrite or review this Korean in-product copy using only supplied product behavior, replacing vague reassurance with concrete outcomes, fallback states, or next actions."
+
+policy:
+  allow_implicit_invocation: false

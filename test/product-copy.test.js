@@ -1,12 +1,17 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+import { checkSkills } from "../src/doctor-skills.js";
+
 const script = fileURLToPath(new URL("../skills/product-copy/scripts/audit-product-copy.mjs", import.meta.url));
+const repoRoot = fileURLToPath(new URL("../", import.meta.url));
+const skillRoot = join(repoRoot, "skills", "product-copy");
 
 async function auditCase(t, sourceText, finalText, extraArgs = []) {
   const directory = await mkdtemp(join(tmpdir(), "product-copy-audit-"));
@@ -19,6 +24,55 @@ async function auditCase(t, sourceText, finalText, extraArgs = []) {
   const result = spawnSync(process.execPath, [script, "--source", source, "--final", final, "--report", report, ...extraArgs], { encoding: "utf8" });
   return { result, report: JSON.parse(await readFile(report, "utf8")), files: { source, final, report } };
 }
+
+// Mutation caught: removing or renaming the packaged skill makes the real plugin loader lose it.
+test("plugin loader discovers explicit-only product-copy metadata", async () => {
+  const loaded = await checkSkills(repoRoot);
+  const skill = await readFile(join(skillRoot, "SKILL.md"), "utf8");
+  const metadata = await readFile(join(skillRoot, "agents", "openai.yaml"), "utf8");
+
+  assert.ok(loaded.skills.includes("product-copy"));
+  assert.match(skill, /^name: product-copy$/m);
+  assert.match(skill, /^disable-model-invocation: true$/m);
+  assert.match(skill, /\$superloopy:product-copy/u);
+  assert.match(skill, /\/superloopy:product-copy/u);
+  assert.match(metadata, /^\s*allow_implicit_invocation:\s*false$/m);
+  assert.match(metadata, /\$superloopy:product-copy/u);
+});
+
+// Mutation caught: weakening the output boundary permits explanatory wrappers or invented behavior.
+test("packaged product-copy declares direct output and no-invention boundaries", async () => {
+  const skill = await readFile(join(skillRoot, "SKILL.md"), "utf8");
+
+  assert.match(skill, /direct rewrite[\s\S]*only the rewritten copy/iu);
+  assert.match(skill, /one precise question/iu);
+  assert.match(skill, /never (?:add|invent)[\s\S]*(?:recovery|encryption|retention|privacy|correctness|safety)/iu);
+  for (const rule of ["PC-1", "PC-2", "PC-3", "PC-4"]) assert.match(skill, new RegExp(rule));
+  assert.match(skill, /scripts\/audit-product-copy\.mjs/u);
+  assert.match(skill, /references\/quick-rules\.md/u);
+  assert.match(skill, /references\/quality-rubric\.md/u);
+  assert.match(skill, /references\/golden-set\.md/u);
+  assert.match(skill, /source[\s\S]*final[\s\S]*summary[\s\S]*audit JSON/iu);
+});
+
+// Mutation caught: leaving an initializer placeholder or omitting a reference ships an incomplete skill.
+test("packaged product-copy has every required resource and no template markers", async () => {
+  const paths = [
+    "SKILL.md",
+    "agents/openai.yaml",
+    "references/quick-rules.md",
+    "references/quality-rubric.md",
+    "references/golden-set.md",
+    "scripts/audit-product-copy.mjs"
+  ];
+
+  for (const path of paths) {
+    const absolutePath = join(skillRoot, path);
+    assert.equal(existsSync(absolutePath), true, `missing product-copy resource: ${path}`);
+    const content = await readFile(absolutePath, "utf8");
+    assert.doesNotMatch(content, /\bTODO\b|\[TODO[^\]]*\]|replace this placeholder/iu, `${path} contains a template marker`);
+  }
+});
 
 // Mutation caught: dropping any PC-1 safety pattern allows vague safety reassurance to pass.
 test("audit rejects vague safety reassurance", async (t) => {
