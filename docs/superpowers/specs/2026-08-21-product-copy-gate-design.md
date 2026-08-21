@@ -88,6 +88,12 @@ The audit reports these clauses for manual review. They do not fail solely becau
 
 Never add a recovery, encryption, retention, privacy, correctness, or safety fact absent from the source or user-provided context. Missing support blocks the rewrite rather than encouraging plausible copy.
 
+### PC-5 — misplaced precision
+
+Accuracy belongs to a measurable or informational target: a value, specification, identity check, or match. Review copy such as `정확한 컴퓨터`, `정확한 MSI 보드 확인됨`, and `정확한 펌웨어 이미지` semantically, then name the supported relation. Preserve legitimate phrases such as `정확한 시간`, `정확한 수치`, `정확한 사양`, and `정확한 정보`.
+
+PC-5 is skill-level manual review, not a deterministic audit pattern. Korean particles, copulas, punctuation, and noun-phrase continuations make lexical matching both incomplete and noisy; the audit must not claim that it can infer the intended relation.
+
 ## Deterministic Audit Boundary
 
 Add `skills/product-copy/scripts/audit-product-copy.mjs` with no dependency. It accepts `--source`, `--final`, and `--report`.
@@ -100,7 +106,7 @@ The report contains:
 - pattern counts before and after;
 - protected-token preservation and change rate.
 
-The script may reject observable lexical forms. It must not certify that a recovery, safety, privacy, or legal claim is true. Manual-review items remain visible even when `ok` is true.
+The script may reject observable lexical forms. It must not certify that a recovery, safety, privacy, or legal claim is true, and it does not classify PC-5 semantic relations. Script-produced manual-review items remain visible even when `ok` is true.
 
 ## Packaged Components
 
@@ -166,6 +172,7 @@ Cover:
 - the issue’s vague failure sentence fails;
 - a concrete supplied fallback passes without safety decoration;
 - negative privacy commitments produce manual review rather than failure;
+- PC-5 remains absent from the lexical report while fresh-context skill evaluations repair misplaced precision without suppressing measurable accuracy phrases;
 - protected values cannot disappear;
 - source/final change rate is reported and large rewrites receive manual review without failing solely on size;
 - malformed arguments and unreadable files write useful failure reports;
