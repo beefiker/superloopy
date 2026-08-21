@@ -12,7 +12,8 @@ const PAIR_PATTERN =
   /^### (G-\d{2}) · (.+?) · (.+)\naudit: ([^\n]+)\n+```before\n([\s\S]*?)\n```\n+```after\n([\s\S]*?)\n```/gmu;
 
 function parseGoldenSet(markdown) {
-  return [...markdown.matchAll(PAIR_PATTERN)].map((match) => {
+  const normalized = markdown.replace(/\r\n?/gu, "\n");
+  return [...normalized.matchAll(PAIR_PATTERN)].map((match) => {
     const auditField = match[4].trim();
     const parseIds = (value) => value.split(",").map((id) => id.trim()).filter(Boolean);
     return {
@@ -53,6 +54,14 @@ test("golden set is large enough and has unique ids", () => {
 test("golden set parser captures every heading", () => {
   const headings = goldenMarkdown.match(/^### G-\d{2} · /gmu) ?? [];
   assert.equal(goldenPairs.length, headings.length, "a malformed entry silently dropped out of the parse");
+});
+
+test("golden set parser accepts Windows line endings", () => {
+  const windowsMarkdown = goldenMarkdown.replace(/\r\n?/gu, "\n").replace(/\n/gu, "\r\n");
+  const windowsPairs = parseGoldenSet(windowsMarkdown);
+  assert.equal(windowsPairs.length, 44);
+  assert.deepEqual([windowsPairs[0].id, windowsPairs.at(-1).id], ["G-01", "G-44"]);
+  assert.equal(windowsPairs[0].before, "팀은 자동화 스크립트를 통해 배포 시간을 절반으로 줄였습니다.");
 });
 
 test("golden set covers the reassurance rules from issue #44", () => {

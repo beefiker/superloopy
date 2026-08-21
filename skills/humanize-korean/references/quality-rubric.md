@@ -7,7 +7,7 @@
 - Change rate: pass at 0.3 or lower, warn above 0.3, fail above 0.5.
 - S1 AI-tell count: lower after rewrite, target zero when possible.
 - S2 repeated-pattern count: lower after rewrite unless the pattern is genre-appropriate.
-- Safety flaunting (L-1): zero `안전`/`안심` boasts after rewrite in `제품 문구` and by default; a declared non-product genre (`--genre`) demotes this to a warning that caps the grade at C. Imperative sentences and stated failure conditions or events are exempt everywhere.
+- Safety flaunting (L-1): zero `안전`/`안심` boasts after rewrite in `제품 문구` and by default; a declared non-product genre (`--genre`) demotes this to a warning that caps the grade at C. Imperative sentences and concrete recovery or fallback outcomes paired with a stated failure are exempt everywhere.
 - Accuracy flaunting and negative-capability reassurance (L-2, L-3): warn when any remains; a remaining count caps the grade at C. Imperatives and conditional negatives (reader warnings) are exempt from L-3.
 - Em dash (M-1): zero `—`/`–` in Korean prose after rewrite; dashes inside code spans and quoted spans are exempt.
 - Register: unchanged.

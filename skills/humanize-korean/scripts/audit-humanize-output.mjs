@@ -33,11 +33,14 @@ const PROSE_SPAN_FILTERED_IDS = new Set(["K-1", "L-1", "L-2", "L-3", "M-1"]);
 // 제품 문구, or an unknown value) stays strict so existing callers keep issue-#44
 // enforcement unless they explicitly declare a non-product genre.
 const RELAXED_L1_GENRES = new Set(["공적", "리포트", "블로그", "칼럼", "대화체"]);
-// The 안전 allowance is "a real failure did not destroy data or work": the
-// sentence must state a failure as a condition or reported event (실패해도,
-// 오류가 나면, 업로드에 실패했지만), not merely name a recovery feature.
+// The 안전 allowance requires both a real failure and a concrete recovery or
+// fallback outcome. A failure alone does not make vague reassurance useful.
 const FAILURE_CONDITION_PATTERN =
   /(?:실패|오류|에러|장애|충돌|손상|망가|유실)[가-힣 ]{0,4}?(?:해도|하면|하더라도|했|한 경우|나도|나면|났|난 경우|생겨도|생기면|생겼|발생 시|발생해도|발생하면|발생했|돼도|되면|되어도|됐|된 경우|져도|지면|졌| 시 )/u;
+const CONCRETE_RECOVERY_PATTERNS = [
+  /안전한\s+(?:기존|이전|백업)\s+[^.!?\n]{1,40}?(?:계속\s+사용|사용을\s+계속|로\s+전환|에서\s+재개)/u,
+  /(?:임시|백업|복구된|원본)\s+[^.!?\n]{0,30}?안전하게\s+(?:보관(?:되|하)|복구|복원|되돌)/u
+];
 const KOREAN_NAME_STOPLIST = new Set([
   "광고",
   "계획",
@@ -200,7 +203,7 @@ function countPatterns(text) {
     // Imperatives are the repair shape issue #44 asks for ("~하세요"), so they
     // are never counted as reassurance.
     if (id === "L-1" || id === "L-3") input = removeImperativeSentences(input);
-    if (id === "L-1") input = removeFailureConditionSentences(input);
+    if (id === "L-1") input = removeConcreteFailureRecoverySentences(input);
     // A conditional negative ("지금 나가면 저장되지 않습니다") is a warning to the
     // reader, not capability reassurance.
     if (id === "L-3") input = removeConditionalSentences(input);
@@ -222,11 +225,17 @@ function removeImperativeSentences(text) {
     .join(" ");
 }
 
-// Issue #44: safety wording is allowed only where it explains that a real
-// failure did not destroy the user's data or work.
-function removeFailureConditionSentences(text) {
-  return splitSentences(text)
-    .filter((sentence) => !FAILURE_CONDITION_PATTERN.test(sentence))
+// Issue #44: safety wording is allowed only when a stated failure is paired
+// with a concrete recovery action or fallback state. The failure may be in the
+// same sentence or the sentence immediately before the outcome.
+function removeConcreteFailureRecoverySentences(text) {
+  const sentences = splitSentences(text);
+  return sentences
+    .filter((sentence, index) => {
+      if (!CONCRETE_RECOVERY_PATTERNS.some((pattern) => pattern.test(sentence))) return true;
+      const failureContext = `${sentences[index - 1] ?? ""} ${sentence}`;
+      return !FAILURE_CONDITION_PATTERN.test(failureContext);
+    })
     .join(" ");
 }
 
