@@ -67,7 +67,7 @@ test("packaged product-copy declares direct output and no-invention boundaries",
   assert.match(skill, /direct rewrite[\s\S]*only the rewritten copy/iu);
   assert.match(skill, /one precise question/iu);
   assert.match(skill, /never (?:add|invent)[\s\S]*(?:recovery|encryption|retention|privacy|correctness|safety)/iu);
-  for (const rule of ["PC-1", "PC-2", "PC-3", "PC-4"]) assert.match(skill, new RegExp(rule));
+  for (const rule of ["PC-1", "PC-2", "PC-3", "PC-4", "PC-5"]) assert.match(skill, new RegExp(rule));
   assert.match(skill, /scripts\/audit-product-copy\.mjs/u);
   assert.match(skill, /references\/quick-rules\.md/u);
   assert.match(skill, /references\/quality-rubric\.md/u);
@@ -164,6 +164,23 @@ test("audit does not match Korean negative prefixes as vague reassurance", async
   const negativePrefixes = await auditCase(t, "불안전하게 처리합니다. 부정확하게 계산합니다.", "불안전하게 처리합니다. 부정확하게 계산합니다.");
   assert.equal(negativePrefixes.result.status, 0);
   assert.ok(!negativePrefixes.report.problems.some((item) => item.id === "PC-1-safety" || item.id === "PC-1-accuracy"));
+});
+
+// Mutation caught: treating correctness as a property of an entity hides which relation was actually verified.
+test("audit sends misplaced precision on product entities to manual review", async (t) => {
+  for (const finalText of ["정확한 컴퓨터", "정확한 MSI 보드 확인됨", "정확한 펌웨어 이미지"]) {
+    const audited = await auditCase(t, finalText, finalText);
+    assert.equal(audited.result.status, 0, audited.result.stderr);
+    assert.ok(audited.report.manualReview.some((item) => item.id === "PC-5-misplaced-precision"), finalText);
+  }
+});
+
+// Mutation caught: banning every 정확한 phrase creates noise for values and information that can actually be accurate.
+test("audit keeps measurable accuracy phrases out of PC-5 review", async (t) => {
+  const copy = "정확한 시간, 수치, 사양, 정보와 정확한 컴퓨터 사양, 정확한 시스템 시간을 표시합니다.";
+  const audited = await auditCase(t, copy, copy);
+  assert.equal(audited.result.status, 0, audited.result.stderr);
+  assert.ok(!audited.report.manualReview.some((item) => item.id === "PC-5-misplaced-precision"));
 });
 
 // Mutation caught: failing to collect a quoted product value permits its removal.

@@ -15,7 +15,7 @@ Rewrite Korean in-product messages into supported outcomes, fallback states, or 
 Read each packaged reference directly before drafting:
 
 - `references/quick-rules.md` for the compact workflow.
-- `references/quality-rubric.md` for PC-1 through PC-4 and review decisions.
+- `references/quality-rubric.md` for PC-1 through PC-5 and review decisions.
 - `references/golden-set.md` for calibrated pass, fail, manual-review, and missing-fact cases.
 
 ## Establish authority
@@ -45,6 +45,12 @@ Prefer an affirmative state or next action only when it preserves meaning. Prese
 ### PC-4 — unsupported reinvention
 
 Reject any new recovery, encryption, retention, privacy, correctness, or safety claim that cannot be traced to the source or explicit context. Ask for the missing product fact instead of making a plausible rewrite.
+
+### PC-5 — misplaced precision
+
+Attach accuracy to the thing that can be checked: a measurement, specification, identity, or match. When `정확한` modifies a computer, board, system, GPU, or firmware image directly, name the verified relation instead. Prefer `대상 컴퓨터 확인`, `MSI 보드 모델 확인`, or `보드와 일치하는 펌웨어 이미지` when those meanings are supplied.
+
+Do not ban `정확한` generally. Keep it when it modifies a measurable or informational noun such as `시간`, `수치`, `사양`, or `정보`. Route mechanically detected entity pairings to manual review because the audit cannot determine the intended relation.
 
 ## Return the result
 

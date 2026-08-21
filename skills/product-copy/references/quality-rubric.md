@@ -26,6 +26,10 @@ Fail when a product name, code span, number, path, URL, quoted value, legal text
 
 Review negative clauses instead of failing them solely for being negative. Prefer an affirmative state or next action only when meaning stays intact. Preserve verified privacy or legal commitments, including `검색어를 서버로 전송하지 않습니다`.
 
+### PC-5 — misplaced precision
+
+Review `정확한` when it directly modifies a product entity such as a computer, board, system, GPU, or firmware image. The copy should name the supplied measurement, specification, identity, or match instead. Do not flag measurable or informational targets such as `정확한 시간`, `정확한 수치`, `정확한 사양`, or `정확한 정보`.
+
 Also review:
 
 - open-ended failure messages whose completeness cannot be proven mechanically;
