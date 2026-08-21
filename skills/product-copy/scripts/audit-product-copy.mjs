@@ -1,12 +1,44 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 
 const PATTERNS = {
   "PC-1-safety": /(?<![가-힣])안전(?:하게|하고\s*정확하게)\s*(?:처리|진행)(?:했습니다|합니다|됩니다)|안심하고\s*(?:계속\s*)?사용하세요/gu,
   "PC-1-accuracy": /(?<![가-힣])정확(?:하게|하고\s*안전하게)\s*(?:계산|처리|진행)(?:했습니다|합니다|됩니다)/gu,
   "PC-2-vague-failure": /(?:저장|적용|처리)에\s*실패해도\s*[^\r\n]*?안전하게\s*남습니다|저장에\s*실패해도\s*데이터는\s*안전합니다/gu,
   "PC-3-negative-capability": /[가-힣A-Za-z0-9]+하지\s*않습니다|전송되지\s*않습니다/gu,
-  "PC-2-failure": /(?:실패|오류)/gu
+  "PC-2-failure": /(?:실패|오류|할\s*수\s*없습니다|못했습니다)/gu
 };
+
+const KOREAN_NAME_STOPLIST = new Set([
+  "광고",
+  "계획",
+  "고객",
+  "공지",
+  "과정",
+  "기능",
+  "기록",
+  "검증",
+  "댓글",
+  "도구",
+  "메일",
+  "문구",
+  "문서",
+  "문장",
+  "방해",
+  "사용자",
+  "사람",
+  "서비스",
+  "성능",
+  "소개글",
+  "안내문",
+  "업데이트",
+  "요소",
+  "이메일",
+  "작업",
+  "제품",
+  "증거",
+  "파일"
+]);
 
 function normalize(text) {
   return text.replace(/\r\n?/gu, "\n");
@@ -22,8 +54,9 @@ function patternCounts(text) {
 
 function collectProtectedTokens(text) {
   const candidates = [];
+  const addCandidate = (type, value, start) => candidates.push({ type, value, start, end: start + value.length });
   const add = (type, expression) => {
-    for (const match of text.matchAll(expression)) candidates.push({ type, value: match[0], start: match.index, end: match.index + match[0].length });
+    for (const match of text.matchAll(expression)) addCandidate(type, match[0], match.index);
   };
   add("code", /`[^`\r\n]+`/gu);
   add("url", /\bhttps?:\/\/[^\s<>()\[\]{}"']+[^\s<>()\[\]{}"'.,;:!?]/gu);
@@ -31,6 +64,8 @@ function collectProtectedTokens(text) {
   add("quote", /"[^"\r\n]+"|“[^”\r\n]+”|‘[^’\r\n]+’|「[^」\r\n]+」|『[^』\r\n]+』/gu);
   add("legal", /(?:제\s*\d+\s*조|Article\s+\d+)/giu);
   add("number", /(?<![\p{L}\p{N}_])[+-]?(?:\d+(?:[.,]\d+)?)(?:%|[A-Za-z가-힣]+)?/gu);
+  add("product", /\b[A-Z][A-Za-z0-9.-]*\b/gu);
+  for (const token of collectKoreanProductNameCandidates(text)) addCandidate("product", token.value, token.start);
   return candidates
     .sort((left, right) => left.start - right.start || right.end - left.end)
     .reduce((accepted, candidate) => {
@@ -38,6 +73,16 @@ function collectProtectedTokens(text) {
       if (!previous || candidate.start >= previous.end) accepted.push(candidate);
       return accepted;
     }, []);
+}
+
+function collectKoreanProductNameCandidates(text) {
+  const patterns = [
+    /(?:^|[\n.!?]\s*)([\uAC00-\uD7A3][\uAC00-\uD7A3A-Za-z0-9.+-]{1,30})(?=은|는|이|가)/gu,
+    /([\uAC00-\uD7A3][\uAC00-\uD7A3A-Za-z0-9.+-]{1,30})(?=\s*(?:앱|서비스|플랫폼|도구|브라우저|메신저|뷰어|에디터))/gu
+  ];
+  return patterns.flatMap((pattern) => [...text.matchAll(pattern)]
+    .map((match) => ({ value: match[1], start: match.index + match[0].indexOf(match[1]) }))
+    .filter((token) => token.value.length >= 3 && !KOREAN_NAME_STOPLIST.has(token.value)));
 }
 
 function missingProtectedTokens(sourceText, finalText) {
@@ -73,10 +118,12 @@ function createErrorReport(id, message) {
   return {
     schemaVersion: 1,
     ok: false,
+    sourceChars: 0,
+    finalChars: 0,
     problems: [{ id, message }],
     manualReview: [],
     patterns: { before: patternCounts(""), after: patternCounts("") },
-    protected: { ok: false, missing: [] },
+    protectedTokens: { total: 0, missing: [] },
     changeRate: null
   };
 }
@@ -86,6 +133,7 @@ export function auditTexts(source, final) {
   const finalText = normalize(final);
   const before = patternCounts(sourceText);
   const after = patternCounts(finalText);
+  const protectedTokens = collectProtectedTokens(sourceText);
   const problems = [];
   const manualReview = [];
   const missing = missingProtectedTokens(sourceText, finalText);
@@ -102,10 +150,12 @@ export function auditTexts(source, final) {
   return {
     schemaVersion: 1,
     ok: problems.length === 0,
+    sourceChars: sourceText.length,
+    finalChars: finalText.length,
     problems,
     manualReview,
     patterns: { before, after },
-    protected: { ok: missing.length === 0, missing },
+    protectedTokens: { total: protectedTokens.length, missing },
     changeRate
   };
 }
@@ -148,4 +198,8 @@ async function main() {
   }
 }
 
-if (import.meta.url === new URL(process.argv[1], "file:").href) await main();
+export function isMainModule(moduleUrl, argvPath, options) {
+  return argvPath !== undefined && moduleUrl === pathToFileURL(argvPath, options).href;
+}
+
+if (isMainModule(import.meta.url, process.argv[1])) await main();
