@@ -50,7 +50,7 @@ Reject any new recovery, encryption, retention, privacy, correctness, or safety 
 
 Attach accuracy to the thing that can be checked: a measurement, specification, identity, or match. When `정확한` modifies a computer, board, system, GPU, or firmware image directly, name the verified relation instead. Prefer `대상 컴퓨터 확인`, `MSI 보드 모델 확인`, or `보드와 일치하는 펌웨어 이미지` when those meanings are supplied.
 
-Do not ban `정확한` generally. Keep it when it modifies a measurable or informational noun such as `시간`, `수치`, `사양`, or `정보`. Route mechanically detected entity pairings to manual review because the audit cannot determine the intended relation.
+Do not ban `정확한` generally. Keep it when it modifies a measurable or informational noun such as `시간`, `수치`, `사양`, or `정보`. Treat entity pairings as semantic manual review in the skill itself. The lexical audit intentionally does not classify PC-5 because Korean particles and noun-phrase continuations cannot establish the intended relation.
 
 ## Return the result
 
