@@ -146,6 +146,7 @@ function renderStart(payload, orchestrate, interop, adhdOverlay, sayItStraightOv
       `- Follow \`${cli} loop guide --json\` for each next command; do not ask the user to run Superloopy.`,
       `- Prove every criterion with \`${cli} loop prove -- <validation-command>\` (real artifacts only).`,
       `- Preflight \`${cli} loop check\`, then \`${cli} loop finish --evidence "<summary>" --artifact .superloopy/evidence/gate.json --json\`.`,
+      ...reassuranceCopyGateLines(),
       ...interopBlock(interop),
       ...(orchestrate ? ["", ...orchestrationLines(interop)] : [])
     ], adhdOverlay, sayItStraightOverlay);
@@ -164,6 +165,7 @@ function renderStart(payload, orchestrate, interop, adhdOverlay, sayItStraightOv
     `- Preflight with \`${cli} loop check\`, then complete with \`${cli} loop finish --evidence "<summary>" --artifact .superloopy/evidence/gate.json --json\`.`,
     "- Report progress in plain terms (criteria proven, next step), not raw command dumps.",
     "- Keep it light unless the task needs heavier review. The Stop hook blocks completion until evidence exists.",
+    ...reassuranceCopyGateLines(),
     ...interopBlock(interop),
     "",
     ...(orchestrate ? orchestrationLines(interop) : [baselineDelegationLine()])
@@ -175,6 +177,7 @@ function renderResume(context, orchestrate, interop, adhdOverlay, sayItStraightO
     HEADER,
     "",
     "A loop is already in progress. Resume as the loop engineer and run the next action yourself; do not start a second plan or ask the user to run Superloopy commands.",
+    ...reassuranceCopyGateLines(),
     ...interopBlock(interop),
     ...(orchestrate
       ? ["", "You opened this with `loopy team`: keep delegating independent slices with the native subagent controls exposed by the current host, and record only artifact-backed proof.", "", ...orchestrationLines(interop)]
@@ -182,6 +185,17 @@ function renderResume(context, orchestrate, interop, adhdOverlay, sayItStraightO
     "",
     context
   ], adhdOverlay, sayItStraightOverlay);
+}
+
+export function reassuranceCopyGateLines() {
+  return [
+    "",
+    "Reassurance-copy gate (conditional):",
+    "- Decide from the affected artifact: if it creates or changes user-visible Korean product copy about behavior, add a plan criterion for RC-1 through RC-4 and Korean naturalness.",
+    "- State supplied outcomes, fallback, recovery, or next action; preserve verified privacy/legal commitments; never invent behavior.",
+    "- Apply humanize-korean semantic review for misplaced modifiers.",
+    "- Ignore internal logs, developer docs, quotations, general/marketing prose, and non-Korean copy."
+  ];
 }
 
 function withOutputOverlays(lines, adhdOverlay, sayItStraightOverlay) {
