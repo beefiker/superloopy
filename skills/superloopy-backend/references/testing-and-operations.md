@@ -32,6 +32,7 @@ The minimum completion report contains:
 - authorization, tenant, bounds, and adversarial-data evidence;
 - performance evidence and remaining capacity assumptions;
 - rollout stages, recovery path, monitoring, and owners;
+- the project's own checks and definition of done: which conventions, hooks, linters, formatters, or generated-artifact regenerations were run, and their results;
 - unresolved risks, missing production authority, evidence gaps, and blockers.
 
 Claims in the completion report must be no broader than the evidence collected.
