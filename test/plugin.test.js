@@ -90,6 +90,16 @@ test("plugin interface assets resolve inside the npm package", async () => {
   ]) {
     assert.equal(files.has(path), true, `say-it-straight package file missing from npm pack: ${path}`);
   }
+  for (const path of [
+    "skills/product-copy/SKILL.md",
+    "skills/product-copy/agents/openai.yaml",
+    "skills/product-copy/references/golden-set.md",
+    "skills/product-copy/references/quality-rubric.md",
+    "skills/product-copy/references/quick-rules.md",
+    "skills/product-copy/scripts/audit-product-copy.mjs"
+  ]) {
+    assert.equal(files.has(path), true, `product-copy package file missing from npm pack: ${path}`);
+  }
 });
 
 test("plugin audit docs describe convention discovery and current ignore scope", async () => {
