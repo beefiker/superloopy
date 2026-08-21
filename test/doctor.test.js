@@ -15,7 +15,7 @@ import {
   runDoctor
 } from "../src/doctor.js";
 
-const EXPECTED_SKILLS = ["humanize-korean", "i-have-adhd", "product-copy", "say-it-straight", "superloopy-clone", "superloopy-doctor", "superloopy-frontend", "superloopy-loop", "superloopy-research", "superloopy-slides"];
+const EXPECTED_SKILLS = ["humanize-korean", "i-have-adhd", "say-it-straight", "superloopy-clone", "superloopy-doctor", "superloopy-frontend", "superloopy-loop", "superloopy-research", "superloopy-slides"];
 test("reviewability counts physical lines and recognizes supported script/config extensions", () => {
   assert.equal(countPhysicalLines(""), 0);
   assert.equal(countPhysicalLines("one"), 1);
