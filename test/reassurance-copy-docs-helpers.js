@@ -25,6 +25,12 @@ const REMOVED_STANDALONE_PATTERNS = [
   /test\/product-copy(?:-integration-helpers|\.test)\.js/u
 ];
 
+export function parseGoldenFileColumnPaths(content) {
+  const normalized = content.replace(/\r\n?/gu, "\n");
+  const inventory = normalized.split("## File Evidence Inventory\n")[1] ?? "";
+  return new Set(inventory.split("\n").flatMap((line) => [...(line.split("|")[1] ?? "").matchAll(/`([^`]+)`/gu)].map((match) => match[1])));
+}
+
 export async function assertAutomaticReassuranceCopyDocs() {
   const locales = [
     { file: "README.md", automatic: /automatic reassurance-copy gate/iu, affected: /affected artifact/iu, scope: /user-visible Korean product-behavior copy/iu, excluded: /internal logs[\s\S]*non-Korean copy/iu, naturalness: /misplaced modifiers/iu },

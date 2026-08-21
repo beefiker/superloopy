@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { assertAutomaticReassuranceCopyDocs } from "./reassurance-copy-docs-helpers.js";
+import { assertAutomaticReassuranceCopyDocs, parseGoldenFileColumnPaths } from "./reassurance-copy-docs-helpers.js";
 test("public docs describe hook proof-plan context and active evidence receipts", async () => {
   const readme = await readFile("README.md", "utf8");
   const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");
@@ -501,9 +501,9 @@ test("public docs describe crew lines as presentation-only status", async () => 
 
 test("loop golden set lists every Git-visible file with strict evidence", async () => {
   const golden = await readFile("docs/superloopy-loop-golden-set.md", "utf8");
-  const inventoryPaths = new Set((golden.split("## File Evidence Inventory\n")[1] ?? "").split("\n").flatMap((line) => [...(line.split("|")[1] ?? "").matchAll(/`([^`]+)`/gu)].map((match) => match[1])));
+  const inventoryPaths = parseGoldenFileColumnPaths(golden);
   const missing = listRepoFiles().filter((file) => !inventoryPaths.has(file));
-
+  assert.deepEqual([...parseGoldenFileColumnPaths("## File Evidence Inventory\r\n| File | Evidence |\r\n| `file.js` | `evidence-only.js` |\r\n")], ["file.js"]);
   assert.deepEqual(missing, []);
   assert.match(golden, /## File Evidence Inventory/);
   assert.match(golden, /Strict pass rule/);
