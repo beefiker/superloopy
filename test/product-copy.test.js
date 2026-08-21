@@ -174,7 +174,9 @@ test("audit sends misplaced precision on product entities to manual review", asy
     "정확한 MSI 보드 확인됨",
     "정확한 MSI 보드입니다.",
     "정확한 펌웨어 이미지",
-    "‘정확한 컴퓨터’"
+    "‘정확한 컴퓨터’",
+    "정확한 컴퓨터: 선택됨",
+    "정확한 컴퓨터…"
   ]) {
     const audited = await auditCase(t, finalText, finalText);
     assert.equal(audited.result.status, 0, audited.result.stderr);
@@ -191,7 +193,9 @@ test("audit keeps measurable accuracy phrases out of PC-5 review", async (t) => 
     "정확한 정보 제공 시스템",
     "정확한 시간 측정 시스템",
     "정확한 GPU 온도",
+    "정확한 GPU 주파수",
     "정확한 컴퓨터 모델 정보",
+    "정확한 시스템 이름",
     "정확한 펌웨어 이미지 정보"
   ]) {
     const audited = await auditCase(t, copy, copy);
