@@ -8,6 +8,7 @@
 - S1 AI-tell count: lower after rewrite, target zero when possible.
 - S2 repeated-pattern count: lower after rewrite unless the pattern is genre-appropriate.
 - Em dash (M-1): zero `—`/`–` in Korean prose after rewrite; dashes inside code spans and quoted spans are exempt.
+- N-1 — misplaced modifier target: 정확성은 시간·수치·사양·정보·식별·일치처럼 확인 가능한 대상에 붙인다. 정확한 컴퓨터/보드/펌웨어 이미지는 공급된 관계에 따라 대상 컴퓨터 확인, 보드 모델 확인, 보드와 일치하는 펌웨어로 고친다. 정확한 시간/수치/사양/정보는 보존한다. N-1 has no deterministic audit pattern or grade effect.
 - Register: unchanged.
 - Added claims: zero.
 

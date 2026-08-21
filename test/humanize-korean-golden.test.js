@@ -46,9 +46,18 @@ async function auditPair(pair) {
 const goldenMarkdown = await readFile(goldenSetPath, "utf8");
 const goldenPairs = parseGoldenSet(goldenMarkdown);
 
-test("golden set has the expected non-product-copy pairs and unique ids", () => {
-  assert.equal(goldenPairs.length, 28, `expected 28 golden pairs, found ${goldenPairs.length}`);
+test("golden set retains 28 existing pairs and adds the semantic N-1 calibration", () => {
+  assert.equal(goldenPairs.length, 29, `expected 29 golden pairs, found ${goldenPairs.length}`);
   assert.equal(new Set(goldenPairs.map((pair) => pair.id)).size, goldenPairs.length);
+  assert.deepEqual(goldenPairs.at(-1), {
+    id: "G-29",
+    rules: "N-1",
+    genre: "리포트",
+    auditIds: [],
+    keepIds: [],
+    before: "정확한 컴퓨터를 확인했습니다. 정확한 MSI 보드를 확인했습니다. 정확한 펌웨어 이미지를 적용했습니다.",
+    after: "대상 컴퓨터를 확인했습니다. MSI 보드 모델을 확인했습니다. 보드와 일치하는 펌웨어 이미지를 적용했습니다."
+  });
 });
 
 test("golden set parser captures every heading", () => {
@@ -59,8 +68,8 @@ test("golden set parser captures every heading", () => {
 test("golden set parser accepts Windows line endings", () => {
   const windowsMarkdown = goldenMarkdown.replace(/\r\n?/gu, "\n").replace(/\n/gu, "\r\n");
   const windowsPairs = parseGoldenSet(windowsMarkdown);
-  assert.equal(windowsPairs.length, 28);
-  assert.deepEqual([windowsPairs[0].id, windowsPairs.at(-1).id], ["G-01", "G-28"]);
+  assert.equal(windowsPairs.length, 29);
+  assert.deepEqual([windowsPairs[0].id, windowsPairs.at(-1).id], ["G-01", "G-29"]);
   assert.equal(windowsPairs[0].before, "팀은 자동화 스크립트를 통해 배포 시간을 절반으로 줄였습니다.");
 });
 
