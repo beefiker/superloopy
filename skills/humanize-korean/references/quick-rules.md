@@ -39,9 +39,6 @@ Keep these byte-for-byte unless the user explicitly asks otherwise:
 | I-1 | `~인 것이다`, `~한 것이다` endings | Use direct declarative endings. |
 | J-2 | Quotation marks used only for emphasis | Keep only true quotes or a few essential terms. |
 | K-1 | Unnecessary software jargon such as `멱등`, `멱등성` in general prose | State the behavior directly, such as `같은 요청을 여러 번 보내도 결과가 달라지지 않는다`. When a developer-facing genre truly needs the term, keep it inside backticks and define it once. |
-| L-1 | Safety flaunting such as `안전하게 처리합니다`, `안심하고 사용하세요`, `안전한 방식으로` | Delete the reassurance or state the concrete behavior. Keep `안전` wording only when a stated failure is paired with a concrete recovery action or fallback state. |
-| L-2 | Baseline-behavior flaunting such as `정확하게 계산합니다`, `정확하고 안전하게`, `여기서 멈춥니다` | Delete it; doing the job correctly is the baseline, not a feature. Keep only a measurable spec, such as an error bound or a concrete stop condition. |
-| L-3 | Negative-capability reassurance such as `자동으로 수정하지 않습니다`, `서버로 전송하지 않습니다` | Say what the user should do (`~하세요`) or what actually happens instead. Keep a negative claim only when the text must state a real commitment, such as a privacy promise. |
 | M-1 | Em dash or en dash (`—`, `–`) used as a pause or parenthetical in Korean prose | 줄표 is an English carryover in modern Korean writing. Replace with 쉼표, 괄호, a colon, or split the sentence; write ranges with `~`. Dashes inside code spans and quoted spans stay. |
 
 ## S2: Repeated Or Genre-Dependent Tells
@@ -69,15 +66,6 @@ Keep these byte-for-byte unless the user explicitly asks otherwise:
 | I-3 | `~다는 뜻이다`, `~다는 의미다` | Integrate the meaning into the sentence. |
 | J-1 | Decorative Markdown emphasis in serious prose | Remove most decoration. |
 | J-3 | Bullets in column/report prose | Keep bullets only when they improve scanning or are part of the source genre. |
-
-## Reassurance Copy (L Rules, From Issue #44)
-
-Safety words in product or completion copy read as advertising, not information. Nothing is "safe" until a user has verified it, and a user who did not already assume safety would not be running the program at all, so flaunting safety only makes text look less trustworthy.
-
-- Treat `안전`, `안심`, `정확` boasts as tone, not as protected claims: removing them does not count as a meaning change. This applies to flaunting only — when safety is the subject matter (news, reports, columns about 안전성), the vocabulary is content and must stay.
-- The one allowed use of `안전` in product copy: a stated failure paired with a concrete recovery action or fallback state (`펌웨어 설정에 실패했습니다. 안전한 기존 부팅 설정을 계속 사용합니다`). A failure alone (`저장에 실패해도 이전 버전은 안전하게 남습니다`) or a recovery-feature name (`복구 기능이 안전하게 지켜드립니다`) is still flaunting.
-- Imperatives are never reassurance: `비밀번호는 안전하게 보관하세요` tells the reader what to do and stays. Replace "what this program will not do" with "what the reader should do": prefer `적용하려면 저장 버튼을 누르세요` over `자동으로 수정하지 않습니다`. Conditional negatives (`지금 나가면 저장되지 않습니다`) are warnings to the reader and stay.
-- Audit treatment: pass the estimated genre via `--genre`. In `제품 문구` (and by default), remaining L-1 hard-fails the audit; in declared non-product genres it warns and caps the grade at C instead, so topic vocabulary is never forcibly deleted. Remaining L-2/L-3 always warn and cap the grade at C, because precision specs and legally required negative claims can legitimately keep those shapes. The report records the genre used.
 
 ## Rewrite Order
 

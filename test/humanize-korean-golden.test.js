@@ -46,8 +46,8 @@ async function auditPair(pair) {
 const goldenMarkdown = await readFile(goldenSetPath, "utf8");
 const goldenPairs = parseGoldenSet(goldenMarkdown);
 
-test("golden set is large enough and has unique ids", () => {
-  assert.ok(goldenPairs.length >= 30, `expected at least 30 golden pairs, found ${goldenPairs.length}`);
+test("golden set has the expected non-product-copy pairs and unique ids", () => {
+  assert.equal(goldenPairs.length, 28, `expected 28 golden pairs, found ${goldenPairs.length}`);
   assert.equal(new Set(goldenPairs.map((pair) => pair.id)).size, goldenPairs.length);
 });
 
@@ -59,22 +59,9 @@ test("golden set parser captures every heading", () => {
 test("golden set parser accepts Windows line endings", () => {
   const windowsMarkdown = goldenMarkdown.replace(/\r\n?/gu, "\n").replace(/\n/gu, "\r\n");
   const windowsPairs = parseGoldenSet(windowsMarkdown);
-  assert.equal(windowsPairs.length, 44);
-  assert.deepEqual([windowsPairs[0].id, windowsPairs.at(-1).id], ["G-01", "G-44"]);
+  assert.equal(windowsPairs.length, 28);
+  assert.deepEqual([windowsPairs[0].id, windowsPairs.at(-1).id], ["G-01", "G-28"]);
   assert.equal(windowsPairs[0].before, "팀은 자동화 스크립트를 통해 배포 시간을 절반으로 줄였습니다.");
-});
-
-test("golden set covers the reassurance rules from issue #44", () => {
-  for (const id of ["L-1", "L-2", "L-3"]) {
-    assert.ok(
-      goldenPairs.some((pair) => pair.auditIds.includes(id)),
-      `expected at least one golden pair auditing ${id}`
-    );
-  }
-  assert.ok(
-    goldenPairs.some((pair) => pair.keepIds.length > 0),
-    "expected at least one must-not-change pair guarding against over-writing"
-  );
 });
 
 for (const pair of goldenPairs) {
