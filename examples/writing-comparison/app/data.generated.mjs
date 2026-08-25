@@ -5,6 +5,7 @@ import { sample as incidentReview } from "./data/incident-review.mjs";
 import { sample as supportReply } from "./data/support-reply.mjs";
 import { sample as internalProposal } from "./data/internal-proposal.mjs";
 import { sample as apiMigration } from "./data/api-migration.mjs";
+import { sample as llmWiki } from "./data/llm-wiki.mjs";
 import { sample as releaseNoteEn } from "./data/release-note-en.mjs";
 import { sample as meetingFollowupEn } from "./data/meeting-followup-en.mjs";
 import { sample as incidentReviewEn } from "./data/incident-review-en.mjs";
@@ -12,7 +13,9 @@ import { sample as supportReplyEn } from "./data/support-reply-en.mjs";
 import { sample as internalProposalEn } from "./data/internal-proposal-en.mjs";
 import { sample as apiMigrationEn } from "./data/api-migration-en.mjs";
 
-export const SAMPLE_ORDER = ["release-note","meeting-followup","incident-review","support-reply","internal-proposal","api-migration","release-note-en","meeting-followup-en","incident-review-en","support-reply-en","internal-proposal-en","api-migration-en"];
+export const SAMPLE_ORDER = ["release-note","meeting-followup","incident-review","support-reply","internal-proposal","api-migration","llm-wiki","release-note-en","meeting-followup-en","incident-review-en","support-reply-en","internal-proposal-en","api-migration-en"];
+
+export const SAMPLE_GROUPS = Object.freeze([{"id":"ko","label":"한국어","samples":["release-note","meeting-followup","incident-review","support-reply","internal-proposal","api-migration","llm-wiki"]},{"id":"en","label":"English","samples":["release-note-en","meeting-followup-en","incident-review-en","support-reply-en","internal-proposal-en","api-migration-en"]}].map(Object.freeze));
 
 export const VERSION_ORDER = ["original","a","b","c"];
 
@@ -23,6 +26,7 @@ export const SAMPLES = Object.freeze({
   "support-reply": supportReply,
   "internal-proposal": internalProposal,
   "api-migration": apiMigration,
+  "llm-wiki": llmWiki,
   "release-note-en": releaseNoteEn,
   "meeting-followup-en": meetingFollowupEn,
   "incident-review-en": incidentReviewEn,

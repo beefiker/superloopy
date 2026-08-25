@@ -1,8 +1,11 @@
-import { SAMPLE_ORDER, SAMPLES, VERSION_ORDER } from "./data.generated.mjs";
+import { SAMPLE_GROUPS, SAMPLES, VERSION_ORDER } from "./data.generated.mjs";
 import { diffDocuments, summarizeDiff } from "./diff-core.mjs";
 import { parseViewState, selectSample, selectVersion, serializeViewState, swapVersions } from "./state.mjs";
 import { renderSideBySide, renderSource, renderUnified, labelFor } from "./views.mjs";
+import { annotateNoteAnchors, installNoteTooltip } from "./notes.mjs";
 import { applySearch } from "./search.mjs";
+import { enhanceSelect } from "./combobox.mjs";
+import { attachComparisonScrollUi } from "./scroll-sync.mjs";
 
 export function navigateModeTabs(tabs, currentTab, key) {
   if (!["ArrowLeft", "ArrowRight"].includes(key) || tabs.length === 0) return false;
@@ -65,11 +68,16 @@ const numberFormatter = new Intl.NumberFormat("en-US");
 const reducedMotion = browserAvailable ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true };
 
 let viewState = parseViewState(browserAvailable ? window.location.search : "");
+// Built once and re-synced after each render; the native <select> underneath
+// stays the value holder, so `change` handling below is unchanged.
+let sampleCombobox = null;
+let leftCombobox = null;
+let rightCombobox = null;
 let currentHunks = [];
 let changedHunks = [];
 let selectedChangeIndex = 0;
 let selectedTypeSize = "medium";
-let scrollSyncGuard = false;
+let scrollUi = null;
 
 function formatNumber(value) {
   return numberFormatter.format(value);
@@ -88,17 +96,28 @@ function setStatus(message) {
   });
 }
 
-export function populateSampleSelect(select, selectedId, samples = SAMPLES, sampleOrder = SAMPLE_ORDER) {
-  const options = sampleOrder.map((sampleId) => {
-    const sample = samples[sampleId];
-    const option = document.createElement("option");
-    option.value = sampleId;
-    option.textContent = sample.label;
-    option.selected = selectedId === sampleId;
-    return option;
+// Grouped by language: twelve flat entries in one list gave no landmark for
+// finding the Korean or the English half. An empty group is dropped rather
+// than rendered as a heading with nothing under it.
+export function populateSampleSelect(select, selectedId, samples = SAMPLES, groups = SAMPLE_GROUPS) {
+  let count = 0;
+  const groupNodes = groups.flatMap((group) => {
+    const options = group.samples.filter((sampleId) => samples[sampleId]).map((sampleId) => {
+      const option = document.createElement("option");
+      option.value = sampleId;
+      option.textContent = samples[sampleId].label;
+      option.selected = selectedId === sampleId;
+      count += 1;
+      return option;
+    });
+    if (options.length === 0) return [];
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = group.label;
+    optgroup.replaceChildren(...options);
+    return [optgroup];
   });
-  select.replaceChildren(...options);
-  select.disabled = options.length === 0;
+  select.replaceChildren(...groupNodes);
+  select.disabled = count === 0;
   select.setAttribute("aria-label", "Comparison sample");
 }
 
@@ -123,6 +142,8 @@ export function populateVersionSelect(select, side, selectedId, versions) {
 function renderVersionSelectors(versions) {
   populateVersionSelect(elements.leftSelector, "left", viewState.left, versions);
   populateVersionSelect(elements.rightSelector, "right", viewState.right, versions);
+  leftCombobox?.sync();
+  rightCombobox?.sync();
 }
 
 function historyUrl() {
@@ -211,14 +232,23 @@ function renderDocuments(leftVersion, rightVersion) {
 
   elements.documentView.dataset.mode = viewState.mode;
   elements.documentView.classList.toggle("hide-highlights", !elements.showHighlights.checked);
+  // Notes follow the version, not the side, so a swapped comparison keeps its
+  // explanations. The unified stream has no [data-side] panes and stays bare.
+  for (const pane of elements.documentView.querySelectorAll("[data-side]")) {
+    const version = pane.dataset.side === "left" ? leftVersion : rightVersion;
+    annotateNoteAnchors(pane, version.notes);
+  }
   addPaneLabels(leftVersion, rightVersion);
   updateTypeControls();
-  attachSynchronizedScrolling();
+  attachScrollUi();
 }
 
 function scrollToSelectedChange(hunk) {
   if (!hunk) return;
   const behavior = reducedMotion.matches ? "auto" : "smooth";
+  // Both panes get their own centring scroll, so syncing would make them fight
+  // mid-animation; it stays suppressed until the smooth scrolls settle.
+  scrollUi?.suppressSync(reducedMotion.matches ? 200 : 700);
   const targets = elements.documentView.querySelectorAll(`[data-hunk-id="${hunk.id}"]`);
   for (const target of targets) target.scrollIntoView({ behavior, block: "center", inline: "nearest" });
 }
@@ -234,6 +264,7 @@ function updateSelectedChange({ announce = false, scroll = false } = {}) {
   if (hunk) {
     for (const node of elements.documentView.querySelectorAll(`[data-hunk-id="${hunk.id}"]`)) node.classList.add("selected-change");
   }
+  scrollUi?.updateSelection(hunk?.id ?? null);
 
   if (scroll) scrollToSelectedChange(hunk);
   if (announce && hunk) setStatus(`Change ${selectedChangeIndex + 1} of ${count}. ${changeMeta(hunk)}.`);
@@ -249,23 +280,14 @@ function moveChange(offset) {
   chooseChange(selectedChangeIndex + offset);
 }
 
-function attachSynchronizedScrolling() {
-  const panes = [...elements.documentView.querySelectorAll(".diff-pane, .source-pane")];
-  if (panes.length !== 2) return;
-
-  panes.forEach((source, sourceIndex) => {
-    source.addEventListener("scroll", () => {
-      if (!elements.syncScroll.checked || scrollSyncGuard) return;
-      const target = panes[sourceIndex === 0 ? 1 : 0];
-      const sourceRange = source.scrollHeight - source.clientHeight;
-      const targetRange = target.scrollHeight - target.clientHeight;
-      if (sourceRange <= 0 || targetRange <= 0) return;
-      scrollSyncGuard = true;
-      target.scrollTop = (source.scrollTop / sourceRange) * targetRange;
-      window.requestAnimationFrame(() => {
-        scrollSyncGuard = false;
-      });
-    }, { passive: true });
+function attachScrollUi() {
+  scrollUi = attachComparisonScrollUi(elements.documentView, {
+    syncEnabled: () => elements.syncScroll.checked,
+    changedHunks: changedHunks.map(({ id, op }) => ({ id, op })),
+    onSelectChange: (hunkId) => {
+      const index = changedHunks.findIndex((hunk) => hunk.id === hunkId);
+      if (index >= 0) chooseChange(index);
+    }
   });
 }
 
@@ -283,6 +305,7 @@ function showRenderError(error) {
 
 function renderInterface() {
   populateSampleSelect(elements.sampleSelector, viewState.sample);
+  sampleCombobox?.sync();
   updateModeTabs();
   elements.errorState.hidden = true;
   elements.emptyState.hidden = true;
@@ -484,6 +507,10 @@ function wireEvents() {
 }
 
 if (browserAvailable) {
+  installNoteTooltip(elements.documentView);
+  sampleCombobox = enhanceSelect(elements.sampleSelector, { labelledBy: "sample-select-label" });
+  leftCombobox = enhanceSelect(elements.leftSelector, { labelledBy: "left-version-label" });
+  rightCombobox = enhanceSelect(elements.rightSelector, { labelledBy: "right-version-label" });
   wireEvents();
   if (window.location.search !== serializeViewState(viewState)) writeHistory("replace");
   renderInterface();
