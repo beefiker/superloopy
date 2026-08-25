@@ -22,6 +22,16 @@ const REQUIRED_S1_PATTERN_IDS = ["A-2", "A-3", "A-7", "A-8", "C-11", "D-1", "D-2
 const GRADE_EXEMPT_IDS = ["J-2"];
 const PROSE_SPAN_FILTERED_IDS = new Set(["K-1", "M-1"]);
 const PROTECTED_PROSE_SPAN_PATTERN = /`[^`\r\n]+`|"[^"\r\n]+"|“[^”\r\n]+”|‘[^’\r\n]+’|「[^」\r\n]+」|『[^』\r\n]+』/gu;
+// Upstream v2.4 서법 보존: a decrease in deontic or hedge markers means a
+// demand or reservation may have become a plain assertion. Repositioning
+// (the D-6 repair) keeps the counts identical; only substitution loses one.
+// A decrease warns rather than fails: A-10/G-2 repairs may legitimately drop
+// a hedge when the source itself is certain.
+const DEONTIC_MARKER_PATTERN = /[가-힣]야\s?(?:한다|합니다|했다|할|하며|하고)|필요가\s?있(?:다|습니다|을)|요구(?:된다|됩니다)/gu;
+const HEDGE_MARKER_PATTERN = /수\s?(?:있다|있습니다|있을)|것으로\s?보(?:인다|입니다)|가능성이\s?(?:있|높)(?:다|습니다)|[을ㄹ]\s?수도/gu;
+// Upstream v2.4 C-8: paired antithesis rhetoric is absent from the human
+// corpus, so two or more remaining pairs are a safe repetition signal.
+const ANTITHESIS_PATTERN = /[가-힣](?:가|이)\s?아니라|인가[?,]/gu;
 const KOREAN_NAME_STOPLIST = new Set([
   "광고",
   "계획",
@@ -94,6 +104,17 @@ async function audit(args) {
 
   const warnings = [];
   if (changeRate > 0.3 && changeRate <= 0.5) warnings.push("Change rate exceeds 30%");
+  const modality = {
+    deontic: { before: countMatches(source, DEONTIC_MARKER_PATTERN), after: countMatches(final, DEONTIC_MARKER_PATTERN) },
+    hedge: { before: countMatches(source, HEDGE_MARKER_PATTERN), after: countMatches(final, HEDGE_MARKER_PATTERN) }
+  };
+  if (modality.deontic.after < modality.deontic.before || modality.hedge.after < modality.hedge.before) {
+    warnings.push("Modality markers decreased; a demand or hedge may have become a plain assertion — reposition instead of substituting (D-6), and drop a hedge only when the source is certain");
+  }
+  const antithesis = { before: countMatches(source, ANTITHESIS_PATTERN), after: countMatches(final, ANTITHESIS_PATTERN) };
+  if (antithesis.after >= 2) {
+    warnings.push("Paired antithesis rhetoric repeats; keep the strongest pair and flatten the rest into direct statements (C-8)");
+  }
   return {
     ok: problems.length === 0,
     grade: grade({ after, changeRate, missing, problems }),
@@ -107,9 +128,15 @@ async function audit(args) {
     },
     protectedTokens: { total: protectedTokens.size, missing },
     patterns: { before, after },
+    modality,
+    antithesis,
     warnings,
     problems
   };
+}
+
+function countMatches(text, pattern) {
+  return [...text.matchAll(pattern)].length;
 }
 
 async function readInputFile(label, path) {
@@ -132,6 +159,8 @@ async function writeFailureReport(path, message) {
     koreanRatio: { source: 0, final: 0 },
     protectedTokens: { total: 0, missing: [] },
     patterns: { before: {}, after: {} },
+    modality: { deontic: { before: 0, after: 0 }, hedge: { before: 0, after: 0 } },
+    antithesis: { before: 0, after: 0 },
     warnings: [],
     problems: [message]
   };
