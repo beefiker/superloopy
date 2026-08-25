@@ -45,3 +45,25 @@ Version A is the Korean humanizer, so English samples carry only `original`, `b`
 and `c`. The version selector shows `A · Unavailable` for them.
 
 The remaining parameters select the left and right versions (`original`, `a`, `b`, `c`) and the view (`rendered`, `source`, `unified`). The URL updates as controls change, so the exact comparison can be reloaded or shared locally.
+
+## Deploying to Cloudflare Pages
+
+The production deployment lives at <https://writing-comparison.pages.dev/> (Pages
+project `writing-comparison`). The site is fully static: everything the browser
+needs is this directory minus the Node-only files (`server.mjs`,
+`build-data.mjs`, `README.md`, `test/`). `index.html` references `og.png` by
+absolute URL on that origin, so regenerate it if the project ever moves.
+
+```bash
+DEPLOY="$(mktemp -d)/site"
+mkdir -p "$DEPLOY/data"
+cp examples/writing-comparison/app/index.html \
+   examples/writing-comparison/app/styles.css \
+   examples/writing-comparison/app/favicon.svg \
+   examples/writing-comparison/app/og.png \
+   examples/writing-comparison/app/apple-touch-icon.png \
+   examples/writing-comparison/app/*.mjs "$DEPLOY"
+rm "$DEPLOY/build-data.mjs" "$DEPLOY/server.mjs"
+cp examples/writing-comparison/app/data/*.mjs "$DEPLOY/data"
+npx wrangler pages deploy "$DEPLOY" --project-name writing-comparison --branch main
+```

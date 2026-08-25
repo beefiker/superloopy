@@ -70,6 +70,12 @@ Loop skill が標準のガードレールです。先頭の完全な `loopy` ト
 
 `superloopy-slides` が生成した **[ライブ多言語デッキ →](https://fileloom-slides.pages.dev)** —— 固定 16:9 ステージのゼロ依存・単一ファイル HTML プレゼンで、English · 한국어 · 中文 · 日本語 · Español に対応します。実ブラウザのビジュアル QA（単体・スマホ letterbox・iframe 埋め込み）に合格し、証跡を `.superloopy/evidence/slides/` に記録しました。
 
+## 文章比較デモ
+
+[![原文と Say It Straight の書き換えを並べて表示する文章比較アプリ](.github/assets/writing-comparison-demo.png)](https://writing-comparison.pages.dev/)
+
+**[ライブ文章比較ビューア →](https://writing-comparison.pages.dev/)** は、原文と `humanize-korean`（A）・`i-have-adhd`（B）・`say-it-straight`（C）の書き換えを並べて表示します。韓国語・英語の 13 サンプルを収録し、Say It Straight の各修正には根拠ノートが付き、どの比較も URL で共有できます。
+
 ## Crew
 
 大きな作業向けに、Superloopy は 6 つの任意サブエージェントを同梱しています。それぞれが 1 つのレーンを担当します。Claude Code はプラグイン同梱の `agents/*.md` を使います。Codex では bootstrap、`superloopy install`、`superloopy agents install` が個人用 TOML を `$CODEX_HOME/agents` に作成し、その時点でモデルルーティングを解決します。

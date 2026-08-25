@@ -70,6 +70,12 @@ Superloopy는 명령을 작게 둡니다. 대신 스킬이 작업 방식을 잡�
 
 `superloopy-slides`가 만든 **[라이브 다국어 덱 →](https://fileloom-slides.pages.dev)** — 고정 16:9 스테이지의 무설치 단일 HTML 프레젠테이션으로 English · 한국어 · 中文 · 日本語 · Español를 지원합니다. 실제 브라우저 비주얼 QA(단독·폰 레터박스·iframe 임베드)를 통과해 `.superloopy/evidence/slides/`에 증거를 남겼습니다.
 
+## 글쓰기 비교 데모
+
+[![원문과 Say It Straight 결과를 나란히 보여주는 글쓰기 비교 앱](.github/assets/writing-comparison-demo.png)](https://writing-comparison.pages.dev/)
+
+**[라이브 글쓰기 비교 뷰어 →](https://writing-comparison.pages.dev/)** 는 원문 문서를 `humanize-korean`(A)·`i-have-adhd`(B)·`say-it-straight`(C) 결과와 나란히 보여줍니다. 한국어·영어 샘플 13개를 담았고, Say It Straight 수정마다 근거 노트가 달리며, 어떤 비교든 URL로 공유할 수 있습니다.
+
 ## Qt 칸반 데모
 
 [Northstar Qt 칸반 데모](examples/qt-kanban/)는 `superloopy-frontend` Qt 경로로 만든 실행 가능한 Qt Quick 프로토타입 인수 검증 픽스처이며, 프로덕션 편집기임을 증명하지 않습니다. Board·검색·필터·카드·드로어·작업 생성은 검증하지만 Timeline과 Inbox는 눈에 보이는 패시브 데모 전용 문맥이고 Settings와 Help는 없습니다. 영속성과 Undo는 범위 밖입니다. Qt 6.11.1, CMake, Ninja가 준비된 상태에서 저장소 루트에서 설정, 빌드, 실행하세요.
