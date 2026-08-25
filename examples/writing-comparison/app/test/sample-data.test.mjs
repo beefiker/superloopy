@@ -5,7 +5,8 @@ import { SAMPLE_ORDER, VERSION_ORDER, SAMPLES } from "../data.generated.mjs";
 
 const EXPECTED_SAMPLES = [
   "release-note", "meeting-followup", "incident-review",
-  "support-reply", "internal-proposal", "api-migration",
+  "support-reply", "internal-proposal",
+  "api-migration", "llm-wiki",
   "release-note-en", "meeting-followup-en", "incident-review-en",
   "support-reply-en", "internal-proposal-en", "api-migration-en"
 ];
@@ -24,6 +25,7 @@ const SAMPLE_LENGTH_RANGES = {
   "support-reply": [600, 900],
   "internal-proposal": [800, 1200],
   "api-migration": [850, 1300],
+  "llm-wiki": [2800, 5600],
   "release-note-en": [1400, 2000],
   "meeting-followup-en": [1000, 1450],
   "incident-review-en": [1100, 1400],
@@ -38,7 +40,8 @@ const REQUIRED_FACTS = {
   "support-reply": ["주문번호 18427", "1~2일", "한진택배", "배송 기사 배정 전"],
   "internal-proposal": ["월 29,000원", "8명", "3개월", "계약을 연장하지 않고 기존 공유 폴더 방식으로 돌아"],
   "api-migration": ["2026-09-30", "X-API-Version", "https://docs.example.com/api/v2", "전환 목록은 운영 배포 전 검토 항목"],
-  "release-note-en": ["2026-08-20", "3:00 PM", "search filters", "the owner and the next check time"],
+  "llm-wiki": ["(BEE)", "30여 명", "대형 프로젝트 3개", "48.9%", "87%", "3,900", "1,300건", "53%에서 100%로", "17~33%", "20~40%", "30~50%", "3분의 2", "골든 질문 100여 개", "200줄", "AGENTS.md", "3개월"],
+  "release-note-en":["2026-08-20", "3:00 PM", "search filters", "the owner and the next check time"],
   "meeting-followup-en": ["2026-08-21", "Mina", "operations team", "decide at the next meeting"],
   "incident-review-en": ["10:12", "10:38", "26 minutes", "confirm again before the next drill", "the owner records the result"],
   "support-reply-en": ["18427", "1-2 days", "Northline Courier", "before a delivery driver is assigned"],
@@ -117,7 +120,7 @@ function duplicateNormalizedContentUnitPairs(text) {
   return duplicates;
 }
 
-test("embeds twelve complete comparison samples", () => {
+test("embeds thirteen complete comparison samples", () => {
   assert.deepEqual(SAMPLE_ORDER, EXPECTED_SAMPLES);
   assert.deepEqual(VERSION_ORDER, ["original", "a", "b", "c"]);
   for (const sampleId of EXPECTED_SAMPLES) {
@@ -149,6 +152,10 @@ test("preserves each document format across all four versions", () => {
     assert.match(textFor("internal-proposal"), /\| 항목 \| 월 비용 \| 대상 \|/, `internal-proposal/${versionId}`);
     assert.match(textFor("api-migration"), /```(?:js|sh)/, `api-migration/${versionId}`);
     assert.match(textFor("api-migration"), /https:\/\/docs\.example\.com\/api\/v2/, `api-migration/${versionId}`);
+    assert.match(textFor("llm-wiki"), /\| 규모 \| 회사 \| 방식 \| 결과 \|/, `llm-wiki/${versionId}`);
+    assert.match(textFor("llm-wiki"), /^> /m, `llm-wiki/${versionId}`);
+    assert.match(textFor("llm-wiki"), /^1\. /m, `llm-wiki/${versionId}`);
+    assert.equal((textFor("llm-wiki").match(/^- /gm) ?? []).length >= 3, true, `llm-wiki/${versionId}`);
   }
 });
 

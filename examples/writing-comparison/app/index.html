@@ -35,10 +35,10 @@
       </section>
 
       <nav id="comparison-dock" class="comparison-dock" aria-label="Comparison controls">
-        <label class="dock-select sample-select"><span>Sample</span><select id="sample-select"></select></label>
-        <label class="dock-select"><span>Left</span><select id="left-version-select"></select></label>
+        <div class="dock-select sample-select"><span id="sample-select-label">Sample</span><select id="sample-select" aria-labelledby="sample-select-label"></select></div>
+        <div class="dock-select"><span id="left-version-label">Left</span><select id="left-version-select" aria-labelledby="left-version-label"></select></div>
         <button id="swap-versions" class="icon-button" type="button" aria-label="Swap versions">⇄</button>
-        <label class="dock-select"><span>Right</span><select id="right-version-select"></select></label>
+        <div class="dock-select"><span id="right-version-label">Right</span><select id="right-version-select" aria-labelledby="right-version-label"></select></div>
         <div id="mode-tabs" class="mode-tabs" role="tablist" aria-label="Comparison mode">
           <button type="button" role="tab" data-mode="rendered" aria-controls="document-view">Rendered</button>
           <button type="button" role="tab" data-mode="source" aria-controls="document-view">Source</button>
@@ -56,7 +56,7 @@
 
     <dialog id="tools-dialog" aria-labelledby="tools-title" hidden>
       <form method="dialog">
-        <div class="dialog-heading">
+        <div class="dialog-heading" tabindex="-1" autofocus>
           <h2 id="tools-title">Comparison tools</h2>
           <button class="icon-button" value="close" aria-label="Close tools">×</button>
         </div>
@@ -80,7 +80,7 @@
 
     <dialog id="keyboard-help" aria-labelledby="keyboard-help-title">
       <form method="dialog">
-        <div class="dialog-heading">
+        <div class="dialog-heading" tabindex="-1" autofocus>
           <h2 id="keyboard-help-title">Keyboard help</h2>
           <button class="icon-button" value="close" aria-label="Close keyboard help">×</button>
         </div>

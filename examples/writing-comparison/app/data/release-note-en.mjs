@@ -1,5 +1,6 @@
 export const sample = Object.freeze({
   "id": "release-note-en",
+  "language": "en",
   "label": "Deployment notice",
   "description": "Heading, paragraphs, list",
   "versions": {
@@ -13,7 +14,8 @@ export const sample = Object.freeze({
         "words": 319,
         "lines": 17
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     },
     "b": {
       "id": "b",
@@ -25,7 +27,8 @@ export const sample = Object.freeze({
         "words": 235,
         "lines": 21
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     },
     "c": {
       "id": "c",
@@ -37,7 +40,8 @@ export const sample = Object.freeze({
         "words": 251,
         "lines": 17
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     }
   }
 });

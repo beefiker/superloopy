@@ -31,8 +31,18 @@ function withDocumentOptionFactory(callback) {
   const previousDocument = globalThis.document;
   globalThis.document = {
     createElement(tagName) {
-      assert.equal(tagName, "option");
-      return { disabled: false, selected: false, textContent: "", value: "" };
+      assert.ok(["option", "optgroup"].includes(tagName), `unexpected element ${tagName}`);
+      if (tagName === "optgroup") {
+        return {
+          tagName: "OPTGROUP",
+          label: "",
+          options: [],
+          replaceChildren(...options) {
+            this.options = options;
+          }
+        };
+      }
+      return { tagName: "OPTION", disabled: false, selected: false, textContent: "", value: "" };
     }
   };
   try {
@@ -77,25 +87,48 @@ function focusableControl(name, activity) {
   };
 }
 
-test("sample selector exposes every Korean and English sample", async () => {
+test("sample selector groups every sample under its language", async () => {
   const { populateSampleSelect } = await controllerModule;
   const select = makeSelectDouble();
   withDocumentOptionFactory(() => populateSampleSelect(select, "incident-review"));
-  assert.deepEqual(select.options.map(({ value, textContent, selected }) => ({ value, textContent, selected })), [
-    { value: "release-note", textContent: "주간 배포 안내", selected: false },
-    { value: "meeting-followup", textContent: "회의 후속 메모", selected: false },
-    { value: "incident-review", textContent: "장애 회고", selected: true },
-    { value: "support-reply", textContent: "고객 지원 답변", selected: false },
-    { value: "internal-proposal", textContent: "내부 제안서", selected: false },
-    { value: "api-migration", textContent: "API 전환 안내", selected: false },
-    { value: "release-note-en", textContent: "Deployment notice", selected: false },
-    { value: "meeting-followup-en", textContent: "Meeting follow-up", selected: false },
-    { value: "incident-review-en", textContent: "Incident review", selected: false },
-    { value: "support-reply-en", textContent: "Support reply", selected: false },
-    { value: "internal-proposal-en", textContent: "Internal proposal", selected: false },
-    { value: "api-migration-en", textContent: "API migration", selected: false }
-  ]);
+
+  assert.deepEqual(
+    select.options.map((group) => [group.label, group.options.map(({ value, textContent, selected }) => ({ value, textContent, selected }))]),
+    [
+      ["한국어", [
+        { value: "release-note", textContent: "주간 배포 안내", selected: false },
+        { value: "meeting-followup", textContent: "회의 후속 메모", selected: false },
+        { value: "incident-review", textContent: "장애 회고", selected: true },
+        { value: "support-reply", textContent: "고객 지원 답변", selected: false },
+        { value: "internal-proposal", textContent: "내부 제안서", selected: false },
+        { value: "api-migration", textContent: "API 전환 안내", selected: false },
+        { value: "llm-wiki", textContent: "LLM 위키 도입 검토", selected: false }
+      ]],
+      ["English", [
+        { value: "release-note-en", textContent: "Deployment notice", selected: false },
+        { value: "meeting-followup-en", textContent: "Meeting follow-up", selected: false },
+        { value: "incident-review-en", textContent: "Incident review", selected: false },
+        { value: "support-reply-en", textContent: "Support reply", selected: false },
+        { value: "internal-proposal-en", textContent: "Internal proposal", selected: false },
+        { value: "api-migration-en", textContent: "API migration", selected: false }
+      ]]
+    ]
+  );
   assert.equal(select.attributes.get("aria-label"), "Comparison sample");
+});
+
+test("a language group with no available sample is dropped, not left empty", async () => {
+  const { populateSampleSelect } = await controllerModule;
+  const { SAMPLES } = await import("../data.generated.mjs");
+  const select = makeSelectDouble();
+  const groups = [
+    { id: "ko", label: "한국어", samples: ["release-note"] },
+    { id: "en", label: "English", samples: ["missing-sample"] }
+  ];
+  withDocumentOptionFactory(() => populateSampleSelect(select, "release-note", SAMPLES, groups));
+
+  assert.deepEqual(select.options.map((group) => group.label), ["한국어"]);
+  assert.equal(select.disabled, false);
 });
 
 test("empty sample collection disables selection", async () => {
