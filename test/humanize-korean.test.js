@@ -295,6 +295,64 @@ test("humanize audit rejects em dashes left in Korean prose but ignores dashes i
   assert.equal(codeSpanResult.status, 0, codeSpanResult.stderr);
 });
 
+test("humanize audit warns when modality markers decrease but not when they are repositioned", async () => {
+  const substituted = await writeCase(
+    "배포 전에 보안 정책을 검토해야 한다. 로그 보존 기간도 확인해야 한다.",
+    "배포 전에 보안 정책을 검토한다. 로그 보존 기간도 확인해야 한다."
+  );
+  const substitutedResult = spawnSync(process.execPath, [script, "--source", substituted.source, "--final", substituted.final, "--report", substituted.report], {
+    encoding: "utf8"
+  });
+
+  assert.equal(substitutedResult.status, 0, substitutedResult.stderr);
+  const substitutedReport = JSON.parse(await readFile(substituted.report, "utf8"));
+  assert.equal(substitutedReport.modality.deontic.before, 2);
+  assert.equal(substitutedReport.modality.deontic.after, 1);
+  assert.ok(substitutedReport.warnings.some((warning) => /Modality markers decreased/.test(warning)), JSON.stringify(substitutedReport.warnings));
+
+  const repositioned = await writeCase(
+    "이 함수는 입력을 검증한다. 잘못된 값은 즉시 호출자에게 반환한다. 로그는 하루 단위로 정리해 보관한다. 담당자는 매주 결과를 공유한다. 배포 전에 반드시 점검해야 한다.",
+    "배포 전에 반드시 점검해야 한다. 이 함수는 입력을 검증한다. 잘못된 값은 즉시 호출자에게 반환한다. 로그는 하루 단위로 정리해 보관한다. 담당자는 매주 결과를 공유한다."
+  );
+  const repositionedResult = spawnSync(process.execPath, [script, "--source", repositioned.source, "--final", repositioned.final, "--report", repositioned.report], {
+    encoding: "utf8"
+  });
+
+  assert.equal(repositionedResult.status, 0, repositionedResult.stderr);
+  const repositionedReport = JSON.parse(await readFile(repositioned.report, "utf8"));
+  assert.equal(repositionedReport.modality.deontic.before, 1);
+  assert.equal(repositionedReport.modality.deontic.after, 1);
+  assert.ok(!repositionedReport.warnings.some((warning) => /Modality markers decreased/.test(warning)), JSON.stringify(repositionedReport.warnings));
+});
+
+test("humanize audit warns on repeated paired antithesis rhetoric but allows a single pair", async () => {
+  const repeated = await writeCase(
+    "속도가 아니라 방향이 문제다. 기능이 아니라 완성도가 관건이다.",
+    "속도가 아니라 방향이 문제다. 기능이 아니라 완성도가 관건이다."
+  );
+  const repeatedResult = spawnSync(process.execPath, [script, "--source", repeated.source, "--final", repeated.final, "--report", repeated.report], {
+    encoding: "utf8"
+  });
+
+  assert.equal(repeatedResult.status, 0, repeatedResult.stderr);
+  const repeatedReport = JSON.parse(await readFile(repeated.report, "utf8"));
+  assert.equal(repeatedReport.antithesis.after, 2);
+  assert.ok(repeatedReport.warnings.some((warning) => /antithesis rhetoric repeats/.test(warning)), JSON.stringify(repeatedReport.warnings));
+
+  const single = await writeCase(
+    "속도가 아니라 방향이 문제다. 완성도는 별도로 살핀다.",
+    "속도가 아니라 방향이 문제다. 완성도는 별도로 살핀다."
+  );
+  const singleResult = spawnSync(process.execPath, [script, "--source", single.source, "--final", single.final, "--report", single.report], {
+    encoding: "utf8"
+  });
+
+  assert.equal(singleResult.status, 0, singleResult.stderr);
+  const singleReport = JSON.parse(await readFile(single.report, "utf8"));
+  assert.equal(singleReport.antithesis.after, 1);
+  assert.ok(!singleReport.warnings.some((warning) => /antithesis/.test(warning)), JSON.stringify(singleReport.warnings));
+});
+
 test("humanize audit protects Korean product names supplied by the caller", async () => {
   const files = await writeCase(
     "카카오톡은 2026년 7월 1일에 업데이트됐다.",

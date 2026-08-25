@@ -38,6 +38,7 @@ A much larger calibration set lives in `references/golden-set.md`: 28 establishe
 - Do not add examples, metaphors, facts, citations, or marketing claims that were not in the source.
 - Remove em dashes and en dashes (`—`, `–`) from Korean prose (M-1): 줄표 is an English carryover and a strong AI tell in modern Korean writing. Restructure with 쉼표, 괄호, a colon, or a sentence split; write ranges with `~`. Dashes inside code spans and quoted spans stay.
 - N-1 — misplaced modifier target: 정확성은 시간·수치·사양·정보·식별·일치처럼 확인 가능한 대상에 붙인다. 정확한 컴퓨터/보드/펌웨어 이미지는 공급된 관계에 따라 대상 컴퓨터 확인, 보드 모델 확인, 보드와 일치하는 펌웨어로 고친다. 정확한 시간/수치/사양/정보는 보존한다. This is semantic review guidance, not an audit pattern or grade effect.
+- Preserve modality (서법, upstream v2.4): a demand (`~해야 한다`) stays a demand and a hedge (`~일 수 있다`) stays a hedge. When deontic endings dominate paragraph closings, reposition the sentence (D-6); never substitute a plain assertion. The audit counts deontic and hedge markers and warns when they decrease.
 - Load `references/quick-rules.md` before rewriting; load `references/golden-set.md` when you need more calibration pairs.
 - Load `references/quality-rubric.md` before grading or finalizing.
 - Use `scripts/audit-humanize-output.mjs` to validate any file-backed output.
