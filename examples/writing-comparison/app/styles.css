@@ -713,6 +713,19 @@ textarea:focus-visible,
   border-left: 1px solid var(--line);
 }
 
+.pane-label-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+
+.pane-label-link:hover,
+.pane-label-link:focus-visible {
+  color: var(--ink);
+  text-decoration-style: solid;
+}
+
 .pane-label {
   position: sticky;
   top: 0;
