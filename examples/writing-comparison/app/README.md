@@ -1,7 +1,7 @@
 # Writing comparison app
 
 Side-by-side comparison of one source document against the Humanize Korean (A),
-i-have-adhd (B), and Say It Straight (C) rewrites, across twelve samples.
+i-have-adhd (B), and Say It Straight (C) rewrites, across thirteen samples.
 
 Regenerate the embedded data after editing anything under `samples/`:
 
@@ -21,7 +21,8 @@ Open the canonical Original → Say It Straight rendered comparison:
 http://127.0.0.1:57777/?sample=release-note&left=original&right=c&mode=rendered
 ```
 
-Choose a sample with the `sample` query parameter:
+The dock's sample control groups these by language (한국어, English). Choose one
+directly with the `sample` query parameter:
 
 - `release-note` — 주간 배포 안내
 - `meeting-followup` — 회의 후속 메모
@@ -29,6 +30,7 @@ Choose a sample with the `sample` query parameter:
 - `support-reply` — 고객 지원 답변
 - `internal-proposal` — 내부 제안서
 - `api-migration` — API 전환 안내
+- `llm-wiki` — LLM 위키 도입 검토
 
 English samples:
 

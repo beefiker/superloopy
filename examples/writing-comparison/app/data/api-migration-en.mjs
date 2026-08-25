@@ -1,5 +1,6 @@
 export const sample = Object.freeze({
   "id": "api-migration-en",
+  "language": "en",
   "label": "API migration",
   "description": "Code, warning, links",
   "versions": {
@@ -13,7 +14,8 @@ export const sample = Object.freeze({
         "words": 223,
         "lines": 25
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     },
     "b": {
       "id": "b",
@@ -25,7 +27,8 @@ export const sample = Object.freeze({
         "words": 154,
         "lines": 27
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     },
     "c": {
       "id": "c",
@@ -37,7 +40,8 @@ export const sample = Object.freeze({
         "words": 190,
         "lines": 25
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     }
   }
 });

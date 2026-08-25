@@ -1,5 +1,6 @@
 export const sample = Object.freeze({
   "id": "internal-proposal-en",
+  "language": "en",
   "label": "Internal proposal",
   "description": "Benefits, costs table",
   "versions": {
@@ -13,7 +14,8 @@ export const sample = Object.freeze({
         "words": 261,
         "lines": 25
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     },
     "b": {
       "id": "b",
@@ -25,7 +27,8 @@ export const sample = Object.freeze({
         "words": 185,
         "lines": 29
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     },
     "c": {
       "id": "c",
@@ -37,7 +40,8 @@ export const sample = Object.freeze({
         "words": 224,
         "lines": 25
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     }
   }
 });

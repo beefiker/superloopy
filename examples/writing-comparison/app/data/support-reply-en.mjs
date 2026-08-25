@@ -1,5 +1,6 @@
 export const sample = Object.freeze({
   "id": "support-reply-en",
+  "language": "en",
   "label": "Support reply",
   "description": "Paragraphs, ordered list",
   "versions": {
@@ -13,7 +14,8 @@ export const sample = Object.freeze({
         "words": 231,
         "lines": 13
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     },
     "b": {
       "id": "b",
@@ -25,7 +27,8 @@ export const sample = Object.freeze({
         "words": 145,
         "lines": 16
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     },
     "c": {
       "id": "c",
@@ -37,7 +40,8 @@ export const sample = Object.freeze({
         "words": 169,
         "lines": 13
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     }
   }
 });

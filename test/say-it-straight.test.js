@@ -65,6 +65,41 @@ test("say-it-straight names periphrasis as a defect and guards the modality it c
   assert.match(rules, /dropped modality or raised certainty/i);
 });
 
+test("say-it-straight guards agent links under compression and hedged agentless consequences", async () => {
+  const skill = await readFile(`${skillRoot}/SKILL.md`, "utf8");
+  const rules = await readFile(`${skillRoot}/references/quick-rules.md`, "utf8");
+
+  assert.match(skill, /grammatical link between an agent/i);
+  assert.match(skill, /keeping the supplied modality/i);
+  assert.match(skill, /never trade the hedge for certainty/i);
+  assert.match(rules, /^\| Compression that drops a grammatical link \|/m);
+  assert.match(rules, /^\| Agentless hedged consequence \|/m);
+  assert.match(rules, /lost agent or blurred ownership/i);
+  assert.match(rules, /raised certainty or dropped condition/i);
+});
+
+test("say-it-straight treats em-dash density, not presence, as the signal", async () => {
+  const skill = await readFile(`${skillRoot}/SKILL.md`, "utf8");
+  const rules = await readFile(`${skillRoot}/references/quick-rules.md`, "utf8");
+  const scenarios = JSON.parse(await readFile("test/fixtures/say-it-straight/scenarios.json", "utf8"));
+
+  assert.match(skill, /em-dash density, not presence/i);
+  assert.match(skill, /blanket request to strip em dashes is not itself a defect/i);
+  assert.match(skill, /Korean prose.*humanize-korean.*M-1/is);
+  assert.match(rules, /^\| Em-dash overuse \|/m);
+  assert.match(rules, /presence alone is not a defect/i);
+  assert.match(rules, /lost emphasis or wrongly merged clauses/i);
+
+  const overuse = scenarios.find((scenario) => scenario.id === "em-dash-overuse");
+  assert.ok(overuse, "em-dash overuse scenario must exist");
+  assert.ok(overuse.must_not_weaken.includes("possibly"), "must pin the hedge the cleanup could drop");
+  assert.equal(overuse.allow_unchanged, false);
+
+  const single = scenarios.find((scenario) => scenario.id === "single-em-dash-stays");
+  assert.ok(single, "single em dash scenario must exist");
+  assert.equal(single.allow_unchanged, true);
+});
+
 test("say-it-straight pressure scenarios stay well formed and cover the periphrasis guard", async () => {
   const scenarios = JSON.parse(await readFile("test/fixtures/say-it-straight/scenarios.json", "utf8"));
   assert.ok(Array.isArray(scenarios), "scenarios fixture must be an array");

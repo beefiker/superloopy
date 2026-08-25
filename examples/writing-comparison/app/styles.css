@@ -9,6 +9,11 @@
   --rose-soft: #f7d9df;
   --mint: #2f7359;
   --mint-soft: #cce9db;
+  /* Annotation channel. Diff colours own the rose/mint backgrounds, so notes
+     take the amber "there's a comment here" convention; translucent so the
+     hover wash composites over token-add/token-remove instead of replacing them. */
+  --note: #8a6d1a;
+  --note-soft: rgb(255 205 66 / 28%);
   --radius: 8px;
   --dock-clearance: 82px;
   /* Must exceed the wrapped dock's full height (three rows + offset),
@@ -387,6 +392,163 @@ textarea:focus-visible,
   background-size: 10px;
 }
 
+/* Grouped sample listbox.
+   The native popup cannot be styled, so the sample control draws its own:
+   a trigger that matches the other dock selects, and a popover that opens
+   upward because the dock is pinned to the bottom of the viewport. */
+.ui-select {
+  position: relative;
+  display: grid;
+  min-width: 0;
+}
+
+.comparison-dock .ui-select-trigger {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: var(--dock-control-height);
+  padding: 5px 9px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  text-align: start;
+}
+
+.comparison-dock .ui-select.is-open > .ui-select-trigger {
+  border-color: rgb(255 255 255 / 30%);
+  background: var(--dock-control-hover);
+}
+
+.ui-select-value {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ui-select-chevron {
+  flex: 0 0 auto;
+  width: 10px;
+  color: #c3c9d4;
+  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ui-select.is-open .ui-select-chevron {
+  transform: rotate(180deg);
+}
+
+.ui-select-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  min-width: 100%;
+  max-height: min(28rem, calc(100vh - 7rem));
+  padding: 5px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--dock-edge);
+  border-top-color: var(--dock-edge-top);
+  border-radius: 12px;
+  /* Opaque, unlike the dock: at any translucency the diff highlights behind
+     the menu showed through and made the sample names hard to read. A shade
+     lighter than the dock so the menu reads as sitting above it. */
+  background: #2b2f36;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 24%),
+    0 16px 40px -12px rgb(0 0 0 / 50%);
+  animation: ui-select-in 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 22%) transparent;
+}
+
+@keyframes ui-select-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-select-popover {
+    animation: none;
+  }
+
+  .ui-select-chevron {
+    transition: none;
+  }
+}
+
+/* Language heading. Separated by space above rather than a rule, so stacked
+   groups do not add another horizontal line to a dock already full of them. */
+.ui-select-group {
+  /* Shares the option rows' text inset, so headings and labels sit on one
+     left rail. */
+  padding: 4px 10px 5px 10px;
+  color: var(--dock-label);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Bound to the group below it: more space above the heading than under it. */
+.ui-select-group:not(:first-child) {
+  margin-top: 6px;
+  border-top: 1px solid var(--dock-divider);
+  padding-top: 11px;
+}
+
+.ui-select-option {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 7px;
+  color: var(--dock-text);
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.3;
+  /* Reset the uppercase label styling inherited from .dock-select: it left
+     Korean untouched but shouted every English sample name. */
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.ui-select-option.is-active {
+  background: var(--dock-control-hover);
+}
+
+.ui-select-option[aria-disabled="true"] {
+  opacity: 0.4;
+}
+
+.ui-select-check {
+  flex: 0 0 auto;
+  width: 12px;
+  margin-left: auto;
+  opacity: 0;
+}
+
+.ui-select-option[aria-selected="true"] .ui-select-check {
+  opacity: 1;
+}
+
+/* Anchor the popover to the labelled wrapper, not to the trigger, so an open
+   menu clears the "Sample" caption instead of sitting on top of it. */
+.comparison-dock .dock-select {
+  position: relative;
+}
+
+.comparison-dock .dock-select .ui-select {
+  position: static;
+}
+
 /* Give the version names room so labels stop truncating mid-word.
    Sized in rem, not ch: ch resolves against the select's own 0.78rem
    font, which is far narrower than the space the option text needs. */
@@ -630,6 +792,66 @@ textarea:focus-visible,
   background: var(--canvas);
 }
 
+/* Overview ruler: the pane pair gains a third, narrow column that maps every
+   changed hunk onto the full document height. Marks reuse the diff channel
+   (rose = removal, mint = addition, both = replacement); the translucent band
+   is the later pane's viewport. Pointer-only affordance: keyboard users have
+   the [ and ] change navigation, so the ruler is aria-hidden. */
+.diff-panes.has-ruler,
+.source-panes.has-ruler {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) 16px;
+}
+
+.scroll-ruler {
+  position: relative;
+  overflow: hidden;
+  border-left: 1px solid var(--line);
+  background: var(--canvas);
+  cursor: pointer;
+  user-select: none;
+}
+
+.ruler-mark {
+  position: absolute;
+  right: 3px;
+  left: 3px;
+  min-height: 3px;
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
+.ruler-mark[data-op="add"] {
+  background: var(--mint);
+}
+
+.ruler-mark[data-op="remove"] {
+  background: var(--rose);
+}
+
+.ruler-mark[data-op="replace"] {
+  background: linear-gradient(90deg, var(--rose) 50%, var(--mint) 50%);
+}
+
+.scroll-ruler:hover .ruler-mark {
+  opacity: 1;
+}
+
+.ruler-mark.selected {
+  right: 1px;
+  left: 1px;
+  opacity: 1;
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.ruler-viewport {
+  position: absolute;
+  right: 0;
+  left: 0;
+  background: rgb(32 40 48 / 8%);
+  border-block: 1px solid rgb(32 40 48 / 28%);
+  pointer-events: none;
+}
+
 /* Current change. A hard stroke competes with the rose/mint diff colours it
    sits next to, so the selection reads as elevation instead: a hairline ring,
    a soft ambient lift, and a rounded edge. */
@@ -839,35 +1061,124 @@ mark.search-match {
   color: var(--ink);
 }
 
+/* Dialogs join the dock's dark component family rather than the light document
+   surface: they hold controls, not text to read. */
 dialog {
   width: min(520px, calc(100% - 24px));
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--ink);
+  border: 1px solid var(--dock-edge);
+  border-top-color: var(--dock-edge-top);
+  border-radius: 14px;
+  background: #2b2f36;
+  color: var(--dock-text);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 24%),
+    0 24px 60px -16px rgb(0 0 0 / 55%);
+  /* Renders the notes field, its scrollbar, and the checkboxes dark. */
+  color-scheme: dark;
 }
 
 dialog::backdrop {
-  background: rgba(32, 36, 42, 0.24);
+  background: rgb(16 18 22 / 46%);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  dialog::backdrop {
+    backdrop-filter: blur(3px);
+  }
+}
+
+dialog[open] {
+  animation: dialog-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog[open] {
+    animation: none;
+  }
 }
 
 dialog form {
   display: grid;
   gap: 12px;
-  padding: 14px;
+  padding: 16px;
 }
 
+dialog :focus-visible {
+  outline: 2px solid var(--dock-focus);
+  outline-offset: 2px;
+}
+
+/* Every field in a dialog reads as one dark control, as in the dock. The
+   checkbox keeps its native rendering; only its accent is re-pointed, because
+   the page accent is near-black and vanishes against this surface. */
+dialog button,
+dialog textarea,
+dialog input:not([type="checkbox"]) {
+  border-color: var(--dock-control-edge);
+  background: var(--dock-control);
+  color: var(--dock-text);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+dialog button:hover:not(:disabled),
+dialog textarea:hover,
+dialog input:not([type="checkbox"]):hover {
+  border-color: rgb(255 255 255 / 26%);
+  background: var(--dock-control-hover);
+}
+
+dialog input[type="checkbox"] {
+  accent-color: #7aa2ff;
+}
+
+/* A full-bleed rule under the title, so the close control reads as part of a
+   header bar instead of a button floating in the panel's corner. */
 .dialog-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin: -16px -16px 2px;
+  padding: 11px 12px 11px 16px;
+  border-bottom: 1px solid var(--dock-divider);
+}
+
+/* The heading is where `showModal` parks focus so the close button does not
+   open pre-pressed. It is a landing target, not a control, so it draws no
+   ring; the dialog is still announced through aria-labelledby. */
+.dialog-heading:focus,
+.dialog-heading:focus-visible {
+  outline: none;
 }
 
 .dialog-heading h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+dialog .dialog-heading .icon-button {
+  width: 30px;
+  min-height: 30px;
+  border-color: transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dock-label);
+  font-size: 1.05rem;
+}
+
+dialog .dialog-heading .icon-button:hover {
+  border-color: var(--dock-control-edge);
+  background: var(--dock-control-hover);
+  color: var(--dock-text);
 }
 
 .toggle-control,
@@ -875,7 +1186,7 @@ dialog form {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: var(--muted-ink);
+  color: var(--dock-text);
   font-size: 0.82rem;
 }
 
@@ -890,7 +1201,7 @@ input[type="checkbox"] {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--muted-ink);
+  color: var(--dock-label);
   font-size: 0.82rem;
 }
 
@@ -907,9 +1218,10 @@ input[type="checkbox"] {
 }
 
 .type-control button[aria-pressed="true"] {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: #fff;
+  border-color: transparent;
+  background: #f2f4f7;
+  color: #1b1e24;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
 }
 
 .change-navigation {
@@ -930,16 +1242,25 @@ input[type="checkbox"] {
 }
 
 label[for="review-notes"] {
-  color: var(--muted-ink);
+  color: var(--dock-label);
   font-size: 0.82rem;
 }
 
 #review-notes {
   width: 100%;
   min-height: 96px;
-  padding: 8px;
+  padding: 9px 10px;
+  border-radius: 8px;
   resize: vertical;
   line-height: 1.5;
+}
+
+#review-notes::placeholder {
+  color: rgb(232 236 242 / 42%);
+}
+
+.shortcut-list dd {
+  color: var(--dock-text);
 }
 
 .dialog-actions {
@@ -949,11 +1270,16 @@ label[for="review-notes"] {
   gap: 8px;
 }
 
-.dialog-close {
+dialog .dialog-close {
   width: 100%;
-  border-color: var(--accent);
-  background: var(--accent);
-  color: #fff;
+  border-color: transparent;
+  background: #f2f4f7;
+  color: #1b1e24;
+}
+
+dialog .dialog-close:hover {
+  border-color: transparent;
+  background: #fff;
 }
 
 .shortcut-list {
@@ -980,9 +1306,10 @@ kbd {
   min-width: 28px;
   min-height: 26px;
   padding: 3px 6px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: #f2f3f4;
+  border: 1px solid var(--dock-control-edge);
+  border-radius: 5px;
+  background: var(--dock-control);
+  color: var(--dock-text);
   font-family: ui-monospace, monospace;
   font-size: 0.78rem;
 }
@@ -1102,6 +1429,12 @@ kbd {
     overflow: auto;
   }
 
+  /* Stacked panes scroll as one container, so pane-level syncing and the
+     ruler's pane mapping have nothing to attach to. */
+  .scroll-ruler {
+    display: none;
+  }
+
   .diff-pane,
   .source-pane {
     min-height: 50%;
@@ -1150,4 +1483,68 @@ kbd {
   html {
     scroll-behavior: auto;
   }
+}
+
+/* Change-rationale notes: anchored sentences carry a dotted underline; the
+   shared tooltip explains which rule drove the edit and why. */
+.note-anchor {
+  /* At rest a note is only a quiet dotted underline, spell-checker style; the
+     background channel stays free for the diff colours until the note is used. */
+  text-decoration: underline dotted var(--note);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  cursor: help;
+  border-radius: 2px;
+}
+
+/* Activation is class-driven: hovering or focusing ANY fragment of a split
+   sentence lights every fragment, so the whole sentence highlights together.
+   The wash clones onto each wrapped line of the sentence. */
+.note-anchor.note-active {
+  background: var(--note-soft);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.note-anchor:focus-visible {
+  outline: 2px solid var(--note);
+  outline-offset: 1px;
+}
+
+.note-tooltip {
+  position: fixed;
+  z-index: 40;
+  max-width: min(420px, calc(100vw - 16px));
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgb(24 26 31 / 18%);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.note-tooltip[hidden] {
+  display: none;
+}
+
+.note-tooltip-rule {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--note);
+}
+
+.note-tooltip-body {
+  margin: 0;
+}
+
+.note-tooltip-from {
+  margin: 6px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  color: var(--muted-ink);
 }
