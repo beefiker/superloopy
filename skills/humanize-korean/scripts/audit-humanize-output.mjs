@@ -27,11 +27,16 @@ const PROTECTED_PROSE_SPAN_PATTERN = /`[^`\r\n]+`|"[^"\r\n]+"|“[^”\r\n]+”|
 // (the D-6 repair) keeps the counts identical; only substitution loses one.
 // A decrease warns rather than fails: A-10/G-2 repairs may legitimately drop
 // a hedge when the source itself is certain.
-const DEONTIC_MARKER_PATTERN = /[가-힣]야\s?(?:한다|합니다|했다|할|하며|하고)|필요가\s?있(?:다|습니다|을)|요구(?:된다|됩니다)/gu;
-const HEDGE_MARKER_PATTERN = /수\s?(?:있다|있습니다|있을)|것으로\s?보(?:인다|입니다)|가능성이\s?(?:있|높)(?:다|습니다)|[을ㄹ]\s?수도/gu;
+const DEONTIC_MARKER_PATTERN = /[가-힣]야(?:만)?\s*(?:한다|합니다|했다|할|하며|하고|겠다|겠습니다|된다|됩니다)|필요가\s?있(?:다|습니다|을)|요구(?:된다|됩니다)/gu;
+// `수도` needs the trailing 있 so the nouns 수도 (capital, water supply) do
+// not count; `~로 보인다` is matched through any preceding syllable because
+// the hedge is the ending, not the 것으로 nominalizer.
+const HEDGE_MARKER_PATTERN = /수\s?(?:있다|있습니다|있을)|[가-힣]로\s?보(?:인다|입니다)|가능성이\s?(?:있|높)(?:다|습니다)|[가-힣]\s?수도\s?있|듯하(?:다|습니다)/gu;
 // Upstream v2.4 C-8: paired antithesis rhetoric is absent from the human
 // corpus, so two or more remaining pairs are a safe repetition signal.
-const ANTITHESIS_PATTERN = /[가-힣](?:가|이)\s?아니라|인가[?,]/gu;
+// The 인가 branch requires both halves of the pair; a lone rhetorical
+// question or the noun 인가 (approval) is not antithesis.
+const ANTITHESIS_PATTERN = /[가-힣](?:가|이)\s?아니라|인가[,，][^\n.!?]*인가\?/gu;
 const KOREAN_NAME_STOPLIST = new Set([
   "광고",
   "계획",

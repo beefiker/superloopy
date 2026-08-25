@@ -41,7 +41,7 @@ const REQUIRED_FACTS = {
   "internal-proposal": ["월 29,000원", "8명", "3개월", "계약을 연장하지 않고 기존 공유 폴더 방식으로 돌아"],
   "api-migration": ["2026-09-30", "X-API-Version", "https://docs.example.com/api/v2", "전환 목록은 운영 배포 전 검토 항목"],
   "llm-wiki": ["(BEE)", "30여 명", "대형 프로젝트 3개", "48.9%", "87%", "3,900", "1,300건", "53%에서 100%로", "17~33%", "20~40%", "30~50%", "3분의 2", "골든 질문 100여 개", "200줄", "AGENTS.md", "3개월"],
-  "release-note-en":["2026-08-20", "3:00 PM", "search filters", "the owner and the next check time"],
+  "release-note-en": ["2026-08-20", "3:00 PM", "search filters", "the owner and the next check time"],
   "meeting-followup-en": ["2026-08-21", "Mina", "operations team", "decide at the next meeting"],
   "incident-review-en": ["10:12", "10:38", "26 minutes", "confirm again before the next drill", "the owner records the result"],
   "support-reply-en": ["18427", "1-2 days", "Northline Courier", "before a delivery driver is assigned"],

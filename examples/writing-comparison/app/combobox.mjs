@@ -225,6 +225,9 @@ export function enhanceSelect(select, { labelledBy } = {}) {
       return;
     }
     if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      // Consumed even without a match: while the listbox is open a printable
+      // key is typeahead input and must not reach the page-level shortcuts.
+      event.preventDefault();
       typeahead += event.key;
       window.clearTimeout(typeaheadTimer);
       typeaheadTimer = window.setTimeout(() => { typeahead = ""; }, 600);
@@ -238,6 +241,11 @@ export function enhanceSelect(select, { labelledBy } = {}) {
     if (row) commit(rows.findIndex((entry) => entry.element === row));
   });
 
+  // Rows are not focusable, so the default mousedown would move focus to
+  // <body> and the focusout handler below would close the popover before its
+  // click could commit the row.
+  popover.addEventListener("pointerdown", (event) => event.preventDefault());
+
   popover.addEventListener("pointermove", (event) => {
     const row = event.target.closest(".ui-select-option");
     const index = rows.findIndex((entry) => entry.element === row);
@@ -246,6 +254,12 @@ export function enhanceSelect(select, { labelledBy } = {}) {
 
   document.addEventListener("pointerdown", (event) => {
     if (isOpen() && !root.contains(event.target)) close({ restoreFocus: false });
+  });
+
+  // Focus can also leave without a pointer or Tab key — for example a dialog
+  // opening and calling focus(). An open popover must not outlive its focus.
+  root.addEventListener("focusout", (event) => {
+    if (!root.contains(event.relatedTarget)) close({ restoreFocus: false });
   });
 
   sync();

@@ -325,6 +325,63 @@ test("humanize audit warns when modality markers decrease but not when they are 
   assert.ok(!repositionedReport.warnings.some((warning) => /Modality markers decreased/.test(warning)), JSON.stringify(repositionedReport.warnings));
 });
 
+test("humanize audit counts precomposed 수도 hedges and widened deontic endings", async () => {
+  const flattened = await writeCase(
+    "마이그레이션이 실패할 수도 있습니다. 백업은 미리 받아야만 합니다. 원인은 설정으로 보인다.",
+    "마이그레이션이 실패합니다. 백업은 미리 받아야만 합니다. 원인은 설정으로 보인다."
+  );
+  const flattenedResult = spawnSync(process.execPath, [script, "--source", flattened.source, "--final", flattened.final, "--report", flattened.report], {
+    encoding: "utf8"
+  });
+
+  assert.equal(flattenedResult.status, 0, flattenedResult.stderr);
+  const flattenedReport = JSON.parse(await readFile(flattened.report, "utf8"));
+  assert.equal(flattenedReport.modality.hedge.before, 2);
+  assert.equal(flattenedReport.modality.hedge.after, 1);
+  assert.equal(flattenedReport.modality.deontic.before, 1);
+  assert.ok(flattenedReport.warnings.some((warning) => /Modality markers decreased/.test(warning)), JSON.stringify(flattenedReport.warnings));
+
+  const nouns = await writeCase(
+    "상수도 요금은 수도 사업소가 고지한다. 이 문서를 검토해야겠다.",
+    "상수도 요금은 수도 사업소가 고지한다. 이 문서를 검토해야겠다."
+  );
+  const nounsResult = spawnSync(process.execPath, [script, "--source", nouns.source, "--final", nouns.final, "--report", nouns.report], {
+    encoding: "utf8"
+  });
+
+  assert.equal(nounsResult.status, 0, nounsResult.stderr);
+  const nounsReport = JSON.parse(await readFile(nouns.report, "utf8"));
+  assert.equal(nounsReport.modality.hedge.after, 0);
+  assert.equal(nounsReport.modality.deontic.after, 1);
+});
+
+test("humanize audit counts antithesis pairs, not lone rhetorical questions", async () => {
+  const loneQuestion = await writeCase(
+    "이번 분기의 담당자는 누구인가? 승인 절차의 인가, 반려 기록을 함께 남긴다.",
+    "이번 분기의 담당자는 누구인가? 승인 절차의 인가, 반려 기록을 함께 남긴다."
+  );
+  const loneQuestionResult = spawnSync(process.execPath, [script, "--source", loneQuestion.source, "--final", loneQuestion.final, "--report", loneQuestion.report], {
+    encoding: "utf8"
+  });
+
+  assert.equal(loneQuestionResult.status, 0, loneQuestionResult.stderr);
+  const loneQuestionReport = JSON.parse(await readFile(loneQuestion.report, "utf8"));
+  assert.equal(loneQuestionReport.antithesis.after, 0);
+
+  const singlePair = await writeCase(
+    "지금 필요한 것은 성능인가, 안정성인가? 우선순위를 정한다.",
+    "지금 필요한 것은 성능인가, 안정성인가? 우선순위를 정한다."
+  );
+  const singlePairResult = spawnSync(process.execPath, [script, "--source", singlePair.source, "--final", singlePair.final, "--report", singlePair.report], {
+    encoding: "utf8"
+  });
+
+  assert.equal(singlePairResult.status, 0, singlePairResult.stderr);
+  const singlePairReport = JSON.parse(await readFile(singlePair.report, "utf8"));
+  assert.equal(singlePairReport.antithesis.after, 1);
+  assert.ok(!singlePairReport.warnings.some((warning) => /antithesis/.test(warning)), JSON.stringify(singlePairReport.warnings));
+});
+
 test("humanize audit warns on repeated paired antithesis rhetoric but allows a single pair", async () => {
   const repeated = await writeCase(
     "속도가 아니라 방향이 문제다. 기능이 아니라 완성도가 관건이다.",

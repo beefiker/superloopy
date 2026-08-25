@@ -298,6 +298,8 @@ function showRenderError(error) {
   elements.emptyState.hidden = true;
   elements.errorMessage.textContent = error instanceof Error ? error.message : "Choose another available version to continue.";
   elements.documentView.replaceChildren();
+  // The ruler and panes this handle points at were just cleared with them.
+  scrollUi = null;
   elements.pairSummary.textContent = "Comparison unavailable";
   clearMetrics();
   updateSelectedChange();
@@ -416,7 +418,9 @@ function discardNotesForComparisonChange() {
 }
 
 function isFormControl(target) {
-  return target instanceof Element && Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+  // The combobox trigger is a <button> whose value-holding <select> is a
+  // sibling, not an ancestor, so it needs its own entry here.
+  return target instanceof Element && Boolean(target.closest("input, textarea, select, [role='combobox'], .ui-select, [contenteditable='true']"));
 }
 
 // Length in the ORIGINAL string whose folded form equals `needle`, or 0 when
