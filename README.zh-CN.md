@@ -70,6 +70,12 @@ Loop skill 是默认护栏。开头的完整 `loopy` token 会启动或继续 ev
 
 `superloopy-slides` 生成了这个 **[在线多语言演示 →](https://fileloom-slides.pages.dev)** —— 固定 16:9 舞台的零依赖单文件 HTML 演示，支持 English · 한국어 · 中文 · 日本語 · Español。它通过了真实浏览器的可视化 QA（独立打开、手机 letterbox、iframe 嵌入），证据记录在 `.superloopy/evidence/slides/`。
 
+## 写作对比演示
+
+[![写作对比应用：原文与 Say It Straight 改写并排显示](.github/assets/writing-comparison-demo.png)](https://writing-comparison.pages.dev/)
+
+**[在线写作对比查看器 →](https://writing-comparison.pages.dev/)** 将原文与 `humanize-korean`（A）、`i-have-adhd`（B）、`say-it-straight`（C）的改写并排展示，共 13 个韩语·英语示例。每处 Say It Straight 修改都附有理由注释，任意对比都可以通过 URL 分享。
+
 ## Crew
 
 对于更大的任务，Superloopy 提供六个可选子代理，每个代理负责一条工作线。Claude Code 直接使用插件内置的 `agents/*.md`。在 Codex 中，bootstrap、`superloopy install` 和 `superloopy agents install` 会把个人 TOML 写入 `$CODEX_HOME/agents`，并在此时完成模型路由解析。

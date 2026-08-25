@@ -70,6 +70,12 @@ The loop skill is the default guardrail. A complete leading `loopy` token starts
 
 `superloopy-slides` generated this **[live multilingual deck →](https://fileloom-slides.pages.dev)** — a zero-dependency single-file HTML presentation on a fixed 16:9 stage in English · 한국어 · 中文 · 日本語 · Español. It passed real-browser visual-QA (standalone, phone letterbox, and iframe embed) recorded under `.superloopy/evidence/slides/`.
 
+## Writing Comparison Demo
+
+[![Writing comparison app showing an original document next to its Say It Straight rewrite](.github/assets/writing-comparison-demo.png)](https://writing-comparison.pages.dev/)
+
+The **[live writing-comparison viewer →](https://writing-comparison.pages.dev/)** puts one source document next to its `humanize-korean` (A), `i-have-adhd` (B), and `say-it-straight` (C) rewrites across thirteen Korean and English samples. Every Say It Straight edit carries a rationale note, and any comparison is shareable by URL.
+
 ## Qt Kanban Demo
 
 The [Northstar Qt Kanban demo](examples/qt-kanban/) is a runnable Qt Quick prototype acceptance fixture built through the `superloopy-frontend` Qt route, not production-editor proof. Board, search, filters, cards, drawers, and task creation are exercised; Timeline and Inbox are visibly passive demo-only context, Settings and Help are absent, and persistence and Undo remain out of scope. With Qt 6.11.1, CMake, and Ninja available, configure, build, and launch it from the repository root:

@@ -53,6 +53,7 @@ Total: 100 points.
 | `.github/assets/slides-demo-reference.png` | Audit coverage and README slides-demo reference. | Must remain a documentation screenshot for the superloopy-slides live example deck, not runtime plugin logic. |
 | `.github/assets/transferloom-clone-reference.png` | Audit coverage and README clone-demo reference. | Must remain a documentation screenshot for the validated Transferloom.com clone, not runtime plugin logic. |
 | `.github/assets/usopp.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
+| `.github/assets/writing-comparison-demo.png` | Audit coverage and README writing-comparison-demo reference. | Must remain a documentation screenshot of the deployed writing-comparison viewer, not runtime plugin logic. |
 | `.github/assets/zoro.png` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
 | `.github/workflows/test.yml` | Cross-platform test CI and GitHub Actions. | Must run `node --test` (no shell glob) across the ubuntu/windows/macos × Node 22/24 matrix with SHA-pinned actions and no runtime side effects, covering the minimum supported line and the next LTS line. |
 | `.nvmrc` | NVM runtime selector. | Must select Node 22 so local development matches the minimum supported engine floor. |
@@ -125,6 +126,7 @@ Total: 100 points.
 | `examples/writing-comparison/app/combobox.mjs` | Grouped listbox that replaces the sample and version `<select>` popups the browser will not style, keeping each select as its value holder. | Must keep the native select as the value source so `change` handling stays unchanged, and must not land the keyboard on an unavailable version. |
 | `examples/writing-comparison/app/data.generated.mjs` | Generated index that re-exports every sample module with the sample and version order. | Must keep the app runnable from a fresh checkout after `node build-data.mjs`. |
 | `examples/writing-comparison/app/data/api-migration-en.mjs` | Generated comparison data for the English API migration guide (code fences, warning, links) sample. | Must match a regenerated build from the Markdown sources. |
+| `examples/writing-comparison/app/apple-touch-icon.png` | 180×180 home-screen icon for the deployed comparison app. | Must stay in step with `favicon.svg`; regenerate both together if the palette changes. |
 | `examples/writing-comparison/app/data/api-migration.mjs` | Generated comparison data for the Korean API migration notice (code fences, warning, links) sample. | Must match a regenerated build from the Markdown sources. |
 | `examples/writing-comparison/app/data/incident-review-en.mjs` | Generated comparison data for the English incident review (timeline table, blockquote, metrics) sample. | Must match a regenerated build from the Markdown sources. |
 | `examples/writing-comparison/app/data/incident-review.mjs` | Generated comparison data for the Korean incident review (timeline table, blockquote, metrics) sample. | Must match a regenerated build from the Markdown sources. |
@@ -138,9 +140,11 @@ Total: 100 points.
 | `examples/writing-comparison/app/data/support-reply-en.mjs` | Generated comparison data for the English support reply (paragraphs, ordered list) sample. | Must match a regenerated build from the Markdown sources. |
 | `examples/writing-comparison/app/data/support-reply.mjs` | Generated comparison data for the Korean customer-support reply (paragraphs, ordered list) sample. | Must match a regenerated build from the Markdown sources. |
 | `examples/writing-comparison/app/diff-core.mjs` | Block and token diff engine producing the hunks both panes and the unified stream render. | Must keep the app runnable from a fresh checkout after `node build-data.mjs`. |
+| `examples/writing-comparison/app/favicon.svg` | Browser-tab icon for the comparison app (two panes, rose and mint bars). | Must stay a self-contained SVG using the app palette. |
 | `examples/writing-comparison/app/index.html` | Single page shell holding the comparison panes, floating control dock, and tool dialogs. | Must keep the app runnable from a fresh checkout after `node build-data.mjs`. |
 | `examples/writing-comparison/app/markdown.mjs` | Minimal Markdown block and inline renderer with HTML escaping and safe-URL checks. | Must keep the app runnable from a fresh checkout after `node build-data.mjs`. |
 | `examples/writing-comparison/app/notes.mjs` | Change-rationale note anchoring and tooltip for the comparison view. | Must keep every embedded note anchored to an exact sentence so hover explanations never point at missing text. |
+| `examples/writing-comparison/app/og.png` | 1200×630 Open Graph preview image for the deployed comparison app. | Must match the absolute URL referenced from `index.html` on the deployed origin. |
 | `examples/writing-comparison/app/scroll-sync.mjs` | Hunk-anchored pane scroll syncing and the overview ruler for the comparison view. | Must keep matching hunks aligned at the anchor line and fall back to proportional syncing when no hunk ids are shared. |
 | `examples/writing-comparison/app/search.mjs` | Original Superloopy search module; covered by the comparison app suite. | Must mark the matched characters themselves, including where lowercasing changes string length. |
 | `examples/writing-comparison/app/server.mjs` | Loopback-only static file server that serves the app on a chosen port. | Must keep the app runnable from a fresh checkout after `node build-data.mjs`. |
@@ -323,6 +327,7 @@ Total: 100 points.
 | `docs/superpowers/specs/2026-07-30-i-have-adhd-loop-routing-design.md` | Approved design record and audit coverage. | Must preserve loop-only automatic routing, explicit standalone invocation, non-diagnostic cue boundaries, and no durable output-style state. |
 | `docs/superpowers/specs/2026-08-04-say-it-straight-design.md` | Approved design record and audit coverage. | Must preserve clean-room Superloopy-native direct-prose boundaries, with research provenance and no copied content. |
 | `docs/superpowers/specs/2026-08-05-say-it-straight-loop-default-design.md` | Approved design record and audit coverage. | Must preserve full-loop default output styling, current-loop-only exact manual controls, durable scoped state, artifact-editing isolation, and task/evidence authority. |
+| `skills/say-it-straight/README.md` | Audit coverage. | Must stay documentation that points at `SKILL.md` and the live demo; the skill contract never moves here. |
 | `skills/say-it-straight/SKILL.md` | `test/say-it-straight.test.js`, `test/plugin.test.js`, npm package dry-run, and audit coverage. | Must keep explicit-only invocation, direct-prose preservation, and clean-room Superloopy-native guidance with no copied content. |
 | `skills/say-it-straight/agents/openai.yaml` | `test/plugin.test.js`, npm package dry-run, and audit coverage. | Must keep explicit-only Codex discovery metadata as clean-room Superloopy-native work with no copied content. |
 | `skills/say-it-straight/LICENSE` | `test/plugin.test.js`, npm package dry-run, and audit coverage. | Must retain the local license record for clean-room Superloopy-native work with no copied content. |

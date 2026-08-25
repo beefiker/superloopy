@@ -70,6 +70,12 @@ La skill de loop es la barandilla por defecto. Un token `loopy` completo al prin
 
 `superloopy-slides` generó este **[deck multilingüe en vivo →](https://fileloom-slides.pages.dev)** — una presentación HTML de un solo archivo y sin dependencias sobre un escenario fijo 16:9, con English · 한국어 · 中文 · 日本語 · Español. Superó la QA visual en navegador real (independiente, letterbox en móvil e incrustado en iframe) registrada en `.superloopy/evidence/slides/`.
 
+## Demo de comparación de escritura
+
+[![App de comparación de escritura mostrando un documento original junto a su reescritura de Say It Straight](.github/assets/writing-comparison-demo.png)](https://writing-comparison.pages.dev/)
+
+El **[visor de comparación de escritura en vivo →](https://writing-comparison.pages.dev/)** muestra un documento original junto a sus reescrituras `humanize-korean` (A), `i-have-adhd` (B) y `say-it-straight` (C) en trece muestras en coreano e inglés. Cada edición de Say It Straight lleva una nota con su justificación y cualquier comparación se puede compartir por URL.
+
 ## Crew
 
 Para trabajos grandes, Superloopy incluye seis subagentes opcionales, cada uno con una única línea de trabajo. Claude Code usa los `agents/*.md` incluidos en el plugin. En Codex, bootstrap, `superloopy install` y `superloopy agents install` materializan los TOML personales en `$CODEX_HOME/agents` y resuelven allí el enrutamiento de modelos.
