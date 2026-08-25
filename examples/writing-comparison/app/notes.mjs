@@ -127,6 +127,7 @@ export function installNoteTooltip(container, windowRef = typeof window === "und
   const document = container.ownerDocument;
   const tooltip = document.createElement("div");
   tooltip.className = "note-tooltip";
+  tooltip.id = "note-tooltip";
   tooltip.setAttribute("role", "tooltip");
   tooltip.hidden = true;
   document.body.append(tooltip);
@@ -134,14 +135,22 @@ export function installNoteTooltip(container, windowRef = typeof window === "und
 
   const fragmentsOf = (noteId) => [...container.querySelectorAll(`.note-anchor[data-note-id="${noteId}"]`)];
   const clearActive = () => {
-    for (const fragment of container.querySelectorAll(".note-anchor.note-active")) fragment.classList.remove("note-active");
+    for (const fragment of container.querySelectorAll(".note-anchor.note-active")) {
+      fragment.classList.remove("note-active");
+      fragment.removeAttribute("aria-describedby");
+    }
   };
   const show = (anchor) => {
     const noteId = anchor.dataset.noteId;
     if (noteId === currentId && !tooltip.hidden) return;
     clearActive();
     const fragments = fragmentsOf(noteId);
-    for (const fragment of fragments) fragment.classList.add("note-active");
+    for (const fragment of fragments) {
+      fragment.classList.add("note-active");
+      // Without this reference a screen reader lands on the anchor and hears
+      // only the sentence text, with no sign a note exists.
+      fragment.setAttribute("aria-describedby", tooltip.id);
+    }
     tooltip.replaceChildren(...tooltipHtmlParts(document, anchor));
     positionTooltip(tooltip, fragments[0] ?? anchor, windowRef);
     currentId = noteId;
