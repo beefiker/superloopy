@@ -201,6 +201,28 @@ function changeMeta(hunk) {
   return `${labelFor(hunk.op)} · ${hunk.kind} · ${tokenCount} span${tokenCount === 1 ? "" : "s"}`;
 }
 
+// Each rewrite version is produced by a packaged skill; its pane label links
+// to that skill's documentation. The original has no skill and stays plain.
+const SKILL_DOC_URLS = Object.freeze({
+  a: "https://github.com/beefiker/superloopy/tree/main/skills/humanize-korean",
+  b: "https://github.com/beefiker/superloopy/tree/main/skills/i-have-adhd",
+  c: "https://github.com/beefiker/superloopy/tree/main/skills/say-it-straight"
+});
+
+function versionLabelNode(version) {
+  const name = `${version.short} — ${version.label}`;
+  const url = SKILL_DOC_URLS[version.id];
+  if (!url) return document.createTextNode(name);
+  const link = document.createElement("a");
+  link.className = "pane-label-link";
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noreferrer";
+  link.title = `View the ${version.label} skill on GitHub`;
+  link.textContent = `${name} ↗`;
+  return link;
+}
+
 function addPaneLabels(leftVersion, rightVersion) {
   const panes = elements.documentView.querySelectorAll("[data-side]");
   for (const pane of panes) {
@@ -208,7 +230,7 @@ function addPaneLabels(leftVersion, rightVersion) {
     const version = side === "left" ? leftVersion : rightVersion;
     const label = document.createElement("header");
     label.className = "pane-label";
-    label.textContent = `${side === "left" ? "Earlier" : "Later"} · ${version.short} — ${version.label}`;
+    label.append(`${side === "left" ? "Earlier" : "Later"} · `, versionLabelNode(version));
     pane.prepend(label);
   }
 
@@ -216,7 +238,7 @@ function addPaneLabels(leftVersion, rightVersion) {
   if (unified) {
     const label = document.createElement("header");
     label.className = "pane-label";
-    label.textContent = `${leftVersion.short} — ${leftVersion.label} → ${rightVersion.short} — ${rightVersion.label}`;
+    label.append(versionLabelNode(leftVersion), " → ", versionLabelNode(rightVersion));
     unified.prepend(label);
   }
 }
