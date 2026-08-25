@@ -1,5 +1,6 @@
 export const sample = Object.freeze({
   "id": "incident-review-en",
+  "language": "en",
   "label": "Incident review",
   "description": "Timeline table, quote, metrics",
   "versions": {
@@ -13,7 +14,8 @@ export const sample = Object.freeze({
         "words": 244,
         "lines": 22
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     },
     "b": {
       "id": "b",
@@ -25,7 +27,8 @@ export const sample = Object.freeze({
         "words": 199,
         "lines": 26
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     },
     "c": {
       "id": "c",
@@ -37,7 +40,8 @@ export const sample = Object.freeze({
         "words": 227,
         "lines": 22
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     }
   }
 });

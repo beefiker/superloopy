@@ -1,5 +1,6 @@
 export const sample = Object.freeze({
   "id": "meeting-followup-en",
+  "language": "en",
   "label": "Meeting follow-up",
   "description": "Checkboxes, owners, due dates",
   "versions": {
@@ -13,7 +14,8 @@ export const sample = Object.freeze({
         "words": 238,
         "lines": 19
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     },
     "b": {
       "id": "b",
@@ -25,7 +27,8 @@ export const sample = Object.freeze({
         "words": 161,
         "lines": 20
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     },
     "c": {
       "id": "c",
@@ -37,7 +40,8 @@ export const sample = Object.freeze({
         "words": 196,
         "lines": 19
       },
-      "audits": []
+      "audits": [],
+      "notes": []
     }
   }
 });
