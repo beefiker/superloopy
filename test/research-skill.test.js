@@ -129,3 +129,20 @@ test("research completion runs the mechanical evidence gate", async () => {
   assert.match(research.content, /`unknown` means the expectation went unmeasured/u);
   assert.match(research.content, /Every wave file must be named there and every ledger claim id must have a line/u);
 });
+
+test("research ledger templates carry the markdown separator row previews need (issue #50)", async () => {
+  const research = await readSkill("superloopy-research");
+
+  // Agents copy these templates verbatim, so a header with no separator row beneath it ships a
+  // table that every markdown preview renders as running text.
+  const headers = [
+    "| id | expected | source | observed | status | claim |",
+    "| url | tiers | reason | substitute | status |",
+    "| id | claim | risk | cost | observations | counter | primary | observed | as-of | depends-on | status |"
+  ];
+  for (const header of headers) {
+    const columns = header.split("|").length - 2;
+    const separator = `|${" --- |".repeat(columns)}`;
+    assert.ok(research.content.includes(`${header}\n${separator}\n`), `separator row must follow: ${header}`);
+  }
+});
