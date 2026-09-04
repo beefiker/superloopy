@@ -6,8 +6,10 @@ import test from "node:test";
 // The research skill's contract lives in prose, so these tests pin the clauses the workflow
 // depends on: retrieval verdicts, the untrusted-content boundary, claim clearing, and the
 // machine-read ledgers the packaged validator reads back.
+// Windows checks the tree out with CRLF, so normalize at the single read point: assertions here
+// pin what the skill says, never which line endings the checkout happened to use.
 async function readSkill(name) {
-  return { content: await readFile(`skills/${name}/SKILL.md`, "utf8") };
+  return { content: (await readFile(`skills/${name}/SKILL.md`, "utf8")).replace(/\r\n?/gu, "\n") };
 }
 
 test("research skill gates retrieval on verdicts instead of trusting a lane's report", async () => {
