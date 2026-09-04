@@ -66,6 +66,16 @@ test("a separator row must match the header width, and alignment colons are allo
   assert.deepEqual(plain.problems, []);
 });
 
+test("the separator rule reads the same on a CRLF checkout", () => {
+  // A Windows session writes CRLF ledgers; the gate must judge them by content, not line endings.
+  const crlf = (lines) => lines.join("\r\n");
+  assert.deepEqual(parseLedger(crlf([LEDGER_HEADER, separator(LEDGER_HEADER), LEDGER_ROW])).problems, []);
+  assert.match(
+    parseLedger(crlf([LEDGER_HEADER, LEDGER_ROW])).problems.join("\n"),
+    /claim-ledger\.md header has no markdown separator row/u
+  );
+});
+
 test("a session whose ledger lacks the separator row fails the whole gate", async () => {
   const root = await mkdtemp(join(tmpdir(), "superloopy-research-"));
   await writeFile(join(root, "SYNTHESIS.md"), SYNTHESIS, "utf8");
