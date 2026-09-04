@@ -6,8 +6,10 @@ import test from "node:test";
 // The research skill's contract lives in prose, so these tests pin the clauses the workflow
 // depends on: retrieval verdicts, the untrusted-content boundary, claim clearing, and the
 // machine-read ledgers the packaged validator reads back.
+// Windows checks the tree out with CRLF, so normalize at the single read point: assertions here
+// pin what the skill says, never which line endings the checkout happened to use.
 async function readSkill(name) {
-  return { content: await readFile(`skills/${name}/SKILL.md`, "utf8") };
+  return { content: (await readFile(`skills/${name}/SKILL.md`, "utf8")).replace(/\r\n?/gu, "\n") };
 }
 
 test("research skill gates retrieval on verdicts instead of trusting a lane's report", async () => {
@@ -128,4 +130,21 @@ test("research completion runs the mechanical evidence gate", async () => {
   assert.match(research.content, /A `violated` row must land somewhere the reader can see/u);
   assert.match(research.content, /`unknown` means the expectation went unmeasured/u);
   assert.match(research.content, /Every wave file must be named there and every ledger claim id must have a line/u);
+});
+
+test("research ledger templates carry the markdown separator row previews need (issue #50)", async () => {
+  const research = await readSkill("superloopy-research");
+
+  // Agents copy these templates verbatim, so a header with no separator row beneath it ships a
+  // table that every markdown preview renders as running text.
+  const headers = [
+    "| id | expected | source | observed | status | claim |",
+    "| url | tiers | reason | substitute | status |",
+    "| id | claim | risk | cost | observations | counter | primary | observed | as-of | depends-on | status |"
+  ];
+  for (const header of headers) {
+    const columns = header.split("|").length - 2;
+    const separator = `|${" --- |".repeat(columns)}`;
+    assert.ok(research.content.includes(`${header}\n${separator}\n`), `separator row must follow: ${header}`);
+  }
 });
