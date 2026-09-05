@@ -42,7 +42,9 @@ TOML files carry explicit resolved `model`, `model_reasoning_effort`, and `servi
 catalog, docs, or TOML fields drift. These fields are advisory because the host may ignore or
 override them, but Superloopy does not omit them just to inherit a parent/default model. They
 improve crew routing efficiency, but they are never proof: Superloopy accepts only artifacts,
-command transcripts, audit verdicts, and gate reports.
+command transcripts, audit verdicts, and gate reports. The orchestrator is the user's host session
+and runs on the user's selected model (`gpt-6-astra` is allowed when selected); Superloopy never
+pins it, and crew lanes never inherit it.
 
 The structured doctor value is `modelRoutingVerification: "unverified"` until a host can attest both the resolved `agent_type` and model. A spawn surface that lacks either signal is reported as `model_unverified`; the parent must not claim that the configured GPT-5.6 tuple was enforced at runtime.
 

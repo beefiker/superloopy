@@ -8,6 +8,7 @@ Superloopy's bundled agent model fields are steering, not proof. They give the h
 
 Allowed models:
 
+- `gpt-6-astra`
 - `gpt-5.6-terra`
 - `gpt-5.6-sol`
 - `gpt-5.6-luna`
@@ -29,6 +30,10 @@ Allowed service tiers: `priority`, `fast`, `efficient`.
 | `fast` | `gpt-5.6-luna` / `low` / `fast` | `gpt-5.5` / `low` / `fast` |
 
 Availability is resolved before an agent is launched. A compatibility selection is explicit; Superloopy never retries a worker with a different model after launch.
+
+## Orchestrator Model
+
+The orchestrator is the user's own host session, not a bundled agent. Superloopy never sets, pins, or resolves its model; the host uses whatever the user selected. `gpt-6-astra` is allowed so the orchestrator may run on it when the user selected it, and `superloopy doctor` does not flag that selection as unsupported. The six crew lanes keep the profile pins above regardless of the orchestrator's model: an orchestrator on `gpt-6-astra` still dispatches `franky` on `gpt-5.6-terra`, `zoro` on `gpt-5.6-sol`, and `nami` on `gpt-5.6-luna`. Crew guidance reports the orchestrator's model as `model_unverified` like any other lane unless the host attests it.
 
 ## Upgrade And Diagnosis
 
@@ -55,7 +60,8 @@ Configured routing is not runtime attestation. The host must expose `agent_type`
 
 ## Rules
 
-- Update `model-policy.json` first when a new Codex model becomes available, then update the preferred TOML pins and this document in the same change.
+- Update `model-policy.json` first when a new Codex model becomes available, then update the preferred TOML pins and this document in the same change. Allow-listing a model (as with `gpt-6-astra`) does not change any crew pin by itself and must not bump `version`; a pin moves only when a profile's preferred candidate changes. Bump `version` only for a candidate change, because a bump invalidates every installed resolution state and forces a fresh probe, and a failed or older-catalog probe then selects compatibility routing for every lane.
+- The orchestrator runs on the user's selected host model and is never re-pinned by Superloopy; crew lanes never inherit the orchestrator's model.
 - Resolve candidates as complete tuples. A model is not usable for a profile unless that same catalog item supports the candidate's reasoning effort and service tier.
 - Use the bundled TOML fields as defaults only. A host may ignore or override them, but the repo never omits them just to inherit a parent/default model.
 - Describe model routing as configured unless the host attests both the resolved role and model; otherwise use `model_unverified`.
