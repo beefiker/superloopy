@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -20,6 +20,7 @@ function codexPolicy() {
     compatibilityModel: "gpt-5.5",
     allowed: {
       models: [
+        "gpt-6-astra",
         "gpt-5.6-terra",
         "gpt-5.6-sol",
         "gpt-5.6-luna",
@@ -128,6 +129,31 @@ test("resolver selects every preferred GPT-5.6 tuple when fully available", () =
     ...result.profiles.standard
   });
   assert.deepEqual(Object.keys(result.agents), Object.keys(AGENTS));
+});
+
+test("resolver keeps every crew pin on the GPT-5.6 family when gpt-6-astra is also available", () => {
+  const resolveCodexModelPolicy = requireExport("resolveCodexModelPolicy");
+  const catalog = [
+    { id: "gpt-6-astra", reasoningEfforts: ["low", "medium", "high", "xhigh", "max", "ultra"], serviceTiers: ["priority", "fast"] },
+    ...fullCatalog()
+  ];
+
+  const result = resolveCodexModelPolicy(codexPolicy(), catalog);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(result.profiles).map(([name, profile]) => [name, profile.resolvedModel])),
+    { standard: "gpt-5.6-terra", deep: "gpt-5.6-sol", fast: "gpt-5.6-luna" }
+  );
+  assert.equal(Object.values(result.agents).some(({ resolvedModel }) => resolvedModel === "gpt-6-astra"), false);
+  assert.equal(Object.values(result.profiles).every(({ reason }) => reason === "preferred_available"), true);
+});
+
+test("shipped model policy allows gpt-6-astra without pinning any profile to it", async () => {
+  const policy = JSON.parse(await readFile(new URL("../model-policy.json", import.meta.url), "utf8"));
+  assert.equal(policy.codex.allowed.models.includes("gpt-6-astra"), true);
+  const pinned = Object.values(policy.codex.profiles).flatMap(({ candidates }) => candidates.map(({ model }) => model));
+  assert.equal(pinned.includes("gpt-6-astra"), false);
 });
 
 test("resolver falls back only the deep profile when Sol is unavailable", () => {

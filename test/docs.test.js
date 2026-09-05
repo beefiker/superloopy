@@ -93,7 +93,7 @@ test("public docs describe doctor checks", async () => {
   assert.match(designAudit, /## Design Decisions/);
   assert.match(designAudit, /## Compatibility Boundary/);
   assert.match(modelPolicy, /steering, not proof/i);
-  assert.match(modelPolicy, /gpt-5\.4-mini/);
+  assert.match(modelPolicy, /## Orchestrator Model[\s\S]*never inherit the orchestrator's model/);
   assert.match(modelPolicy, /exact legacy.*without `--force`/is);
   assert.match(modelPolicy, /model_unverified/);
   assert.match(modelPolicy, /split-brain/i);
