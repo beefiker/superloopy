@@ -145,11 +145,11 @@ async function runDoctorCommand(argv, stdout, cwd) {
     scope: selection.scope,
     comparisonPath: parsed.comparisonPath,
     queryInstalledPluginTruth: host === "codex" ? queryInstalledPluginTruth : undefined,
-    installedModelPolicy: {
+    installedModelPolicy: host === "codex" ? {
       env: process.env,
       homeDir: homedir(),
       refreshModels: parsed.refreshModels
-    }
+    } : undefined
   });
   stdout.write(parsed.json ? `${JSON.stringify(result, null, 2)}\n` : formatDoctor(result));
   return result.ok ? 0 : 1;
