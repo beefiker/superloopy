@@ -15,6 +15,16 @@ export async function checkAntigravityHostWiring(cwd) {
     { path: join(cwd, "gemini-extension.json"), name: "gemini-extension.json" }
   ];
 
+  let packageVersion = null;
+  const packageJsonPath = join(cwd, "package.json");
+  if (existsSync(packageJsonPath)) {
+    try {
+      const pkg = JSON.parse(await readFile(packageJsonPath, "utf8"));
+      if (typeof pkg?.version === "string" && pkg.version.trim().length > 0) packageVersion = pkg.version;
+    } catch {}
+  }
+
+  const manifestVersions = [];
   for (const { path, name } of manifestPaths) {
     if (!existsSync(path)) {
       problems.push(`missing ${name}`);
@@ -25,9 +35,23 @@ export async function checkAntigravityHostWiring(cwd) {
       if (manifest?.name !== "superloopy") problems.push(`${name} name must be superloopy`);
       if (typeof manifest?.version !== "string" || manifest.version.trim().length === 0) {
         problems.push(`${name} missing valid version`);
+      } else {
+        manifestVersions.push({ name, version: manifest.version });
+        if (packageVersion !== null && manifest.version !== packageVersion) {
+          problems.push(`${name} version (${manifest.version}) does not match package.json version (${packageVersion})`);
+        }
       }
     } catch (error) {
       problems.push(`${name} invalid JSON (${errorText(error)})`);
+    }
+  }
+
+  if (packageVersion === null && manifestVersions.length > 1) {
+    const first = manifestVersions[0];
+    for (let i = 1; i < manifestVersions.length; i++) {
+      if (manifestVersions[i].version !== first.version) {
+        problems.push(`${manifestVersions[i].name} version (${manifestVersions[i].version}) does not match ${first.name} version (${first.version})`);
+      }
     }
   }
 
@@ -73,6 +97,19 @@ export async function checkAntigravityHostWiring(cwd) {
             (c) => c.includes("${PLUGIN_ROOT}/src/cli.js") && /hook\s+user-prompt-submit(?:\s|$)/u.test(c) && /--host\s+antigravity(?:\s|$)/u.test(c)
           );
           if (!promptCli) problems.push("hooks.json UserPromptSubmit does not invoke CLI hook user-prompt-submit with --host antigravity");
+        }
+
+        const stopHook = hookSpec.Stop;
+        if (!Array.isArray(stopHook) || stopHook.length === 0) {
+          problems.push("hooks.json missing Stop hook");
+        } else {
+          const stopCommands = (Array.isArray(stopHook[0]?.hooks) ? stopHook[0].hooks : [])
+            .map((h) => h?.command)
+            .filter((c) => typeof c === "string");
+          const stopCli = stopCommands.some(
+            (c) => c.includes("${PLUGIN_ROOT}/src/cli.js") && /hook\s+stop(?:\s|$)/u.test(c) && /--host\s+antigravity(?:\s|$)/u.test(c)
+          );
+          if (!stopCli) problems.push("hooks.json Stop does not invoke CLI hook stop with --host antigravity");
         }
 
         const rawEntries = hookSpec.SubagentStop;

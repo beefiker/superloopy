@@ -9,6 +9,7 @@ import { checkAntigravityHostWiring } from "../src/doctor.js";
 const cliCommand = 'node "${PLUGIN_ROOT}/src/cli.js" hook subagent-stop --host antigravity';
 const auditCommand = 'node "${PLUGIN_ROOT}/src/cli.js" hook subagent-stop-audit --host antigravity';
 const promptCommand = 'node "${PLUGIN_ROOT}/src/cli.js" hook user-prompt-submit --host antigravity';
+const stopCommand = 'node "${PLUGIN_ROOT}/src/cli.js" hook stop --host antigravity';
 
 const validHooks = {
   superloopy: {
@@ -23,6 +24,13 @@ const validHooks = {
       {
         hooks: [
           { type: "command", command: promptCommand, timeout: 5 }
+        ]
+      }
+    ],
+    Stop: [
+      {
+        hooks: [
+          { type: "command", command: stopCommand, timeout: 5 }
         ]
       }
     ],
@@ -198,4 +206,24 @@ test("checkAntigravityHostWiring fails if --host has an invalid suffix like anti
   const result = await checkAntigravityHostWiring(await createRepo({ hooks: hostTypo }));
   assert.equal(result.ok, false);
   assert.match(result.message, /with --host antigravity/);
+});
+
+test("checkAntigravityHostWiring fails if hooks.json lacks Stop hook", async () => {
+  const missingStop = {
+    superloopy: {
+      SessionStart: validHooks.superloopy.SessionStart,
+      UserPromptSubmit: validHooks.superloopy.UserPromptSubmit,
+      SubagentStop: validHooks.superloopy.SubagentStop
+    }
+  };
+  const result = await checkAntigravityHostWiring(await createRepo({ hooks: missingStop }));
+  assert.equal(result.ok, false);
+  assert.match(result.message, /missing Stop hook/);
+});
+
+test("checkAntigravityHostWiring fails if Antigravity manifests have version skew", async () => {
+  const skewed = await createRepo({ plugin: { name: "superloopy", version: "9.9.9" } });
+  const result = await checkAntigravityHostWiring(skewed);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /version/);
 });

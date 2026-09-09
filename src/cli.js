@@ -19,7 +19,7 @@ import { runAuditorStopHook } from "./audit-hooks.js";
 import { beginLoop } from "./begin.js";
 import { captureLoop } from "./capture.js";
 import { checkLoop, formatCheckResult } from "./check.js";
-import { formatDoctor, runDoctor } from "./doctor.js";
+import { detectHost, formatDoctor, runDoctor } from "./doctor.js";
 import { queryInstalledPluginTruth } from "./installed-plugin-truth.js";
 import { finishLoop } from "./finish.js";
 import { formatGuideResult } from "./guide.js";
@@ -139,7 +139,7 @@ async function runDoctorCommand(argv, stdout, cwd) {
   }
   const parsed = parseDoctorArgs(argv);
   const selection = resolveDoctorSelection(cwd, parsed);
-  const host = isAntigravityHost(process.env) ? "antigravity" : (isClaudeHost(process.env) ? "claude" : (selection.root.includes(".gemini") ? "antigravity" : (selection.root.includes(".claude") ? "claude" : "codex")));
+  const host = detectHost(selection.root, process.env);
   const result = await runDoctor(selection.root, {
     host,
     scope: selection.scope,

@@ -27,13 +27,7 @@ export const INVENTORY_DOCS = new Set([
   "docs/superloopy-loop-golden-set.md"
 ]);
 const RUNTIME_IGNORE_SAMPLES = [
-  ".superloopy/goals.json",
-  ".superloopy/evidence/report.md",
-  ".DS_Store",
-  "docs/.DS_Store",
-  "node_modules/example/index.js",
-  "coverage/index.html",
-  "superloopy.log"
+  ".superloopy/goals.json", ".superloopy/evidence/report.md", ".DS_Store", "docs/.DS_Store", "node_modules/example/index.js", "coverage/index.html", "superloopy.log"
 ];
 const GENERATED_INSTALL_FILES = new Set([
   ".codex-marketplace-install.json"
@@ -70,7 +64,7 @@ export async function runDoctor(cwd, options = {}) {
   const antigravityHostWiring = await checkAntigravityHostWiring(cwd);
   const modelPolicy = await checkModelPolicy(cwd);
   const claudeModelPolicy = await checkClaudeModelPolicy(cwd);
-  const host = options.host ?? (isAntigravityHost(options.env ?? process.env) || cwd.includes(".gemini") ? "antigravity" : (isClaudeHost(options.env ?? process.env) || cwd.includes(".claude") ? "claude" : "codex"));
+  const host = options.host ?? detectHost(cwd, options.env ?? process.env);
   const installedModelPolicy = host !== "codex"
     ? { ok: true, informational: true, installed: false, policyVersion: null, targetDir: null, checkedAt: null, selectionStatus: "host_exempt", availabilityStatus: "not_checked", stale: false, degraded: false, restartRequired: false, agents: {}, state: "host_exempt", message: `Managed agent routing is Codex-only; exempt on ${host}.` }
     : await checkInstalledModelPolicy(cwd, options.installedModelPolicy ?? {});
@@ -84,6 +78,15 @@ export async function runDoctor(cwd, options = {}) {
     root: cwd,
     checks
   };
+}
+
+export function detectHost(root, env = process.env) {
+  if (isAntigravityHost(env)) return "antigravity";
+  if (isClaudeHost(env)) return "claude";
+  const s = typeof root === "string" ? root : "";
+  const hasGeminiMeta = existsSync(join(s, "gemini-extension.json")) || existsSync(join(s, ".gemini-plugin"));
+  if (hasGeminiMeta && (!isSourceCheckoutRoot(s) || s.includes(".gemini") || s.includes("antigravity"))) return "antigravity";
+  return s.includes(".gemini") || s.includes("antigravity") ? "antigravity" : (s.includes(".claude") ? "claude" : "codex");
 }
 
 export function doctorOverallOk(checks, scope) {
