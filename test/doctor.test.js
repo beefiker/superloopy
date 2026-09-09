@@ -383,17 +383,12 @@ test("runDoctor accepts an injected installed-plugin probe without reading live 
 
   const mismatch = await runDoctor(process.cwd(), {
     scope: "installed",
-    queryInstalledPluginTruth: () => ({
-      ok: false,
-      informational: true,
-      state: "version_mismatch",
-      executingVersion: "0.12.4",
-      installedVersion: "0.12.3",
-      message: "confirmed mismatch"
-    })
+    queryInstalledPluginTruth: () => ({ ok: false, informational: true, state: "version_mismatch", executingVersion: "0.12.4", installedVersion: "0.12.3", message: "confirmed mismatch" })
   });
   assert.equal(mismatch.ok, false);
   assert.equal(mismatch.checks.installedPluginTruth.state, "version_mismatch");
+  const exempt = await runDoctor(process.cwd(), { host: "antigravity" });
+  assert.equal(exempt.checks.installedPluginTruth.state, "host_exempt");
 });
 
 test("doctor CLI gates installed scope through the real Codex authority seam", async () => {
