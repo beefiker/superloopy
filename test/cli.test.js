@@ -7,7 +7,6 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { binShimSupportsSiblingFallback, installBinShim, parseBinShimHost, SUPERLOOPY_AGENT_NAMES } from "../src/agents.js";
-import { detectHost } from "../src/doctor.js";
 import { createLoop } from "../src/loop.js";
 
 async function tempRepo() {
@@ -506,24 +505,11 @@ test("CLI hook subagent-stop honors the host contract over stdin", async () => {
   assert.equal(noType.stdout.trim(), "");
 });
 
-test("installBinShim preserves Antigravity identity and detectHost recognizes it", async () => {
+test("installBinShim stamps the Antigravity host identity into the generated shim", async () => {
   const repo = await tempRepo();
   const binDir = join(repo, "bin");
   const result = await installBinShim(repo, ["--bin-dir", binDir], { host: "antigravity", homeDir: join(repo, "home") });
   assert.equal(result.ok, true);
   const shim = await readFile(result.target, "utf8");
   assert.equal(parseBinShimHost(shim), "antigravity");
-  assert.equal(detectHost(repo, { SUPERLOOPY_HOST: "antigravity" }), "antigravity");
-  // Shipped manifests are NOT a host signal: `gemini-extension.json` and `.gemini-plugin/` are in
-  // every npm tarball, so a Codex install carries them too and must still resolve to "codex" --
-  // otherwise the Codex-only installedPluginTruth/installedModelPolicy checks go silently exempt.
-  const nonCheckout = join(repo, "installed-plugin");
-  await mkdir(join(nonCheckout, ".gemini-plugin"), { recursive: true });
-  await writeFile(join(nonCheckout, "gemini-extension.json"), "{}", "utf8");
-  assert.equal(detectHost(nonCheckout, {}), "codex");
-  // The install location is the signal: a plugin install lives under a host-owned directory.
-  assert.equal(detectHost(join(repo, ".gemini", "config", "plugins", "superloopy"), {}), "antigravity");
-  assert.equal(detectHost(join(repo, ".claude", "plugins", "superloopy"), {}), "claude");
-  // ...matched as a whole segment, so a project directory cannot impersonate a host.
-  assert.equal(detectHost(join(repo, "antigravity-notes", "superloopy"), {}), "codex");
 });

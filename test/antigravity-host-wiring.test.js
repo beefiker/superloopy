@@ -227,3 +227,21 @@ test("checkAntigravityHostWiring fails if Antigravity manifests have version ske
   assert.equal(result.ok, false);
   assert.match(result.message, /version/);
 });
+
+// A host may split one event's hooks across several entry groups (ordering, separate matchers).
+// Reading only the first group reported valid wiring as broken; every group counts.
+test("checkAntigravityHostWiring accepts a CLI hook declared in a later entry group", async () => {
+  const splitGroups = {
+    superloopy: {
+      SessionStart: [
+        { hooks: [] },
+        { hooks: [{ type: "command", command: 'node "${PLUGIN_ROOT}/src/cli.js" hook session-start --host antigravity' }] }
+      ],
+      UserPromptSubmit: [{ hooks: [] }, { hooks: [{ type: "command", command: promptCommand }] }],
+      Stop: [{ hooks: [] }, { hooks: [{ type: "command", command: stopCommand }] }],
+      SubagentStop: validHooks.superloopy.SubagentStop
+    }
+  };
+  const result = await checkAntigravityHostWiring(await createRepo({ hooks: splitGroups }));
+  assert.equal(result.ok, true, result.message);
+});

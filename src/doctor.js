@@ -29,7 +29,13 @@ export const INVENTORY_DOCS = new Set([
   "docs/superloopy-loop-golden-set.md"
 ]);
 const RUNTIME_IGNORE_SAMPLES = [
-  ".superloopy/goals.json", ".superloopy/evidence/report.md", ".DS_Store", "docs/.DS_Store", "node_modules/example/index.js", "coverage/index.html", "superloopy.log"
+  ".superloopy/goals.json",
+  ".superloopy/evidence/report.md",
+  ".DS_Store",
+  "docs/.DS_Store",
+  "node_modules/example/index.js",
+  "coverage/index.html",
+  "superloopy.log"
 ];
 const GENERATED_INSTALL_FILES = new Set([
   ".codex-marketplace-install.json"

@@ -1,5 +1,16 @@
 import { isAntigravityHost, isClaudeHost } from "./agents.js";
 
+// The only host identities Superloopy resolves. Anything else is a broken declaration, not a
+// fourth host: `canonicalAgentType` returns null for an unknown host, so every receipt lookup
+// misses and the evidence gate silently stops gating. Callers that accept a host from outside
+// (a `--host` flag, a `SUPERLOOPY_HOST` env value) must reject unknown values instead.
+export const SUPERLOOPY_HOSTS = ["codex", "claude", "antigravity"];
+const KNOWN_HOSTS = new Set(SUPERLOOPY_HOSTS);
+
+export function isKnownHost(value) {
+  return typeof value === "string" && KNOWN_HOSTS.has(value);
+}
+
 // Host-owned install directories. `antigravity` is listed undotted too: the desktop app ships an
 // `Antigravity` support directory alongside the dotted CLI config dir.
 const ANTIGRAVITY_PATH_SEGMENTS = new Set([".gemini", ".antigravity", "antigravity"]);
