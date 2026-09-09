@@ -7,6 +7,33 @@ function errorText(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
+// Hook events that must invoke exactly one CLI subcommand. SubagentStop is handled separately
+// because it fans out across agent-type matchers instead of declaring a single command.
+const CLI_HOOK_EVENTS = [
+  { event: "SessionStart", subcommand: "session-start" },
+  { event: "UserPromptSubmit", subcommand: "user-prompt-submit" },
+  { event: "Stop", subcommand: "stop" }
+];
+
+// Every command an event declares, across ALL of its entry groups. A manifest may legitimately
+// split one event's hooks over several groups, so reading only the first group reports valid
+// wiring as broken -- which is why the SubagentStop branch below scans every entry.
+function hookCommands(entries) {
+  return (Array.isArray(entries) ? entries : [])
+    .filter((entry) => entry && typeof entry === "object")
+    .flatMap((entry) => (Array.isArray(entry.hooks) ? entry.hooks : []))
+    .map((hook) => hook?.command)
+    .filter((command) => typeof command === "string");
+}
+
+// The trailing `(?:\s|$)` is what keeps `stop` from matching `subagent-stop-audit` and
+// `--host antigravity` from matching `--host antigravity-typo`.
+function invokesCli(command, subcommand) {
+  return command.includes("${PLUGIN_ROOT}/src/cli.js")
+    && new RegExp(`hook\\s+${subcommand}(?:\\s|$)`, "u").test(command)
+    && /--host\s+antigravity(?:\s|$)/u.test(command);
+}
+
 export async function checkAntigravityHostWiring(cwd) {
   const problems = [];
   const manifestPaths = [
@@ -21,7 +48,11 @@ export async function checkAntigravityHostWiring(cwd) {
     try {
       const pkg = JSON.parse(await readFile(packageJsonPath, "utf8"));
       if (typeof pkg?.version === "string" && pkg.version.trim().length > 0) packageVersion = pkg.version;
-    } catch {}
+    } catch {
+      // An unreadable or malformed package.json is not this check's business -- checkPluginManifest
+      // and checkDependencies report it. Leaving packageVersion null degrades the skew check to
+      // comparing the Antigravity manifests against each other, which is still worth reporting.
+    }
   }
 
   const manifestVersions = [];
@@ -73,43 +104,15 @@ export async function checkAntigravityHostWiring(cwd) {
       if (!hookSpec || typeof hookSpec !== "object") {
         problems.push("hooks.json missing top-level hook specification");
       } else {
-        const sessionStart = hookSpec.SessionStart;
-        if (!Array.isArray(sessionStart) || sessionStart.length === 0) {
-          problems.push("hooks.json missing SessionStart hook");
-        } else {
-          const sessionStartCommands = (Array.isArray(sessionStart[0]?.hooks) ? sessionStart[0].hooks : [])
-            .map((h) => h?.command)
-            .filter((c) => typeof c === "string");
-          const sessionStartCli = sessionStartCommands.some(
-            (c) => c.includes("${PLUGIN_ROOT}/src/cli.js") && /hook\s+session-start(?:\s|$)/u.test(c) && /--host\s+antigravity(?:\s|$)/u.test(c)
-          );
-          if (!sessionStartCli) problems.push("hooks.json SessionStart does not invoke CLI hook session-start with --host antigravity");
-        }
-
-        const userPromptSubmit = hookSpec.UserPromptSubmit;
-        if (!Array.isArray(userPromptSubmit) || userPromptSubmit.length === 0) {
-          problems.push("hooks.json missing UserPromptSubmit hook");
-        } else {
-          const promptCommands = (Array.isArray(userPromptSubmit[0]?.hooks) ? userPromptSubmit[0].hooks : [])
-            .map((h) => h?.command)
-            .filter((c) => typeof c === "string");
-          const promptCli = promptCommands.some(
-            (c) => c.includes("${PLUGIN_ROOT}/src/cli.js") && /hook\s+user-prompt-submit(?:\s|$)/u.test(c) && /--host\s+antigravity(?:\s|$)/u.test(c)
-          );
-          if (!promptCli) problems.push("hooks.json UserPromptSubmit does not invoke CLI hook user-prompt-submit with --host antigravity");
-        }
-
-        const stopHook = hookSpec.Stop;
-        if (!Array.isArray(stopHook) || stopHook.length === 0) {
-          problems.push("hooks.json missing Stop hook");
-        } else {
-          const stopCommands = (Array.isArray(stopHook[0]?.hooks) ? stopHook[0].hooks : [])
-            .map((h) => h?.command)
-            .filter((c) => typeof c === "string");
-          const stopCli = stopCommands.some(
-            (c) => c.includes("${PLUGIN_ROOT}/src/cli.js") && /hook\s+stop(?:\s|$)/u.test(c) && /--host\s+antigravity(?:\s|$)/u.test(c)
-          );
-          if (!stopCli) problems.push("hooks.json Stop does not invoke CLI hook stop with --host antigravity");
+        for (const { event, subcommand } of CLI_HOOK_EVENTS) {
+          const entries = hookSpec[event];
+          if (!Array.isArray(entries) || entries.length === 0) {
+            problems.push(`hooks.json missing ${event} hook`);
+            continue;
+          }
+          if (!hookCommands(entries).some((command) => invokesCli(command, subcommand))) {
+            problems.push(`hooks.json ${event} does not invoke CLI hook ${subcommand} with --host antigravity`);
+          }
         }
 
         const rawEntries = hookSpec.SubagentStop;
@@ -120,9 +123,7 @@ export async function checkAntigravityHostWiring(cwd) {
           problems.push("hooks.json declares no SubagentStop hooks");
         } else {
           const entries = subagentStop.map((entry) => {
-            const commands = (Array.isArray(entry.hooks) ? entry.hooks : [])
-              .map((hook) => hook?.command)
-              .filter((command) => typeof command === "string");
+            const commands = hookCommands([entry]);
             const matcher = typeof entry.matcher === "string" ? entry.matcher : "";
             if (matcher.length > 0) matcherSources.push(matcher);
             let regex = null;
@@ -133,16 +134,8 @@ export async function checkAntigravityHostWiring(cwd) {
                 problems.push(`hooks.json SubagentStop matcher is not a valid regex: ${matcher}`);
               }
             }
-            const invokesWorkerCli = commands.some(
-              (command) => command.includes("${PLUGIN_ROOT}/src/cli.js")
-                && /hook\s+subagent-stop(?:\s|$)/u.test(command)
-                && /--host\s+antigravity(?:\s|$)/u.test(command)
-            );
-            const invokesAuditCli = commands.some(
-              (command) => command.includes("${PLUGIN_ROOT}/src/cli.js")
-                && /hook\s+subagent-stop-audit(?:\s|$)/u.test(command)
-                && /--host\s+antigravity(?:\s|$)/u.test(command)
-            );
+            const invokesWorkerCli = commands.some((command) => invokesCli(command, "subagent-stop"));
+            const invokesAuditCli = commands.some((command) => invokesCli(command, "subagent-stop-audit"));
             return { matcher, regex, invokesWorkerCli, invokesAuditCli };
           });
 

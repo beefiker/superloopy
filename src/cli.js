@@ -20,6 +20,7 @@ import { beginLoop } from "./begin.js";
 import { captureLoop } from "./capture.js";
 import { checkLoop, formatCheckResult } from "./check.js";
 import { detectHost, formatDoctor, runDoctor } from "./doctor.js";
+import { isKnownHost, SUPERLOOPY_HOSTS } from "./host-detect.js";
 import { queryInstalledPluginTruth } from "./installed-plugin-truth.js";
 import { finishLoop } from "./finish.js";
 import { formatGuideResult } from "./guide.js";
@@ -318,12 +319,26 @@ function loopOptionArgv(subcommand, argv) {
   return delimiter === -1 ? argv : argv.slice(0, delimiter);
 }
 
+// Treats unset and blank as "not declared" -- only a present, non-blank, unrecognized value is an error.
+function requireKnownHost(value, source) {
+  if (value === undefined || value.trim() === "") return undefined;
+  if (!isKnownHost(value)) {
+    throw new CliUsageError(`${source} must be one of ${SUPERLOOPY_HOSTS.join(", ")}; received ${JSON.stringify(value)}.`);
+  }
+  return value;
+}
+
 async function runHook(subcommand, stdin, stdout, rest = []) {
   const payload = parseJson(await readStdin(stdin));
-  const explicitHost = readFlag(rest, "--host");
+  // Reject an unrecognized host rather than running under it. `canonicalAgentType` returns null
+  // for an unknown host, so `matchesAgentType` never matches, the SubagentStop hook writes nothing,
+  // and the subagent stops with no evidence receipt -- the gate disappears without a word. A
+  // mis-declared host is a configuration error, so fail loudly and let the operator fix the source.
+  const explicitHost = requireKnownHost(readFlag(rest, "--host"), "--host");
   if (explicitHost !== undefined) {
     process.env.SUPERLOOPY_HOST = explicitHost;
   }
+  requireKnownHost(process.env.SUPERLOOPY_HOST, "SUPERLOOPY_HOST");
   const host = explicitHost ?? (isClaudeHost(process.env) ? "claude" : (isAntigravityHost(process.env) ? "antigravity" : "codex"));
   const context = { host };
   if (subcommand === "session-start") {
