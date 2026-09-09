@@ -144,3 +144,20 @@ test("checkAntigravityHostWiring reports invalid regex matchers in hooks.json", 
   assert.equal(result.ok, false);
   assert.match(result.message, /not a valid regex/);
 });
+
+test("checkAntigravityHostWiring fails if hooks lack --host antigravity", async () => {
+  const noHostFlag = {
+    superloopy: {
+      SessionStart: [
+        { hooks: [{ type: "command", command: 'node "${PLUGIN_ROOT}/src/cli.js" hook session-start' }] }
+      ],
+      SubagentStop: [
+        { matcher: "^(?:superloopy:)?(?:franky|zoro|usopp|jinbe|nami)$", hooks: [{ type: "command", command: 'node "${PLUGIN_ROOT}/src/cli.js" hook subagent-stop' }] },
+        { matcher: "^(?:superloopy:)?robin$", hooks: [{ type: "command", command: 'node "${PLUGIN_ROOT}/src/cli.js" hook subagent-stop-audit' }] }
+      ]
+    }
+  };
+  const result = await checkAntigravityHostWiring(await createRepo({ hooks: noHostFlag }));
+  assert.equal(result.ok, false);
+  assert.match(result.message, /with --host antigravity/);
+});

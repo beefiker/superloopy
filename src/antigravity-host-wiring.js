@@ -57,9 +57,9 @@ export async function checkAntigravityHostWiring(cwd) {
             .map((h) => h?.command)
             .filter((c) => typeof c === "string");
           const sessionStartCli = sessionStartCommands.some(
-            (c) => c.includes("${PLUGIN_ROOT}/src/cli.js") && /hook\s+session-start/u.test(c)
+            (c) => c.includes("${PLUGIN_ROOT}/src/cli.js") && /hook\s+session-start/u.test(c) && /--host\s+antigravity/u.test(c)
           );
-          if (!sessionStartCli) problems.push("hooks.json SessionStart does not invoke CLI hook session-start");
+          if (!sessionStartCli) problems.push("hooks.json SessionStart does not invoke CLI hook session-start with --host antigravity");
         }
 
         const rawEntries = hookSpec.SubagentStop;
@@ -86,10 +86,12 @@ export async function checkAntigravityHostWiring(cwd) {
             const invokesWorkerCli = commands.some(
               (command) => command.includes("${PLUGIN_ROOT}/src/cli.js")
                 && /hook\s+subagent-stop(?:\s|$)/u.test(command)
+                && /--host\s+antigravity/u.test(command)
             );
             const invokesAuditCli = commands.some(
               (command) => command.includes("${PLUGIN_ROOT}/src/cli.js")
                 && /hook\s+subagent-stop-audit(?:\s|$)/u.test(command)
+                && /--host\s+antigravity/u.test(command)
             );
             return { matcher, regex, invokesWorkerCli, invokesAuditCli };
           });

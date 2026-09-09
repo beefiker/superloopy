@@ -272,6 +272,15 @@ Then run `/reload-plugins`. Nothing else to clean up — Claude Code installs ar
 ```sh
 agy plugin disable superloopy
 rm -rf ~/.gemini/config/plugins/superloopy
+rm -f ~/.local/bin/superloopy
 ```
+
+```powershell
+agy plugin disable superloopy
+Remove-Item "$env:USERPROFILE\.gemini\config\plugins\superloopy" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item "$env:APPDATA\npm\superloopy.cmd" -ErrorAction SilentlyContinue
+```
+
+Agents and skills are plugin-bundled so no agent TOMLs are placed. If you installed with `SUPERLOOPY_BIN_DIR`, clean up that configured path instead.
 
 <sub>MIT licensed.</sub>

@@ -227,8 +227,8 @@ export function isClaudeHost(env = process.env) {
 export function isAntigravityHost(env = process.env) {
   if (env.SUPERLOOPY_HOST === "antigravity") return true;
   if (env.SUPERLOOPY_HOST === "codex" || env.SUPERLOOPY_HOST === "claude") return false;
-  return (typeof env.ANTIGRAVITY_PLUGIN_ROOT === "string" && env.ANTIGRAVITY_PLUGIN_ROOT.trim().length > 0)
-    || (typeof env.GEMINI_PLUGIN_ROOT === "string" && env.GEMINI_PLUGIN_ROOT.trim().length > 0);
+  const isSet = (k) => typeof env[k] === "string" && env[k].trim().length > 0;
+  return isSet("ANTIGRAVITY_PLUGIN_ROOT") || isSet("GEMINI_PLUGIN_ROOT");
 }
 
 function bundledPluginBootstrap(host, displayName, bin) {
