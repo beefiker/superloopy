@@ -105,8 +105,8 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.deepEqual(Object.keys(parsed.checks), [
     "pluginManifest", "hooks", "skills", "cli", "dependencies", "runtimeBoundary", "fileAudit",
     "gateNotes", "designAudit", "comparisonSimilarity", "reviewability", "dispatchCoherence",
-    "claudeHostWiring", "modelPolicy", "claudeModelPolicy", "installedModelPolicy",
-    "installedPluginTruth", "hostContract", "interop", "wrapper"
+    "claudeHostWiring", "antigravityHostWiring", "modelPolicy", "claudeModelPolicy",
+    "installedModelPolicy", "installedPluginTruth", "hostContract", "interop", "wrapper"
   ]);
   assert.equal(parsed.checks.pluginManifest.ok, true);
   assert.equal(parsed.checks.hooks.ok, true);
@@ -155,6 +155,8 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.claudeHostWiring.ok, true);
   assert.equal(parsed.checks.claudeHostWiring.policy, "claude-host-wiring-present-and-namespaced");
   assert.ok(parsed.checks.claudeHostWiring.matchers.length >= 1);
+  assert.equal(parsed.checks.antigravityHostWiring.ok, true);
+  assert.equal(parsed.checks.antigravityHostWiring.policy, "antigravity-host-wiring-present-and-namespaced");
   assert.equal(parsed.checks.claudeModelPolicy.ok, true);
   assert.equal(parsed.checks.claudeModelPolicy.policyPath, "docs/superloopy-model-policy-claude.md");
   assert.equal(parsed.checks.claudeModelPolicy.policyDataPath, "model-policy.json");
@@ -162,12 +164,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.claudeModelPolicy.agents.nami, "haiku");
   assert.equal(parsed.checks.claudeModelPolicy.agents.zoro, "opus");
   assert.deepEqual(
-    {
-      ok: parsed.checks.installedModelPolicy.ok,
-      installed: parsed.checks.installedModelPolicy.installed,
-      degraded: parsed.checks.installedModelPolicy.degraded,
-      restartRequired: parsed.checks.installedModelPolicy.restartRequired
-    },
+    { ok: parsed.checks.installedModelPolicy.ok, installed: parsed.checks.installedModelPolicy.installed, degraded: parsed.checks.installedModelPolicy.degraded, restartRequired: parsed.checks.installedModelPolicy.restartRequired },
     { ok: true, installed: false, degraded: false, restartRequired: false }
   );
   assert.equal(parsed.checks.installedPluginTruth.state, "authority_unavailable");

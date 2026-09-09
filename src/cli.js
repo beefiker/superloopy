@@ -79,7 +79,7 @@ async function main(argv, stdin, stdout, stderr, cwd) {
       return await runInstall([subcommand, ...rest].filter((value) => value !== undefined), stdout, cwd);
     }
     if (command === "hook") {
-      return await runHook(subcommand, stdin, stdout);
+      return await runHook(subcommand, stdin, stdout, rest);
     }
     stderr.write(`Unknown command: ${command}\n${topHelp()}`);
     return 1;
@@ -316,11 +316,16 @@ function loopOptionArgv(subcommand, argv) {
   return delimiter === -1 ? argv : argv.slice(0, delimiter);
 }
 
-async function runHook(subcommand, stdin, stdout) {
+async function runHook(subcommand, stdin, stdout, rest = []) {
   const payload = parseJson(await readStdin(stdin));
-  const context = { host: isClaudeHost(process.env) ? "claude" : (isAntigravityHost(process.env) ? "antigravity" : "codex") };
+  const explicitHost = readFlag(rest, "--host");
+  if (explicitHost !== undefined) {
+    process.env.SUPERLOOPY_HOST = explicitHost;
+  }
+  const host = explicitHost ?? (isClaudeHost(process.env) ? "claude" : (isAntigravityHost(process.env) ? "antigravity" : "codex"));
+  const context = { host };
   if (subcommand === "session-start") {
-    stdout.write(await runSessionStartHook(payload));
+    stdout.write(await runSessionStartHook(payload, { env: process.env, host }));
     return 0;
   }
   if (subcommand === "pre-tool-use") {

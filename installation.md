@@ -85,7 +85,7 @@ Verify the plugin installation:
 agy plugin validate ~/.gemini/config/plugins/superloopy
 ```
 
-Superloopy runs as a native Antigravity plugin: skills (`skills/`), custom subagents (`agents/`), and lifecycle hooks (`hooks/`) load through Antigravity's plugin ingestion.
+Superloopy runs as a native Antigravity plugin: skills (`skills/`), custom subagents (`agents/`), and lifecycle hooks (`hooks.json`) load through Antigravity's plugin ingestion. On SessionStart, Superloopy installs the `superloopy` command wrapper into PATH (`~/.local/bin`) so CLI workflows (`superloopy loop ...`) are directly callable, while skills and agents stay plugin-bundled without writing into `~/.codex`.
 
 ## Local Checkout Flow
 

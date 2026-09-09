@@ -231,14 +231,15 @@ export function isAntigravityHost(env = process.env) {
     || (typeof env.GEMINI_PLUGIN_ROOT === "string" && env.GEMINI_PLUGIN_ROOT.trim().length > 0);
 }
 
-function bundledPluginBootstrap(host, displayName) {
+function bundledPluginBootstrap(host, displayName, bin) {
+  const binResult = bin ?? { status: "unchanged", onPath: true, target: "(plugin-bundled)", next: `On ${displayName}, Superloopy runs from the bundled plugin; no CLI wrapper is installed.` };
   return {
-    ok: true,
+    ok: bin ? bin.ok : true,
     kind: "bootstrap",
     host,
     degraded: false,
     restartRequired: false,
-    bin: { status: "unchanged", onPath: true, target: "(plugin-bundled)", next: `On ${displayName}, Superloopy runs from the bundled plugin; no CLI wrapper is installed.` },
+    bin: binResult,
     agents: {
       ok: true,
       target: "(plugin-bundled)",
@@ -248,15 +249,26 @@ function bundledPluginBootstrap(host, displayName) {
       restartRequired: false,
       modelResolution: { availabilitySource: "plugin", selectionReason: "plugin_bundled" }
     },
-    next: `Superloopy is plugin-bundled on ${displayName} (skills, agents, hooks). No ~/.codex install performed.`
+    next: bin
+      ? `Superloopy agents and skills are plugin-bundled on ${displayName}. Command wrapper ${bin.status} at ${bin.target}.`
+      : `Superloopy is plugin-bundled on ${displayName} (skills, agents, hooks). No ~/.codex install performed.`
   };
 }
 
 export async function bootstrapSuperloopy(cwd, argv = [], options = {}) {
   const env = options.env ?? process.env;
   const homeDir = options.homeDir ?? homedir();
-  if (isClaudeHost(env)) return bundledPluginBootstrap("claude", "Claude Code");
-  if (isAntigravityHost(env)) return bundledPluginBootstrap("antigravity", "Google Antigravity");
+  const host = options.host ?? (isClaudeHost(env) ? "claude" : (isAntigravityHost(env) ? "antigravity" : "codex"));
+  if (host === "claude" || isClaudeHost(env)) return bundledPluginBootstrap("claude", "Claude Code");
+  if (host === "antigravity" || isAntigravityHost(env)) {
+    const bin = await installBinShim(cwd, argv, {
+      env,
+      homeDir,
+      platform: options.platform,
+      force: options.force ?? hasFlag(argv, "--force")
+    });
+    return bundledPluginBootstrap("antigravity", "Google Antigravity", bin);
+  }
   const bin = await installBinShim(cwd, argv, {
     env,
     homeDir,
