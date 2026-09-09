@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { checkDesignAudit } from "./design-audit.js";
 import { checkFileAudit } from "./file-audit.js";
 import { checkComparisonSimilarity } from "./comparison-similarity.js";
-import { SUPERLOOPY_AGENT_NAMES } from "./agents.js";
+import { isAntigravityHost, isClaudeHost, SUPERLOOPY_AGENT_NAMES } from "./agents.js";
 import { checkSkills } from "./doctor-skills.js";
 import { checkClaudeModelPolicy, checkModelPolicy } from "./model-policy.js";
 import { isSourceCheckoutRoot } from "./source-checkout.js";
@@ -71,13 +71,9 @@ export async function runDoctor(cwd, options = {}) {
   const modelPolicy = await checkModelPolicy(cwd);
   const claudeModelPolicy = await checkClaudeModelPolicy(cwd);
   const installedModelPolicy = await checkInstalledModelPolicy(cwd, options.installedModelPolicy ?? {});
-  const installedPluginTruth = options.queryInstalledPluginTruth === undefined
-    ? {
-        ok: true,
-        informational: true,
-        state: "authority_unavailable",
-        message: "Codex installed-plugin authority is unavailable."
-      }
+  const host = options.host ?? (isAntigravityHost(options.env ?? process.env) || cwd.includes(".gemini") ? "antigravity" : (isClaudeHost(options.env ?? process.env) || cwd.includes(".claude") ? "claude" : "codex"));
+  const installedPluginTruth = options.queryInstalledPluginTruth === undefined || host !== "codex"
+    ? { ok: true, informational: true, state: host === "codex" ? "authority_unavailable" : "host_exempt", message: host === "codex" ? "Codex installed-plugin authority is unavailable." : `Installed plugin authority is Codex-only; exempt on ${host}.` }
     : options.queryInstalledPluginTruth(pluginManifest.ok ? pluginManifest.manifest.version : undefined);
   const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, antigravityHostWiring, modelPolicy, claudeModelPolicy, installedModelPolicy, installedPluginTruth, hostContract: checkHostContract(), interop: checkInterop(options), wrapper: checkWrapper({ ...options, diagnosedRoot: cwd }) };
   return {

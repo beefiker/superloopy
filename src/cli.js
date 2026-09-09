@@ -139,10 +139,12 @@ async function runDoctorCommand(argv, stdout, cwd) {
   }
   const parsed = parseDoctorArgs(argv);
   const selection = resolveDoctorSelection(cwd, parsed);
+  const host = isAntigravityHost(process.env) ? "antigravity" : (isClaudeHost(process.env) ? "claude" : (selection.root.includes(".gemini") ? "antigravity" : (selection.root.includes(".claude") ? "claude" : "codex")));
   const result = await runDoctor(selection.root, {
+    host,
     scope: selection.scope,
     comparisonPath: parsed.comparisonPath,
-    queryInstalledPluginTruth,
+    queryInstalledPluginTruth: host === "codex" ? queryInstalledPluginTruth : undefined,
     installedModelPolicy: {
       env: process.env,
       homeDir: homedir(),

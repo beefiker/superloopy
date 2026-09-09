@@ -272,15 +272,23 @@ Then run `/reload-plugins`. Nothing else to clean up — Claude Code installs ar
 ```sh
 agy plugin disable superloopy
 rm -rf ~/.gemini/config/plugins/superloopy
-rm -f ~/.local/bin/superloopy
 ```
 
 ```powershell
 agy plugin disable superloopy
 Remove-Item "$env:USERPROFILE\.gemini\config\plugins\superloopy" -Recurse -Force -ErrorAction SilentlyContinue
+```
+
+Optional wrapper cleanup: if you do not also use Superloopy on Codex, remove the command wrapper:
+
+```sh
+rm -f ~/.local/bin/superloopy
+```
+
+```powershell
 Remove-Item "$env:APPDATA\npm\superloopy.cmd" -ErrorAction SilentlyContinue
 ```
 
-Agents and skills are plugin-bundled so no agent TOMLs are placed. If you installed with `SUPERLOOPY_BIN_DIR`, clean up that configured path instead.
+If you keep Superloopy on Codex, keep the wrapper or run `superloopy install` to repoint it to your Codex installation. Agents and skills on Antigravity are plugin-bundled so no agent TOMLs are placed. If you installed with `SUPERLOOPY_BIN_DIR`, clean up that configured path instead.
 
 <sub>MIT licensed.</sub>
