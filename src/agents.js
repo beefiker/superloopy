@@ -169,9 +169,10 @@ export async function installBinShim(cwd, argv, options = {}) {
   const env = options.env ?? process.env;
   const homeDir = options.homeDir ?? homedir();
   const platform = options.platform ?? process.platform;
+  const host = options.host ?? (isAntigravityHost(env) ? "antigravity" : (isClaudeHost(env) ? "claude" : undefined));
   const targetDir = resolveBinDir(cwd, argv, env, homeDir, platform);
   const target = join(targetDir, platform === "win32" ? "superloopy.cmd" : "superloopy");
-  const content = binShimContent(CLI_PATH, platform);
+  const content = binShimContent(CLI_PATH, platform, host);
 
   await mkdir(targetDir, { recursive: true });
   const status = await installOneTextFile(target, content, force, platform === "win32" ? undefined : 0o755, {
@@ -262,6 +263,7 @@ export async function bootstrapSuperloopy(cwd, argv = [], options = {}) {
   if (host === "claude" || isClaudeHost(env)) return bundledPluginBootstrap("claude", "Claude Code");
   if (host === "antigravity" || isAntigravityHost(env)) {
     const bin = await installBinShim(cwd, argv, {
+      host: "antigravity",
       env,
       homeDir,
       platform: options.platform,
@@ -376,35 +378,27 @@ function resolveBinDir(cwd, argv, env, homeDir, platform = process.platform) {
   return join(homeDir, ".local", "bin");
 }
 
-function binShimContent(cliPath, platform) {
+function binShimContent(cliPath, platform, host) {
+  const hostCmd = host ? `set "SUPERLOOPY_HOST=${host}"` : null;
+  const hostSh = host ? `export SUPERLOOPY_HOST=${shellQuote(host)}` : null;
   if (platform === "win32") {
     const resolver = cmdDoubleQuote(shimCliResolverSource());
-    return [
-      "@echo off",
-      `@rem ${BIN_SHIM_MARKER}`,
-      "setlocal",
-      `set "SUPERLOOPY_SHIM_CLI=${cmdSetValue(cliPath)}"`,
-      `for /f "usebackq delims=" %%I in (\`node -e "${resolver}"\`) do set "SUPERLOOPY_CLI=%%I"`,
-      "if not exist \"%SUPERLOOPY_CLI%\" (",
-      "  echo Superloopy CLI target not found: %SUPERLOOPY_SHIM_CLI% 1>&2",
-      "  exit /b 1",
-      ")",
-      "node \"%SUPERLOOPY_CLI%\" %*",
-      ""
-    ].join("\r\n");
+    const lines = ["@echo off", `@rem ${BIN_SHIM_MARKER}`, "setlocal"];
+    if (hostCmd) lines.push(hostCmd);
+    lines.push(`set "SUPERLOOPY_SHIM_CLI=${cmdSetValue(cliPath)}"`, `for /f "usebackq delims=" %%I in (\`node -e "${resolver}"\`) do set "SUPERLOOPY_CLI=%%I"`, "if not exist \"%SUPERLOOPY_CLI%\" (", "  echo Superloopy CLI target not found: %SUPERLOOPY_SHIM_CLI% 1>&2", "  exit /b 1", ")", "node \"%SUPERLOOPY_CLI%\" %*", "");
+    return lines.join("\r\n");
   }
-  return [
-    "#!/usr/bin/env sh",
-    `# ${BIN_SHIM_MARKER}`,
-    `SUPERLOOPY_SHIM_CLI=${shellQuote(cliPath)}`,
-    `SUPERLOOPY_CLI=$(SUPERLOOPY_SHIM_CLI="$SUPERLOOPY_SHIM_CLI" node -e ${shellQuote(shimCliResolverSource())}) || exit $?`,
-    "if [ ! -f \"$SUPERLOOPY_CLI\" ]; then",
-    "  echo \"Superloopy CLI target not found: $SUPERLOOPY_SHIM_CLI\" >&2",
-    "  exit 1",
-    "fi",
-    "exec node \"$SUPERLOOPY_CLI\" \"$@\"",
-    ""
-  ].join("\n");
+  const lines = ["#!/usr/bin/env sh", `# ${BIN_SHIM_MARKER}`];
+  if (hostSh) lines.push(hostSh);
+  lines.push(`SUPERLOOPY_SHIM_CLI=${shellQuote(cliPath)}`, `SUPERLOOPY_CLI=$(SUPERLOOPY_SHIM_CLI="$SUPERLOOPY_SHIM_CLI" node -e ${shellQuote(shimCliResolverSource())}) || exit $?`, "if [ ! -f \"$SUPERLOOPY_CLI\" ]; then", "  echo \"Superloopy CLI target not found: $SUPERLOOPY_SHIM_CLI\" >&2", "  exit 1", "fi", "exec node \"$SUPERLOOPY_CLI\" \"$@\"", "");
+  return lines.join("\n");
+}
+
+export function parseBinShimHost(content, platform = process.platform) {
+  if (typeof content !== "string" || !isGeneratedSuperloopyBinShim(content, platform)) return null;
+  const normalized = content.replace(/\r\n/gu, "\n");
+  const match = platform === "win32" ? /^set "SUPERLOOPY_HOST=([^"\n]*)"/mu.exec(normalized) : /^export SUPERLOOPY_HOST=(?:'((?:[^']|'\\'')*)'|(\S+))/mu.exec(normalized);
+  return match === null ? null : (platform === "win32" ? match[1] : (match[1] ?? match[2]));
 }
 
 // Extract the cli.js path a generated Superloopy shim executes, or null when the content is

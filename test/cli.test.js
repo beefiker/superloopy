@@ -6,7 +6,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { binShimSupportsSiblingFallback, installBinShim, SUPERLOOPY_AGENT_NAMES } from "../src/agents.js";
+import { binShimSupportsSiblingFallback, installBinShim, parseBinShimHost, SUPERLOOPY_AGENT_NAMES } from "../src/agents.js";
+import { detectHost } from "../src/doctor.js";
 import { createLoop } from "../src/loop.js";
 
 async function tempRepo() {
@@ -503,4 +504,18 @@ test("CLI hook subagent-stop honors the host contract over stdin", async () => {
   });
   assert.equal(noType.status, 0, noType.stderr);
   assert.equal(noType.stdout.trim(), "");
+});
+
+test("installBinShim preserves Antigravity identity and detectHost recognizes it", async () => {
+  const repo = await tempRepo();
+  const binDir = join(repo, "bin");
+  const result = await installBinShim(repo, ["--bin-dir", binDir], { host: "antigravity", homeDir: join(repo, "home") });
+  assert.equal(result.ok, true);
+  const shim = await readFile(result.target, "utf8");
+  assert.equal(parseBinShimHost(shim), "antigravity");
+  assert.equal(detectHost(repo, { SUPERLOOPY_HOST: "antigravity" }), "antigravity");
+  const nonCheckout = join(repo, "installed-plugin");
+  await mkdir(nonCheckout, { recursive: true });
+  await writeFile(join(nonCheckout, "gemini-extension.json"), "{}", "utf8");
+  assert.equal(detectHost(nonCheckout, {}), "antigravity");
 });
