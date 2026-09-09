@@ -79,7 +79,10 @@ export function manifestTargets(repoRoot) {
   return [
     join(repoRoot, "package.json"),
     join(repoRoot, ".codex-plugin", "plugin.json"),
-    join(repoRoot, ".claude-plugin", "plugin.json")
+    join(repoRoot, ".claude-plugin", "plugin.json"),
+    join(repoRoot, ".gemini-plugin", "plugin.json"),
+    join(repoRoot, "plugin.json"),
+    join(repoRoot, "gemini-extension.json")
   ];
 }
 

@@ -40,6 +40,7 @@ Total: 100 points.
 | `.claude-plugin/marketplace.json` | Audit coverage. | Must expose superloopy as an installable Claude Code marketplace plugin pointing at this repo root. |
 | `.claude-plugin/plugin.json` | Audit coverage; Claude plugin load. | Must remain a metadata-only descriptor while repository conventions expose skills, agents, and hooks/hooks.json to Claude Code. |
 | `.codex-plugin/plugin.json` | `test/plugin.test.js`, doctor plugin manifest check. | Must expose `./skills/`, the packaged Superloopy hook files including opt-in Stop, and packaged interface assets. |
+| `.gemini-plugin/plugin.json` | Audit coverage; Antigravity plugin load. | Must remain a metadata-only descriptor while repository conventions expose skills, agents, and hooks to Google Antigravity. |
 | `.codex/agents/franky.toml` | `test/docs.test.js`, audit coverage. | Must define the bounded Superloopy executor role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
 | `.codex/agents/jinbe.toml` | `test/docs.test.js`, audit coverage. | Must define the Superloopy gate-review role, active evidence root, advisory model defaults, and `SUPERLOOPY_EVIDENCE` receipt. |
 | `.codex/agents/nami.toml` | `test/cli.test.js`, `test/doctor.test.js`, audit coverage. | Must define the read-only navigator role, advisory fast model defaults, return absolute paths, and write no evidence receipt; installed via SUPERLOOPY_AGENT_NAMES and matched by a SubagentStop matcher. |
@@ -213,6 +214,7 @@ Total: 100 points.
 | `examples/writing-comparison/samples/support-reply/c.md` | Korean customer-support reply (paragraphs, ordered list) — Say It Straight (C) output. | Must keep the support-reply factual skeleton and document format that `sample-data.test.mjs` asserts. |
 | `examples/writing-comparison/samples/support-reply/notes.json` | Korean customer-support reply (paragraphs, ordered list) — change-rationale notes for the C variant. | Must keep anchors matching c.md exactly once; the build and `notes.test.mjs` enforce this. |
 | `examples/writing-comparison/samples/support-reply/original.md` | Korean customer-support reply (paragraphs, ordered list) — untransformed source. | Must keep the support-reply factual skeleton and document format that `sample-data.test.mjs` asserts. |
+| `gemini-extension.json` | Audit coverage; extension import discovery. | Must expose superloopy name and current version for Antigravity extension discovery. |
 | `hooks/hooks.json` | Audit coverage; Claude hook load. | Must route SessionStart/UserPromptSubmit/Stop/SubagentStop to the CLI via ${CLAUDE_PLUGIN_ROOT}, matching worker/navigator and auditor agent types. |
 | `hooks/pre-tool-use.json` | `test/plugin.test.js`, doctor hook check. | Must route to `node "${PLUGIN_ROOT}/src/cli.js" hook pre-tool-use`. |
 | `hooks/session-start.json` | `test/golden-hooks.test.js`, `test/hooks.test.js`, doctor hook check. | Must route bootstrap through the CLI so fresh managed manifests are reused without probing and changed definitions surface a Codex restart instruction. |
@@ -225,6 +227,7 @@ Total: 100 points.
 | `legacy-agent-manifests.json` | `test/model-install.test.js`, installed-policy coverage. | Must contain complete lowercase SHA-256 manifests for known pre-managed fleets and authorize nothing from partial or name-only matches. |
 | `package-lock.json` | Hashgraph catalog readiness and npm audit surface. | Must lock only the dependency-free package root unless real dependencies are intentionally added. |
 | `package.json` | `npm test`, doctor dependency check. | Must stay dependency-free and expose `superloopy`, `test`, `check`, and `sync-version` scripts. |
+| `plugin.json` | `test/antigravity-plugin.test.js`, doctor plugin manifest check. | Must expose name, version, and repository metadata for Antigravity plugin validation and import. |
 | `scripts/serve-web.mjs` | Browser QA preview server. | Must serve `web-superloopy/dist/` without dependencies and expose MIME types for landing WebGL assets. |
 | `scripts/sync-version.mjs` | `test/sync-version.test.js`. | Must stamp package metadata, the lockfile root, both host plugin manifests, and the Claude marketplace entry from one authoritative version without publishing or adding dependencies. |
 | `web-superloopy/README.md` | Landing workspace notes: stack, vendored orbit runtime layout, and build commands. | Must stay website-only with no Superloopy CLI package coupling. |
@@ -324,6 +327,7 @@ Total: 100 points.
 | `src/adhd-output.js` | `test/adhd-output.test.js`, `test/engineer.test.js`. | Must activate only on self-selected execution-support cues, reject diagnosis-by-writing, strip skill frontmatter, and fail closed to normal loop output. |
 | `skills/i-have-adhd/SKILL.md`, `skills/i-have-adhd/agents/openai.yaml`, `skills/i-have-adhd/LICENSE`, `skills/i-have-adhd/references/upstream-notice.md` | `test/plugin.test.js`, npm package dry-run, audit coverage. | Must preserve the attributed ten-rule contract, explicit-only standalone activation, non-diagnostic premise, and Superloopy precedence. |
 | `test/adhd-output.test.js` | `node --test test/adhd-output.test.js`. | Must cover positive English/Korean preferences, negative writing-style/domain cases, frontmatter extraction, actual packaged loading, and loader failure. |
+| `test/antigravity-plugin.test.js` | `node --test test/antigravity-plugin.test.js`. | Must cover Antigravity and Gemini plugin manifests, host detection, and canonical agent type mapping. |
 | `docs/superpowers/specs/2026-07-30-i-have-adhd-loop-routing-design.md` | Approved design record and audit coverage. | Must preserve loop-only automatic routing, explicit standalone invocation, non-diagnostic cue boundaries, and no durable output-style state. |
 | `docs/superpowers/specs/2026-08-04-say-it-straight-design.md` | Approved design record and audit coverage. | Must preserve clean-room Superloopy-native direct-prose boundaries, with research provenance and no copied content. |
 | `docs/superpowers/specs/2026-08-05-say-it-straight-loop-default-design.md` | Approved design record and audit coverage. | Must preserve full-loop default output styling, current-loop-only exact manual controls, durable scoped state, artifact-editing isolation, and task/evidence authority. |

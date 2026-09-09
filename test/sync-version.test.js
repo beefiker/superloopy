@@ -72,3 +72,26 @@ test("syncVersion stamps the Claude plugin manifest and the marketplace plugins[
   const again = await syncVersion({ repoRoot: repo });
   assert.doesNotMatch(JSON.stringify(again.changed), /marketplace\.json/);
 });
+
+test("syncVersion stamps Antigravity and Gemini plugin manifests", async () => {
+  const repo = await mkdtemp(join(tmpdir(), "superloopy-sync-version-gemini-"));
+  await mkdir(join(repo, ".gemini-plugin"), { recursive: true });
+  await writeFile(join(repo, "package.json"), `${JSON.stringify({ name: "superloopy", version: "0.5.0" }, null, 2)}\n`);
+  await writeFile(join(repo, ".gemini-plugin", "plugin.json"), `${JSON.stringify({ name: "superloopy", version: "0.1.0" }, null, 2)}\n`);
+  await writeFile(join(repo, "plugin.json"), `${JSON.stringify({ name: "superloopy", version: "0.1.0" }, null, 2)}\n`);
+  await writeFile(join(repo, "gemini-extension.json"), `${JSON.stringify({ name: "superloopy", version: "0.1.0" }, null, 2)}\n`);
+
+  const result = await syncVersion({ repoRoot: repo });
+
+  assert.equal(result.version, "0.5.0");
+  assert.ok(result.changed.includes(join(repo, ".gemini-plugin", "plugin.json")));
+  assert.ok(result.changed.includes(join(repo, "plugin.json")));
+  assert.ok(result.changed.includes(join(repo, "gemini-extension.json")));
+  assert.equal(JSON.parse(await readFile(join(repo, ".gemini-plugin", "plugin.json"), "utf8")).version, "0.5.0");
+  assert.equal(JSON.parse(await readFile(join(repo, "plugin.json"), "utf8")).version, "0.5.0");
+  assert.equal(JSON.parse(await readFile(join(repo, "gemini-extension.json"), "utf8")).version, "0.5.0");
+
+  const again = await syncVersion({ repoRoot: repo });
+  assert.equal(again.changed.length, 0);
+});
+

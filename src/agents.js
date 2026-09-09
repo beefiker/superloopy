@@ -224,32 +224,39 @@ export function isClaudeHost(env = process.env) {
   return typeof env.CLAUDE_PLUGIN_ROOT === "string" && env.CLAUDE_PLUGIN_ROOT.trim().length > 0;
 }
 
+export function isAntigravityHost(env = process.env) {
+  if (env.SUPERLOOPY_HOST === "antigravity") return true;
+  if (env.SUPERLOOPY_HOST === "codex" || env.SUPERLOOPY_HOST === "claude") return false;
+  return (typeof env.ANTIGRAVITY_PLUGIN_ROOT === "string" && env.ANTIGRAVITY_PLUGIN_ROOT.trim().length > 0)
+    || (typeof env.GEMINI_PLUGIN_ROOT === "string" && env.GEMINI_PLUGIN_ROOT.trim().length > 0);
+}
+
+function bundledPluginBootstrap(host, displayName) {
+  return {
+    ok: true,
+    kind: "bootstrap",
+    host,
+    degraded: false,
+    restartRequired: false,
+    bin: { status: "unchanged", onPath: true, target: "(plugin-bundled)", next: `On ${displayName}, Superloopy runs from the bundled plugin; no CLI wrapper is installed.` },
+    agents: {
+      ok: true,
+      target: "(plugin-bundled)",
+      agents: [],
+      conflicts: [],
+      degraded: false,
+      restartRequired: false,
+      modelResolution: { availabilitySource: "plugin", selectionReason: "plugin_bundled" }
+    },
+    next: `Superloopy is plugin-bundled on ${displayName} (skills, agents, hooks). No ~/.codex install performed.`
+  };
+}
+
 export async function bootstrapSuperloopy(cwd, argv = [], options = {}) {
   const env = options.env ?? process.env;
   const homeDir = options.homeDir ?? homedir();
-  // On Claude Code the agents (agents/*.md), hooks, and skills are plugin-bundled and the hooks
-  // invoke the CLI directly via ${CLAUDE_PLUGIN_ROOT}, so there is nothing to install into
-  // ~/.codex and no command wrapper to place. Skip the Codex bootstrap cleanly.
-  if (isClaudeHost(env)) {
-    return {
-      ok: true,
-      kind: "bootstrap",
-      host: "claude",
-      degraded: false,
-      restartRequired: false,
-      bin: { status: "unchanged", onPath: true, target: "(plugin-bundled)", next: "On Claude Code, Superloopy runs from the bundled plugin; no CLI wrapper is installed." },
-      agents: {
-        ok: true,
-        target: "(plugin-bundled)",
-        agents: [],
-        conflicts: [],
-        degraded: false,
-        restartRequired: false,
-        modelResolution: { availabilitySource: "plugin", selectionReason: "plugin_bundled" }
-      },
-      next: "Superloopy is plugin-bundled on Claude Code (skills, agents, hooks). No ~/.codex install performed."
-    };
-  }
+  if (isClaudeHost(env)) return bundledPluginBootstrap("claude", "Claude Code");
+  if (isAntigravityHost(env)) return bundledPluginBootstrap("antigravity", "Google Antigravity");
   const bin = await installBinShim(cwd, argv, {
     env,
     homeDir,
