@@ -5,7 +5,9 @@ import { join } from "node:path";
 import { checkDesignAudit } from "./design-audit.js";
 import { checkFileAudit } from "./file-audit.js";
 import { checkComparisonSimilarity } from "./comparison-similarity.js";
-import { isAntigravityHost, isClaudeHost, SUPERLOOPY_AGENT_NAMES } from "./agents.js";
+import { SUPERLOOPY_AGENT_NAMES } from "./agents.js";
+import { detectHost } from "./host-detect.js";
+export { detectHost } from "./host-detect.js";
 import { checkSkills } from "./doctor-skills.js";
 import { checkClaudeModelPolicy, checkModelPolicy } from "./model-policy.js";
 import { isSourceCheckoutRoot } from "./source-checkout.js";
@@ -78,15 +80,6 @@ export async function runDoctor(cwd, options = {}) {
     root: cwd,
     checks
   };
-}
-
-export function detectHost(root, env = process.env) {
-  if (isAntigravityHost(env)) return "antigravity";
-  if (isClaudeHost(env)) return "claude";
-  const s = typeof root === "string" ? root : "";
-  const hasGeminiMeta = existsSync(join(s, "gemini-extension.json")) || existsSync(join(s, ".gemini-plugin"));
-  if (hasGeminiMeta && (!isSourceCheckoutRoot(s) || s.includes(".gemini") || s.includes("antigravity"))) return "antigravity";
-  return s.includes(".gemini") || s.includes("antigravity") ? "antigravity" : (s.includes(".claude") ? "claude" : "codex");
 }
 
 export function doctorOverallOk(checks, scope) {

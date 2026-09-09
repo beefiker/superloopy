@@ -587,6 +587,7 @@ Total: 100 points.
 | `src/guide.js` | CLI, docs, hook, and evidence tests. | Must produce next action, proof target, proof plan, templates, recorded evidence, and blockers. |
 | `src/help.js` | CLI help tests. | Must show the shortest evidence-backed flow and pass-artifact rule. |
 | `src/hooks.js` | Hook, model-install, and golden-hook tests. | Must run managed bootstrap at SessionStart, reuse fresh state without a catalog query, surface compatibility/restart status, and keep continuation, steering, and receipt validation fail-closed. |
+| `src/host-detect.js` | `test/cli.test.js`, `test/doctor-packed.test.js`, doctor tests. | Must resolve the host from host/shim env or a host-owned install path only, never from shipped manifests, so a packed Codex install keeps the Codex-only installed-authority checks armed. |
 | `src/install-flow.js` | `test/auto-update.test.js`. | Must distinguish marketplace, checkout, future npx-local snapshot, and unknown install states so unsafe npx updates stay off. |
 | `src/installed-plugin-truth.js` | `test/installed-plugin-truth.test.js`. | Must use only the exact `superloopy@beefiker` JSON entry, bounded read-only Codex subprocess output, and strict version classification without scanning or mutating caches, wrappers, or plugin state. |
 | `src/installed-model-policy.js` | `test/installed-model-policy.test.js`, doctor tests. | Must report absent/legacy/unmanaged/preferred/degraded/stale/mixed/tampered status and keep explicit availability refresh read-only before and after install. |
