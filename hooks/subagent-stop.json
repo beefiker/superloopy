@@ -13,11 +13,33 @@
         ]
       },
       {
+        "matcher": "^superloopy:(?:franky|zoro|usopp|jinbe)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/src/cli.js\" hook subagent-stop --host antigravity",
+            "timeout": 5,
+            "statusMessage": "(Superloopy) Verifying Evidence Receipt"
+          }
+        ]
+      },
+      {
         "matcher": "^nami$",
         "hooks": [
           {
             "type": "command",
             "command": "node \"${PLUGIN_ROOT}/src/cli.js\" hook subagent-stop",
+            "timeout": 5,
+            "statusMessage": "(Superloopy) Navigator (read-only) — no receipt required"
+          }
+        ]
+      },
+      {
+        "matcher": "^superloopy:nami$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/src/cli.js\" hook subagent-stop --host antigravity",
             "timeout": 5,
             "statusMessage": "(Superloopy) Navigator (read-only) — no receipt required"
           }

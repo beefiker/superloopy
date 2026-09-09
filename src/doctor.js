@@ -12,6 +12,8 @@ import { isSourceCheckoutRoot } from "./source-checkout.js";
 import { checkInterop } from "./interop.js";
 import { checkWrapper } from "./wrapper-check.js";
 import { checkInstalledModelPolicy } from "./installed-model-policy.js";
+import { checkAntigravityHostWiring } from "./antigravity-host-wiring.js";
+export { checkAntigravityHostWiring } from "./antigravity-host-wiring.js";
 
 const FILE_AUDIT_PATH = "docs/superloopy-file-audit.md";
 const GATE_NOTES_PATH = "docs/superloopy-gate-notes.md";
@@ -65,6 +67,7 @@ export async function runDoctor(cwd, options = {}) {
   const reviewability = await checkReviewability(cwd);
   const dispatchCoherence = await checkDispatchCoherence(cwd);
   const claudeHostWiring = await checkClaudeHostWiring(cwd);
+  const antigravityHostWiring = await checkAntigravityHostWiring(cwd);
   const modelPolicy = await checkModelPolicy(cwd);
   const claudeModelPolicy = await checkClaudeModelPolicy(cwd);
   const installedModelPolicy = await checkInstalledModelPolicy(cwd, options.installedModelPolicy ?? {});
@@ -76,7 +79,7 @@ export async function runDoctor(cwd, options = {}) {
         message: "Codex installed-plugin authority is unavailable."
       }
     : options.queryInstalledPluginTruth(pluginManifest.ok ? pluginManifest.manifest.version : undefined);
-  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, modelPolicy, claudeModelPolicy, installedModelPolicy, installedPluginTruth, hostContract: checkHostContract(), interop: checkInterop(options), wrapper: checkWrapper({ ...options, diagnosedRoot: cwd }) };
+  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, antigravityHostWiring, modelPolicy, claudeModelPolicy, installedModelPolicy, installedPluginTruth, hostContract: checkHostContract(), interop: checkInterop(options), wrapper: checkWrapper({ ...options, diagnosedRoot: cwd }) };
   return {
     ok: doctorOverallOk(checks, scope),
     scope,

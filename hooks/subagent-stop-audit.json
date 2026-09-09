@@ -11,6 +11,17 @@
             "statusMessage": "(Superloopy) Validating Audit Verdict"
           }
         ]
+      },
+      {
+        "matcher": "^superloopy:robin$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/src/cli.js\" hook subagent-stop-audit --host antigravity",
+            "timeout": 5,
+            "statusMessage": "(Superloopy) Validating Audit Verdict"
+          }
+        ]
       }
     ]
   }
