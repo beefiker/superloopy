@@ -81,6 +81,7 @@ function candidateRoots(env, homeDir) {
   add(join(homeDir, ".codex", "plugins"));
   add(nearestPluginsDir(envDir("ANTIGRAVITY_PLUGIN_ROOT")));
   add(nearestPluginsDir(envDir("GEMINI_PLUGIN_ROOT")));
+  add(nearestPluginsDir(envDir("PLUGIN_ROOT")));
   const agConfig = envDir("ANTIGRAVITY_CONFIG_DIR") ?? envDir("GEMINI_CONFIG_DIR");
   add(agConfig ? join(agConfig, "plugins") : undefined);
   add(join(homeDir, ".gemini", "config", "plugins"));
