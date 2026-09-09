@@ -120,11 +120,14 @@ const AGENT_NAMES = new Set(SUPERLOOPY_AGENT_NAMES);
 export function canonicalAgentType(host, role) {
   if (!AGENT_NAMES.has(role)) return null;
   if (host === "codex") return role;
-  if (host === "claude") return `superloopy:${role}`;
+  if (host === "claude" || host === "antigravity") return `superloopy:${role}`;
   return null;
 }
 
 export function matchesAgentType({ host, agentType, role } = {}) {
+  if (host === "antigravity") {
+    return AGENT_NAMES.has(role) && (agentType === role || agentType === `superloopy:${role}`);
+  }
   const expected = canonicalAgentType(host, role);
   return expected !== null && agentType === expected;
 }

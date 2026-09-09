@@ -1,0 +1,21 @@
+{
+  "name": "superloopy",
+  "version": "0.17.2",
+  "description": "Strict evidence loop harness with explicit criteria and append-only evidence ledgers.",
+  "homepage": "https://github.com/beefiker/superloopy#readme",
+  "repository": "https://github.com/beefiker/superloopy",
+  "license": "MIT",
+  "author": {
+    "name": "beefiker"
+  },
+  "keywords": [
+    "antigravity",
+    "gemini",
+    "codex",
+    "claude-code",
+    "evidence-gates",
+    "proof-of-done",
+    "loop",
+    "subagents"
+  ]
+}

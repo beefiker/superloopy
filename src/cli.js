@@ -11,7 +11,8 @@ import {
   formatBootstrapResult,
   installAgents,
   installBinShim,
-  isClaudeHost
+  isClaudeHost,
+  isAntigravityHost
 } from "./agents.js";
 import { auditLoop } from "./audit.js";
 import { runAuditorStopHook } from "./audit-hooks.js";
@@ -222,6 +223,8 @@ function isLikelySuperloopyPluginRoot(cwd) {
   // and no signature files) still falls back instead of collecting false failures.
   return jsonNameIs(join(cwd, "package.json"), "superloopy")
     || jsonNameIs(join(cwd, ".codex-plugin", "plugin.json"), "superloopy")
+    || jsonNameIs(join(cwd, ".gemini-plugin", "plugin.json"), "superloopy")
+    || jsonNameIs(join(cwd, "plugin.json"), "superloopy")
     || hasSuperloopySignature(cwd);
 }
 
@@ -315,7 +318,7 @@ function loopOptionArgv(subcommand, argv) {
 
 async function runHook(subcommand, stdin, stdout) {
   const payload = parseJson(await readStdin(stdin));
-  const context = { host: isClaudeHost(process.env) ? "claude" : "codex" };
+  const context = { host: isClaudeHost(process.env) ? "claude" : (isAntigravityHost(process.env) ? "antigravity" : "codex") };
   if (subcommand === "session-start") {
     stdout.write(await runSessionStartHook(payload));
     return 0;
