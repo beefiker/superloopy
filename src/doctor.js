@@ -70,8 +70,10 @@ export async function runDoctor(cwd, options = {}) {
   const antigravityHostWiring = await checkAntigravityHostWiring(cwd);
   const modelPolicy = await checkModelPolicy(cwd);
   const claudeModelPolicy = await checkClaudeModelPolicy(cwd);
-  const installedModelPolicy = await checkInstalledModelPolicy(cwd, options.installedModelPolicy ?? {});
   const host = options.host ?? (isAntigravityHost(options.env ?? process.env) || cwd.includes(".gemini") ? "antigravity" : (isClaudeHost(options.env ?? process.env) || cwd.includes(".claude") ? "claude" : "codex"));
+  const installedModelPolicy = host !== "codex"
+    ? { ok: true, informational: true, installed: false, policyVersion: null, targetDir: null, checkedAt: null, selectionStatus: "host_exempt", availabilityStatus: "not_checked", stale: false, degraded: false, restartRequired: false, agents: {}, state: "host_exempt", message: `Managed agent routing is Codex-only; exempt on ${host}.` }
+    : await checkInstalledModelPolicy(cwd, options.installedModelPolicy ?? {});
   const installedPluginTruth = options.queryInstalledPluginTruth === undefined || host !== "codex"
     ? { ok: true, informational: true, state: host === "codex" ? "authority_unavailable" : "host_exempt", message: host === "codex" ? "Codex installed-plugin authority is unavailable." : `Installed plugin authority is Codex-only; exempt on ${host}.` }
     : options.queryInstalledPluginTruth(pluginManifest.ok ? pluginManifest.manifest.version : undefined);

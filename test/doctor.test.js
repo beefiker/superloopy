@@ -389,6 +389,8 @@ test("runDoctor accepts an injected installed-plugin probe without reading live 
   assert.equal(mismatch.checks.installedPluginTruth.state, "version_mismatch");
   const exempt = await runDoctor(process.cwd(), { host: "antigravity" });
   assert.equal(exempt.checks.installedPluginTruth.state, "host_exempt");
+  assert.equal(exempt.checks.installedModelPolicy.state, "host_exempt");
+  assert.equal(exempt.checks.installedModelPolicy.ok, true);
 });
 
 test("doctor CLI gates installed scope through the real Codex authority seam", async () => {
