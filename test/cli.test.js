@@ -514,8 +514,16 @@ test("installBinShim preserves Antigravity identity and detectHost recognizes it
   const shim = await readFile(result.target, "utf8");
   assert.equal(parseBinShimHost(shim), "antigravity");
   assert.equal(detectHost(repo, { SUPERLOOPY_HOST: "antigravity" }), "antigravity");
+  // Shipped manifests are NOT a host signal: `gemini-extension.json` and `.gemini-plugin/` are in
+  // every npm tarball, so a Codex install carries them too and must still resolve to "codex" --
+  // otherwise the Codex-only installedPluginTruth/installedModelPolicy checks go silently exempt.
   const nonCheckout = join(repo, "installed-plugin");
-  await mkdir(nonCheckout, { recursive: true });
+  await mkdir(join(nonCheckout, ".gemini-plugin"), { recursive: true });
   await writeFile(join(nonCheckout, "gemini-extension.json"), "{}", "utf8");
-  assert.equal(detectHost(nonCheckout, {}), "antigravity");
+  assert.equal(detectHost(nonCheckout, {}), "codex");
+  // The install location is the signal: a plugin install lives under a host-owned directory.
+  assert.equal(detectHost(join(repo, ".gemini", "config", "plugins", "superloopy"), {}), "antigravity");
+  assert.equal(detectHost(join(repo, ".claude", "plugins", "superloopy"), {}), "claude");
+  // ...matched as a whole segment, so a project directory cannot impersonate a host.
+  assert.equal(detectHost(join(repo, "antigravity-notes", "superloopy"), {}), "codex");
 });
