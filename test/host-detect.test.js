@@ -36,6 +36,25 @@ test("detectHost reads host identity from env, not from shipped manifests", asyn
   assert.equal(detectHost(nonCheckout, {}), "codex");
 });
 
+// A declared host is the operator's own answer and must win over inference. "antigravity" always
+// did (isAntigravityHost reads SUPERLOOPY_HOST); "claude" and "codex" did not, so a declared Claude
+// install resolved to "codex" and got the Codex-only installedPluginTruth/installedModelPolicy
+// checks pointed at it -- the mirror image of the manifest-sniffing bug.
+test("detectHost honors a declared SUPERLOOPY_HOST over env signals and install path", async () => {
+  const repo = await tempRepo();
+  for (const host of SUPERLOOPY_HOSTS) {
+    assert.equal(detectHost(repo, { SUPERLOOPY_HOST: host }), host);
+  }
+  assert.equal(detectHost(join(repo, ".gemini", "config", "plugins", "superloopy"), { SUPERLOOPY_HOST: "codex" }), "codex");
+  assert.equal(detectHost(join(repo, ".claude", "plugins", "superloopy"), { SUPERLOOPY_HOST: "antigravity" }), "antigravity");
+  assert.equal(detectHost(repo, { SUPERLOOPY_HOST: "claude", GEMINI_PLUGIN_ROOT: "/plugins/superloopy" }), "claude");
+
+  // An unrecognized value carries no authority: detection falls back to the remaining signals
+  // rather than trusting it. The CLI is what rejects it outright, at its entry points.
+  assert.equal(detectHost(repo, { SUPERLOOPY_HOST: "gemini" }), "codex");
+  assert.equal(detectHost(join(repo, ".claude", "plugins", "superloopy"), { SUPERLOOPY_HOST: "bogus" }), "claude");
+});
+
 test("detectHost reads host identity from a host-owned install directory", async () => {
   const repo = await tempRepo();
   assert.equal(detectHost(join(repo, ".gemini", "config", "plugins", "superloopy"), {}), "antigravity");
