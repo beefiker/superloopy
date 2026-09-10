@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { binShimSupportsSiblingFallback, installBinShim, SUPERLOOPY_AGENT_NAMES } from "../src/agents.js";
+import { binShimSupportsSiblingFallback, installBinShim, parseBinShimHost, SUPERLOOPY_AGENT_NAMES } from "../src/agents.js";
 import { createLoop } from "../src/loop.js";
 
 async function tempRepo() {
@@ -503,4 +503,13 @@ test("CLI hook subagent-stop honors the host contract over stdin", async () => {
   });
   assert.equal(noType.status, 0, noType.stderr);
   assert.equal(noType.stdout.trim(), "");
+});
+
+test("installBinShim stamps the Antigravity host identity into the generated shim", async () => {
+  const repo = await tempRepo();
+  const binDir = join(repo, "bin");
+  const result = await installBinShim(repo, ["--bin-dir", binDir], { host: "antigravity", homeDir: join(repo, "home") });
+  assert.equal(result.ok, true);
+  const shim = await readFile(result.target, "utf8");
+  assert.equal(parseBinShimHost(shim), "antigravity");
 });

@@ -11,14 +11,16 @@ import {
   formatBootstrapResult,
   installAgents,
   installBinShim,
-  isClaudeHost
+  isClaudeHost,
+  isAntigravityHost
 } from "./agents.js";
 import { auditLoop } from "./audit.js";
 import { runAuditorStopHook } from "./audit-hooks.js";
 import { beginLoop } from "./begin.js";
 import { captureLoop } from "./capture.js";
 import { checkLoop, formatCheckResult } from "./check.js";
-import { formatDoctor, runDoctor } from "./doctor.js";
+import { detectHost, formatDoctor, runDoctor } from "./doctor.js";
+import { isKnownHost, SUPERLOOPY_HOSTS } from "./host-detect.js";
 import { queryInstalledPluginTruth } from "./installed-plugin-truth.js";
 import { finishLoop } from "./finish.js";
 import { formatGuideResult } from "./guide.js";
@@ -78,7 +80,7 @@ async function main(argv, stdin, stdout, stderr, cwd) {
       return await runInstall([subcommand, ...rest].filter((value) => value !== undefined), stdout, cwd);
     }
     if (command === "hook") {
-      return await runHook(subcommand, stdin, stdout);
+      return await runHook(subcommand, stdin, stdout, rest);
     }
     stderr.write(`Unknown command: ${command}\n${topHelp()}`);
     return 1;
@@ -138,15 +140,17 @@ async function runDoctorCommand(argv, stdout, cwd) {
   }
   const parsed = parseDoctorArgs(argv);
   const selection = resolveDoctorSelection(cwd, parsed);
+  const host = detectHost(selection.root, process.env);
   const result = await runDoctor(selection.root, {
+    host,
     scope: selection.scope,
     comparisonPath: parsed.comparisonPath,
-    queryInstalledPluginTruth,
-    installedModelPolicy: {
+    queryInstalledPluginTruth: host === "codex" ? queryInstalledPluginTruth : undefined,
+    installedModelPolicy: host === "codex" ? {
       env: process.env,
       homeDir: homedir(),
       refreshModels: parsed.refreshModels
-    }
+    } : undefined
   });
   stdout.write(parsed.json ? `${JSON.stringify(result, null, 2)}\n` : formatDoctor(result));
   return result.ok ? 0 : 1;
@@ -222,6 +226,8 @@ function isLikelySuperloopyPluginRoot(cwd) {
   // and no signature files) still falls back instead of collecting false failures.
   return jsonNameIs(join(cwd, "package.json"), "superloopy")
     || jsonNameIs(join(cwd, ".codex-plugin", "plugin.json"), "superloopy")
+    || jsonNameIs(join(cwd, ".gemini-plugin", "plugin.json"), "superloopy")
+    || jsonNameIs(join(cwd, "plugin.json"), "superloopy")
     || hasSuperloopySignature(cwd);
 }
 
@@ -313,11 +319,30 @@ function loopOptionArgv(subcommand, argv) {
   return delimiter === -1 ? argv : argv.slice(0, delimiter);
 }
 
-async function runHook(subcommand, stdin, stdout) {
+// Treats unset and blank as "not declared" -- only a present, non-blank, unrecognized value is an error.
+function requireKnownHost(value, source) {
+  if (value === undefined || value.trim() === "") return undefined;
+  if (!isKnownHost(value)) {
+    throw new CliUsageError(`${source} must be one of ${SUPERLOOPY_HOSTS.join(", ")}; received ${JSON.stringify(value)}.`);
+  }
+  return value;
+}
+
+async function runHook(subcommand, stdin, stdout, rest = []) {
   const payload = parseJson(await readStdin(stdin));
-  const context = { host: isClaudeHost(process.env) ? "claude" : "codex" };
+  // Reject an unrecognized host rather than running under it. `canonicalAgentType` returns null
+  // for an unknown host, so `matchesAgentType` never matches, the SubagentStop hook writes nothing,
+  // and the subagent stops with no evidence receipt -- the gate disappears without a word. A
+  // mis-declared host is a configuration error, so fail loudly and let the operator fix the source.
+  const explicitHost = requireKnownHost(readFlag(rest, "--host"), "--host");
+  if (explicitHost !== undefined) {
+    process.env.SUPERLOOPY_HOST = explicitHost;
+  }
+  requireKnownHost(process.env.SUPERLOOPY_HOST, "SUPERLOOPY_HOST");
+  const host = explicitHost ?? (isClaudeHost(process.env) ? "claude" : (isAntigravityHost(process.env) ? "antigravity" : "codex"));
+  const context = { host };
   if (subcommand === "session-start") {
-    stdout.write(await runSessionStartHook(payload));
+    stdout.write(await runSessionStartHook(payload, { env: process.env, host }));
     return 0;
   }
   if (subcommand === "pre-tool-use") {

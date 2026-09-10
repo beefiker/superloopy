@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { bootstrapHasUserSignal, bootstrapSuperloopy, formatBootstrapHookContext, isClaudeHost } from "./agents.js";
+import { bootstrapHasUserSignal, bootstrapSuperloopy, formatBootstrapHookContext, isAntigravityHost, isClaudeHost } from "./agents.js";
 import { runAutoUpdateCheck } from "./auto-update.js";
 import { parseJson } from "./args.js";
 import { resolveEvidenceArtifact } from "./artifacts.js";
@@ -161,6 +161,7 @@ export async function runSessionStartHook(payload, options = {}) {
   payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
   if (payload.source !== "compact" && transcriptHasContextPressureMarker(payload.transcript_path)) return "";
   const env = options.env ?? process.env;
+  const host = options.host ?? (isClaudeHost(env) ? "claude" : (isAntigravityHost(env) ? "antigravity" : "codex"));
   const contexts = [];
   if (payload.source === "compact") {
     try {
@@ -173,9 +174,8 @@ export async function runSessionStartHook(payload, options = {}) {
     }
   }
   try {
-    // Auto-update is the Codex install-flow concern; on Claude Code updates are managed by
-    // `/plugin`, so skip it there (like the bootstrap no-op) to avoid emitting Codex upgrade notices.
-    if (!isClaudeHost(env)) {
+    // Skip auto-update checks on Claude Code and Antigravity; only run for Codex.
+    if (host === "codex" && !isClaudeHost(env) && !isAntigravityHost(env)) {
       const update = await runAutoUpdateCheck({ env });
       if (update.notices.length > 0) contexts.push(update.notices.join("\n\n"));
     }
@@ -183,7 +183,7 @@ export async function runSessionStartHook(payload, options = {}) {
     // Update checks must never break the bootstrap/session context hook.
   }
   try {
-    const bootstrap = await bootstrapSuperloopy(payload.cwd, [], { ...options, env });
+    const bootstrap = await bootstrapSuperloopy(payload.cwd, [], { ...options, env, host });
     if (bootstrapHasUserSignal(bootstrap)) {
       contexts.push(formatBootstrapHookContext(bootstrap));
     }

@@ -1,7 +1,7 @@
 {
   "name": "superloopy",
   "version": "0.18.0",
-  "description": "Lightweight loop harness with strict evidence gates — Claude Code edition.",
+  "description": "Strict evidence loop harness with explicit criteria and append-only evidence ledgers.",
   "homepage": "https://github.com/beefiker/superloopy#readme",
   "repository": "https://github.com/beefiker/superloopy",
   "license": "MIT",
@@ -9,8 +9,10 @@
     "name": "beefiker"
   },
   "keywords": [
+    "antigravity",
+    "gemini",
+    "codex",
     "claude-code",
-    "agent-skills",
     "evidence-gates",
     "proof-of-done",
     "loop",

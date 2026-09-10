@@ -7,8 +7,9 @@ is visible and testable.
 ## Custom agents
 
 `superloopy agents install` copies the bundled agent definitions into the personal Codex agents
-directory (`$CODEX_HOME/agents` when set, otherwise `~/.codex/agents`). The host spawns them
-through its native multi-agent dispatch when the parent delegates: the receipt workers
+directory (`$CODEX_HOME/agents` when set, otherwise `~/.codex/agents`). On Claude Code and Google
+Antigravity, agent definitions are bundled within the plugin and ingested directly by the host runtime.
+The host spawns them through its native multi-agent dispatch when the parent delegates: the receipt workers
 `franky`, `zoro`, `usopp`, `jinbe`, the read-only auditor `robin`, and the read-only navigator
 `nami`. `superloopy doctor` (dispatchCoherence) fails if any agent Superloopy dispatches is not installed
 or not matched by a hook.
