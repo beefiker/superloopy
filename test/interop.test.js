@@ -77,6 +77,28 @@ test("detectSuperpowers walks up CLAUDE_PLUGIN_ROOT to its plugins ancestor", as
   assert.equal(result.path, sibling);
 });
 
+test("detectSuperpowers walks up GEMINI_PLUGIN_ROOT / ANTIGRAVITY_PLUGIN_ROOT to its plugins ancestor", async () => {
+  const home = await tempHome();
+  const pluginsRoot = join(home, "custom-antigravity", "plugins");
+  const ownRoot = join(pluginsRoot, "superloopy");
+  await mkdir(ownRoot, { recursive: true });
+  const sibling = join(pluginsRoot, "superpowers");
+  await mkdir(sibling, { recursive: true });
+  await writeFile(join(sibling, "plugin.json"), "{}\n");
+
+  const resultGemini = detectSuperpowers({ GEMINI_PLUGIN_ROOT: ownRoot }, home);
+  assert.equal(resultGemini.installed, true);
+  assert.equal(resultGemini.path, sibling);
+
+  const resultAg = detectSuperpowers({ ANTIGRAVITY_PLUGIN_ROOT: ownRoot }, home);
+  assert.equal(resultAg.installed, true);
+  assert.equal(resultAg.path, sibling);
+
+  const resultPluginRoot = detectSuperpowers({ PLUGIN_ROOT: ownRoot }, home);
+  assert.equal(resultPluginRoot.installed, true);
+  assert.equal(resultPluginRoot.path, sibling);
+});
+
 test("detectSuperpowers does not treat a bare superpowers-marketplace clone as installed", async () => {
   const home = await tempHome();
   // A marketplace repo clone whose dir name is not exactly `superpowers` and carries no

@@ -14,7 +14,8 @@ Use the first matching path:
 
 1. If the current session is Codex or `codex` is the target, use the Codex flow.
 2. If the current session is Claude Code or `claude` is the target, use the Claude Code flow.
-3. If the user only asked to inspect or test a checkout, use the local checkout flow.
+3. If the current session is Google Antigravity or `antigravity`/`agy` is the target, use the Antigravity flow.
+4. If the user only asked to inspect or test a checkout, use the local checkout flow.
 
 Prerequisite for all flows: Node.js >= 22.
 
@@ -63,6 +64,29 @@ claude plugin install superloopy@beefiker
 claude plugin validate <installed-superloopy-plugin-root>
 ```
 
+## Google Antigravity Flow
+
+Install Superloopy into Antigravity using the `agy` CLI or global plugin configuration:
+
+```bash
+agy plugin import https://github.com/beefiker/superloopy
+```
+
+Or clone/link into the global plugin directory:
+
+```bash
+git clone https://github.com/beefiker/superloopy ~/.gemini/config/plugins/superloopy
+agy plugin enable superloopy
+```
+
+Verify the plugin installation:
+
+```bash
+agy plugin validate ~/.gemini/config/plugins/superloopy
+```
+
+Superloopy runs as a native Antigravity plugin: skills (`skills/`), custom subagents (`agents/`), and lifecycle hooks (`hooks.json`) load through Antigravity's plugin ingestion. On SessionStart, Superloopy installs the `superloopy` command wrapper into PATH (`~/.local/bin`) so CLI workflows (`superloopy loop ...`) are directly callable, while skills and agents stay plugin-bundled without writing into `~/.codex`.
+
 ## Local Checkout Flow
 
 Use this only when the user asked for a checkout install or when marketplace install is unavailable:
@@ -110,7 +134,7 @@ node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json
 
 Before saying the install is done, report:
 
-- Host installed: Codex, Claude Code, or local checkout.
-- Command path used: marketplace or checkout.
-- Verification result: `superloopy doctor --json`, `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`, or `claude plugin validate`.
+- Host installed: Codex, Claude Code, Google Antigravity, or local checkout.
+- Command path used: marketplace, plugin import, or checkout.
+- Verification result: `superloopy doctor --json`, `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`, `claude plugin validate`, or `agy plugin validate`.
 - Any blocker, such as missing Node.js >= 22, old Codex CLI, auth/login failure, hook approval needed, or missing `PATH` entry.

@@ -23,7 +23,7 @@ const MAX_WALK_ENTRIES = 5000;
 const SKIP_DIRS = new Set([".git", "node_modules", ".DS_Store"]);
 // A directory looks like an installed plugin (not a bare marketplace clone) when it
 // carries one of these markers.
-const PLUGIN_MARKERS = [".claude-plugin", ".codex-plugin", "plugin.json", "skills", "commands"];
+const PLUGIN_MARKERS = [".claude-plugin", ".codex-plugin", ".gemini-plugin", "plugin.json", "skills", "commands"];
 // The intro skill ships inside the Superpowers plugin itself, so its presence is a
 // strong "installed" signal that survives host-specific directory naming.
 const SIGNATURE_SKILL_DIRS = new Set(["using-superpowers"]);
@@ -79,6 +79,12 @@ function candidateRoots(env, homeDir) {
   const codexHome = envDir("CODEX_HOME");
   add(codexHome ? join(codexHome, "plugins") : undefined);
   add(join(homeDir, ".codex", "plugins"));
+  add(nearestPluginsDir(envDir("ANTIGRAVITY_PLUGIN_ROOT")));
+  add(nearestPluginsDir(envDir("GEMINI_PLUGIN_ROOT")));
+  add(nearestPluginsDir(envDir("PLUGIN_ROOT")));
+  const agConfig = envDir("ANTIGRAVITY_CONFIG_DIR") ?? envDir("GEMINI_CONFIG_DIR");
+  add(agConfig ? join(agConfig, "plugins") : undefined);
+  add(join(homeDir, ".gemini", "config", "plugins"));
 
   const seen = new Set();
   return roots.filter((root) => {

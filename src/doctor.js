@@ -6,12 +6,16 @@ import { checkDesignAudit } from "./design-audit.js";
 import { checkFileAudit } from "./file-audit.js";
 import { checkComparisonSimilarity } from "./comparison-similarity.js";
 import { SUPERLOOPY_AGENT_NAMES } from "./agents.js";
+import { detectHost } from "./host-detect.js";
+export { detectHost } from "./host-detect.js";
 import { checkSkills } from "./doctor-skills.js";
 import { checkClaudeModelPolicy, checkModelPolicy } from "./model-policy.js";
 import { isSourceCheckoutRoot } from "./source-checkout.js";
 import { checkInterop } from "./interop.js";
 import { checkWrapper } from "./wrapper-check.js";
 import { checkInstalledModelPolicy } from "./installed-model-policy.js";
+import { checkAntigravityHostWiring } from "./antigravity-host-wiring.js";
+export { checkAntigravityHostWiring } from "./antigravity-host-wiring.js";
 
 const FILE_AUDIT_PATH = "docs/superloopy-file-audit.md";
 const GATE_NOTES_PATH = "docs/superloopy-gate-notes.md";
@@ -65,18 +69,17 @@ export async function runDoctor(cwd, options = {}) {
   const reviewability = await checkReviewability(cwd);
   const dispatchCoherence = await checkDispatchCoherence(cwd);
   const claudeHostWiring = await checkClaudeHostWiring(cwd);
+  const antigravityHostWiring = await checkAntigravityHostWiring(cwd);
   const modelPolicy = await checkModelPolicy(cwd);
   const claudeModelPolicy = await checkClaudeModelPolicy(cwd);
-  const installedModelPolicy = await checkInstalledModelPolicy(cwd, options.installedModelPolicy ?? {});
-  const installedPluginTruth = options.queryInstalledPluginTruth === undefined
-    ? {
-        ok: true,
-        informational: true,
-        state: "authority_unavailable",
-        message: "Codex installed-plugin authority is unavailable."
-      }
+  const host = options.host ?? detectHost(cwd, options.env ?? process.env);
+  const installedModelPolicy = host !== "codex"
+    ? { ok: true, informational: true, installed: false, policyVersion: null, targetDir: null, checkedAt: null, selectionStatus: "host_exempt", availabilityStatus: "not_checked", stale: false, degraded: false, restartRequired: false, agents: {}, state: "host_exempt", message: `Managed agent routing is Codex-only; exempt on ${host}.` }
+    : await checkInstalledModelPolicy(cwd, options.installedModelPolicy ?? {});
+  const installedPluginTruth = options.queryInstalledPluginTruth === undefined || host !== "codex"
+    ? { ok: true, informational: true, state: host === "codex" ? "authority_unavailable" : "host_exempt", message: host === "codex" ? "Codex installed-plugin authority is unavailable." : `Installed plugin authority is Codex-only; exempt on ${host}.` }
     : options.queryInstalledPluginTruth(pluginManifest.ok ? pluginManifest.manifest.version : undefined);
-  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, modelPolicy, claudeModelPolicy, installedModelPolicy, installedPluginTruth, hostContract: checkHostContract(), interop: checkInterop(options), wrapper: checkWrapper({ ...options, diagnosedRoot: cwd }) };
+  const checks = { pluginManifest, hooks, skills, cli, dependencies, runtimeBoundary, fileAudit, gateNotes, designAudit, comparisonSimilarity, reviewability, dispatchCoherence, claudeHostWiring, antigravityHostWiring, modelPolicy, claudeModelPolicy, installedModelPolicy, installedPluginTruth, hostContract: checkHostContract(), interop: checkInterop(options), wrapper: checkWrapper({ ...options, diagnosedRoot: cwd }) };
   return {
     ok: doctorOverallOk(checks, scope),
     scope,

@@ -120,11 +120,20 @@ const AGENT_NAMES = new Set(SUPERLOOPY_AGENT_NAMES);
 export function canonicalAgentType(host, role) {
   if (!AGENT_NAMES.has(role)) return null;
   if (host === "codex") return role;
-  if (host === "claude") return `superloopy:${role}`;
+  if (host === "claude" || host === "antigravity") return `superloopy:${role}`;
   return null;
 }
 
+// Deliberately looser than codex (bare only) and claude (namespaced only): Antigravity is accepted
+// under either spelling because its reported agent type is not pinned to one form. That is safe
+// because it is not the only guard -- `hooks.json`'s SubagentStop matcher
+// (`^(?:superloopy:)?<agent>$`) already decides which agent types reach this hook, and AGENT_NAMES
+// still pins the role to Superloopy's own crew. Do not "tighten" this to one spelling without
+// first confirming which form the host actually sends; getting it wrong silently skips the gate.
 export function matchesAgentType({ host, agentType, role } = {}) {
+  if (host === "antigravity") {
+    return AGENT_NAMES.has(role) && (agentType === role || agentType === `superloopy:${role}`);
+  }
   const expected = canonicalAgentType(host, role);
   return expected !== null && agentType === expected;
 }
