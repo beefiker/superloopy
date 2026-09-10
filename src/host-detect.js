@@ -22,6 +22,13 @@ const CLAUDE_PATH_SEGMENTS = new Set([".claude"]);
 // Antigravity signal labels a Codex install "antigravity" and silently exempts it from the
 // Codex-only installedPluginTruth and installedModelPolicy checks.
 export function detectHost(root, env = process.env) {
+  // A recognized `SUPERLOOPY_HOST` is the host's (or our shim's) own declaration, so it outranks
+  // both the plugin-root signals and the install path. Without this branch only "antigravity" was
+  // honored: `isAntigravityHost` reads the value, while "claude" still needed `CLAUDE_PLUGIN_ROOT`
+  // and fell through to "codex" -- which pointed the Codex-only installedPluginTruth and
+  // installedModelPolicy checks at a Claude install -- and "codex" lost to a `.gemini` path segment.
+  // Unknown values are ignored rather than trusted here; the CLI rejects them at its entry points.
+  if (isKnownHost(env.SUPERLOOPY_HOST)) return env.SUPERLOOPY_HOST;
   if (isAntigravityHost(env)) return "antigravity";
   if (isClaudeHost(env)) return "claude";
   return hostFromInstallPath(typeof root === "string" ? root : "");
