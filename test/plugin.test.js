@@ -101,9 +101,10 @@ test("plugin audit docs describe convention discovery and current ignore scope",
   assert.match(auditClaudeRow, /metadata-only.*convention/i);
   assert.match(goldenClaudeRow, /metadata-only.*convention/i);
   assert.doesNotMatch(auditClaudeRow, /skills\/agents\/hooks entries/i);
-  assert.match(auditIgnoreRow, /Superpowers.*plan.*spec/i);
+  assert.match(auditIgnoreRow, /local.*plan.*spec/i);
+  assert.doesNotMatch(auditIgnoreRow, /superpowers/i);
   assert.match(auditIgnoreRow, /root `build\/`/i);
-  assert.match(goldenIgnoreRow, /`build\/`.*docs\/superpowers\/plans\/.*docs\/superpowers\/specs\//i);
+  assert.match(goldenIgnoreRow, /`build\/`.*docs\/plans\/.*docs\/specs\//i);
 });
 
 test("package metadata names author and GitHub topics", async () => {
@@ -427,7 +428,8 @@ test("plugin packages the Superloopy Korean humanizer skill with measurable safe
     "skills/humanize-korean/references/quality-rubric.md",
     "skills/humanize-korean/references/golden-set.md",
     "skills/humanize-korean/references/upstream-notice.md",
-    "skills/humanize-korean/scripts/audit-humanize-output.mjs"
+    "skills/humanize-korean/scripts/audit-humanize-output.mjs",
+    "skills/humanize-korean/scripts/calque-patterns.mjs"
   ]) {
     assert.equal(existsSync(file), true);
   }

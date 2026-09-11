@@ -38,8 +38,8 @@ test("standalone reviewability uses the physical-line and extension contract", (
   for (const file of ["a.mjs", "a.cjs", "a.yml"]) {
     assert.equal(isReviewableTextFile(file), true, file);
   }
-  assert.equal(isReviewableTextFile("docs/superpowers/plans/approved.md"), true);
-  assert.equal(isReviewableTextFile("docs/superpowers/plans/untracked.md"), true);
+  assert.equal(isReviewableTextFile("docs/plans/approved.md"), true);
+  assert.equal(isReviewableTextFile("docs/plans/untracked.md"), true);
 });
 
 test("the per-file inventories are audited by completeness, not by line count", () => {
@@ -105,18 +105,18 @@ test("ignored plans stay local while force-tracked plans and ordinary Markdown r
   const staged = spawnSync("git", ["add", "--force", "."], { cwd: repo, encoding: "utf8" });
   assert.equal(staged.status, 0, staged.stderr);
 
-  const localPlan = join(repo, "docs", "superpowers", "plans", "local.md");
+  const localPlan = join(repo, "docs", "plans", "local.md");
   await mkdir(dirname(localPlan), { recursive: true });
   await writeFile(localPlan, "# Local plan\n".repeat(551));
   const ignored = await runDoctor(repo);
   assert.equal(ignored.checks.reviewability.ok, true, ignored.checks.reviewability.message);
 
-  const forced = spawnSync("git", ["add", "--force", "docs/superpowers/plans/local.md"], { cwd: repo, encoding: "utf8" });
+  const forced = spawnSync("git", ["add", "--force", "docs/plans/local.md"], { cwd: repo, encoding: "utf8" });
   assert.equal(forced.status, 0, forced.stderr);
   const trackedPlan = await runDoctor(repo);
   assert.equal(trackedPlan.checks.reviewability.ok, false);
-  assert.match(trackedPlan.checks.reviewability.message, /docs\/superpowers\/plans\/local\.md:551/);
-  const unstaged = spawnSync("git", ["rm", "--cached", "docs/superpowers/plans/local.md"], { cwd: repo, encoding: "utf8" });
+  assert.match(trackedPlan.checks.reviewability.message, /docs\/plans\/local\.md:551/);
+  const unstaged = spawnSync("git", ["rm", "--cached", "docs/plans/local.md"], { cwd: repo, encoding: "utf8" });
   assert.equal(unstaged.status, 0, unstaged.stderr);
 
   await writeFile(join(repo, "docs", "ordinary.md"), "# Ordinary\n".repeat(551));
