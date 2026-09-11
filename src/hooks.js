@@ -5,17 +5,18 @@ import { parseJson } from "./args.js";
 import { resolveEvidenceArtifact } from "./artifacts.js";
 import { buildGuide, flowStepLine, proofPlanLine, recordedEvidenceLine } from "./guide.js";
 import { CONTEXT_PRESSURE_MARKERS, decideContinuation, transcriptTailHasMarker } from "./continuation.js";
+import { calqueNudgeContext, mergeAdditionalContext } from "./calque-nudge.js";
+import { isMissingPlanError, runOutputStyleControlHook } from "./output-style-hook.js";
 import { matchesAgentType, receiptFromPayload, subagentTranscriptPath } from "./receipt.js";
 import { hasEngineerTrigger, runEngineerTriggerHook } from "./engineer.js";
 import { applySteeringIdempotent, statusLoop } from "./loop.js";
-import { appendLedger, evidenceRelativeDir, goalsPath, readPlan, scopeFromSessionId, withFileLock } from "./store.js";
+import { appendLedger, evidenceRelativeDir, goalsPath, scopeFromSessionId } from "./store.js";
 import { MAX_SUBAGENT_ATTEMPTS, clearAttemptState, nextAttemptState, recordSubagentLedger } from "./subagent-attempts.js";
 import { resolveWorkspaceRoot } from "./workspace-identity.js";
 import { steeringRequestKey } from "./steering-receipts.js";
 import { formatMeasuredAdditionalContext } from "./context-cost.js";
 import { buildRecoveryProjection, renderRecoveryCapsule } from "./compaction-recovery.js";
 import { fleetLoop } from "./fleet.js";
-import { inspectRepositoryBinding } from "./repository-binding.js";
 import { isSayItStraightEnabled, parseLoopOutputStyleControl, renderSayItStraightLoopOverlay, updateSayItStraightOutput } from "./loop-output-style.js";
 
 export { runPreToolUseHook } from "./pre-tool-use.js";
@@ -74,6 +75,13 @@ export async function runUserPromptSubmitHook(payload, options = {}) {
   if (typeof payload.prompt !== "string" || typeof payload.cwd !== "string") return "";
   payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
   if (hasContextPressureMarker(payload.prompt) || transcriptHasContextPressureMarker(payload.transcript_path)) return "";
+  const output = await runUserPromptSubmitCore(payload, options);
+  // Opt-in write-time calque nudge (SUPERLOOPY_CALQUE_NUDGE=on): advisory context about the
+  // previous reply, folded into whatever this hook already emits. Never a block.
+  return mergeAdditionalContext(output, "UserPromptSubmit", calqueNudgeContext(payload, options.env ?? process.env));
+}
+
+async function runUserPromptSubmitCore(payload, options) {
   const outputStyleControl = parseLoopOutputStyleControl(payload.prompt);
   if (outputStyleControl !== null) return await runOutputStyleControlHook(payload, outputStyleControl, options.updateSayItStraightOutput ?? updateSayItStraightOutput);
   const directive = parseSteeringDirective(payload.prompt);
@@ -91,67 +99,6 @@ export async function runUserPromptSubmitHook(payload, options = {}) {
   } catch {
     return "";
   }
-}
-
-async function runOutputStyleControlHook(payload, control, updateOutputStyle) {
-  let status;
-  try {
-    status = await statusForOutputStyleControl(payload);
-  } catch (error) {
-    if (isMissingPlanError(error)) return formatOutputStyleContext("No active Superloopy loop; no output style changed.");
-    return formatOutputStyleContext("Superloopy could not change the output style; the prior loop setting remains authoritative.");
-  }
-  if (status.binding?.resumable === false) {
-    return formatOutputStyleContext(`Superloopy repository binding is ${status.binding.status}; no output style changed.`);
-  }
-  if (status.plan.aggregateCompletion?.status === "complete") {
-    return formatOutputStyleContext("The current Superloopy loop is already complete; no output style changed.");
-  }
-  try {
-    const scope = scopeFromSessionId(status.plan.sessionId);
-    const mutation = await withFileLock(goalsPath(payload.cwd, scope), async () => {
-      const plan = await readPlan(payload.cwd, scope);
-      const binding = await inspectRepositoryBinding(payload.cwd, plan);
-      if (binding.resumable === false) return { binding };
-      if (plan.aggregateCompletion?.status === "complete") return { complete: true };
-      return { result: await updateOutputStyle(payload.cwd, scope, control.enabled) };
-    });
-    if (mutation.binding !== undefined) {
-      return formatOutputStyleContext(`Superloopy repository binding is ${mutation.binding.status}; no output style changed.`);
-    }
-    if (mutation.complete) {
-      return formatOutputStyleContext("The current Superloopy loop is already complete; no output style changed.");
-    }
-    const enabled = isSayItStraightEnabled(mutation.result.plan);
-    return formatAdditionalContext("UserPromptSubmit", [
-      `Say It Straight output is ${enabled ? "enabled" : "disabled"} for the current loop only.`,
-      renderSayItStraightLoopOverlay(enabled)
-    ].filter(Boolean).join("\n\n"));
-  } catch (error) {
-    const failure = error?.outputStyleFailure;
-    if (failure?.priorRestored === false && typeof failure.effectiveEnabled === "boolean") {
-      const effective = failure.effectiveEnabled ? "enabled" : "disabled";
-      return formatOutputStyleContext(`Superloopy could not record or roll back the output-style change; the actual persisted current-loop output style is ${effective}.`);
-    }
-    if (failure?.priorRestored === false) return formatOutputStyleContext("Superloopy could not record or roll back the output-style change; the actual persisted current-loop output style could not be verified. Inspect the current loop before continuing.");
-    return formatOutputStyleContext("Superloopy could not change the output style; the prior loop setting remains authoritative.");
-  }
-}
-
-function formatOutputStyleContext(message) {
-  return formatAdditionalContext("UserPromptSubmit", message);
-}
-
-async function statusForOutputStyleControl(payload) {
-  const scope = scopeFromPayload(payload);
-  if (scope !== undefined) {
-    try {
-      return await statusLoop(payload.cwd, ["--session-id", scope.sessionId]);
-    } catch (error) {
-      if (!isMissingPlanError(error)) throw error;
-    }
-  }
-  return await statusLoop(payload.cwd);
 }
 
 export async function runSessionStartHook(payload, options = {}) {
@@ -517,10 +464,6 @@ async function statusForPayload(payload) {
     }
   }
   return await statusLoop(payload.cwd);
-}
-
-function isMissingPlanError(error) {
-  return error instanceof Error && error.message.startsWith("No Superloopy plan found.");
 }
 
 function scopeFromPayload(payload) {

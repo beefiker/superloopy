@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const CURRENT_GATE_PATHS = [
-  "docs/superpowers/specs/2026-08-21-automatic-reassurance-copy-gate-design.md",
+  "docs/specs/2026-08-21-automatic-reassurance-copy-gate-design.md",
   "skills/superloopy-loop/SKILL.md",
   "skills/superloopy-loop/references/reassurance-copy.md",
   "skills/superloopy-loop/scripts/audit-reassurance-copy.mjs",
