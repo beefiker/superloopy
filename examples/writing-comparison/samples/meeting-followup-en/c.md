@@ -10,9 +10,9 @@ The product sync on 2026-08-21 covered the onboarding survey, the billing error 
 
 ## Open questions
 
-Whether someone who dismissed the onboarding survey should see it again was raised but not settled. Everyone agreed to decide at the next meeting, once first-week dismissal numbers are available. The survey stays as it is until then.
+Whether someone who dismissed the onboarding survey should see it again was raised but not settled. Everyone agreed to decide at the next meeting, once first-week dismissal numbers are available. Until then the survey stays as it is and nobody changes the dismissal behaviour.
 
-The billing error report format is also unsettled. Operations prefers one row per customer; support prefers one row for every failed charge. Both layouts stay for now so real data can settle the difference.
+The billing error report format is also unsettled. Operations prefers one row per customer; support prefers one row for every failed charge. Both layouts stay for now so the difference can be compared against real data.
 
 ## Next meeting
 
