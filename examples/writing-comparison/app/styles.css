@@ -1561,3 +1561,20 @@ kbd {
   border-top: 1px solid var(--line);
   color: var(--muted-ink);
 }
+
+/* Link from the viewer header to the benchmark page. */
+.header-link {
+  align-self: center;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 0.85rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.header-link:hover,
+.header-link:focus-visible {
+  border-color: var(--accent);
+}

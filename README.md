@@ -74,7 +74,7 @@ The loop skill is the default guardrail. A complete leading `loopy` token starts
 
 [![Writing comparison app showing an original document next to its Say It Straight rewrite](.github/assets/writing-comparison-demo.png)](https://writing-comparison.pages.dev/)
 
-The **[live writing-comparison viewer →](https://writing-comparison.pages.dev/)** puts one source document next to its `humanize-korean` (A), `i-have-adhd` (B), and `say-it-straight` (C) rewrites across thirteen Korean and English samples. Every Say It Straight edit carries a rationale note, and any comparison is shareable by URL.
+The **[live writing-comparison viewer →](https://writing-comparison.pages.dev/)** puts one source document next to its `humanize-korean` (A), `i-have-adhd` (B), and `say-it-straight` (C) rewrites across fourteen Korean and English samples, plus eight benchmark fixtures with each skill's measured output and a [benchmark page](https://writing-comparison.pages.dev/benchmark.html) with the cost and latency numbers. Every Say It Straight edit carries a rationale note, and any comparison is shareable by URL.
 
 ## Qt Kanban Demo
 

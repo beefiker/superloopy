@@ -1,0 +1,88 @@
+import { readFile, writeFile } from "node:fs/promises";
+import { argv } from "node:process";
+import { pathToFileURL } from "node:url";
+
+// Emits data/benchmark.mjs from the immutable evidence file so the benchmark page and the
+// comparison viewer read the same numbers. Run: node examples/writing-comparison/app/build-benchmark.mjs
+const evidenceFile = new URL("../../../docs/benchmarks/2026-09-11-skill-benchmark-runs.json", import.meta.url);
+const outputFile = new URL("./data/benchmark.mjs", import.meta.url);
+
+export const SIZES = ["short", "mid", "big", "huge"];
+export const CONDITIONS = [
+  { id: "baseline", label: "No skill", short: "No skill", group: "baseline" },
+  { id: "sis-skill", label: "say-it-straight (SKILL only)", short: "say-it-straight (SKILL)", group: "subject" },
+  { id: "sis-full", label: "say-it-straight (file-backed)", short: "say-it-straight (files)", group: "subject" },
+  { id: "adhd-ours", label: "i-have-adhd (ours)", short: "i-have-adhd (ours)", group: "ours" },
+  { id: "adhd-upstream", label: "i-have-adhd (ayghri)", short: "i-have-adhd (ayghri)", group: "upstream" },
+  { id: "hk-ours", label: "humanize-korean (ours)", short: "humanize-korean", group: "ours" },
+  { id: "imnotai-codex", label: "im-not-ai (Codex single call)", short: "im-not-ai (Codex)", group: "upstream" },
+  { id: "imnotai-light", label: "im-not-ai (Claude light, emulated)", short: "im-not-ai (Claude light)", group: "upstream" }
+];
+const VIEWER_VERSION = { "hk-ours": "a", "adhd-ours": "b", "sis-skill": "c" };
+
+export function buildBenchmark(evidence) {
+  const quality = new Map(evidence.series.quality.map((q) => [`${q.cond}--${q.lang}-${q.size}--${q.n}`, q]));
+  const frames = evidence.series.frames?.runs ?? {};
+  const cells = evidence.series.summary
+    .filter((s) => SIZES.includes(s.size))
+    .map((s) => {
+      const runs = (evidence.series.cells[`${s.lang}|${s.size}|${s.cond}`] ?? []).filter((r) => r.n > 0).map((r) => {
+        const key = `${s.cond}--${s.lang}-${s.size}--${r.n}`;
+        const q = quality.get(key);
+        return {
+          n: r.n, ok: r.ok, api_s: round(r.api_s, 1), think: r.think, out: r.out, cost: round(r.cost, 4), cached: r.cr > 0 && r.cw === 0,
+          delivered: q ? q.delivered : r.ok, factsKept: q?.factsKept ?? null, factsTotal: q?.factsTotal ?? null, ratio: q?.ratio ?? null,
+          residual: q?.residual ?? null, openerKept: frames[key]?.openerKept ?? null, closerKept: frames[key]?.closerKept ?? null
+        };
+      });
+      return {
+        lang: s.lang, size: s.size, cond: s.cond, delivered: s.runs ?? 0, undelivered: s.undelivered ?? 0, cachedRuns: s.cachedRuns ?? 0,
+        prompt: s.prompt ?? null, out: s.out ?? null, think: s.think ?? null, think_min: s.think_min ?? null, think_max: s.think_max ?? null,
+        api_med: s.api_med ?? null, api_min: s.api_min ?? null, api_max: s.api_max ?? null, cost_med: s.cost_med ?? null, warm_cost: s.warm_cost ?? null,
+        viewerVersion: VIEWER_VERSION[s.cond] ?? null, viewerRun: evidence.viewerRuns?.picked?.[`${s.lang}-${s.size}`]?.[s.cond] ?? null,
+        runs
+      };
+    });
+  const fixtures = Object.fromEntries(Object.entries(evidence.fixtures).map(([id, f]) => {
+    const [lang, size] = id.split("-");
+    return [id, { lang, size, chars: f.chars, words: f.words, sample: `bench-${id}`, tells: f.tells ?? null, frames: evidence.series.frames?.fixtures?.[id] ?? null }];
+  }));
+  return {
+    generated: evidence.generated, model: evidence.model, effort: "high", priceBasisUSDperMillion: evidence.priceBasisUSDperMillion,
+    sizes: SIZES, conditions: CONDITIONS, fixtures, cells, effortProbe: evidence.effortProbe,
+    contextTokens: evidence.tokenCounts.files, viewerRule: evidence.viewerRuns?.rule ?? null
+  };
+}
+
+// One record per line keeps the module under the repository's 550-line reviewability cap while
+// leaving every cell diffable on its own line.
+export function compactStringify(data) {
+  const line = (v) => JSON.stringify(v);
+  const list = (xs) => `[\n${xs.map((x) => `    ${line(x)}`).join(",\n")}\n  ]`;
+  const map = (o) => `{\n${Object.entries(o).map(([k, v]) => `    ${line(k)}: ${line(v)}`).join(",\n")}\n  }`;
+  return `{
+  "generated": ${line(data.generated)},
+  "model": ${line(data.model)},
+  "effort": ${line(data.effort)},
+  "priceBasisUSDperMillion": ${line(data.priceBasisUSDperMillion)},
+  "sizes": ${line(data.sizes)},
+  "conditions": ${list(data.conditions)},
+  "fixtures": ${map(data.fixtures)},
+  "cells": ${list(data.cells)},
+  "effortProbe": ${line(data.effortProbe)},
+  "contextTokens": ${list(data.contextTokens)},
+  "viewerRule": ${line(data.viewerRule)}
+}`;
+}
+
+function round(value, digits) {
+  return value === null || value === undefined || Number.isNaN(value) ? null : Number(Number(value).toFixed(digits));
+}
+
+async function main() {
+  const evidence = JSON.parse(await readFile(evidenceFile, "utf8"));
+  const data = buildBenchmark(evidence);
+  await writeFile(outputFile, `// Generated by build-benchmark.mjs from docs/benchmarks/2026-09-11-skill-benchmark-runs.json. Do not edit by hand.\nexport const BENCHMARK = Object.freeze(${compactStringify(data)});\n`, "utf8");
+}
+
+if (argv[1] && import.meta.url === pathToFileURL(argv[1]).href) await main();
