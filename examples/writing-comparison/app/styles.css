@@ -15,10 +15,10 @@
   --note: #8a6d1a;
   --note-soft: rgb(255 205 66 / 28%);
   --radius: 8px;
-  --dock-clearance: 82px;
+  --dock-clearance: 80px;
   /* Must exceed the wrapped dock's full height (three rows + offset),
      otherwise the end of the document sits underneath it. */
-  --dock-clearance-narrow: 168px;
+  --dock-clearance-narrow: 138px;
 
   /* Floating dock: a self-contained dark surface layered over the light page. */
   --dock-bg: rgb(24 26 31 / 92%);
@@ -31,7 +31,7 @@
   --dock-label: rgb(232 236 242 / 68%);
   --dock-divider: rgb(255 255 255 / 12%);
   --dock-focus: #8fb4ff;
-  --dock-control-height: 34px;
+  --dock-control-height: 30px;
   font-family: Roboto, "Noto Sans KR", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
   background: var(--canvas);
@@ -144,12 +144,20 @@ textarea:focus-visible,
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 4px 8px;
+  padding: 8px 12px 6px;
+}
+
+.comparison-title-row .title-group {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 14px;
+  min-width: 0;
 }
 
 .comparison-title-row h1 {
-  grid-column: 1;
   margin: 0;
   font-size: 1rem;
 }
@@ -283,10 +291,10 @@ textarea:focus-visible,
 .pair-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px 14px;
+  gap: 2px 12px;
   margin: 8px 1px;
   color: var(--muted-ink);
-  font-size: 0.76rem;
+  font-size: 0.74rem;
 }
 
 .pair-meta p {
@@ -310,13 +318,13 @@ textarea:focus-visible,
   z-index: 20;
   display: flex;
   align-items: end;
-  gap: 8px;
+  gap: 6px;
   max-width: calc(100vw - 24px);
-  padding: 8px 10px;
+  padding: 6px 8px;
   transform: translateX(-50%);
   border: 1px solid var(--dock-edge);
   border-top-color: var(--dock-edge-top);
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--dock-bg);
   box-shadow:
     0 1px 2px rgb(0 0 0 / 20%),
@@ -365,9 +373,9 @@ textarea:focus-visible,
 .dock-select {
   display: grid;
   min-width: 0;
-  gap: 3px;
+  gap: 2px;
   color: var(--dock-label);
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -377,9 +385,9 @@ textarea:focus-visible,
   min-width: 0;
   width: 100%;
   min-height: var(--dock-control-height);
-  padding: 5px 26px 5px 9px;
-  border-radius: 8px;
-  font-size: 0.78rem;
+  padding: 4px 24px 4px 8px;
+  border-radius: 7px;
+  font-size: 0.76rem;
   font-weight: 500;
   letter-spacing: normal;
   text-transform: none;
@@ -409,9 +417,9 @@ textarea:focus-visible,
   justify-content: space-between;
   width: 100%;
   min-height: var(--dock-control-height);
-  padding: 5px 9px;
-  border-radius: 8px;
-  font-size: 0.78rem;
+  padding: 4px 8px;
+  border-radius: 7px;
+  font-size: 0.76rem;
   font-weight: 500;
   letter-spacing: normal;
   text-transform: none;
@@ -1341,22 +1349,58 @@ kbd {
 
 @media (max-width: 800px) {
   .comparison-title-row {
-    padding-inline: 8px;
+    gap: 2px 6px;
+    padding: 6px 8px 4px;
+  }
+
+  .comparison-title-row h1 {
+    font-size: 0.94rem;
+  }
+
+  .header-link {
+    font-size: 0.72rem;
+  }
+
+  .pair-meta {
+    gap: 1px 10px;
+    font-size: 0.7rem;
+  }
+
+  /* Buttons sit beside the title only, so the summary line gets the full width. */
+  .comparison-title-row #search-toggle,
+  .comparison-title-row #more-tools {
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .comparison-title-row .pair-meta {
+    grid-column: 1 / -1;
   }
 
   .document-workspace {
-    padding-inline: 8px;
-    padding-bottom: var(--dock-clearance-narrow);
+    padding: 6px 8px var(--dock-clearance-narrow);
   }
 
   .comparison-dock {
+    bottom: max(8px, env(safe-area-inset-bottom));
     width: calc(100vw - 16px);
     max-width: calc(100vw - 16px);
-    gap: 6px 8px;
-    padding: 8px;
+    gap: 4px 6px;
+    padding: 6px;
     flex-wrap: wrap;
     align-items: end;
     justify-content: center;
+  }
+
+  /* Labels stay for assistive tech; the controls' own values carry the row. */
+  .comparison-dock .dock-select > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   /* Row 1: the three selectors. Row 2: mode + change navigation. */
@@ -1563,16 +1607,43 @@ kbd {
 }
 
 /* Link from the viewer header to the benchmark page. */
+.header-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+}
+
 .header-link {
-  align-self: center;
-  color: var(--muted-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink);
   font-size: 0.76rem;
-  text-decoration: none;
+  line-height: 1.4;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line);
+  text-decoration-color: color-mix(in srgb, var(--muted-ink) 60%, transparent);
   white-space: nowrap;
+  transition: text-decoration-color 120ms ease, color 120ms ease;
+}
+
+.header-link svg {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  fill: var(--muted-ink);
+  transition: fill 120ms ease;
 }
 
 .header-link:hover,
 .header-link:focus-visible {
-  color: var(--ink);
-  text-decoration: underline;
+  text-decoration-color: currentColor;
+}
+
+.header-link:hover svg,
+.header-link:focus-visible svg {
+  fill: currentColor;
 }
