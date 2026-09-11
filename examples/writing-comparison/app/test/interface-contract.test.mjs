@@ -102,7 +102,8 @@ test("sample selector groups every sample under its language", async () => {
         { value: "support-reply", textContent: "고객 지원 답변", selected: false },
         { value: "internal-proposal", textContent: "내부 제안서", selected: false },
         { value: "api-migration", textContent: "API 전환 안내", selected: false },
-        { value: "llm-wiki", textContent: "LLM 위키 도입 검토", selected: false }
+        { value: "llm-wiki", textContent: "LLM 위키 도입 검토", selected: false },
+        { value: "config-sync-review", textContent: "설정 동기화 전환 검토", selected: false }
       ]],
       ["English", [
         { value: "release-note-en", textContent: "Deployment notice", selected: false },
@@ -111,6 +112,16 @@ test("sample selector groups every sample under its language", async () => {
         { value: "support-reply-en", textContent: "Support reply", selected: false },
         { value: "internal-proposal-en", textContent: "Internal proposal", selected: false },
         { value: "api-migration-en", textContent: "API migration", selected: false }
+      ]],
+      ["Benchmark", [
+        { value: "bench-ko-short", textContent: "벤치마크 · 한국어 short (510자)", selected: false },
+        { value: "bench-ko-mid", textContent: "벤치마크 · 한국어 mid (1,239자)", selected: false },
+        { value: "bench-ko-big", textContent: "벤치마크 · 한국어 big (5,526자)", selected: false },
+        { value: "bench-ko-huge", textContent: "벤치마크 · 한국어 huge (17,237자)", selected: false },
+        { value: "bench-en-short", textContent: "Benchmark · English short (73 words)", selected: false },
+        { value: "bench-en-mid", textContent: "Benchmark · English mid (265 words)", selected: false },
+        { value: "bench-en-big", textContent: "Benchmark · English big (992 words)", selected: false },
+        { value: "bench-en-huge", textContent: "Benchmark · English huge (2,732 words)", selected: false }
       ]]
     ]
   );

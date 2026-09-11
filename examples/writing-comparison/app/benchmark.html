@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Skill benchmark</title>
+    <meta name="description" content="Measured cost, latency, and rewrite quality of say-it-straight against humanize-korean, i-have-adhd, im-not-ai, and no skill, on four sizes of Korean and English drafts.">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Writing comparison">
+    <meta property="og:title" content="Skill benchmark">
+    <meta property="og:description" content="Measured cost, latency, and rewrite quality of say-it-straight against humanize-korean, i-have-adhd, im-not-ai, and no skill.">
+    <meta property="og:url" content="https://writing-comparison.pages.dev/benchmark.html">
+    <meta property="og:image" content="https://writing-comparison.pages.dev/og.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+    <link rel="stylesheet" href="./benchmark.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#summary">Skip to results</a>
+    <header class="page-header">
+      <div class="page-header-inner">
+        <p class="eyebrow"><a href="./">Writing comparison</a> · Benchmark</p>
+        <h1>What a writing skill costs</h1>
+        <p class="lede" id="lede"></p>
+      </div>
+    </header>
+    <main class="page">
+      <section id="summary" class="section" aria-labelledby="summary-title">
+        <h2 id="summary-title">say-it-straight against no skill</h2>
+        <div id="hero-tiles" class="tiles"></div>
+        <div class="chart-grid">
+          <figure class="chart-card" id="latency-chart"></figure>
+          <figure class="chart-card" id="cost-chart"></figure>
+        </div>
+        <p class="note" id="summary-note"></p>
+      </section>
+
+      <section class="section" aria-labelledby="examples-title">
+        <h2 id="examples-title">Every skill on every example</h2>
+        <p class="section-lede">Eight model-written drafts, four sizes per language. Bars are median API seconds over three cached runs; whiskers are min and max. Rose is say-it-straight, blue is no skill, gray is everyone else. A hollow bar means the skill returned a status block instead of a rewrite. Each table row links to the same output in the comparison viewer.</p>
+        <div id="example-cards" class="example-grid"></div>
+      </section>
+
+      <section class="section" aria-labelledby="context-title">
+        <h2 id="context-title">Context each skill loads</h2>
+        <p class="section-lede">Tokens added to the prompt when a skill is invoked, counted with Claude's own tokenizer. This is the fixed part of the cost; the variable part is thinking.</p>
+        <div class="chart-grid">
+          <figure class="chart-card chart-card-wide" id="context-chart"></figure>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="effort-title">
+        <h2 id="effort-title">Effort is the largest single variable</h2>
+        <p class="section-lede">The same Korean mid draft, no skill, one run per effort level. Every series number on this page was measured at <code>high</code>.</p>
+        <div class="chart-grid">
+          <figure class="chart-card" id="effort-chart"></figure>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="method-title">
+        <h2 id="method-title">Method and validity</h2>
+        <ul class="method-list" id="method-list"></ul>
+        <p class="note">Full report with per-run spreads, rule findings, and reproduction steps: <a href="https://github.com/beefiker/superloopy/blob/main/docs/superloopy-skill-benchmark.md">docs/superloopy-skill-benchmark.md</a>. Raw per-run data: <a href="https://github.com/beefiker/superloopy/blob/main/docs/benchmarks/2026-09-11-skill-benchmark-runs.json">2026-09-11-skill-benchmark-runs.json</a>.</p>
+      </section>
+    </main>
+    <script type="module" src="./benchmark.mjs"></script>
+  </body>
+</html>
