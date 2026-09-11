@@ -1,7 +1,8 @@
 # Writing comparison app
 
 Side-by-side comparison of one source document against the Humanize Korean (A),
-i-have-adhd (B), and Say It Straight (C) rewrites, across thirteen samples.
+i-have-adhd (B), and Say It Straight (C) rewrites, across fourteen authored samples, plus eight benchmark fixtures whose A, B, and C
+versions are the measured skill outputs from `docs/superloopy-skill-benchmark.md`.
 
 Regenerate the embedded data after editing anything under `samples/`:
 
@@ -31,6 +32,7 @@ directly with the `sample` query parameter:
 - `internal-proposal` — 내부 제안서
 - `api-migration` — API 전환 안내
 - `llm-wiki` — LLM 위키 도입 검토
+- `config-sync-review` — 설정 동기화 전환 검토
 
 English samples:
 
@@ -40,6 +42,13 @@ English samples:
 - `support-reply-en` — Support reply
 - `internal-proposal-en` — Internal proposal
 - `api-migration-en` — API migration
+
+Benchmark samples (group "Benchmark"; versions are the median-latency delivered run per
+skill, regenerated with `node examples/writing-comparison/app/build-benchmark.mjs` for the
+numbers page at `benchmark.html`):
+
+- `bench-ko-short`, `bench-ko-mid`, `bench-ko-big`, `bench-ko-huge` — 설정 동기화 전환 검토, model draft at four sizes
+- `bench-en-short`, `bench-en-mid`, `bench-en-big`, `bench-en-huge` — API v2 migration guide, model draft at four sizes
 
 Version A is the Korean humanizer, so English samples carry only `original`, `b`,
 and `c`. The version selector shows `A · Unavailable` for them.
@@ -58,12 +67,14 @@ absolute URL on that origin, so regenerate it if the project ever moves.
 DEPLOY="$(mktemp -d)/site"
 mkdir -p "$DEPLOY/data"
 cp examples/writing-comparison/app/index.html \
+   examples/writing-comparison/app/benchmark.html \
+   examples/writing-comparison/app/benchmark.css \
    examples/writing-comparison/app/styles.css \
    examples/writing-comparison/app/favicon.svg \
    examples/writing-comparison/app/og.png \
    examples/writing-comparison/app/apple-touch-icon.png \
    examples/writing-comparison/app/*.mjs "$DEPLOY"
-rm "$DEPLOY/build-data.mjs" "$DEPLOY/server.mjs"
+rm "$DEPLOY/build-data.mjs" "$DEPLOY/build-benchmark.mjs" "$DEPLOY/server.mjs"
 cp examples/writing-comparison/app/data/*.mjs "$DEPLOY/data"
 npx wrangler pages deploy "$DEPLOY" --project-name writing-comparison --branch main
 ```

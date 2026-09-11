@@ -6,16 +6,25 @@ import { sample as supportReply } from "./data/support-reply.mjs";
 import { sample as internalProposal } from "./data/internal-proposal.mjs";
 import { sample as apiMigration } from "./data/api-migration.mjs";
 import { sample as llmWiki } from "./data/llm-wiki.mjs";
+import { sample as configSyncReview } from "./data/config-sync-review.mjs";
 import { sample as releaseNoteEn } from "./data/release-note-en.mjs";
 import { sample as meetingFollowupEn } from "./data/meeting-followup-en.mjs";
 import { sample as incidentReviewEn } from "./data/incident-review-en.mjs";
 import { sample as supportReplyEn } from "./data/support-reply-en.mjs";
 import { sample as internalProposalEn } from "./data/internal-proposal-en.mjs";
 import { sample as apiMigrationEn } from "./data/api-migration-en.mjs";
+import { sample as benchKoShort } from "./data/bench-ko-short.mjs";
+import { sample as benchKoMid } from "./data/bench-ko-mid.mjs";
+import { sample as benchKoBig } from "./data/bench-ko-big.mjs";
+import { sample as benchKoHuge } from "./data/bench-ko-huge.mjs";
+import { sample as benchEnShort } from "./data/bench-en-short.mjs";
+import { sample as benchEnMid } from "./data/bench-en-mid.mjs";
+import { sample as benchEnBig } from "./data/bench-en-big.mjs";
+import { sample as benchEnHuge } from "./data/bench-en-huge.mjs";
 
-export const SAMPLE_ORDER = ["release-note","meeting-followup","incident-review","support-reply","internal-proposal","api-migration","llm-wiki","release-note-en","meeting-followup-en","incident-review-en","support-reply-en","internal-proposal-en","api-migration-en"];
+export const SAMPLE_ORDER = ["release-note","meeting-followup","incident-review","support-reply","internal-proposal","api-migration","llm-wiki","config-sync-review","release-note-en","meeting-followup-en","incident-review-en","support-reply-en","internal-proposal-en","api-migration-en","bench-ko-short","bench-ko-mid","bench-ko-big","bench-ko-huge","bench-en-short","bench-en-mid","bench-en-big","bench-en-huge"];
 
-export const SAMPLE_GROUPS = Object.freeze([{"id":"ko","label":"한국어","samples":["release-note","meeting-followup","incident-review","support-reply","internal-proposal","api-migration","llm-wiki"]},{"id":"en","label":"English","samples":["release-note-en","meeting-followup-en","incident-review-en","support-reply-en","internal-proposal-en","api-migration-en"]}].map(Object.freeze));
+export const SAMPLE_GROUPS = Object.freeze([{"id":"ko","label":"한국어","samples":["release-note","meeting-followup","incident-review","support-reply","internal-proposal","api-migration","llm-wiki","config-sync-review"]},{"id":"en","label":"English","samples":["release-note-en","meeting-followup-en","incident-review-en","support-reply-en","internal-proposal-en","api-migration-en"]},{"id":"bench","label":"Benchmark","samples":["bench-ko-short","bench-ko-mid","bench-ko-big","bench-ko-huge","bench-en-short","bench-en-mid","bench-en-big","bench-en-huge"]}].map(Object.freeze));
 
 export const VERSION_ORDER = ["original","a","b","c"];
 
@@ -27,10 +36,19 @@ export const SAMPLES = Object.freeze({
   "internal-proposal": internalProposal,
   "api-migration": apiMigration,
   "llm-wiki": llmWiki,
+  "config-sync-review": configSyncReview,
   "release-note-en": releaseNoteEn,
   "meeting-followup-en": meetingFollowupEn,
   "incident-review-en": incidentReviewEn,
   "support-reply-en": supportReplyEn,
   "internal-proposal-en": internalProposalEn,
   "api-migration-en": apiMigrationEn,
+  "bench-ko-short": benchKoShort,
+  "bench-ko-mid": benchKoMid,
+  "bench-ko-big": benchKoBig,
+  "bench-ko-huge": benchKoHuge,
+  "bench-en-short": benchEnShort,
+  "bench-en-mid": benchEnMid,
+  "bench-en-big": benchEnBig,
+  "bench-en-huge": benchEnHuge,
 });

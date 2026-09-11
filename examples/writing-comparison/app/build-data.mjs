@@ -16,7 +16,10 @@ const versionMetadata = Object.freeze({
 // and labels live here so the selector never hard-codes a language list.
 const sampleGroups = [
   { id: "ko", label: "한국어" },
-  { id: "en", label: "English" }
+  { id: "en", label: "English" },
+  // Benchmark fixtures: model-written drafts at four sizes, with each skill's measured output as its version.
+  // Versions come from the median-latency delivered run of docs/benchmarks/2026-09-11-skill-benchmark-runs.json.
+  { id: "bench", label: "Benchmark" }
 ];
 const sampleDefinitions = [
   { id: "release-note", language: "ko", label: "주간 배포 안내", description: "제목, 문단, 목록" },
@@ -26,12 +29,21 @@ const sampleDefinitions = [
   { id: "internal-proposal", language: "ko", label: "내부 제안서", description: "장단점, 표" },
   { id: "api-migration", language: "ko", label: "API 전환 안내", description: "코드, 경고, 링크" },
   { id: "llm-wiki", language: "ko", label: "LLM 위키 도입 검토", description: "절차 목록, 사례 표, 인용" },
+  { id: "config-sync-review", language: "ko", label: "설정 동기화 전환 검토", description: "챗봇 답변 틀, 번역투 부사, 표, 목록" },
   { id: "release-note-en", language: "en", label: "Deployment notice", description: "Heading, paragraphs, list" },
   { id: "meeting-followup-en", language: "en", label: "Meeting follow-up", description: "Checkboxes, owners, due dates" },
   { id: "incident-review-en", language: "en", label: "Incident review", description: "Timeline table, quote, metrics" },
   { id: "support-reply-en", language: "en", label: "Support reply", description: "Paragraphs, ordered list" },
   { id: "internal-proposal-en", language: "en", label: "Internal proposal", description: "Benefits, costs table" },
-  { id: "api-migration-en", language: "en", label: "API migration", description: "Code, warning, links" }
+  { id: "api-migration-en", language: "en", label: "API migration", description: "Code, warning, links" },
+  { id: "bench-ko-short", language: "bench", label: "벤치마크 · 한국어 short (510자)", description: "설정 동기화 검토, 모델 초안" },
+  { id: "bench-ko-mid", language: "bench", label: "벤치마크 · 한국어 mid (1,239자)", description: "설정 동기화 검토, 모델 초안" },
+  { id: "bench-ko-big", language: "bench", label: "벤치마크 · 한국어 big (5,526자)", description: "설정 동기화 검토, 모델 초안" },
+  { id: "bench-ko-huge", language: "bench", label: "벤치마크 · 한국어 huge (17,237자)", description: "설정 동기화 검토, 모델 초안" },
+  { id: "bench-en-short", language: "bench", label: "Benchmark · English short (73 words)", description: "API v2 migration guide, model draft" },
+  { id: "bench-en-mid", language: "bench", label: "Benchmark · English mid (265 words)", description: "API v2 migration guide, model draft" },
+  { id: "bench-en-big", language: "bench", label: "Benchmark · English big (992 words)", description: "API v2 migration guide, model draft" },
+  { id: "bench-en-huge", language: "bench", label: "Benchmark · English huge (2,732 words)", description: "API v2 migration guide, model draft" }
 ];
 function metricsFor(text) {
   return {

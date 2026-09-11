@@ -6,9 +6,11 @@ import { SAMPLE_ORDER, VERSION_ORDER, SAMPLES } from "../data.generated.mjs";
 const EXPECTED_SAMPLES = [
   "release-note", "meeting-followup", "incident-review",
   "support-reply", "internal-proposal",
-  "api-migration", "llm-wiki",
+  "api-migration", "llm-wiki", "config-sync-review",
   "release-note-en", "meeting-followup-en", "incident-review-en",
-  "support-reply-en", "internal-proposal-en", "api-migration-en"
+  "support-reply-en", "internal-proposal-en", "api-migration-en",
+  "bench-ko-short", "bench-ko-mid", "bench-ko-big", "bench-ko-huge",
+  "bench-en-short", "bench-en-mid", "bench-en-big", "bench-en-huge"
 ];
 // Version A is the Korean humanizer, so it has no English counterpart.
 // English samples ship original + B + C and the selector marks A unavailable.
@@ -16,8 +18,10 @@ const EXPECTED_VERSIONS = Object.freeze({
   __default: ["original", "a", "b", "c"],
   __english: ["original", "b", "c"]
 });
+// Benchmark samples carry the measured skill outputs; the English ones have no Korean humanizer run.
 const versionsFor = (sampleId) =>
-  sampleId.endsWith("-en") ? EXPECTED_VERSIONS.__english : EXPECTED_VERSIONS.__default;
+  sampleId.endsWith("-en") || sampleId.startsWith("bench-en-") ? EXPECTED_VERSIONS.__english : EXPECTED_VERSIONS.__default;
+const BENCHMARK_SAMPLES = EXPECTED_SAMPLES.filter((id) => id.startsWith("bench-"));
 const SAMPLE_LENGTH_RANGES = {
   "release-note": [700, 1100],
   "meeting-followup": [650, 1000],
@@ -26,12 +30,22 @@ const SAMPLE_LENGTH_RANGES = {
   "internal-proposal": [800, 1200],
   "api-migration": [850, 1300],
   "llm-wiki": [2800, 5600],
+  "config-sync-review": [1000, 1700],
   "release-note-en": [1400, 2000],
   "meeting-followup-en": [1000, 1450],
   "incident-review-en": [1100, 1400],
   "support-reply-en": [800, 1300],
   "internal-proposal-en": [1000, 1450],
-  "api-migration-en": [1000, 1400]
+  "api-migration-en": [1000, 1400],
+  // Benchmark versions are model outputs: i-have-adhd compresses to about half, so the floor is loose.
+  "bench-ko-short": [400, 800],
+  "bench-ko-mid": [900, 1400],
+  "bench-ko-big": [3000, 6000],
+  "bench-ko-huge": [11000, 18000],
+  "bench-en-short": [450, 950],
+  "bench-en-mid": [1300, 1800],
+  "bench-en-big": [2800, 6300],
+  "bench-en-huge": [7000, 17000]
 };
 const REQUIRED_FACTS = {
   "release-note": ["2026-08-20", "오후 3시", "검색 필터", "담당자와 다음 확인 시각"],
@@ -41,16 +55,28 @@ const REQUIRED_FACTS = {
   "internal-proposal": ["월 29,000원", "8명", "3개월", "계약을 연장하지 않고 기존 공유 폴더 방식으로 돌아"],
   "api-migration": ["2026-09-30", "X-API-Version", "https://docs.example.com/api/v2", "전환 목록은 운영 배포 전 검토 항목"],
   "llm-wiki": ["(BEE)", "30여 명", "대형 프로젝트 3개", "48.9%", "87%", "3,900", "1,300건", "53%에서 100%로", "17~33%", "20~40%", "30~50%", "3분의 2", "골든 질문 100여 개", "200줄", "AGENTS.md", "3개월"],
+  "config-sync-review": ["12개 서비스", "4건", "38분", "`config.yaml`", "`settings`", "`schemas/settings.v2.json`", "서비스 코드 수정 없이", "90일", "2026-10-15", "2026-11-05", "이전 설정을 유지하고 오류 로그를", "진행 중인 동기화를 마친 뒤", "2단계 전에"],
   "release-note-en": ["2026-08-20", "3:00 PM", "search filters", "the owner and the next check time"],
   "meeting-followup-en": ["2026-08-21", "Mina", "operations team", "decide at the next meeting"],
   "incident-review-en": ["10:12", "10:38", "26 minutes", "confirm again before the next drill", "the owner records the result"],
   "support-reply-en": ["18427", "1-2 days", "Northline Courier", "before a delivery driver is assigned"],
   "internal-proposal-en": ["$29 per month", "8 people", "three months", "do not renew the contract and return to the existing shared folder"],
-  "api-migration-en": ["2026-09-30", "X-API-Version", "https://docs.example.com/api/v2", "the migration list is a review item before production release"]
+  "api-migration-en": ["2026-09-30", "X-API-Version", "https://docs.example.com/api/v2", "the migration list is a review item before production release"],
+  // Benchmark fixtures: the fact tokens the benchmark's delivered rule counted.
+  "bench-ko-short": ["12개", "4건", "38분", "2026-10-15", "2026-11-05"],
+  "bench-ko-mid": ["12개", "4건", "38분", "2026-10-15", "2026-11-05", "settings_history"],
+  "bench-ko-big": ["12개", "4건", "38분", "2026-10-15", "2026-11-05", "settings_history", "schemas/settings.v2.json"],
+  "bench-ko-huge": ["12개", "4건", "38분", "2026-10-15", "2026-11-05", "settings_history", "schemas/settings.v2.json"],
+  "bench-en-short": ["2026-09-30", "X-API-Version", "Authorization"],
+  "bench-en-mid": ["2026-09-30", "X-API-Version", "Authorization", "docs.example.com/api/v2"],
+  "bench-en-big": ["2026-09-30", "X-API-Version", "Authorization", "docs.example.com/api/v2", "api.example.com/orders"],
+  "bench-en-huge": ["2026-09-30", "X-API-Version", "Authorization", "docs.example.com/api/v2", "api.example.com/orders"]
 };
 const UNSUPPORTED_TRANSFORMED_FACTS = {
   "release-note": ["저장 지연이 사라지는지 먼저 확인", "확인한 영향 범위와 다음 안내 시각"],
-  "incident-review": ["고객 문의와 대시보드의 빈 응답 수치가 같은 방향으로 움직이는지도"]
+  "incident-review": ["고객 문의와 대시보드의 빈 응답 수치가 같은 방향으로 움직이는지도"],
+  // The P-family repair ladder forbids stock replacement phrases: they measure as AI tells themselves.
+  "config-sync-review": ["아무 표시 없이", "티 안 나게", "눈에 띄지 않게", "페일세이프", "그레이스풀", "정상 종료", "기준 데이터"]
 };
 const NORMALIZATION_STOPWORDS = new Set([
   "그리고", "하지만", "또는", "관련", "대한", "위해", "있는", "없는", "합니다", "합니다만",
@@ -120,7 +146,7 @@ function duplicateNormalizedContentUnitPairs(text) {
   return duplicates;
 }
 
-test("embeds thirteen complete comparison samples", () => {
+test("embeds twenty-two complete comparison samples", () => {
   assert.deepEqual(SAMPLE_ORDER, EXPECTED_SAMPLES);
   assert.deepEqual(VERSION_ORDER, ["original", "a", "b", "c"]);
   for (const sampleId of EXPECTED_SAMPLES) {
@@ -156,6 +182,9 @@ test("preserves each document format across all four versions", () => {
     assert.match(textFor("llm-wiki"), /^> /m, `llm-wiki/${versionId}`);
     assert.match(textFor("llm-wiki"), /^1\. /m, `llm-wiki/${versionId}`);
     assert.equal((textFor("llm-wiki").match(/^- /gm) ?? []).length >= 3, true, `llm-wiki/${versionId}`);
+    assert.match(textFor("config-sync-review"), /\| 단계 \| 대상 \| 일정 \|/, `config-sync-review/${versionId}`);
+    assert.match(textFor("config-sync-review"), /^## 실패 처리$/m, `config-sync-review/${versionId}`);
+    assert.equal((textFor("config-sync-review").match(/^- /gm) ?? []).length >= 3, true, `config-sync-review/${versionId}`);
   }
 });
 
@@ -206,7 +235,8 @@ test("states the API deployment-record instruction once in version C", () => {
 });
 
 test("does not repeat normalized semantic content units in transformed samples", () => {
-  for (const sampleId of SAMPLE_ORDER) {
+  // Benchmark versions are unedited model outputs shown as measured, so they are not held to the authored-sample bar.
+  for (const sampleId of SAMPLE_ORDER.filter((id) => !BENCHMARK_SAMPLES.includes(id))) {
     for (const versionId of versionsFor(sampleId).filter((id) => id !== "original")) {
       const duplicates = duplicateNormalizedContentUnitPairs(SAMPLES[sampleId].versions[versionId].text);
       assert.deepEqual(duplicates, [], `${sampleId}/${versionId}: ${JSON.stringify(duplicates)}`);

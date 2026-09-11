@@ -6,7 +6,7 @@ import { diffDocuments } from "../diff-core.mjs";
 import { renderBlock } from "../markdown.mjs";
 import { anchorSliceRanges, findAnchorMatch, findAnchorRange, normalizeAnchor } from "../notes.mjs";
 
-const KOREAN_NOTE_SAMPLES = ["release-note", "meeting-followup", "incident-review", "support-reply", "internal-proposal", "api-migration", "llm-wiki"];
+const KOREAN_NOTE_SAMPLES = ["release-note", "meeting-followup", "incident-review", "support-reply", "internal-proposal", "api-migration", "llm-wiki", "config-sync-review"];
 
 function fakeVersions(originalText, cText) {
   return {
