@@ -141,6 +141,7 @@ When **all four** scoped fields (`target`, `owner`, `claims`, and `scopeReason`)
 - one-time SessionStart bootstrap for the command wrapper and bundled agents
 - quiet default plugin continuation hook registration
 - packaged Stop hook that remains runtime opt-in through `SUPERLOOPY_STOP_HOOK=on`
+- opt-in write-time calque nudge through `SUPERLOOPY_CALQUE_NUDGE=on`: advisory context at the next prompt when the previous Korean reply carried a gating P calque, never a block
 - premature native `update_goal status=complete` rejection while Superloopy aggregate completion is incomplete
 - accepted fleet handoffs requiring active-root evidence artifacts
 - crew completion lines staying presentation-only beside handoff and fleet status

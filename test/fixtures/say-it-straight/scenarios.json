@@ -195,5 +195,22 @@
       "may"
     ],
     "allow_unchanged": false
+  },
+  {
+    "id": "idiom-stands-in-for-observable",
+    "prompt": "Rewrite for a release note: 'When the signing certificate has expired, the uploader fails silently and the job is marked done.' Keep it short.",
+    "must_preserve": [
+      "signing certificate",
+      "expired",
+      "marked done"
+    ],
+    "must_not_add": [
+      "log",
+      "warning",
+      "exit code",
+      "error message",
+      "invented mechanism detail"
+    ],
+    "allow_unchanged": false
   }
 ]
