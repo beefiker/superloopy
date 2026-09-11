@@ -1,6 +1,6 @@
 # Proposal: shared design tool licence
 
-Design work is currently spread across a shared folder and three personal accounts, so the current file is whichever copy somebody last put back. This proposal moves the team onto one paid workspace for three months, then decides.
+Design work is currently spread across a shared folder and three personal accounts, so the current file is whichever copy somebody last put back. This proposal suggests moving the team onto one paid workspace for a three-month trial, then deciding.
 
 ## Benefits
 
@@ -18,7 +18,7 @@ Design work is currently spread across a shared folder and three personal accoun
 
 ## Risks
 
-The main risk is spending three months moving files and then concluding the tool does not fit, leaving the work half migrated. To contain that, only new projects start in the workspace during the trial and existing folders stay where they are.
+The main risk is spending three months moving files and then concluding the tool does not fit, leaving the work half migrated. To contain that, only new projects would start in the workspace during the trial and existing folders would stay where they are.
 
 ## Decision
 
