@@ -19,4 +19,4 @@ The nightly index rebuild started late and overlapped morning traffic. While it 
 
 ## Follow-up
 
-The rebuild now refuses to start when it would overlap the morning window, and the empty response rate pages rather than sitting on a dashboard. Both changes are deployed. The on-call runbook still needs a section on telling an empty result apart from a failed query, and the owner records the result. We will confirm again before the next drill.
+The rebuild now refuses to start when it would overlap the morning window, and the empty response rate has become a paging alert rather than a dashboard-only signal. Both changes are deployed. The on-call runbook still needs a section on telling an empty result apart from a failed query, and the owner records the result. We will confirm again before the next drill.
