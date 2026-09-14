@@ -319,6 +319,7 @@ textarea:focus-visible,
   display: flex;
   align-items: end;
   gap: 6px;
+  width: max-content;
   max-width: calc(100vw - 24px);
   padding: 6px 8px;
   transform: translateX(-50%);
@@ -407,6 +408,9 @@ textarea:focus-visible,
 .ui-select {
   position: relative;
   display: grid;
+  /* minmax(0, 1fr) lets the track shrink below the trigger's label, so a
+     long sample name truncates instead of overflowing the next control. */
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
 }
 
@@ -416,6 +420,7 @@ textarea:focus-visible,
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  min-width: 0;
   min-height: var(--dock-control-height);
   padding: 4px 8px;
   border-radius: 7px;
@@ -432,6 +437,8 @@ textarea:focus-visible,
 }
 
 .ui-select-value {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -561,7 +568,9 @@ textarea:focus-visible,
    Sized in rem, not ch: ch resolves against the select's own 0.78rem
    font, which is far narrower than the space the option text needs. */
 .comparison-dock .sample-select {
-  flex: 1 1 10rem;
+  /* Basis fits the longest sample label ("Benchmark · English huge (2,732 words)")
+     so it truncates only when the viewport, not the dock, runs out of room. */
+  flex: 1 1 18.5rem;
   min-width: 9.5rem;
 }
 
