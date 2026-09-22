@@ -48,7 +48,7 @@ Require explicit user authority before production writes, destructive operations
 
 ## Rules that are decisions
 
-Each of these is checkable from the diff or from a run. They are the rules this skill keeps because they were measured to bite; the ones that asked for a judgement were measured not to.
+Each of these is checkable from the diff or from a run. Measured effect (see the README): about a quarter fewer changes ship an untested part; the rest is checkable procedure without a separately measured effect.
 
 1. **Reproduce first, and re-run the same reproduction at the end.** Capture the reported symptom as a runnable reproduction before changing anything, at the conditions the report describes rather than narrowed onto the cause you find. A change that does not make the reported behavior go away is not a fix, however well the cause is explained.
 2. **Extend the suite that already states the contract.** Put new cases in the test file that already covers the unit you are changing. A second file, fixture, bootstrap, or harness for a unit that has one is a change to the project's test topology and carries its own stated reason. New coverage may not be bought by mutating fixture state other cases depend on, and releases what it creates through the suite's own teardown.
