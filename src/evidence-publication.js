@@ -308,14 +308,19 @@ async function guardDirectoryIdentityDuringWrite(artifact, path, expectedStat, o
     }
   };
   let watcher;
-  try {
-    watcher = watch(dirname(path), { persistent: false }, verify);
-    watcher.on("error", () => {
-      watcher?.close();
-      watcher = undefined;
-    });
-  } catch {
-    // Polling below remains the portable identity guard when watching is unavailable.
+  // On Windows, libuv's directory watcher aborts the whole process (fs-event.c assertion) when
+  // the watched path and the event path differ in case or 8.3 short form, which happens under
+  // temp directories; the polling guard below is the only identity guard there.
+  if (process.platform !== "win32") {
+    try {
+      watcher = watch(dirname(path), { persistent: false }, verify);
+      watcher.on("error", () => {
+        watcher?.close();
+        watcher = undefined;
+      });
+    } catch {
+      // Polling below remains the portable identity guard when watching is unavailable.
+    }
   }
   const timer = setInterval(verify, 5);
   timer.unref();
