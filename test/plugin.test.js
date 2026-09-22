@@ -82,9 +82,10 @@ test("plugin interface assets resolve inside the npm package", async () => {
     "skills/say-it-straight/references/quality-rubric.md",
     "skills/say-it-straight/references/quick-rules.md",
     "skills/say-it-straight/references/upstream-notice.md",
-    "skills/say-it-straight/scripts/audit-output.mjs"
+    "skills/say-it-straight/scripts/audit-output.mjs",
+    ...["SKILL.md", "agents/openai.yaml", "scripts/write-evidence-report.mjs", ...["architecture", "data-safety", "evidence", "runtime-agents", "sweep", "testing-and-operations", "upstream-notice"].map((name) => `references/${name}.md`)].map((name) => `skills/superloopy-backend/${name}`)
   ]) {
-    assert.equal(files.has(path), true, `say-it-straight package file missing from npm pack: ${path}`);
+    assert.equal(files.has(path), true, `skill package file missing from npm pack: ${path}`);
   }
   for (const path of ["skills/superloopy-loop/references/reassurance-copy.md", "skills/superloopy-loop/scripts/audit-reassurance-copy.mjs"]) assert.equal(files.has(path), true, `reassurance-copy loop resource missing from npm pack: ${path}`);
   assert.equal([...files].some((path) => path.startsWith("skills/product-copy/")), false, "standalone product-copy resources must not ship in npm pack");
