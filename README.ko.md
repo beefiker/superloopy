@@ -47,6 +47,7 @@ Superloopy는 명령을 작게 둡니다. 대신 스킬이 작업 방식을 잡�
 | `superloopy-loop` | full loop는 `loopy <task>` 또는 `loopy team <task>`로 시작합니다. `loopywork`, `lpy`, `$lpy`는 가벼운 guidance만 넣을 때 씁니다. | full loop는 직접적·간결·완전한 진행/최종 응답과 가벼운 계획, 근거, 품질 게이트, 최종 evidence report를 남깁니다. 정확한 영문/한국어 제어는 현재 미완료 loop에만 적용되며 새 loop는 enabled로 초기화됩니다. guidance alias는 상태를 바꾸지 않습니다. |
 | `superloopy-doctor` | install, wrapper, plugin cache, hook/bootstrap, agent, Codex/Claude Code host wiring, stale version 문제를 진단할 때. | 읽기 전용 health report: wrapper/cache/version 근거, 실패한 체크, 승인 후 실행할 정확한 복구 명령. |
 | `superloopy-research` | Codex의 `$superloopy:superloopy-research`나 Claude Code의 `/superloopy:superloopy-research`를 직접 호출하거나, 리서치 작업을 선행 `loopy`/`루피`(예: `loopy research`)로 시작할 때만. 단순한 조사·검색·요약 요청으로는 켜지지 않습니다. | 리서치 축, 확장 wave, 모든 retrieval의 판정 결과, 등급과 시점이 붙은 출처, 비용이 기록된 claim ledger, 검증 메모, 출처가 붙은 synthesis artifact. |
+| `superloopy-backend` | 백엔드·데이터·마이그레이션·런타임 데이터베이스 에이전트 작업에 Codex의 `$superloopy:superloopy-backend`나 Claude Code의 `/superloopy:superloopy-backend`를 직접 호출하거나, 해당 작업을 선행 `loopy`/`루피`로 시작할 때만. 단순한 백엔드·데이터베이스 용어로는 활성화되지 않습니다. | 스택 중립적인 컨텍스트 카드, 명시된 계약, 최소 권한 데이터 안전장치, TDD, 마이그레이션·런타임 에이전트 경계, 명령으로 검증한 운영 근거. |
 | `superloopy-clone` | `loopy clone`, 허가된 웹사이트 클론, 리빌드, 마이그레이션, 픽셀 기준 복구를 요청할 때. | 브라우저 캡처, 페이지 구조, 디자인 토큰, asset 목록, 구현 메모, build 출력, visual QA 근거. |
 | `superloopy-frontend` | 지원되는 화면 기반 애플리케이션 UI(공개·인증·비공개/내부용·설치형 PWA/확장을 포함한 브라우저 호스팅 웹, 사용자 여정이 있는 인터랙티브 배포형 콘텐츠 중심 웹(캠페인·출판·랜딩 경험 등), 데스크톱, 모바일/태블릿, 임베디드/하이브리드 클라이언트, 커스텀 렌더링 UI, Qt, 혼합 타깃) 작업에 Codex의 `$superloopy:superloopy-frontend`나 Claude Code의 `/superloopy:superloopy-frontend`를 직접 호출하거나, 해당 작업을 선행 `loopy`/`루피`로 시작할 때만. 단순한 UI·플랫폼·프레임워크 용어로는 켜지지 않으며 TV·웨어러블·XR·자동차·게임 UI·TUI·정적 미디어/문서 결과물·비 UI 작업은 제외됩니다. | 하나의 공통 UX 계약에 플랫폼/컴포지션 경로를 더합니다. 근거는 변경한 주장에 비례하며 브라우저, 네이티브 타깃/셸, 렌더러, 혼합 타깃의 각 소유자를 독립적으로 검증합니다. 독립 실행에서는 실행별 영수증을 보존하고 활성 루프에서는 goal과 criterion에 연결합니다. |
 | `humanize-korean` | 한국어 글의 AI 티를 줄이거나 번역투를 고치고, 사실은 바꾸지 않은 채 사람이 쓴 것처럼 다듬어야 할 때. | 잘못 놓인 수식어의 의미 검토를 포함한 한국어 자연스러움을 맡습니다. `final.md`, `summary.md`, `audit.json`을 쓰고, Superloopy loop 안에서는 `.superloopy/evidence/humanize-korean/` 아래에 근거를 남깁니다. |
@@ -55,6 +56,10 @@ Superloopy는 명령을 작게 둡니다. 대신 스킬이 작업 방식을 잡�
 | `superloopy-slides` | 슬라이드·프레젠테이션·덱을 요청하거나 PPT/PPTX를 웹으로 변환할 때. | 고정 16:9 스테이지의 의존성 없는 단일 HTML 덱, 직접 고르는 스타일 미리보기 3종, `.superloopy/evidence/slides/` 아래 렌더링 스크린샷 visual-QA artifact. |
 
 **자동 안심 문구 게이트.** 모든 full Loopy 시작·재개 컨텍스트에는 이 조건부 게이트가 들어갑니다. 영향받는 artifact가 사용자가 보는 한국어 제품 동작 문구를 새로 만들거나 바꿀 때만 켜지고, RC-1부터 RC-4와 `humanize-korean`의 자연스러움 검토를 plan criterion에 추가합니다. 내부 로그와 진단, 개발자 문서와 주석, 테스트 설명, 인용문, 일반·마케팅 글, 한국어가 아닌 문구는 제외합니다. 제공된 동작만 사용하며 사실이 없으면 결과를 꾸며내지 않고 blocker나 질문으로 남깁니다. 별도 skill이나 호출 이름은 없습니다.
+
+### `superloopy-backend`가 측정된 효과
+
+네 개 백엔드 코드베이스(Java·Go)의 병합된 풀 리퀘스트를 봉인된 체크아웃에 재현하고, 해당 PR의 테스트를 숨겨 오라클로 쓰며, 모든 제출물을 블라인드로 세 번 리뷰해 측정했습니다. 규칙을 뽑아내지 않은 46개 과제에서 스킬을 켜면 **테스트 없는 부분이 포함된 변경이 약 1/4 줄었습니다**(스킬 없이 실행할 때 대비 비율 0.73, 90% 구간 0.56~0.90). 출력 토큰은 **1.7~1.8배**입니다. 숨긴 테스트의 통과 여부는 바뀌지 않았고, 수정 경로를 더 찾아주지도 않았습니다. 데이터 안전·마이그레이션·런타임 에이전트 지침은 측정되지 않았으므로 측정된 효과가 아닌 지침으로 읽어야 합니다.
 
 기본 안전장치는 loop 스킬입니다. 문장 맨 앞의 완전한 `loopy` 토큰은 evidence loop를 시작하거나 이어가고, `loopy team`은 크루 모드로 올립니다. 선행 `loopywork`, `lpy`, `$lpy`는 시작 안내만 넣고, 구조화된 `SUPERLOOPY_STEER`는 진행 중인 loop를 조정합니다. full-loop 직접 출력은 제공한 문장이나 task artifact를 몰래 고치지 않으며, 직접 윤문은 명시적 호출만 가능합니다. prompt hook은 일반 문장에서 frontend나 한국어 글쓰기 모드를 추측하지 않습니다. 전문 스킬은 직접 호출하거나, 이미 시작된 loop가 실제 전문 작업을 명시적으로 배정할 때만 사용합니다.
 

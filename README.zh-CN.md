@@ -47,6 +47,7 @@ Superloopy 保持命令层很小。具体工作方式由 skills 负责：什么�
 | `superloopy-loop` | 用 `loopy <task>` 或 `loopy team <task>` 启动完整 loop；用 `loopywork`、`lpy`、`$lpy` 只注入 guidance。 | 完整 loop 会产出直接、简洁、完整的进度/最终回复，以及轻量计划、证明、质量 gate 和最终 evidence report。精确的英文/韩文控制只影响当前未完成 loop；新 loop 会重置为 enabled。Guidance alias 不会改状态。 |
 | `superloopy-doctor` | 诊断安装、wrapper、plugin cache、hook/bootstrap、agent、Codex/Claude Code host wiring 或版本过旧问题时。 | 只读 health report：wrapper/cache/version 证据、失败检查，以及只有批准后才运行的精确修复命令。 |
 | `superloopy-research` | 仅当你在 Codex 中显式调用 `$superloopy:superloopy-research`、在 Claude Code 中调用 `/superloopy:superloopy-research`，或以行首 `loopy`/`루피`（如 `loopy research`）开始研究任务时。普通的调查、检索或总结请求不会激活它。 | 研究轴、扩展 wave、每次抓取的判定结果、带评级与时点的来源、记录成本的 claim ledger、验证笔记、带引用的 synthesis artifact。 |
+| `superloopy-backend` | 仅在处理后端、数据、迁移或运行时数据库代理工作时，在 Codex 中显式调用 `$superloopy:superloopy-backend`，或在 Claude Code 中调用 `/superloopy:superloopy-backend`，也可用开头的 `loopy`/`루피` 启动该工作。普通的后端或数据库词汇不会激活它。 | 与技术栈无关的上下文卡、明确契约、最小权限数据保护、TDD、迁移与运行时代理边界，以及由命令验证的运维证据。 |
 | `superloopy-clone` | 请求 `loopy clone`、已授权的网站克隆、重建、迁移，或需要按像素恢复页面时。 | 浏览器截图、页面结构、设计 token、资产清单、实现笔记、build 输出、visual QA 证据。 |
 | `superloopy-frontend` | 仅在处理受支持的基于屏幕的应用 UI（浏览器托管 Web，包括公开、需认证、私有/内部、已安装 PWA 或扩展；具有用户旅程的已部署交互式内容型 Web，例如营销活动、出版物或着陆页体验；以及桌面、移动设备/平板、嵌入式/混合客户端、自定义渲染 UI、Qt 或混合目标）时，在 Codex 中显式调用 `$superloopy:superloopy-frontend`，或在 Claude Code 中调用 `/superloopy:superloopy-frontend`，也可用开头的 `loopy`/`루피` 启动该工作。仅出现 UI、平台或框架词汇不会激活它；TV、可穿戴设备、XR、汽车、游戏 UI、TUI、静态媒体/文档产物和非 UI 工作仍被排除。 | 采用一份共享 UX 契约，并叠加平台/界面构成路径。证据与变更声明成比例，并分别验证浏览器、原生目标/外壳、渲染器和每个混合目标。独立运行保留按次划分的证据；活动循环则把证据绑定到 goal 和 criterion。 |
 | `humanize-korean` | 需要去掉韩文内容里的 AI 腔、修正翻译腔，或在不改事实的前提下让韩文更像真人写作时。 | 负责韩文自然度，包括对错位修饰语的语义审查。写入 `final.md`、`summary.md`、`audit.json`；在 Superloopy loop 中把证据记录到 `.superloopy/evidence/humanize-korean/`。 |
@@ -55,6 +56,10 @@ Superloopy 保持命令层很小。具体工作方式由 skills 负责：什么�
 | `superloopy-slides` | 需要幻灯片、演示文稿、deck，或把 PPT/PPTX 转成网页时。 | 固定 16:9 舞台的零依赖单文件 HTML deck、可挑选的三种样式预览，以及 `.superloopy/evidence/slides/` 下的渲染截图 visual-QA 证据产物。 |
 
 **自动安心文案 gate。** 每次完整 Loopy 的开始和恢复上下文都包含这个条件 gate。只有当受影响的 artifact 新建或修改用户可见的韩文产品行为文案时才会启用，并把 RC-1 到 RC-4 以及 `humanize-korean` 的自然度审查加入 plan criterion。内部日志和诊断、开发者文档和注释、测试叙述、引用、一般或营销文字以及非韩文文案都不在范围内。它只使用已提供的行为；缺少事实时会记录 blocker 或问题，而不会编造结果。没有独立 skill 或调用名称。
+
+### `superloopy-backend` 的实测效果
+
+测量方法：在四个后端代码库（Java 与 Go）上，把已合并的拉取请求在封存的检出中重放，隐藏该 PR 自带的测试作为判据，并对每份提交做三次盲评。在 46 个规则并非由其推导出的任务上，启用该技能后**含有未测试部分的变更减少了约四分之一**（相对于不启用技能的比率 0.73，90% 区间 0.56–0.90），输出 token 为 **1.7–1.8 倍**。它没有改变隐藏测试是否通过，也没有找到更多的修复点。数据安全、迁移与运行时代理的指导未经测量，请视为指导而非实测效果。
 
 Loop skill 是默认护栏。开头的完整 `loopy` token 会启动或继续 evidence loop；`loopy team` 会升级到 crew 模式。开头的 `loopywork`、`lpy`、`$lpy` 只注入起步 guidance，结构化的 `SUPERLOOPY_STEER` 可调整进行中的 loop。完整 Loopy 的直接输出不会悄悄改写提供的文字或 task artifact；直接编辑仍须显式调用。Prompt hook 不会从普通文本推断 frontend 或韩文写作模式；请显式调用专门 skill，或让已经启动的 loop 明确分派真正的专门 subtask。
 
