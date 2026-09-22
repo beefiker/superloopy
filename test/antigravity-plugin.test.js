@@ -42,3 +42,17 @@ test("canonicalAgentType and matchesAgentType resolve Antigravity host agent typ
   assert.equal(matchesAgentType({ host: "antigravity", agentType: "superloopy:franky", role: "franky" }), true);
   assert.equal(matchesAgentType({ host: "antigravity", agentType: "zoro", role: "franky" }), false);
 });
+
+test("the agent install guide documents the working Antigravity commands", async () => {
+  const install = await readFile("installation.md", "utf8");
+
+  // `agy plugin install <url>` clones into ~/.gemini/config/plugins and registers the
+  // plugin. `agy plugin import` only migrates gemini/claude hosts and rejects a URL;
+  // a manual clone plus `agy plugin enable` sets a flag without ingesting anything,
+  // and `agy plugin validate` still passes on it, so both failures are silent.
+  assert.match(install, /agy plugin install https:\/\/github\.com\/beefiker\/superloopy/u);
+  assert.match(install, /agy plugin validate ~\/\.gemini\/config\/plugins\/superloopy/u);
+  assert.match(install, /agy plugin list/u);
+  assert.doesNotMatch(install, /agy plugin import https:/u);
+  assert.doesNotMatch(install, /^agy plugin enable superloopy\s*$/mu);
+});
