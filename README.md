@@ -57,6 +57,10 @@ Superloopy keeps the command layer small. Skills carry the specialist workflow: 
 
 **Automatic reassurance-copy gate.** Every full Loopy start or resume carries this conditional gate. It activates only when an affected artifact creates or changes user-visible Korean product-behavior copy, then adds RC-1 through RC-4 and `humanize-korean` naturalness review to the plan criterion. Internal logs and diagnostics, developer documentation and comments, test narration, quotations, general or marketing prose, and non-Korean copy are excluded. The gate uses supplied behavior and records a blocker or question when facts are missing instead of inventing an outcome; it has no standalone skill or invocation name.
 
+### What `superloopy-backend` was measured to do
+
+Measured by replaying merged pull requests from four backend codebases (Java and Go) against a sealed checkout, with the pull request's own tests withheld as the oracle and every submission blind-reviewed three times. On 46 tasks the skill's rules were never derived from, loading the skill left **about a quarter fewer changes with a part that has no test** (ratio 0.73 against running without the skill, 90% interval 0.56–0.90), at **1.7–1.8× the output tokens**. It did not change whether the withheld tests passed, and it did not find more of the fix. The data-safety, migration and runtime-agent guidance has not been measured; treat it as guidance, not as a measured effect.
+
 The loop skill is the default guardrail. A complete leading `loopy` token starts or resumes the evidence loop; `loopy team` escalates to crew mode. Leading `loopywork`, `lpy`, and `$lpy` tokens only inject starter guidance. Structured `SUPERLOOPY_STEER` directives can adjust an active loop. Full-loop direct output never silently rewrites supplied prose or task artifacts: direct editing remains explicit-only. The prompt hook does not infer frontend or Korean-writing modes from ordinary text; invoke specialist skills explicitly or let an already-active loop route a real specialist subtask.
 
 ## Clone Demo
