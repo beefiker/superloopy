@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import "./helpers/trust-isolate.js";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync, readdirSync, renameSync, statSync } from "node:fs";
+import { mkdtemp, mkdir, open, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
 import { auditLoop } from "../src/audit.js";
-import { resolveEvidenceOutputPath, validateQualityGate, writeEvidenceOutputFile } from "../src/artifacts.js";
+import { resolveEvidenceOutputPath, validateQualityGate, writeEvidenceOutputFile, writeEvidenceOutputFileExclusive } from "../src/artifacts.js";
 import { captureLoop } from "../src/capture.js";
 import { createLoop, evidenceLoop, nextLoop } from "../src/loop.js";
 import { isTrustedCommand, recordTrustedCommand, trustLoop } from "../src/plan-trust.js";
@@ -207,6 +208,313 @@ test("SECURITY: evidence output write rejects a symlink swapped in after path re
     /symlink|ELOOP|not follow/i
   );
   assert.equal(await readFile(outsideTarget, "utf8"), "original\n");
+});
+
+test("exclusive evidence output stays unpublished until its durable write completes", async () => {
+  const repo = await tempRepo();
+  await mkdir(join(repo, ".superloopy", "evidence", "superloopy-backend"), { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-one/backend-skill-report.md",
+    undefined,
+  );
+  const probePath = join(repo, "file-handle-probe");
+  const probe = await open(probePath, "wx");
+  const fileHandlePrototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  await rm(probePath);
+  const originalWriteFile = fileHandlePrototype.writeFile;
+  const originalSync = fileHandlePrototype.sync;
+  const originalChmod = fileHandlePrototype.chmod;
+  let directorySyncs = 0;
+  let directoryChmods = 0;
+  let signalEntered;
+  let releaseWrite;
+  const entered = new Promise((resolve) => { signalEntered = resolve; });
+  const released = new Promise((resolve) => { releaseWrite = resolve; });
+  fileHandlePrototype.writeFile = async function delayedWriteFile(data, options) {
+    if (data === "durable report\n") {
+      signalEntered();
+      await released;
+    }
+    return originalWriteFile.call(this, data, options);
+  };
+  fileHandlePrototype.sync = async function trackedSync() {
+    if ((await this.stat()).isDirectory()) directorySyncs += 1;
+    return originalSync.call(this);
+  };
+  fileHandlePrototype.chmod = async function trackedChmod(mode) {
+    if ((await this.stat()).isDirectory()) directoryChmods += 1;
+    return originalChmod.call(this, mode);
+  };
+  let writing;
+  try {
+    writing = writeEvidenceOutputFileExclusive(output, "durable report\n");
+    await entered;
+    const publishedBeforeWrite = existsSync(output.absolutePath);
+    assert.deepEqual([existsSync(join(repo, ".superloopy", "evidence-publication.lock")), existsSync(join(repo, ".superloopy-evidence-publication.lock")), existsSync(`${join(repo, ".superloopy", "evidence", "superloopy-backend")}.lock`)], [true, false, false], "publication lock must live under .superloopy so crash residue stays inside the runtime gitignore boundary");
+    if (process.platform !== "win32") {
+      const [stageName] = readdirSync(join(repo, ".superloopy", "evidence", "superloopy-backend"))
+        .filter((name) => name.startsWith(".run-one."));
+      assert.equal(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", stageName)).mode & 0o777, 0o700);
+    }
+    releaseWrite();
+    await writing;
+    assert.equal(publishedBeforeWrite, false);
+    assert.equal(await readFile(output.absolutePath, "utf8"), "durable report\n");
+    assert.ok(directorySyncs >= 2, "staging and publish directories must both be synced");
+    assert.equal(directoryChmods, process.platform === "win32" ? 0 : 1, "staging widens to the umask default through the verified handle before the rename commit");
+    if (process.platform !== "win32") {
+      assert.notEqual(statSync(join(repo, ".superloopy", "evidence", "superloopy-backend", "run-one")).mode & 0o200, 0, "published report directory must stay owner-writable for ordinary cleanup");
+      assert.equal(statSync(output.absolutePath).mode & 0o222, 0, "published report must be read-only");
+    }
+  } finally {
+    releaseWrite?.();
+    await writing?.catch(() => {});
+    fileHandlePrototype.writeFile = originalWriteFile;
+    fileHandlePrototype.sync = originalSync;
+    fileHandlePrototype.chmod = originalChmod;
+  }
+});
+
+test("a post-rename publish-directory sync failure leaves the published report intact", async () => {
+  const repo = await tempRepo();
+  const publishRoot = join(repo, ".superloopy", "evidence", "superloopy-backend");
+  await mkdir(publishRoot, { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-sync-failure/backend-skill-report.md",
+    undefined,
+  );
+  const probe = await open(join(repo, "file-handle-sync-probe"), "wx");
+  const fileHandlePrototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  const originalSync = fileHandlePrototype.sync;
+  // Post-rename publish-root sync ordinal: POSIX staging guard (1), staged chmod (2), then (3);
+  // win32 adds a pre-rename publish-root sync after the anchor link, so its first is (4).
+  const postRenamePublishSync = process.platform === "win32" ? 4 : 3;
+  let directorySyncs = 0;
+  fileHandlePrototype.sync = async function failPublishDirectorySync() {
+    if ((await this.stat()).isDirectory() && ++directorySyncs === postRenamePublishSync) {
+      throw Object.assign(new Error("injected publish directory sync failure"), { code: "EIO" });
+    }
+    return originalSync.call(this);
+  };
+
+  try {
+    await assert.rejects(
+      writeEvidenceOutputFileExclusive(output, "report needing durable publication\n"),
+      /publish directory sync failure/u,
+    );
+  } finally {
+    fileHandlePrototype.sync = originalSync;
+  }
+  // rename() is the commit point: a finalization failure surfaces as an error but must never
+  // truncate or remove the already-published report, and the id stays claimed.
+  assert.equal(await readFile(output.absolutePath, "utf8"), "report needing durable publication\n");
+  await assert.rejects(writeEvidenceOutputFileExclusive(output, "must not replace the committed report\n"), /already exists/u);
+  assert.equal(await readFile(output.absolutePath, "utf8"), "report needing durable publication\n");
+});
+
+test("Windows exclusive publication retains its scrub anchor through commit checks", async () => {
+  const repo = await tempRepo();
+  const publishRoot = join(repo, ".superloopy", "evidence", "superloopy-backend");
+  await mkdir(publishRoot, { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-windows-anchor/backend-skill-report.md",
+    undefined,
+  );
+  const probe = await open(join(repo, "file-handle-windows-anchor-probe"), "wx");
+  const fileHandlePrototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  const originalSync = fileHandlePrototype.sync;
+  const originalChmod = fileHandlePrototype.chmod;
+  const platformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
+  let directorySyncs = 0;
+  let fileHandleChmods = 0;
+  let pinnedFileHandle;
+  fileHandlePrototype.sync = async function inspectFinalPublishSync() {
+    if ((await this.stat()).isDirectory() && ++directorySyncs === 4) {
+      assert.equal(
+        readdirSync(publishRoot).some((name) => name.endsWith(".scrub")),
+        true,
+        "the pinned scrub link must survive until the final publish-root sync",
+      );
+    } else if (directorySyncs === 5) {
+      assert.equal(
+        readdirSync(publishRoot).some((name) => name.endsWith(".scrub")),
+        false,
+        "scrub-link removal must be followed by a publish-root sync",
+      );
+      assert.notEqual(pinnedFileHandle?.fd, -1, "the verified report handle must remain open through anchor removal sync");
+    }
+    return originalSync.call(this);
+  };
+  fileHandlePrototype.chmod = async function trackPinnedFileChmod(mode) {
+    if (!(await this.stat()).isDirectory()) {
+      fileHandleChmods += 1;
+      pinnedFileHandle = this;
+    }
+    return originalChmod.call(this, mode);
+  };
+  Object.defineProperty(process, "platform", { ...platformDescriptor, value: "win32" });
+
+  try {
+    await writeEvidenceOutputFileExclusive(output, "Windows anchor report\n");
+  } finally {
+    fileHandlePrototype.sync = originalSync;
+    fileHandlePrototype.chmod = originalChmod;
+    Object.defineProperty(process, "platform", platformDescriptor);
+  }
+  assert.equal(directorySyncs, 5);
+  assert.equal(fileHandleChmods, 2, "Windows report mode must be restored through the verified handle after anchor removal");
+  assert.equal(readdirSync(publishRoot).some((name) => name.endsWith(".scrub")), false);
+  assert.equal(await readFile(output.absolutePath, "utf8"), "Windows anchor report\n");
+});
+
+test("a staging-directory sync failure closes the opened report before rollback", async () => {
+  const repo = await tempRepo();
+  const publishRoot = join(repo, ".superloopy", "evidence", "superloopy-backend");
+  await mkdir(publishRoot, { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-stage-sync-failure/backend-skill-report.md",
+    undefined,
+  );
+  const probe = await open(join(repo, "file-handle-stage-sync-probe"), "wx");
+  const fileHandlePrototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  const originalSync = fileHandlePrototype.sync;
+  const originalWriteFile = fileHandlePrototype.writeFile;
+  let directorySyncs = 0;
+  let reportHandle;
+  fileHandlePrototype.sync = async function failFirstDirectorySync() {
+    if ((await this.stat()).isDirectory() && ++directorySyncs === 1) {
+      throw Object.assign(new Error("injected staging directory sync failure"), { code: "EIO" });
+    }
+    return originalSync.call(this);
+  };
+  fileHandlePrototype.writeFile = function captureReportHandle(data, options) {
+    if (data === "report whose staging sync fails\n") reportHandle = this;
+    return originalWriteFile.call(this, data, options);
+  };
+
+  try {
+    await assert.rejects(
+      writeEvidenceOutputFileExclusive(output, "report whose staging sync fails\n"),
+      /staging directory sync failure/u,
+    );
+  } finally {
+    fileHandlePrototype.sync = originalSync;
+    fileHandlePrototype.writeFile = originalWriteFile;
+  }
+  assert.equal(reportHandle.fd, -1);
+  assert.equal(existsSync(output.absolutePath), false);
+  assert.equal(readdirSync(publishRoot).some((name) => name.startsWith(".run-stage-sync-failure.")), false);
+  await writeEvidenceOutputFileExclusive(output, "retry after staging sync failure\n");
+  assert.equal(await readFile(output.absolutePath, "utf8"), "retry after staging sync failure\n");
+});
+
+test("an initial report stat failure closes the opened report before rollback", async () => {
+  const repo = await tempRepo();
+  const publishRoot = join(repo, ".superloopy", "evidence", "superloopy-backend");
+  await mkdir(publishRoot, { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-stat-failure/backend-skill-report.md",
+    undefined,
+  );
+  const probe = await open(join(repo, "file-handle-stat-probe"), "wx");
+  const fileHandlePrototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  const originalStat = fileHandlePrototype.stat;
+  let reportHandle;
+  fileHandlePrototype.stat = async function failInitialReportStat(options) {
+    const result = await originalStat.call(this, options);
+    if (!reportHandle && result.isFile()) {
+      reportHandle = this;
+      throw Object.assign(new Error("injected initial report stat failure"), { code: "EIO" });
+    }
+    return result;
+  };
+
+  try {
+    await assert.rejects(
+      writeEvidenceOutputFileExclusive(output, "report whose initial stat fails\n"),
+      /initial report stat failure/u,
+    );
+  } finally {
+    fileHandlePrototype.stat = originalStat;
+  }
+  assert.equal(reportHandle.fd, -1);
+  assert.equal(existsSync(output.absolutePath), false);
+  assert.equal(readdirSync(publishRoot).some((name) => name.startsWith(".run-stat-failure.")), false);
+  await writeEvidenceOutputFileExclusive(output, "retry after initial stat failure\n");
+  assert.equal(await readFile(output.absolutePath, "utf8"), "retry after initial stat failure\n");
+});
+
+test("SECURITY: synchronously moving staging immediately before write leaves no report content outside", async (t) => {
+  if (process.platform === "win32") return t.skip("moving an open directory is rejected by Windows");
+  const repo = await tempRepo();
+  const outside = await mkdtemp(join(tmpdir(), "superloopy-exclusive-outside-"));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  t.after(() => rm(outside, { recursive: true, force: true }));
+  const publishRoot = join(repo, ".superloopy", "evidence", "superloopy-backend");
+  await mkdir(publishRoot, { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-moved/backend-skill-report.md",
+    undefined,
+  );
+  const probe = await open(join(repo, "file-handle-race-probe"), "wx");
+  const fileHandlePrototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  const originalWriteFile = fileHandlePrototype.writeFile;
+  let movedDirectory;
+  fileHandlePrototype.writeFile = function moveThenWrite(data, options) {
+    if (data === "confined report\n") {
+      const [stageName] = readdirSync(publishRoot).filter((name) => name.startsWith(".run-moved."));
+      assert.ok(stageName, "private staging directory must exist immediately before the write");
+      movedDirectory = join(outside, stageName);
+      renameSync(join(publishRoot, stageName), movedDirectory);
+    }
+    return originalWriteFile.call(this, data, options);
+  };
+
+  try {
+    await assert.rejects(
+      writeEvidenceOutputFileExclusive(output, "confined report\n"),
+      /directory.*(?:changed|confined)/iu,
+    );
+    const escapedReport = join(movedDirectory, "backend-skill-report.md");
+    assert.notEqual(existsSync(escapedReport) ? await readFile(escapedReport, "utf8") : "", "confined report\n");
+    assert.equal(existsSync(output.absolutePath), false);
+  } finally {
+    fileHandlePrototype.writeFile = originalWriteFile;
+  }
+});
+
+test("SECURITY: exclusive publication rejects a swapped ancestor before creating directories", async (t) => {
+  if (process.platform === "win32") return t.skip("directory symlink creation is not reliably available on Windows CI");
+  const { rename: renamePath, symlink } = await import("node:fs/promises");
+  const repo = await tempRepo();
+  const outside = await mkdtemp(join(tmpdir(), "superloopy-exclusive-ancestor-outside-"));
+  t.after(() => rm(outside, { recursive: true, force: true }));
+  await mkdir(join(repo, ".superloopy"), { recursive: true });
+  const output = resolveEvidenceOutputPath(
+    repo,
+    ".superloopy/evidence/superloopy-backend/run-swapped-ancestor/backend-skill-report.md",
+    undefined,
+  );
+  await renamePath(join(repo, ".superloopy"), join(repo, ".superloopy-original"));
+  await symlink(outside, join(repo, ".superloopy"), "dir");
+
+  await assert.rejects(
+    writeEvidenceOutputFileExclusive(output, "must remain confined\n"),
+    /symlink|confined|resolve under/iu,
+  );
+  assert.equal(existsSync(join(outside, "evidence")), false, "rejection must precede external directory creation");
 });
 
 test("SECURITY: evidence output path rejects a symlinked evidence root", async () => {
