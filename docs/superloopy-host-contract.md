@@ -47,7 +47,7 @@ command transcripts, audit verdicts, and gate reports. The orchestrator is the u
 and runs on the user's selected model (`gpt-6-astra` is allowed when selected); Superloopy never
 pins it, and crew lanes never inherit it.
 
-The structured doctor value is `modelRoutingVerification: "unverified"` until a host can attest both the resolved `agent_type` and model. A spawn surface that lacks either signal is reported as `model_unverified`; the parent must not claim that the configured GPT-5.6 tuple was enforced at runtime.
+The structured doctor value is `modelRoutingVerification: "unverified"` until a host can attest both the resolved `agent_type` and model. A spawn surface that lacks either signal is reported as `model_unverified`; the parent must not claim that the configured GPT-6 tuple was enforced at runtime.
 
 ## SubagentStop hook payload
 

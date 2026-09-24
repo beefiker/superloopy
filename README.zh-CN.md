@@ -85,7 +85,7 @@ Loop skill 是默认护栏。开头的完整 `loopy` token 会启动或继续 ev
 
 对于更大的任务，Superloopy 提供六个可选子代理，每个代理负责一条工作线。Claude Code 直接使用插件内置的 `agents/*.md`。在 Codex 中，bootstrap、`superloopy install` 和 `superloopy agents install` 会把个人 TOML 写入 `$CODEX_HOME/agents`，并在此时完成模型路由解析。
 
-Codex 仅在没有有效状态、策略或目标发生变化、缓存已满 24 小时，或指定 `--refresh-models` 时调用稳定的 `model/list`；如果有效状态与 managed agent 文件仍一致，则直接复用同一份 manifest。解析会优先选择 `gpt-5.6-terra`、`gpt-5.6-sol` 和 `gpt-5.6-luna` 的完整 tuple，某个首选模型不可用时则明确选择相应的 `gpt-5.5` tuple。首次探测结果未知时会保守选择兼容配置；刷新探测结果未知时会保留现有的有效解析。`--compat` 无需查询即可确定兼容配置。agent 定义有变化时必须重启 Codex；有效 manifest 未变化时不需要。launch 后不会重试或切换 model。`superloopy doctor --refresh-models` 只做只读比较，不会改写 state 或 agent 文件。详情见 `docs/superloopy-model-policy.md` 和 `docs/superloopy-model-policy-claude.md`。
+Codex 仅在没有有效状态、策略或目标发生变化、缓存已满 24 小时，或指定 `--refresh-models` 时调用稳定的 `model/list`；如果有效状态与 managed agent 文件仍一致，则直接复用同一份 manifest。解析会为 `standard` 和 `deep` 优先选择 `gpt-6-sol`、为 `fast` 优先选择 `gpt-6-luna` 的完整 tuple，某个首选模型不可用时则明确选择相应的 GPT-5.6 tuple。首次探测结果未知时会保守选择兼容配置；刷新探测结果未知时会保留现有的有效解析。`--compat` 无需查询即可确定兼容配置。agent 定义有变化时必须重启 Codex；有效 manifest 未变化时不需要。launch 后不会重试或切换 model。`superloopy doctor --refresh-models` 只做只读比较，不会改写 state 或 agent 文件。详情见 `docs/superloopy-model-policy.md` 和 `docs/superloopy-model-policy-claude.md`。
 
 <table>
   <tr>
@@ -141,7 +141,7 @@ codex plugin add superloopy@beefiker
 
 ### Claude Code
 
-需要 Node.js ≥ 22。从同一个仓库：
+需要 Node.js ≥ 22；固定使用 Opus 5.5 的子代理还需要 Claude Code ≥ 2.1.280。从同一个仓库：
 
 ```
 /plugin marketplace add beefiker/superloopy

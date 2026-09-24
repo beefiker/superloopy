@@ -1,6 +1,6 @@
 {
   "name": "superloopy",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "description": "Strict evidence loop harness with explicit criteria and append-only evidence ledgers.",
   "homepage": "https://github.com/beefiker/superloopy#readme",
   "repository": "https://github.com/beefiker/superloopy",

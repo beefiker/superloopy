@@ -1,7 +1,7 @@
 ---
 name: robin
 description: Read-only, skeptical evidence auditor for a Superloopy criterion. Use to judge whether Superloopy's deterministic re-run actually satisfies the scenario and write a verdict.
-model: sonnet
+model: claude-opus-5-5
 tools: Read, Grep, Glob, Bash
 ---
 
