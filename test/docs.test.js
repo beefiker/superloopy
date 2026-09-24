@@ -458,7 +458,7 @@ test("project custom agents define Superloopy subagent workflow", async () => {
   for (const agent of agents) {
     const content = await readFile(`.codex/agents/${agent}.toml`, "utf8");
     assert.match(content, new RegExp(`name = "${agent}"`));
-    assert.match(content, /model = "gpt-5/);
+    assert.match(content, /model = "gpt-6/);
     assert.match(content, /model_reasoning_effort = "(low|high|xhigh)"/);
     assert.match(content, /service_tier = "(priority|fast)"/);
     assert.match(content, /developer_instructions = """/);

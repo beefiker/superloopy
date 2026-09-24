@@ -48,7 +48,7 @@ export async function checkModelPolicy(cwd) {
     policyPath: MODEL_POLICY_PATH,
     policyDataPath: MODEL_POLICY_DATA_PATH,
     policyDataVersion: data.version,
-    compatibilityModel: codex.compatibilityModel,
+    compatibilityModels: Object.fromEntries(Object.entries(codex.profiles).map(([name, profile]) => [name, profile.candidates[1].model])),
     allowedModels: codex.allowed.models,
     allowedEfforts: codex.allowed.reasoningEfforts,
     allowedTiers: codex.allowed.serviceTiers,
@@ -136,15 +136,11 @@ function validateModelPolicyData(data) {
 
 function validateCodexPolicyData(codex) {
   assertRecord(codex, "model policy data.codex");
-  assertString(codex.compatibilityModel, "model policy data.codex.compatibilityModel");
   assertStringArray(codex.allowed?.models, "model policy data.codex.allowed.models");
   assertStringArray(codex.allowed?.reasoningEfforts, "model policy data.codex.allowed.reasoningEfforts");
   assertStringArray(codex.allowed?.serviceTiers, "model policy data.codex.allowed.serviceTiers");
   assertRecord(codex.profiles, "model policy data.codex.profiles");
   assertRecord(codex.agents, "model policy data.codex.agents");
-  if (!codex.allowed.models.includes(codex.compatibilityModel)) {
-    throw new Error("model policy data.codex.compatibilityModel is not allowed");
-  }
   for (const [profileName, profile] of Object.entries(codex.profiles)) {
     assertRecord(profile, `model policy data.codex.profiles.${profileName}`);
     assertNonEmptyArray(profile.candidates, `model policy data.codex.profiles.${profileName}.candidates`);
@@ -166,8 +162,8 @@ function validateCodexPolicyData(codex) {
     if (profile.candidates.length !== 2) {
       throw new Error(`Codex profile ${profileName} must define exactly one preferred and one compatibility candidate`);
     }
-    if (profile.candidates[1].model !== codex.compatibilityModel) {
-      throw new Error(`model policy data.codex.profiles.${profileName}.candidates.1.model must match compatibilityModel ${codex.compatibilityModel}`);
+    if (profile.candidates[1].model === profile.candidates[0].model) {
+      throw new Error(`Codex profile ${profileName} compatibility candidate must use a different model`);
     }
   }
 }

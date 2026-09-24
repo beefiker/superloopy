@@ -17,17 +17,14 @@ const AGENTS = {
 
 function codexPolicy() {
   return {
-    compatibilityModel: "gpt-5.5",
     allowed: {
       models: [
         "gpt-6-astra",
+        "gpt-6-sol",
+        "gpt-6-luna",
         "gpt-5.6-terra",
         "gpt-5.6-sol",
-        "gpt-5.6-luna",
-        "gpt-5.5",
-        "gpt-5.4",
-        "gpt-5.4-mini",
-        "gpt-5.3-codex-spark"
+        "gpt-5.6-luna"
       ],
       reasoningEfforts: ["low", "medium", "high", "xhigh"],
       serviceTiers: ["priority", "fast", "efficient"]
@@ -35,20 +32,20 @@ function codexPolicy() {
     profiles: {
       standard: {
         candidates: [
-          { model: "gpt-5.6-terra", model_reasoning_effort: "high", service_tier: "priority" },
-          { model: "gpt-5.5", model_reasoning_effort: "high", service_tier: "priority" }
+          { model: "gpt-6-sol", model_reasoning_effort: "high", service_tier: "priority" },
+          { model: "gpt-5.6-terra", model_reasoning_effort: "high", service_tier: "priority" }
         ]
       },
       deep: {
         candidates: [
-          { model: "gpt-5.6-sol", model_reasoning_effort: "xhigh", service_tier: "priority" },
-          { model: "gpt-5.5", model_reasoning_effort: "xhigh", service_tier: "priority" }
+          { model: "gpt-6-sol", model_reasoning_effort: "xhigh", service_tier: "priority" },
+          { model: "gpt-5.6-sol", model_reasoning_effort: "xhigh", service_tier: "priority" }
         ]
       },
       fast: {
         candidates: [
-          { model: "gpt-5.6-luna", model_reasoning_effort: "low", service_tier: "fast" },
-          { model: "gpt-5.5", model_reasoning_effort: "low", service_tier: "fast" }
+          { model: "gpt-6-luna", model_reasoning_effort: "low", service_tier: "fast" },
+          { model: "gpt-5.6-luna", model_reasoning_effort: "low", service_tier: "fast" }
         ]
       }
     },
@@ -58,14 +55,14 @@ function codexPolicy() {
 
 function policyData() {
   return {
-    version: "2026-07-10",
+    version: "2026-09-25",
     policy: "advisory-model-defaults-are-explicit",
     codex: codexPolicy(),
     claude: {
-      allowed: { models: ["opus", "sonnet", "haiku"] },
+      allowed: { models: ["claude-opus-5-5", "haiku"] },
       profiles: {
-        standard: { model: "sonnet" },
-        deep: { model: "opus" },
+        standard: { model: "claude-opus-5-5" },
+        deep: { model: "claude-opus-5-5" },
         fast: { model: "haiku" }
       },
       agents: structuredClone(AGENTS)
@@ -75,10 +72,11 @@ function policyData() {
 
 function fullCatalog() {
   return [
+    { id: "gpt-6-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
+    { id: "gpt-6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },
     { id: "gpt-5.6-terra", reasoningEfforts: ["high"], serviceTiers: ["priority"] },
     { id: "gpt-5.6-sol", reasoningEfforts: ["xhigh"], serviceTiers: ["priority"] },
-    { id: "gpt-5.6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },
-    { id: "gpt-5.5", reasoningEfforts: ["low", "high", "xhigh"], serviceTiers: ["fast", "priority"] }
+    { id: "gpt-5.6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] }
   ];
 }
 
@@ -93,34 +91,34 @@ async function writePolicyFixture(data) {
   return cwd;
 }
 
-test("resolver selects every preferred GPT-5.6 tuple when fully available", () => {
+test("resolver selects every preferred GPT-6 tuple when fully available", () => {
   const resolveCodexModelPolicy = requireExport("resolveCodexModelPolicy");
 
   const result = resolveCodexModelPolicy(codexPolicy(), fullCatalog());
 
   assert.equal(result.ok, true);
   assert.deepEqual(result.profiles.standard, {
-    model: "gpt-5.6-terra",
+    model: "gpt-6-sol",
     model_reasoning_effort: "high",
     service_tier: "priority",
-    requestedModel: "gpt-5.6-terra",
-    resolvedModel: "gpt-5.6-terra",
+    requestedModel: "gpt-6-sol",
+    resolvedModel: "gpt-6-sol",
     reason: "preferred_available"
   });
   assert.deepEqual(result.profiles.deep, {
-    model: "gpt-5.6-sol",
+    model: "gpt-6-sol",
     model_reasoning_effort: "xhigh",
     service_tier: "priority",
-    requestedModel: "gpt-5.6-sol",
-    resolvedModel: "gpt-5.6-sol",
+    requestedModel: "gpt-6-sol",
+    resolvedModel: "gpt-6-sol",
     reason: "preferred_available"
   });
   assert.deepEqual(result.profiles.fast, {
-    model: "gpt-5.6-luna",
+    model: "gpt-6-luna",
     model_reasoning_effort: "low",
     service_tier: "fast",
-    requestedModel: "gpt-5.6-luna",
-    resolvedModel: "gpt-5.6-luna",
+    requestedModel: "gpt-6-luna",
+    resolvedModel: "gpt-6-luna",
     reason: "preferred_available"
   });
   assert.deepEqual(result.agents.franky, {
@@ -131,7 +129,7 @@ test("resolver selects every preferred GPT-5.6 tuple when fully available", () =
   assert.deepEqual(Object.keys(result.agents), Object.keys(AGENTS));
 });
 
-test("resolver keeps every crew pin on the GPT-5.6 family when gpt-6-astra is also available", () => {
+test("resolver keeps every crew pin on the GPT-6 family when gpt-6-astra is also available", () => {
   const resolveCodexModelPolicy = requireExport("resolveCodexModelPolicy");
   const catalog = [
     { id: "gpt-6-astra", reasoningEfforts: ["low", "medium", "high", "xhigh", "max", "ultra"], serviceTiers: ["priority", "fast"] },
@@ -143,7 +141,7 @@ test("resolver keeps every crew pin on the GPT-5.6 family when gpt-6-astra is al
   assert.equal(result.ok, true);
   assert.deepEqual(
     Object.fromEntries(Object.entries(result.profiles).map(([name, profile]) => [name, profile.resolvedModel])),
-    { standard: "gpt-5.6-terra", deep: "gpt-5.6-sol", fast: "gpt-5.6-luna" }
+    { standard: "gpt-6-sol", deep: "gpt-6-sol", fast: "gpt-6-luna" }
   );
   assert.equal(Object.values(result.agents).some(({ resolvedModel }) => resolvedModel === "gpt-6-astra"), false);
   assert.equal(Object.values(result.profiles).every(({ reason }) => reason === "preferred_available"), true);
@@ -156,25 +154,27 @@ test("shipped model policy allows gpt-6-astra without pinning any profile to it"
   assert.equal(pinned.includes("gpt-6-astra"), false);
 });
 
-test("resolver falls back only the deep profile when Sol is unavailable", () => {
+test("resolver falls back only the deep profile when Sol lacks xhigh", () => {
   const resolveCodexModelPolicy = requireExport("resolveCodexModelPolicy");
-  const catalog = fullCatalog().filter(({ id }) => id !== "gpt-5.6-sol");
+  const catalog = fullCatalog().map((item) => item.id === "gpt-6-sol"
+    ? { ...item, reasoningEfforts: ["high"] }
+    : item);
 
   const result = resolveCodexModelPolicy(codexPolicy(), catalog);
 
   assert.equal(result.ok, true);
   assert.equal(result.profiles.standard.reason, "preferred_available");
-  assert.equal(result.profiles.deep.requestedModel, "gpt-5.6-sol");
-  assert.equal(result.profiles.deep.resolvedModel, "gpt-5.5");
+  assert.equal(result.profiles.deep.requestedModel, "gpt-6-sol");
+  assert.equal(result.profiles.deep.resolvedModel, "gpt-5.6-sol");
   assert.equal(result.profiles.deep.reason, "compatibility_fallback");
-  assert.equal(result.agents.zoro.resolvedModel, "gpt-5.5");
-  assert.equal(result.agents.jinbe.resolvedModel, "gpt-5.5");
+  assert.equal(result.agents.zoro.resolvedModel, "gpt-5.6-sol");
+  assert.equal(result.agents.jinbe.resolvedModel, "gpt-5.6-sol");
   assert.equal(result.profiles.fast.reason, "preferred_available");
 });
 
-test("resolver selects GPT-5.5 compatibility tuples when the whole GPT-5.6 family is unavailable", () => {
+test("resolver selects GPT-5.6 compatibility tuples when the whole GPT-6 family is unavailable", () => {
   const resolveCodexModelPolicy = requireExport("resolveCodexModelPolicy");
-  const catalog = fullCatalog().filter(({ id }) => id === "gpt-5.5");
+  const catalog = fullCatalog().filter(({ id }) => id.startsWith("gpt-5.6"));
 
   const result = resolveCodexModelPolicy(codexPolicy(), catalog);
 
@@ -182,55 +182,57 @@ test("resolver selects GPT-5.5 compatibility tuples when the whole GPT-5.6 famil
   assert.deepEqual(
     Object.fromEntries(Object.entries(result.profiles).map(([name, profile]) => [name, [profile.resolvedModel, profile.reason]])),
     {
-      standard: ["gpt-5.5", "compatibility_fallback"],
-      deep: ["gpt-5.5", "compatibility_fallback"],
-      fast: ["gpt-5.5", "compatibility_fallback"]
+      standard: ["gpt-5.6-terra", "compatibility_fallback"],
+      deep: ["gpt-5.6-sol", "compatibility_fallback"],
+      fast: ["gpt-5.6-luna", "compatibility_fallback"]
     }
   );
 });
 
-test("resolver returns a visible failure when neither the preferred nor GPT-5.5 tuple is available", () => {
+test("resolver returns a visible failure when neither the preferred nor GPT-5.6 tuple is available", () => {
   const resolveCodexModelPolicy = requireExport("resolveCodexModelPolicy");
 
   const result = resolveCodexModelPolicy(codexPolicy(), []);
 
   assert.deepEqual(result, {
     ok: false,
-    message: "No fully supported model tuple for Codex profile standard (requested gpt-5.6-terra)."
+    message: "No fully supported model tuple for Codex profile standard (requested gpt-6-sol)."
   });
 });
 
 test("resolver requires model, effort, and tier support from one catalog item", () => {
   const resolveCodexModelPolicy = requireExport("resolveCodexModelPolicy");
   const catalog = [
-    { id: "gpt-5.6-terra", reasoningEfforts: ["high"], serviceTiers: ["fast"] },
+    { id: "gpt-6-sol", reasoningEfforts: ["high"], serviceTiers: ["fast"] },
+    { id: "gpt-6-sol", reasoningEfforts: ["xhigh"], serviceTiers: ["priority"] },
+    { id: "gpt-6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },
+    { id: "gpt-5.6-terra", reasoningEfforts: ["high"], serviceTiers: ["priority"] },
     { id: "gpt-5.6-sol", reasoningEfforts: ["xhigh"], serviceTiers: ["priority"] },
-    { id: "gpt-5.6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },
-    { id: "gpt-5.5", reasoningEfforts: ["low", "high", "xhigh"], serviceTiers: ["fast", "priority"] }
+    { id: "gpt-5.6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] }
   ];
 
   const result = resolveCodexModelPolicy(codexPolicy(), catalog);
 
   assert.equal(result.ok, true);
-  assert.equal(result.profiles.standard.resolvedModel, "gpt-5.5");
+  assert.equal(result.profiles.standard.resolvedModel, "gpt-5.6-terra");
   assert.equal(result.profiles.standard.reason, "compatibility_fallback");
 });
 
 test("resolver does not combine effort and tier support across duplicate catalog items", () => {
   const resolveCodexModelPolicy = requireExport("resolveCodexModelPolicy");
   const catalog = [
+    { id: "gpt-6-sol", reasoningEfforts: ["high"], serviceTiers: ["priority"] },
+    { id: "gpt-6-sol", reasoningEfforts: ["xhigh"], serviceTiers: ["fast"] },
+    { id: "gpt-6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },
     { id: "gpt-5.6-terra", reasoningEfforts: ["high"], serviceTiers: ["priority"] },
-    { id: "gpt-5.6-sol", reasoningEfforts: ["xhigh"], serviceTiers: ["fast"] },
-    { id: "gpt-5.6-sol", reasoningEfforts: ["high"], serviceTiers: ["priority"] },
-    { id: "gpt-5.6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },
-    { id: "gpt-5.5", reasoningEfforts: ["low", "high"], serviceTiers: ["fast", "priority"] }
+    { id: "gpt-5.6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] }
   ];
 
   const result = resolveCodexModelPolicy(codexPolicy(), catalog);
 
   assert.deepEqual(result, {
     ok: false,
-    message: "No fully supported model tuple for Codex profile deep (requested gpt-5.6-sol)."
+    message: "No fully supported model tuple for Codex profile deep (requested gpt-6-sol)."
   });
 });
 
@@ -293,7 +295,7 @@ test("policy loader rejects malformed candidate arrays", async (t) => {
   }
 });
 
-test("policy loader requires the declared model in the second compatibility position", async (t) => {
+test("policy loader requires a distinct second compatibility candidate", async (t) => {
   const loadModelPolicyData = requireExport("loadModelPolicyData");
   const cases = [
     ["missing candidate", (data) => {
@@ -301,14 +303,14 @@ test("policy loader requires the declared model in the second compatibility posi
     }, /Missing compatibility candidate for Codex profile standard/u],
     ["extra candidate", (data) => {
       data.codex.profiles.standard.candidates.push({
-        model: "gpt-5.4",
+        model: "gpt-5.6-terra",
         model_reasoning_effort: "high",
         service_tier: "priority"
       });
     }, /must define exactly one preferred and one compatibility candidate/u],
-    ["wrong model", (data) => {
-      data.codex.profiles.standard.candidates[1].model = "gpt-5.4";
-    }, /profiles\.standard\.candidates\.1\.model must match compatibilityModel gpt-5\.5/u]
+    ["same model", (data) => {
+      data.codex.profiles.standard.candidates[1].model = "gpt-6-sol";
+    }, /compatibility candidate must use a different model/u]
   ];
   for (const [name, mutate, expected] of cases) {
     await t.test(name, async () => {

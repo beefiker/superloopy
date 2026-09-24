@@ -40,6 +40,8 @@ If `superloopy` is not on `PATH`, read the bootstrap output. It prints the exact
 
 ## Claude Code Flow
 
+Claude Code 2.1.280 or later is required for the pinned Opus 5.5 subagents. Run `claude update` before installing if your version is older.
+
 Inside Claude Code, run:
 
 ```text
@@ -137,6 +139,6 @@ node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json
 Before saying the install is done, report:
 
 - Host installed: Codex, Claude Code, Google Antigravity, or local checkout.
-- Command path used: marketplace, plugin import, or checkout.
+- Command path used: marketplace, plugin install, or checkout.
 - Verification result: `superloopy doctor --json`, `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`, `claude plugin validate`, or `agy plugin validate` plus `agy plugin list`.
 - Any blocker, such as missing Node.js >= 22, old Codex CLI, auth/login failure, hook approval needed, or missing `PATH` entry.

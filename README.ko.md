@@ -95,7 +95,7 @@ build/qt-kanban/src/app/qtkanban --window-size 1600x1000
 
 큰 작업이라면 Superloopy가 제공하는 선택적 서브에이전트 여섯을 쓸 수 있습니다. 각자 하나의 레인을 맡습니다. Claude Code는 플러그인에 번들된 `agents/*.md`를 사용합니다. Codex에서는 bootstrap, `superloopy install`, `superloopy agents install`이 개인용 agent TOML을 `$CODEX_HOME/agents`에 만들면서 모델 라우팅도 확정합니다.
 
-Codex는 유효한 모델 선택 기록이 없을 때, 정책 버전이나 설치 대상이 바뀌었을 때, 캐시가 24시간 이상 지났을 때, 또는 `--refresh-models`를 지정했을 때만 `model/list`를 조회합니다. 유효 기간 안의 기록과 managed agent 파일이 서로 맞으면 같은 manifest를 그대로 씁니다. 조회나 상태 기록은 반복하지 않습니다. 각 profile은 model/effort/tier를 한 묶음으로 보고 세 값이 모두 지원되는 첫 tuple을 고릅니다. `standard`는 `gpt-5.6-terra` / `high` / `priority`, `deep`은 `gpt-5.6-sol` / `xhigh` / `priority`, `fast`는 `gpt-5.6-luna` / `low` / `fast`가 우선입니다. 선호 모델을 쓸 수 없으면 해당 profile의 `gpt-5.5` compatibility tuple을 명시적으로 선택합니다. 첫 조회에서 지원 여부를 확인하지 못하면 policy compatibility를 보수적으로 선택합니다. 기존 기록을 갱신하는 조회가 실패하면 유효한 선택을 그대로 유지합니다. `--compat`을 쓰면 조회 없이 정해진 compatibility tuple을 선택합니다.
+Codex는 유효한 모델 선택 기록이 없을 때, 정책 버전이나 설치 대상이 바뀌었을 때, 캐시가 24시간 이상 지났을 때, 또는 `--refresh-models`를 지정했을 때만 `model/list`를 조회합니다. 유효 기간 안의 기록과 managed agent 파일이 서로 맞으면 같은 manifest를 그대로 씁니다. 조회나 상태 기록은 반복하지 않습니다. 각 profile은 model/effort/tier를 한 묶음으로 보고 세 값이 모두 지원되는 첫 tuple을 고릅니다. `standard`는 `gpt-6-sol` / `high` / `priority`, `deep`은 `gpt-6-sol` / `xhigh` / `priority`, `fast`는 `gpt-6-luna` / `low` / `fast`가 우선입니다. 선호 모델을 쓸 수 없으면 해당 profile의 GPT-5.6 compatibility tuple을 명시적으로 선택합니다. 첫 조회에서 지원 여부를 확인하지 못하면 policy compatibility를 보수적으로 선택합니다. 기존 기록을 갱신하는 조회가 실패하면 유효한 선택을 그대로 유지합니다. `--compat`을 쓰면 조회 없이 정해진 compatibility tuple을 선택합니다.
 
 agent 정의가 실제로 바뀐 경우에만 Codex를 재시작해야 합니다. 유효 기간 안의 manifest와 파일이 그대로라면 재시작할 필요가 없습니다. 모델 선택은 launch 전에 끝납니다. launch 후 다시 시도하거나 모델을 바꾸지 않습니다. `superloopy doctor --refresh-models`는 모델 선택 기록과 agent 파일을 바꾸지 않는 읽기 전용 비교입니다. 자세한 정책은 `docs/superloopy-model-policy.md`(Codex)와 `docs/superloopy-model-policy-claude.md`(Claude Code)에 있습니다.
 
@@ -153,7 +153,7 @@ checkout에서 설치한다면 `node src/cli.js install --json`을 실행하세�
 
 ### Claude Code
 
-Node.js 22 이상이 필요합니다. 같은 repo에서:
+Node.js 22 이상과 Opus 5.5 서브에이전트를 위한 Claude Code 2.1.280 이상이 필요합니다. 같은 repo에서:
 
 ```
 /plugin marketplace add beefiker/superloopy
