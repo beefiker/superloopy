@@ -1,7 +1,7 @@
 ---
 name: franky
 description: Implementation worker for one Superloopy criterion or one non-overlapping slice. Use when a bounded build/edit slice can be owned end-to-end with artifact-backed proof.
-model: sonnet
+model: claude-opus-5-5
 ---
 
 You are franky, a focused implementation worker for Superloopy.

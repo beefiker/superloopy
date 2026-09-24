@@ -40,6 +40,8 @@ If `superloopy` is not on `PATH`, read the bootstrap output. It prints the exact
 
 ## Claude Code Flow
 
+Claude Code 2.1.280 or later is required for the pinned Opus 5.5 subagents. Run `claude update` before installing if your version is older.
+
 Inside Claude Code, run:
 
 ```text
@@ -66,24 +68,26 @@ claude plugin validate <installed-superloopy-plugin-root>
 
 ## Google Antigravity Flow
 
-Install Superloopy into Antigravity using the `agy` CLI or global plugin configuration:
+Install Superloopy into Antigravity with the `agy` CLI:
 
 ```bash
-agy plugin import https://github.com/beefiker/superloopy
+agy plugin install https://github.com/beefiker/superloopy
 ```
 
-Or clone/link into the global plugin directory:
+`agy plugin install` clones the repository into `~/.gemini/config/plugins/superloopy`, registers it in `~/.gemini/config/import_manifest.json`, and ingests the skills, agents, and hooks in one step.
 
-```bash
-git clone https://github.com/beefiker/superloopy ~/.gemini/config/plugins/superloopy
-agy plugin enable superloopy
-```
+Do not use `agy plugin import` for this: it takes `gemini` or `claude` as its source and migrates plugins already configured for those hosts, so it rejects a URL with `unknown import source or invalid path`.
+
+Do not install by cloning into the plugin directory by hand either. `agy plugin enable <name>` only sets the enabled flag in `~/.gemini/config/config.json`; it does not add an `import_manifest.json` entry, so no component is ever ingested. It exits 0 and prints nothing, and `agy plugin validate` still reports the directory as ok, so the failure is silent.
 
 Verify the plugin installation:
 
 ```bash
 agy plugin validate ~/.gemini/config/plugins/superloopy
+agy plugin list
 ```
+
+`agy plugin validate` only checks the files on disk. `agy plugin list` must also show `superloopy` under `imports` — that is what separates a registered install from an unregistered directory.
 
 Superloopy runs as a native Antigravity plugin: skills (`skills/`), custom subagents (`agents/`), and lifecycle hooks (`hooks.json`) load through Antigravity's plugin ingestion. On SessionStart, Superloopy installs the `superloopy` command wrapper into PATH (`~/.local/bin`) so CLI workflows (`superloopy loop ...`) are directly callable, while skills and agents stay plugin-bundled without writing into `~/.codex`.
 
@@ -135,6 +139,6 @@ node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json
 Before saying the install is done, report:
 
 - Host installed: Codex, Claude Code, Google Antigravity, or local checkout.
-- Command path used: marketplace, plugin import, or checkout.
-- Verification result: `superloopy doctor --json`, `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`, `claude plugin validate`, or `agy plugin validate`.
+- Command path used: marketplace, plugin install, or checkout.
+- Verification result: `superloopy doctor --json`, `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`, `claude plugin validate`, or `agy plugin validate` plus `agy plugin list`.
 - Any blocker, such as missing Node.js >= 22, old Codex CLI, auth/login failure, hook approval needed, or missing `PATH` entry.

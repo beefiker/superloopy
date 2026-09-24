@@ -85,7 +85,7 @@ Loop skill が標準のガードレールです。先頭の完全な `loopy` ト
 
 大きな作業向けに、Superloopy は 6 つの任意サブエージェントを同梱しています。それぞれが 1 つのレーンを担当します。Claude Code はプラグイン同梱の `agents/*.md` を使います。Codex では bootstrap、`superloopy install`、`superloopy agents install` が個人用 TOML を `$CODEX_HOME/agents` に作成し、その時点でモデルルーティングを解決します。
 
-Codex が安定版の `model/list` を問い合わせるのは、状態がない、ポリシーまたは対象が変わった、キャッシュが 24 時間以上経過した、または `--refresh-models` を指定した場合だけです。有効な状態と managed agent ファイルが一致していれば、同じ manifest をそのまま再利用します。解決では `gpt-5.6-terra`、`gpt-5.6-sol`、`gpt-5.6-luna` の完全な tuple を優先し、利用できないモデルだけ対応する `gpt-5.5` tuple に切り替えます。初回の問い合わせ結果が不明なら互換設定を保守的に選び、更新時だけ不明なら既存の有効な解決を維持します。`--compat` は問い合わせなしで互換設定を決定します。agent 定義が変わった場合は Codex の再起動が必要ですが、有効な manifest が未変更なら不要です。launch 後の再試行や model switch はありません。`superloopy doctor --refresh-models` は読み取り専用で、state や agent ファイルを書き換えません。詳細は `docs/superloopy-model-policy.md` と `docs/superloopy-model-policy-claude.md` にあります。
+Codex が安定版の `model/list` を問い合わせるのは、状態がない、ポリシーまたは対象が変わった、キャッシュが 24 時間以上経過した、または `--refresh-models` を指定した場合だけです。有効な状態と managed agent ファイルが一致していれば、同じ manifest をそのまま再利用します。解決では `standard` と `deep` に `gpt-6-sol`、`fast` に `gpt-6-luna` の完全な tuple を優先し、利用できないモデルだけ対応する GPT-5.6 tuple に切り替えます。初回の問い合わせ結果が不明なら互換設定を保守的に選び、更新時だけ不明なら既存の有効な解決を維持します。`--compat` は問い合わせなしで互換設定を決定します。agent 定義が変わった場合は Codex の再起動が必要ですが、有効な manifest が未変更なら不要です。launch 後の再試行や model switch はありません。`superloopy doctor --refresh-models` は読み取り専用で、state や agent ファイルを書き換えません。詳細は `docs/superloopy-model-policy.md` と `docs/superloopy-model-policy-claude.md` にあります。
 
 <table>
   <tr>
@@ -141,7 +141,7 @@ checkout からインストールする場合は `node src/cli.js install --json
 
 ### Claude Code
 
-Node.js 22 以上が必要です。同じ repo から:
+Node.js 22 以上と、Opus 5.5 のサブエージェント用に Claude Code 2.1.280 以上が必要です。同じ repo から:
 
 ```
 /plugin marketplace add beefiker/superloopy
