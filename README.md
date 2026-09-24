@@ -99,11 +99,11 @@ examples/qt-kanban/scripts/audit-macos-accessibility.sh \
 
 For bigger work, Superloopy ships six optional subagents — each owns one lane. Claude Code uses the plugin-bundled `agents/*.md`. On Codex, bootstrap, `superloopy install`, and `superloopy agents install` materialize personal TOMLs under `$CODEX_HOME/agents`; model routing is resolved during that installation step.
 
-Codex calls the stable `model/list` method only when resolution state is missing, the policy version or target changed, the cache is at least 24 hours old, or `--refresh-models` is supplied. When fresh state still matches the managed files, it reuses the exact manifest without a query or state rewrite. Profiles select the first supported complete model/effort/tier tuple: `gpt-5.6-terra` / `high` / `priority` for `standard`, `gpt-5.6-sol` / `xhigh` / `priority` for `deep`, and `gpt-5.6-luna` / `low` / `fast` for `fast`. If a preferred model is unavailable, that profile uses its explicit `gpt-5.5` compatibility tuple. `gpt-6-astra` is allowed for the orchestrator (your own Codex session) when you select it in Codex; crew lanes keep their pins and never inherit the orchestrator's model. An unknown first probe conservatively selects policy compatibility; an unknown refresh preserves a valid existing resolution. `--compat` makes the compatibility choice deterministically without querying.
+Codex calls the stable `model/list` method only when resolution state is missing, the policy version or target changed, the cache is at least 24 hours old, or `--refresh-models` is supplied. When fresh state still matches the managed files, it reuses the exact manifest without a query or state rewrite. Profiles select the first supported complete model/effort/tier tuple: `gpt-6-sol` / `high` / `priority` for `standard`, `gpt-6-sol` / `xhigh` / `priority` for `deep`, and `gpt-6-luna` / `low` / `fast` for `fast`. If a preferred model is unavailable, that profile uses its explicit GPT-5.6 compatibility tuple. `gpt-6-astra` is allowed for the orchestrator (your own Codex session) when you select it in Codex; crew lanes keep their pins and never inherit the orchestrator's model. An unknown first probe conservatively selects policy compatibility; an unknown refresh preserves a valid existing resolution. `--compat` makes the compatibility choice deterministically without querying.
 
 Upgrades from pre-managed Superloopy releases are hash-bound: a complete exact legacy fleet is adopted and upgraded without `--force`, while one edit, symlink, missing file, or unknown hash keeps the whole fleet in conflict. Changed agent definitions require a Codex restart; an unchanged fresh manifest does not. `superloopy doctor --refresh-models` can report preferred availability before managed state exists, detects a wrapper/plugin split-brain, and never rewrites resolution state or agent files.
 
-Resolution finishes before launch, with no post-launch retry or model switch. The TOML pins configure routing, but a host that does not expose `agent_type` plus resolved-model attestation remains `model_unverified`; Superloopy never presents that as a proven GPT-5.6 runtime gate. The policy details are in `docs/superloopy-model-policy.md` (Codex) and `docs/superloopy-model-policy-claude.md` (Claude Code).
+Resolution finishes before launch, with no post-launch retry or model switch. The TOML pins configure routing, but a host that does not expose `agent_type` plus resolved-model attestation remains `model_unverified`; Superloopy never presents that as a proven GPT-6 runtime gate. The policy details are in `docs/superloopy-model-policy.md` (Codex) and `docs/superloopy-model-policy-claude.md` (Claude Code).
 
 **Installed-plugin truth.** `installedPluginTruth` runs the read-only `codex plugin list --json` authority probe. A confirmed `superloopy@beefiker` version mismatch is informational in source scope, but fails installed scope. Missing Codex, no registered plugin, and invalid authority output stay informational and do not fail doctor. Never infer the installed version from cache directory names or repair without approval.
 
@@ -163,7 +163,7 @@ Installing from a checkout instead? Run `node src/cli.js install --json`.
 
 ### Claude Code
 
-Needs Node.js ≥ 22. From the same repo:
+Needs Node.js ≥ 22 and Claude Code ≥ 2.1.280 for the pinned Opus 5.5 subagents. From the same repo:
 
 ```
 /plugin marketplace add beefiker/superloopy

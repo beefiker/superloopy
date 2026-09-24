@@ -53,6 +53,7 @@ test("the agent install guide documents the working Antigravity commands", async
   assert.match(install, /agy plugin install https:\/\/github\.com\/beefiker\/superloopy/u);
   assert.match(install, /agy plugin validate ~\/\.gemini\/config\/plugins\/superloopy/u);
   assert.match(install, /agy plugin list/u);
+  assert.match(install, /Command path used: marketplace, plugin install, or checkout/u);
   assert.doesNotMatch(install, /agy plugin import https:/u);
   assert.doesNotMatch(install, /^agy plugin enable superloopy\s*$/mu);
 });

@@ -24,10 +24,11 @@ function fullCatalog() {
     ok: true,
     source: "model_list",
     models: [
+      { id: "gpt-6-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
+      { id: "gpt-6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },
       { id: "gpt-5.6-terra", reasoningEfforts: ["high"], serviceTiers: ["priority"] },
       { id: "gpt-5.6-sol", reasoningEfforts: ["xhigh"], serviceTiers: ["priority"] },
-      { id: "gpt-5.6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },
-      { id: "gpt-5.5", reasoningEfforts: ["low", "high", "xhigh"], serviceTiers: ["fast", "priority"] }
+      { id: "gpt-5.6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] }
     ]
   };
 }

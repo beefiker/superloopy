@@ -2,23 +2,24 @@
 
 Claude Code edition of the advisory model policy. Same principle as `docs/superloopy-model-policy.md`: model fields are **steering, not proof** — completion authority comes from Superloopy artifacts, `loop check`, and the deterministic gate, never from which model ran a lane.
 
-`model-policy.json` is shared with the Codex policy. Claude subagent frontmatter keeps resolved aliases pinned so a plugin install does not silently inherit a weaker parent/default model.
+`model-policy.json` is shared with the Codex policy. Claude subagent frontmatter keeps resolved model IDs or aliases pinned so a plugin install does not silently inherit a weaker parent/default model.
 
 ## Allowed values (Claude)
 
-- Models (aliases): `opus`, `sonnet`, `haiku`. A pinned `claude-*` id must be added to `model-policy.json` before use.
+- Models: `claude-opus-5-5`, `haiku`. Standard and deep lanes pin Opus 5.5 explicitly; the fast navigation lane retains the host `haiku` alias.
+- Opus 5.5 requires Claude Code 2.1.280 or later. A host can override or substitute a subagent model; inspect the running model in `/tasks` before claiming runtime routing.
 - Reasoning depth is expressed in the subagent's instructions (Claude has no `service_tier`); review and gate lanes are told to reason at maximal rigor.
 
 ## Bundled subagent defaults (`agents/*.md`)
 
 | Agent | Purpose | Profile | Model | Read-only | Maps from Codex |
 | --- | --- | --- | --- | --- | --- |
-| `franky` | Bounded implementation lane. | `standard` | `sonnet` | no | gpt-5.5 / high |
-| `zoro` | Skeptical code review lane. | `deep` | `opus` | no (one report) | gpt-5.5 / xhigh |
-| `usopp` | QA and regression lane. | `standard` | `sonnet` | no (one report) | gpt-5.5 / high |
-| `jinbe` | Final gate integration lane. | `deep` | `opus` | no (one report) | gpt-5.5 / xhigh |
-| `robin` | Evidence auditor lane. | `standard` | `sonnet` | yes (no edit/write) | gpt-5.5 / high |
-| `nami` | Read-only navigation lane. | `fast` | `haiku` | yes (Read/Grep/Glob) | gpt-5.4-mini / low |
+| `franky` | Bounded implementation lane. | `standard` | `claude-opus-5-5` | no | gpt-6-sol / high |
+| `zoro` | Skeptical code review lane. | `deep` | `claude-opus-5-5` | no (one report) | gpt-6-sol / xhigh |
+| `usopp` | QA and regression lane. | `standard` | `claude-opus-5-5` | no (one report) | gpt-6-sol / high |
+| `jinbe` | Final gate integration lane. | `deep` | `claude-opus-5-5` | no (one report) | gpt-6-sol / xhigh |
+| `robin` | Evidence auditor lane. | `standard` | `claude-opus-5-5` | yes (no edit/write) | gpt-6-sol / high |
+| `nami` | Read-only navigation lane. | `fast` | `haiku` | yes (Read/Grep/Glob) | gpt-6-luna / low |
 
 ## Rules
 

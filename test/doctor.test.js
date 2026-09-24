@@ -139,12 +139,12 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.modelPolicy.ok, true);
   assert.equal(parsed.checks.modelPolicy.policyPath, "docs/superloopy-model-policy.md");
   assert.equal(parsed.checks.modelPolicy.policyDataPath, "model-policy.json");
-  assert.equal(parsed.checks.modelPolicy.policyDataVersion, "2026-07-10");
-  assert.equal(parsed.checks.modelPolicy.compatibilityModel, "gpt-5.5");
+  assert.equal(parsed.checks.modelPolicy.policyDataVersion, "2026-09-25");
+  assert.deepEqual(parsed.checks.modelPolicy.compatibilityModels, { standard: "gpt-5.6-terra", deep: "gpt-5.6-sol", fast: "gpt-5.6-luna" });
   assert.equal(parsed.checks.modelPolicy.agents.nami.profile, "fast");
-  assert.equal(parsed.checks.modelPolicy.profiles.standard.candidates[0].model, "gpt-5.6-terra");
-  assert.equal(parsed.checks.modelPolicy.agents.nami.model, "gpt-5.6-luna");
-  assert.equal(parsed.checks.modelPolicy.agents.zoro.model, "gpt-5.6-sol");
+  assert.equal(parsed.checks.modelPolicy.profiles.standard.candidates[0].model, "gpt-6-sol");
+  assert.equal(parsed.checks.modelPolicy.agents.nami.model, "gpt-6-luna");
+  assert.equal(parsed.checks.modelPolicy.agents.zoro.model, "gpt-6-sol");
   assert.equal(parsed.checks.modelPolicy.agents.zoro.model_reasoning_effort, "xhigh");
   assert.equal(parsed.checks.hostContract.ok, true);
   assert.ok(parsed.checks.hostContract.cannotVerify.length >= 3);
@@ -160,9 +160,10 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.claudeModelPolicy.ok, true);
   assert.equal(parsed.checks.claudeModelPolicy.policyPath, "docs/superloopy-model-policy-claude.md");
   assert.equal(parsed.checks.claudeModelPolicy.policyDataPath, "model-policy.json");
-  assert.equal(parsed.checks.claudeModelPolicy.policyDataVersion, "2026-07-10");
+  assert.equal(parsed.checks.claudeModelPolicy.policyDataVersion, "2026-09-25");
   assert.equal(parsed.checks.claudeModelPolicy.agents.nami, "haiku");
-  assert.equal(parsed.checks.claudeModelPolicy.agents.zoro, "opus");
+  assert.equal(parsed.checks.claudeModelPolicy.agents.zoro, "claude-opus-5-5");
+  assert.equal(parsed.checks.claudeModelPolicy.agents.franky, "claude-opus-5-5");
   assert.deepEqual(
     { ok: parsed.checks.installedModelPolicy.ok, installed: parsed.checks.installedModelPolicy.installed, degraded: parsed.checks.installedModelPolicy.degraded, restartRequired: parsed.checks.installedModelPolicy.restartRequired },
     { ok: true, installed: false, degraded: false, restartRequired: false }
@@ -244,7 +245,7 @@ test("doctor model policy fails when bundled agent defaults drift", async () => 
   const repo = await tempRepoCopy();
   const agentPath = join(repo, ".codex", "agents", "nami.toml");
   const agent = await readFile(agentPath, "utf8");
-  await writeFile(agentPath, agent.replace('model = "gpt-5.6-luna"', 'model = "gpt-5.5"'), "utf8");
+  await writeFile(agentPath, agent.replace('model = "gpt-6-luna"', 'model = "gpt-5.6-luna"'), "utf8");
 
   const result = await runDoctor(repo);
   assert.equal(result.ok, false);
@@ -257,13 +258,13 @@ test("doctor model policy resolves bundled defaults from the model policy data",
   const policyDataPath = join(repo, "model-policy.json");
   const policyData = JSON.parse(await readFile(policyDataPath, "utf8"));
   assert.ok(Array.isArray(policyData.codex.profiles.fast.candidates), "fast profile must expose ordered candidates");
-  policyData.codex.profiles.fast.candidates[0].model = "gpt-5.5";
+  policyData.codex.profiles.fast.candidates[0].model = "gpt-5.6-terra";
   await writeFile(policyDataPath, `${JSON.stringify(policyData, null, 2)}\n`, "utf8");
 
   const result = await runDoctor(repo);
   assert.equal(result.ok, false);
   assert.equal(result.checks.modelPolicy.ok, false);
-  assert.match(result.checks.modelPolicy.message, /nami\.toml model must be gpt-5\.5/);
+  assert.match(result.checks.modelPolicy.message, /nami\.toml model must be gpt-5\.6-terra/);
 });
 
 test("doctor model policy reports invalid model policy data entries", async () => {
