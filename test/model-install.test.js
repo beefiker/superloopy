@@ -104,7 +104,7 @@ test("first unknown install conservatively writes a complete managed compatibili
     assert.equal(content.split("\n")[0], MANAGED_MARKER);
     assert.equal(content.match(/^# superloopy-managed-agent v1$/gmu)?.length, 1);
     assert.match(content, new RegExp(`name = "${agent.name}"`, "u"));
-    assert.equal(content.split("\n").find((line) => line.startsWith("model = ")), `model = "${agent.resolvedModel}"`);
+    assert.equal(content.split("\n").find((line) => line.startsWith("model = "))?.replace(/\r$/u, ""), `model = "${agent.resolvedModel}"`);
     assert.match(content, /^developer_instructions = """$/mu);
   }
   const state = await readState(setup);
