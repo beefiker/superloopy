@@ -282,9 +282,9 @@ test("sweep: a route the change makes worse is repaired in the change, even if i
   const header = sweep.split("\n").find((line) => line.startsWith("| Does"));
   assert.ok(header.indexOf("make it worse") < header.indexOf("Was it correct before"));
   // "yes" is a closed list, so an intended new value flowing into a downstream site is not "worse",
-  // and neither is an early rejection (429, 503, 400) ahead of a guard. 13-scenario battery, 2026-09-28:
-  // the unbounded wording flagged an added event field 3/3; "a response made before a guard" flagged
-  // a readiness 503 3/3.
+  // and neither is an early rejection (429, 503, 400) ahead of a guard. Battery, 2026-09-28, 3 judgments
+  // per scenario: the unbounded wording flagged an added event field 3/3; "a response made before a
+  // guard" flagged a readiness 503 3/3; the final wording ran on 14 reconstructed scenarios, 14/14.
   assert.match(sweep, /a caller-supplied secret or credential, or more of one, where a constant, a redacted form, or nothing was/u);
   assert.match(sweep, /A new value that is none of these and that no cited rule bans is not worse/u);
   assert.match(sweep, /a project rule you can cite by file and line/u);
