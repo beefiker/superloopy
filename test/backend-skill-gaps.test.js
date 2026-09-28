@@ -298,6 +298,47 @@ test("sweep: a route the change makes worse is repaired in the change, even if i
   assert.match(skill, /or blocked, citing the drafted follow-up/u);
 });
 
+test("sweep: a misstated value on a statement the diff edits is repaired, even when it leaks nothing", async () => {
+  // n=1, 2026-09-28, not a replay measurement. Blind run on "the encrypt/decrypt APIs log their
+  // input": it edited the log line and noticed that a blank password still logged `***` while the
+  // configured key was used, then pinned it as correct because it leaked nothing. Anonymized A/B
+  // judges (4/4, control rubric with no examples 2/2) scored that as the contract gap against the human fix. Battery, 2026-09-28: the old
+  // table pinned it 3/3; an exception written inside the out-of-scope row was ignored 3/3; the
+  // separate, mutually exclusive rows below repair it 5/5 and still pin a misstated value on an
+  // unedited statement 5/5, an accurate field 5/5, and the four earlier worsening scenarios 3/3 each.
+  const sweep = await read(`${root}/references/sweep.md`);
+  assert.match(sweep, /no, on a statement your diff edits — it writes, logs, or returns a value that misstates what the code does/u);
+  assert.match(sweep, /even when it leaks nothing, and even in a part of the statement your hunk left alone/u);
+  assert.match(sweep, /no, on a statement your diff does not edit — it is wrong in a different way/u);
+  const rows = sweep.split("\n").filter((line) => line.startsWith("| no | no |"));
+  assert.ok(rows[0].includes("statement your diff edits"), "the edited-statement row is checked before 'correct before'");
+});
+
+test("data safety: secret handling is routed and states comparison, configuration and credential policy", async () => {
+  // n=1 per task, 2026-09-28, not a replay measurement. The blind runs on "the system API gate value is
+  // hard-coded" and "the encrypt/decrypt APIs log their input" never loaded data-safety.md (the
+  // default-password run did, because it touched a query): the routing named no secret, and a judge
+  // given "..., privilege, secret, or transaction boundary" still skipped it 3/3 (read as a kind of
+  // boundary). "a secret or a query, ..." routes it 5/5 and still skips a cache TTL and a log rewording
+  // 5/5. Anonymized judges named plain equality and one 403 for a missing key and a wrong header on the
+  // gate task (4/4, and 2/2 on a control rubric with no examples), and a weaker check than sibling
+  // password writers on the default-password task (4/4, control 2/2). Caveat: none of those judges saw
+  // that the human change which added that policy check echoed the password in its 400 body (0/6);
+  // a reviewer did. So the rule names the sibling path's own validator, never a new policy, and sends
+  // its rejection path through the worsening check.
+  const skill = await read(`${root}/SKILL.md`);
+  assert.match(skill, /\[Data safety\]\(references\/data-safety\.md\) — when touching a secret or a query/u);
+  const dataSafety = await read(`${root}/references/data-safety.md`);
+  assert.match(dataSafety, /^## Handle secrets and credentials$/mu);
+  assert.match(dataSafety, /constant-time primitive/u);
+  // missing configuration: old text caught one error for both causes 1/3, new 5/5
+  assert.match(dataSafety, /fails closed with a server-side error distinct from the caller's rejection, and one startup log names the missing key, never its value/u);
+  // "no default value" alone made judges reject a non-secret feature flag default 2/3; scoped, 0/5
+  assert.match(dataSafety, /Source holds no default for a secret\./u);
+  assert.match(dataSafety, /meets the policy its sibling writers already enforce/u);
+  assert.match(dataSafety, /run the rejection path through the worsening check in \[Sweep\]\(sweep\.md\)/u);
+});
+
 test("v6: the red-run record is one row per case and names the hunk that reddens it", async () => {
   // 18 of 24 tasks; four prose rewrites did not move the class and are ratcheted out. Mechanical form.
   const skill = await read(`${root}/SKILL.md`);
