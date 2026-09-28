@@ -9,8 +9,9 @@ A candidate that no command can classify takes the last row, not a guess.
 |---|---|---|---|
 | yes — with the change the site emits, and at base did not, one of: a caller-supplied secret or credential, or more of one, where a constant, a redacted form, or nothing was; data a rule you can cite by file and line bans from this log, response or store — a project rule, or [data-safety](data-safety.md) for data of another tenant or principal; a write, or a response carrying protected data, made without a guard that ran ahead of this site at base. A new value that is none of these and that no cited rule bans is not worse, and neither is an early rejection with no data or write: take the next column. | — | — | **Repair here, in this change**, with a case that fails without it. The worsening is a defect this change ships, whether or not the site was already wrong. |
 | no | yes — the symptom reproduces here | — | **Repair here, in this change**, with a case that fails without it. |
+| no | no | no, on a statement your diff edits — it writes, logs, or returns a value that misstates what the code does (a flag, label, or count that disagrees with the branch it reports), even when it leaks nothing, and even in a part of the statement your hunk left alone | **Repair here, in this change**, with a case that fails without it. The edited statement ships under your change. |
 | no | no | yes — its current behavior is right | **Pin it.** Add the assertion that locks its present behavior, or carry a filed follow-up id. Do not rewrite shared code under it; if the shared code must change, route the repair so this site keeps its behavior. |
-| no | no | no — it is wrong in a different way | **Out of scope.** Pin it the same way; a note is not a discharge. |
+| no | no | no, on a statement your diff does not edit — it is wrong in a different way | **Out of scope.** Pin it the same way; a note is not a discharge. |
 | cannot run the check that decides it | | | **Record as unverified** in the receipt, name the command that would decide it, and do not touch it. |
 
 When filing the follow-up needs authority you do not have (an issue-tracker write the user has not
