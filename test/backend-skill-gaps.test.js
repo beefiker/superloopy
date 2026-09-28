@@ -268,6 +268,35 @@ test("v6: a route left out of scope is pinned by an artifact, never discharged b
   assert.doesNotMatch(skill, /WHERE that decision was published in the change itself/u);
 });
 
+test("sweep: a route the change makes worse is repaired in the change, even if it was already wrong", async () => {
+  // n=1, 2026-09-28, not a replay measurement. Blind run on a "remove the default admin password"
+  // task: the request DTO's toString (logged at info) now carried the operator's chosen password
+  // where it had carried a public constant. Both old checks answered "no", so the table sent it to
+  // out-of-scope, and pinning it would have asserted a credential leak. The worsening check runs first.
+  const sweep = await read(`${root}/references/sweep.md`);
+  assert.match(sweep, /The worsening is a defect this change ships, whether or not the site was already wrong/u);
+  assert.match(sweep, /Does your change make it worse\? \(run this site with the reproduction's input at the base commit, and with your change using the input the change now requires or accepts in its place/u);
+  // the check must also be runnable for changes that alter no input (TTL, retry policy, migration)
+  assert.match(sweep, /the same input when the change alters no input/u);
+  // the table's first decision column is the worsening check, so it takes precedence over "correct before?"
+  const header = sweep.split("\n").find((line) => line.startsWith("| Does"));
+  assert.ok(header.indexOf("make it worse") < header.indexOf("Was it correct before"));
+  // "yes" is a closed list, so an intended new value flowing into a downstream site is not "worse",
+  // and neither is an early rejection (429, 503, 400) ahead of a guard. 13-scenario battery, 2026-09-28:
+  // the unbounded wording flagged an added event field 3/3; "a response made before a guard" flagged
+  // a readiness 503 3/3.
+  assert.match(sweep, /a caller-supplied secret or credential where a constant or nothing was/u);
+  assert.match(sweep, /a project rule you can cite by file and line/u);
+  assert.match(sweep, /a write, or a response carrying protected data, made without a guard that ran ahead of this site at base/u);
+  assert.match(sweep, /neither is an early rejection with no data or write: take the next column/u);
+  assert.doesNotMatch(sweep, /a value it never carried/u);
+  // a follow-up the run may not file is raised to the user, and the receipt field admits that value
+  assert.match(sweep, /draft it and list it under blockers in the final answer/u);
+  assert.match(sweep, /the receipt row cites the draft as `blocked`/u);
+  const skill = await read(`${root}/SKILL.md`);
+  assert.match(skill, /or blocked, citing the drafted follow-up/u);
+});
+
 test("v6: the red-run record is one row per case and names the hunk that reddens it", async () => {
   // 18 of 24 tasks; four prose rewrites did not move the class and are ratcheted out. Mechanical form.
   const skill = await read(`${root}/SKILL.md`);
