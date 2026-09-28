@@ -168,7 +168,7 @@ test("backend skill states the sweep obligation and its boundary in one place, w
   assert.match(skill, /narrow means minimal in mechanism, not partial in coverage/iu);
   assert.match(skill, /enumerate every other route into that mechanism/iu);
   assert.match(skill, /the other call sites of each symbol you changed/iu);
-  assert.match(skill, /pin it: an assertion that locks its present behavior, or a filed follow-up whose id the change carries/iu);
+  assert.match(skill, /pin it: an assertion that locks its present behavior, a filed follow-up id the change carries, or a drafted one raised as a blocker/iu);
   assert.match(skill, /a test that fails without it and a stated reason on the change/iu);
   assert.match(skill, /callers that were behaving correctly keep the behavior they have/iu);
 });
@@ -261,7 +261,7 @@ test("v6: the sweep enumerates routes from the author's own diff, not by an outw
 test("v6: a route left out of scope is pinned by an artifact, never discharged by a note", async () => {
   // 11 of 24 tasks: 4 notes false, 3 empty, 2 in permanent docs, 2 whole symptoms only in the report.
   const skill = await read(`${root}/SKILL.md`);
-  assert.match(skill, /an assertion that locks its present behavior, or a filed follow-up whose id the change carries/iu);
+  assert.match(skill, /an assertion that locks its present behavior, a filed follow-up id the change carries, or a drafted one raised as a blocker/iu);
   assert.match(skill, /one row per symbol, statement, writer and input shape/iu);
   assert.match(skill, /A route recorded only in this report reaches nobody/iu);
   assert.doesNotMatch(skill, /record why it is out of scope where a reviewer will read it/iu);
@@ -285,7 +285,8 @@ test("sweep: a route the change makes worse is repaired in the change, even if i
   // and neither is an early rejection (429, 503, 400) ahead of a guard. 13-scenario battery, 2026-09-28:
   // the unbounded wording flagged an added event field 3/3; "a response made before a guard" flagged
   // a readiness 503 3/3.
-  assert.match(sweep, /a caller-supplied secret or credential where a constant or nothing was/u);
+  assert.match(sweep, /a caller-supplied secret or credential, or more of one, where a constant, a redacted form, or nothing was/u);
+  assert.match(sweep, /A new value that is none of these and that no cited rule bans is not worse/u);
   assert.match(sweep, /a project rule you can cite by file and line/u);
   assert.match(sweep, /a write, or a response carrying protected data, made without a guard that ran ahead of this site at base/u);
   assert.match(sweep, /neither is an early rejection with no data or write: take the next column/u);
