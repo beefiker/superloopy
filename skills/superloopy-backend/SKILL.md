@@ -61,7 +61,7 @@ Each of these is checkable from the diff or from a run. Measured effect (see the
 
 ## Repair the class, and stop where behavior was already correct
 
-Narrow means minimal in mechanism, not partial in coverage: repair the mechanism that produced the defect rather than the single instance it was reported through, and before calling it fixed, enumerate every other route into that mechanism from your own diff — the other call sites of each symbol you changed, the other branches of each statement you edited, the other code that writes each value you moved, the other input shapes the condition you added accepts — and either correct each in the same change or pin it: an assertion that locks its present behavior, or a filed follow-up whose id the change carries. Decide each candidate by the two checks in [Sweep](references/sweep.md). Any correction you make beyond the site the report names is a behavior change of its own and carries what the requested one carries — a test that fails without it and a stated reason on the change — and callers that were behaving correctly keep the behavior they have.
+Narrow means minimal in mechanism, not partial in coverage: repair the mechanism that produced the defect, not the single instance it was reported through, and before calling it fixed, enumerate every other route into that mechanism from your own diff — the other call sites of each symbol you changed, the other branches of each statement you edited, the other code that writes each value you moved, the other input shapes the condition you added accepts — and either correct each in the same change or pin it: an assertion that locks its present behavior, a filed follow-up id the change carries, or a drafted one raised as a blocker. Decide each by the checks in [Sweep](references/sweep.md). Any correction beyond the site the report names is its own behavior change and carries what the requested one carries — a test that fails without it and a stated reason on the change — and callers that were behaving correctly keep the behavior they have.
 
 ## Fail closed
 
@@ -77,7 +77,7 @@ Report the context card, change classification, contracts, changed behavior, val
 
 - `regression_test_failed_without_fix` — one row per new case, not per file: the hunk whose reversion reddens that case, the command, and the assertion that failed. Two cases naming the same hunk are one case; a case naming none is not evidence.
 - `unrequested_changes` — every hunk not on the path from the reported symptom to the repair, each with its own failing test, or reverted before you finish; a formatting or flag-only hunk has no expressible test and is reverted. `none` if there are none.
-- `routes_into_the_mechanism` — one row per symbol, statement, writer and input shape from the clause above: each corrected here, or pinned, naming the assertion that locks it or the follow-up id. A route recorded only in this report reaches nobody.
+- `routes_into_the_mechanism` — one row per symbol, statement, writer and input shape: each corrected here, or pinned, naming the assertion that locks it or the follow-up id, or blocked, citing the drafted follow-up. A route recorded only in this report reaches nobody.
 - `definition_of_done` — the project's own list from the context card, item by item, each marked done or explicitly deferred.
 
 Redact credentials, connection strings, tokens, and protected row data; reference large artifacts by path instead of inlining them.
