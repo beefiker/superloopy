@@ -287,7 +287,7 @@ test("sweep: a route the change makes worse is repaired in the change, even if i
   // guard" flagged a readiness 503 3/3; the final wording ran on 14 reconstructed scenarios, 14/14.
   assert.match(sweep, /a caller-supplied secret or credential, or more of one, where a constant, a redacted form, or nothing was/u);
   assert.match(sweep, /A new value that is none of these and that no cited rule bans is not worse/u);
-  assert.match(sweep, /a project rule you can cite by file and line/u);
+  assert.match(sweep, /a rule you can cite by file and line bans from this log, response or store — a project rule, or \[data-safety\]\(data-safety.md\) for data of another tenant or principal/u);
   assert.match(sweep, /a write, or a response carrying protected data, made without a guard that ran ahead of this site at base/u);
   assert.match(sweep, /neither is an early rejection with no data or write: take the next column/u);
   assert.doesNotMatch(sweep, /a value it never carried/u);
