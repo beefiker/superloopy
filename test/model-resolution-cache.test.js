@@ -271,6 +271,21 @@ test("compatibility override makes zero queries and uses each profile non-first 
   assert.deepEqual(result.state.files, {});
 });
 
+test("compatibility override selects the last tuple of a longer ordered chain", async (t) => {
+  const policy = policyData();
+  policy.codex.profiles.standard.candidates.splice(1, 0, candidate("middle-standard", "high", "priority"));
+  policy.codex.allowed.models.push("middle-standard");
+  const setup = await fixture(t, policy);
+  const result = await prepareCodexModelResolution(prepareOptions(setup, async () => {
+    throw new Error("query must not run");
+  }, { compatibility: true }));
+
+  assert.equal(result.ok, true);
+  assert.equal(result.state.profiles.standard.resolvedModel, "stable");
+  const files = persistedState(policy, setup.targetDir).files;
+  assert.equal(validateModelResolutionState({ ...result.state, files }, policy).ok, true);
+});
+
 test("successful query selects preferred tuples without persisting preparation state", async (t) => {
   const setup = await fixture(t);
   const result = await prepareCodexModelResolution(prepareOptions(setup, successfulQuery(setup.policy)));
