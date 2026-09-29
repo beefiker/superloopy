@@ -4,6 +4,10 @@ Load this only from the "Repair the class" section, once the diff-anchored enume
 its candidates.
 Every disposition here is decided by a command's output, never by reasoning about intent.
 A candidate that no command can classify takes the last row, not a guess.
+A change that compares, configures, accepts, logs or returns a secret, token, key or credential is
+decided with [data-safety § Handle secrets and credentials](data-safety.md#handle-secrets-and-credentials)
+read in full first: apply its rules to the code your diff already wrote, and where one of them covers a
+site, it overrides the out-of-scope row.
 
 | Does your change make it worse? (run this site with the reproduction's input at the base commit, and with your change using the input the change now requires or accepts in its place — the same input when the change alters no input; compare what the site emits: log lines, responses, stored values, errors) | Does it reach the defect? (run the reproduction, or its equivalent input, through this site) | Was it correct before? (run this site's existing test, or the invariant, at the base commit) | Disposition |
 |---|---|---|---|
