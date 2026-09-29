@@ -14,7 +14,7 @@ Use this module whenever a change reads protected data, writes durable state, ch
 
 - Compare secrets, tokens, and keys with the platform's constant-time primitive (for example `MessageDigest.isEqual`, `hmac.compare_digest`, `crypto.timingSafeEqual`), after rejecting a blank value on either side. Plain string equality is a timing oracle.
 - Take secrets from deployment configuration or a secret store, declared where sibling secrets are declared. Source holds no default for a secret. A blank configured value fails closed with a server-side error distinct from the caller's rejection, and one startup log names the missing key, never its value.
-- A credential the change newly accepts from a caller meets the policy its sibling writers already enforce (strength, not-equal-to-login, history): call the same validator rather than a weaker check of your own. Then run the rejection path through the worsening check in [Sweep](sweep.md): an error body or log line that reflects the request can carry the credential back out.
+- A credential the change now requires the caller to supply, or newly accepts, meets the policy its sibling writers already enforce (strength, not-equal-to-login, history): call the same validator rather than a weaker check of your own. This holds when the parameter existed before the change — removing its default or making it mandatory makes it the caller's credential — and it takes precedence over the sweep's out-of-scope row. Then run the rejection path through the worsening check in [Sweep](sweep.md): an error body or log line that reflects the request can carry the credential back out.
 
 ## Make writes reconcilable
 
