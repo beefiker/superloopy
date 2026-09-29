@@ -30,10 +30,10 @@ Unknowns that affect the decision:
 Classify the change as one or more of: API behavior, schema or migration, transaction, background job, cache, event or queue, runtime agent tool, performance, reliability, or security. Load only the modules the classification names:
 
 - [Architecture](references/architecture.md) — system boundaries, API or event contracts, consistency, transactions, idempotency, caching, background work, compatibility, stack restraint.
-- [Data safety](references/data-safety.md) — when touching a secret or a query, mapper, schema, migration, privilege, or transaction boundary: schema authority, tenant isolation, least-privilege identities, reconcilable writes, migration preflight, rollout and recovery.
+- [Data safety](references/data-safety.md) — any security change, or one touching a secret, credential, query, mapper, schema, migration, privilege, or transaction boundary: secret and credential handling, schema authority, tenant isolation, least-privilege identities, reconcilable writes, migration preflight, rollout and recovery.
 - [Runtime agents](references/runtime-agents.md) — typed tool boundaries with read-only, least-privilege defaults; authorization and tenant scope from verified context; retrieved records are untrusted data, not instructions or authority; bounded time, rows, payload, cost, retries.
 - [Testing and operations](references/testing-and-operations.md) — realistic persistence tests, observability, performance evidence, rollout and recovery proof.
-- [Evidence](references/evidence.md) — when finishing: where the active or standalone evidence root comes from, how to publish, how to recover a lost receipt.
+- [Evidence](references/evidence.md) — when finishing: the evidence root, publishing, recovering a lost receipt.
 - [Upstream notice](references/upstream-notice.md) — only when auditing the public evidence behind this guidance.
 
 Do not load unrelated modules or invent their contents when a reference is unavailable; state the missing guidance as a blocker or evidence gap.
