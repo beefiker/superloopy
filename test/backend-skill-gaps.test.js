@@ -346,8 +346,13 @@ test("data safety: secret handling is routed and states comparison, configuratio
   // parameter existed at base, so "newly accepts" did not literally apply and sweep's row won. With
   // "now requires" and the precedence clause (real run, 2026-09-29, n=1) it called the sibling
   // validator before any write and masked the password in error bodies, tested both ways (0/1 before).
-  assert.match(dataSafety, /now requires the caller to supply, or newly accepts/u);
+  assert.match(dataSafety, /A credential the change stores, sets or replaces from caller input/u);
   assert.match(dataSafety, /takes precedence over the sweep's out-of-scope row/u);
+  // Review of 0.21.3 (Codex, PR #63): "now requires the caller to supply" also covered a login that makes
+  // an existing password mandatory, sending it through creation policy and rejecting legacy passwords.
+  // Rescoped to stored credentials as a clarity fix; the n=1 run above was on the prior wording.
+  assert.match(dataSafety, /only presented for verification \(login, token or key check\) is compared, never run through creation policy/u);
+  assert.doesNotMatch(dataSafety, /now requires the caller to supply/u);
 });
 
 test("sweep sends secret-touching changes to data-safety, because sweep is the module every run reads", async () => {
