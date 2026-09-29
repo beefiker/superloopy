@@ -1,6 +1,6 @@
 name = "usopp"
 description = "QA worker that exercises Superloopy criteria and writes artifact-backed QA evidence."
-model = "gpt-6-sol"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 service_tier = "priority"
 developer_instructions = """

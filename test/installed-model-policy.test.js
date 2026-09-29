@@ -17,6 +17,7 @@ const SHELL_SAFE_TARGET_PATTERN = /^[\p{L}\p{N}_./:@+,= -]+$/u;
 
 function fullCatalog() {
   return [
+    { id: "gpt-6.1-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
     { id: "gpt-6-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
     { id: "gpt-6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },
     { id: "gpt-5.6-terra", reasoningEfforts: ["high"], serviceTiers: ["priority"] },
@@ -204,7 +205,7 @@ test("explicit doctor refresh reports preferred availability before managed stat
   assert.equal(check.selectionStatus, "not_installed");
   assert.equal(check.availabilityStatus, "preferred_available");
   assert.deepEqual(new Set(Object.values(check.availableAgents).map(({ resolvedModel }) => resolvedModel)), new Set([
-    "gpt-6-sol",
+    "gpt-6.1-sol",
     "gpt-6-luna"
   ]));
 });
@@ -249,7 +250,7 @@ test("ordinary installed doctor reports preferred metadata and makes zero catalo
     {
       ok: true,
       installed: true,
-      policyVersion: "2026-09-25",
+      policyVersion: "2026-09-30",
       targetDir: setup.targetDir,
       checkedAt: NOW.toISOString(),
       selectionStatus: "preferred",
@@ -261,7 +262,7 @@ test("ordinary installed doctor reports preferred metadata and makes zero catalo
   );
   assert.deepEqual(Object.keys(check.agents), SUPERLOOPY_AGENT_NAMES);
   for (const agent of Object.values(check.agents)) {
-    assert.equal(agent.requestedModel.startsWith("gpt-6-"), true);
+    assert.match(agent.requestedModel, /^gpt-6(?:\.1)?-/u);
     assert.equal(agent.requestedModel, agent.resolvedModel);
     assert.equal(agent.reason, "preferred_available");
     assert.equal(agent.status, "preferred");
@@ -354,7 +355,7 @@ test("installed doctor emits literal argv instead of an executable repair comman
 
 test("installed doctor distinguishes mixed-profile and unsupported routing without leaking values", async (t) => {
   const cases = [
-    ["mixed_profile", "zoro", ["gpt-6-sol", "high", "priority"], "mixed_profile"],
+    ["mixed_profile", "zoro", ["gpt-6.1-sol", "high", "priority"], "mixed_profile"],
     ["unsupported_tuple", "nami", ["credential-secret-model", "low", "fast"], "unsupported_tuple"]
   ];
   for (const [label, name, tuple, expectedStatus] of cases) {

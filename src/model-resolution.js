@@ -145,7 +145,7 @@ function resolveCompatibility(codexPolicy) {
   const profiles = {};
   const catalog = [];
   for (const [profileName, profile] of Object.entries(codexPolicy.profiles)) {
-    const candidate = profile.candidates[1];
+    const candidate = profile.candidates.length > 1 ? profile.candidates.at(-1) : undefined;
     if (candidate === undefined) return fail(`No compatibility candidate for Codex profile ${profileName}.`);
     profiles[profileName] = { candidates: [candidate] };
     catalog.push({
@@ -223,7 +223,9 @@ export function validateModelResolutionState(state, policy, options = {}) {
   if (!profileValidation.ok) return profileValidation;
   const compatibilitySelection = state.selectionReason === "compatibility_override"
     || state.selectionReason === "probe_unknown_compatibility";
-  if (compatibilitySelection && !Object.values(profileValidation.indexes).every((index) => index === 1)) {
+  if (compatibilitySelection && !Object.entries(profileValidation.indexes).every(([profileName, index]) =>
+    index === policy.codex.profiles[profileName].candidates.length - 1
+  )) {
     return invalid("selection");
   }
   if (state.degraded !== Object.values(profileValidation.indexes).some((index) => index > 0)) {
