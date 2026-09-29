@@ -315,19 +315,24 @@ test("sweep: a misstated value on a statement the diff edits is repaired, even w
 });
 
 test("data safety: secret handling is routed and states comparison, configuration and credential policy", async () => {
-  // n=1 per task, 2026-09-28, not a replay measurement. The blind runs on "the system API gate value is
-  // hard-coded" and "the encrypt/decrypt APIs log their input" never loaded data-safety.md (the
-  // default-password run did, because it touched a query): the routing named no secret, and a judge
-  // given "..., privilege, secret, or transaction boundary" still skipped it 3/3 (read as a kind of
-  // boundary). "a secret or a query, ..." routes it 5/5 and still skips a cache TTL and a log rewording
-  // 5/5. Anonymized judges named plain equality and one 403 for a missing key and a wrong header on the
-  // gate task (4/4, and 2/2 on a control rubric with no examples), and a weaker check than sibling
-  // password writers on the default-password task (4/4, control 2/2). Caveat: none of those judges saw
-  // that the human change which added that policy check echoed the password in its 400 body (0/6);
-  // a reviewer did. So the rule names the sibling path's own validator, never a new policy, and sends
-  // its rejection path through the worsening check.
+  // Measured on real blind runs, 2026-09-28, not the 24-task replay. On 0.21.1 the "system API gate value
+  // is hard-coded" and "encrypt/decrypt APIs log their input" runs never loaded data-safety.md. 0.21.2's
+  // "when touching a secret or a query, ..." was not enough: 1 of 5 real runs loaded it (0 of 2 on the
+  // gate task), and both gate runs said "no query, schema or transaction was touched", reading the
+  // persistence topics after the colon, while having classified the change "security". The trigger
+  // naming the security class and the topics leading with "secret and credential handling" got it read
+  // in 3 of 3 real runs (gate x2, default password x1), but only the default-password run read it before
+  // editing code. Both gate runs read it at the sweep step, after their first edit (partial: `sed 1,40`,
+  // `grep secret`), then retrofitted a constant-time compare and a 500 for a missing key distinct from
+  // the 403 for a wrong one (0 of 2 before). One gate run's reasoning names the new trigger. Bare completions
+  // and routing-only agents loaded the module 3/3 even on the 0.21.2 text, so neither can stand in for a
+  // real run here. The credential-policy line reached the default-password run but the sweep pinned the
+  // sibling policy as out of scope; no judge saw that the human change adding that policy echoed the
+  // password in its 400 body (0/6), so the line names the sibling validator, never a new policy, and
+  // sends its rejection path through the worsening check.
   const skill = await read(`${root}/SKILL.md`);
-  assert.match(skill, /\[Data safety\]\(references\/data-safety\.md\) — when touching a secret or a query/u);
+  assert.match(skill, /\[Data safety\]\(references\/data-safety\.md\) — any security change, or one touching a secret, credential, query/u);
+  assert.match(skill, /transaction boundary: secret and credential handling, schema authority/u);
   const dataSafety = await read(`${root}/references/data-safety.md`);
   assert.match(dataSafety, /^## Handle secrets and credentials$/mu);
   assert.match(dataSafety, /constant-time primitive/u);
@@ -337,6 +342,40 @@ test("data safety: secret handling is routed and states comparison, configuratio
   assert.match(dataSafety, /Source holds no default for a secret\./u);
   assert.match(dataSafety, /meets the policy its sibling writers already enforce/u);
   assert.match(dataSafety, /run the rejection path through the worsening check in \[Sweep\]\(sweep\.md\)/u);
+  // The default-password run read this line and still pinned the policy out of scope: the password
+  // parameter existed at base, so "newly accepts" did not literally apply and sweep's row won. With
+  // "now requires" and the precedence clause (real run, 2026-09-29, n=1) it called the sibling
+  // validator before any write and masked the password in error bodies, tested both ways (0/1 before).
+  assert.match(dataSafety, /now requires the caller to supply, or newly accepts/u);
+  assert.match(dataSafety, /takes precedence over the sweep's out-of-scope row/u);
+});
+
+test("sweep sends secret-touching changes to data-safety, because sweep is the module every run reads", async () => {
+  // Real runs, 2026-09-28: every run opened sweep.md; runs on the gate task read data-safety.md only at
+  // the sweep step, after their first code edit, and then corrected the code. The pointer makes that
+  // late read dependable and full-section, and names which rule wins over the out-of-scope row. Not yet
+  // measured on its own: on 2026-09-29 (n=2) both gate runs read data-safety.md in full before editing,
+  // but in the same `cat` as sweep.md, before seeing this pointer, under the unchanged SKILL.md trigger
+  // that produced late reads the day before. That is run variance on the trigger, not this line's effect.
+  const sweep = await read(`${root}/references/sweep.md`);
+  const dataSafety = await read(`${root}/references/data-safety.md`);
+  assert.match(sweep, /\[data-safety § Handle secrets and credentials\]\(data-safety\.md#handle-secrets-and-credentials\)/u);
+  assert.match(dataSafety, /^## Handle secrets and credentials$/mu, "the anchor sweep links must exist");
+  assert.match(sweep, /apply its rules to the code your diff already wrote/u);
+  assert.match(sweep, /it overrides the out-of-scope row/u);
+});
+
+test("the evidence root forms the docs name are exactly the ones the helper accepts", async () => {
+  // A run passed an absolute evidence root, got rejected, and spent a call recovering: the placeholder
+  // never said the argument is project-relative.
+  const evidence = await read(`${root}/references/evidence.md`);
+  const { scopeForEvidenceRoot } = await import(pathToFileURL(join(process.cwd(), root, "scripts/write-evidence-report.mjs")));
+  const line = evidence.split("\n").find((l) => l.startsWith("`<active-evidence-root>` is"));
+  assert.ok(line, "evidence.md states the form of <active-evidence-root>");
+  assert.match(line, /never an absolute path/u);
+  assert.doesNotThrow(() => scopeForEvidenceRoot(".superloopy/evidence"));
+  assert.throws(() => scopeForEvidenceRoot("/abs/project/.superloopy/evidence"));
+  assert.match(line, /`\.superloopy\/sessions\/<session-id>\/evidence`/u);
 });
 
 test("v6: the red-run record is one row per case and names the hunk that reddens it", async () => {
