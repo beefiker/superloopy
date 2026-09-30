@@ -196,6 +196,25 @@ test("backend skill scales discovery to the classified change instead of filling
   assert.match(skill, /A card filled to the bottom for a two-line fix is cost, not diligence/iu);
 });
 
+test("backend skill card makes every open item the ticket states get a disposition", async () => {
+  // Replay 2026-09-29 (ISMPDEV-178, n=2, 0.21.4): the ticket marked a second column as a separate
+  // matter to confirm; both runs fixed the labels and said nothing about it, while the human PR named
+  // it out of scope. 2026-09-30, same inputs, n=2 each: "Questions the request or ticket raises" was
+  // filled by both runs with their own questions and still missed it (0/2); this wording, which asks
+  // for the items the ticket states, gave it a disposition in 1/2. A direction, not a measured effect.
+  // The line sits inside the part of the card every change fills.
+  const skill = await read(`${root}/SKILL.md`);
+  const open = skill.indexOf("```text\n") + 8;
+  const lines = skill.slice(open, skill.indexOf("```", open)).split("\n").filter(Boolean);
+  const at = lines.indexOf("Open items the request/ticket states, quoted, each in scope, out (follow-up drafted), or answered:");
+  assert.ok(at >= 0, "card has the ticket-questions line");
+  const word = /A change confined to one unit needs the first (\w+) lines/u.exec(skill)?.[1];
+  const filled = { five: 5, six: 6, seven: 7 }[word];
+  assert.ok(at < filled, `the line is card line ${at + 1}, outside the first ${word} a one-unit change fills`);
+  const dod = lines.findIndex((l) => l.startsWith("Project definition of done"));
+  assert.ok(dod >= 0 && dod < filled, `definition of done is card line ${dod + 1}, outside the first ${word}`);
+});
+
 test("backend skill keeps evidence publication mechanics in a reference loaded only at the finish", async () => {
   const skill = await read(`${root}/SKILL.md`);
   const evidence = await read(`${root}/references/evidence.md`);
