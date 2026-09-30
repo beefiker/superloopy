@@ -11,10 +11,11 @@ Open the response with `SUPERLOOPY BACKEND ENABLED`. If another active Superloop
 
 Inspect the repository before prescribing commands, code, schema, or infrastructure: its instructions, its recorded conventions and the hooks, linters, formatters, or convention checks that enforce them, language and runtime, data stores and schema authority, test commands, generated artifacts and how they are regenerated, and the project's own definition of done for a change of this kind. Preserve the existing stack and patterns; remain stack-neutral when evidence does not select a technology. Ask only when a missing fact would materially change the implementation or its safety.
 
-Fill the context card only as far as the classified change reaches. A change confined to one unit needs the first five lines; a schema, contract, or runtime-agent change needs all of it. A card filled to the bottom for a two-line fix is cost, not diligence.
+Fill the context card only as far as the classified change reaches. A change confined to one unit needs the first six lines; a schema, contract, or runtime-agent change needs all of it. A card filled to the bottom for a two-line fix is cost, not diligence.
 
 ```text
 User outcome:
+Open items the request/ticket states, quoted, each in scope, out (follow-up drafted), or answered:
 Language and runtime / existing architecture:
 Recorded conventions and their enforcement:
 Generated artifacts and their regeneration command:
@@ -82,6 +83,6 @@ Report the context card, change classification, contracts, changed behavior, val
 
 Redact credentials, connection strings, tokens, and protected row data; reference large artifacts by path instead of inlining them.
 
-Publish the report by passing it on standard input to `node "$BACKEND_SKILL_DIR/scripts/write-evidence-report.mjs" write "<project-root>" "<active-evidence-root>" "<qualified-report-id>"`, exactly as [Evidence](references/evidence.md) directs: it resolves the active evidence root inside a Superloopy loop or the project-local root for a standalone run, mints a qualified report id that names one attempt (a re-attempt gets a new id such as `-attempt-2`), recovers a lost receipt with `recover` only for the invocation whose receipt was lost, and keeps the evidence root out of the change under review. Never write the target path directly. Announce the printed path and end with this exact receipt after replacing the placeholder:
+Publish the report by passing it on standard input to `node "$BACKEND_SKILL_DIR/scripts/write-evidence-report.mjs" write "<project-root>" "<active-evidence-root>" "<qualified-report-id>"`, exactly as [Evidence](references/evidence.md) directs: it resolves the active evidence root inside a Superloopy loop or the project-local root for a standalone run, mints a qualified report id that names one attempt (a re-attempt gets a new id like `-attempt-2`), and recovers a lost receipt with `recover` only for the invocation whose receipt was lost. Never write the target path directly. Announce the printed path and end with this exact receipt after replacing the placeholder:
 
 `SUPERLOOPY_EVIDENCE: <BACKEND_EVIDENCE_REPORT>`
