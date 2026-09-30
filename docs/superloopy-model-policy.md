@@ -2,13 +2,14 @@
 
 Superloopy's bundled agent model fields are steering, not proof. They give the host sensible defaults for cost and depth, but completion authority still comes from Superloopy artifacts, `loop check`, and the quality gate.
 
-`model-policy.json` is the source of truth for allowed values, reusable profiles, and per-agent profile assignment. Each Codex profile contains an ordered preferred and compatibility tuple with complete model, effort, and tier values. Resolution selects the first tuple that the current catalog supports in full. The bundled `.codex/agents/*.toml` files stay pinned to the preferred resolved model IDs so Superloopy never falls through to a weak parent/default model by accident.
+`model-policy.json` is the source of truth for allowed values, reusable profiles, and per-agent profile assignment. Each Codex profile contains an ordered list of complete model, effort, and tier tuples: the first is preferred, any middle tuples are ordered fallbacks, and the last is the compatibility tuple. Every tuple in a profile uses a different model. Resolution selects the first tuple that the current catalog supports in full. The bundled `.codex/agents/*.toml` files stay pinned to the preferred resolved model IDs so Superloopy never falls through to a weak parent/default model by accident.
 
 ## Allowed Fields
 
 Allowed models:
 
 - `gpt-6-astra`
+- `gpt-6.1-sol`
 - `gpt-6-sol`
 - `gpt-6-luna`
 - `gpt-5.6-terra`
@@ -21,17 +22,17 @@ Allowed service tiers: `priority`, `fast`, `efficient`.
 
 ## Profile Candidates
 
-| Profile | Preferred tuple | Compatibility tuple |
-| --- | --- | --- |
-| `standard` | `gpt-6-sol` / `high` / `priority` | `gpt-5.6-terra` / `high` / `priority` |
-| `deep` | `gpt-6-sol` / `xhigh` / `priority` | `gpt-5.6-sol` / `xhigh` / `priority` |
-| `fast` | `gpt-6-luna` / `low` / `fast` | `gpt-5.6-luna` / `low` / `fast` |
+| Profile | Preferred tuple | Fallback tuple | Compatibility tuple |
+| --- | --- | --- | --- |
+| `standard` | `gpt-6.1-sol` / `high` / `priority` | `gpt-6-sol` / `high` / `priority` | `gpt-5.6-terra` / `high` / `priority` |
+| `deep` | `gpt-6.1-sol` / `xhigh` / `priority` | `gpt-6-sol` / `xhigh` / `priority` | `gpt-5.6-sol` / `xhigh` / `priority` |
+| `fast` | `gpt-6-luna` / `low` / `fast` | none | `gpt-5.6-luna` / `low` / `fast` |
 
-Availability is resolved before an agent is launched. A compatibility selection is explicit; Superloopy never retries a worker with a different model after launch.
+Availability is resolved before an agent is launched. Any selection after the preferred tuple is reported as a compatibility fallback. `--compat` and an unknown first probe select the last tuple, which stays on the widely available GPT-5.6 family. Superloopy never retries a worker with a different model after launch.
 
 ## Orchestrator Model
 
-The orchestrator is the user's own host session, not a bundled agent. Superloopy never sets, pins, or resolves its model; the host uses whatever the user selected. `gpt-6-astra` is allowed so the orchestrator may run on it when the user selected it, and `superloopy doctor` does not flag that selection as unsupported. The six crew lanes keep the profile pins above regardless of the orchestrator's model: an orchestrator on `gpt-6-astra` still dispatches `franky` and `zoro` on `gpt-6-sol`, and `nami` on `gpt-6-luna`. Crew guidance reports the orchestrator's model as `model_unverified` like any other lane unless the host attests it.
+The orchestrator is the user's own host session, not a bundled agent. Superloopy never sets, pins, or resolves its model; the host uses whatever the user selected. `gpt-6-astra` is allowed so the orchestrator may run on it when the user selected it, and `superloopy doctor` does not flag that selection as unsupported. The six crew lanes keep the profile pins above regardless of the orchestrator's model: an orchestrator on `gpt-6-astra` still dispatches `franky` and `zoro` on `gpt-6.1-sol`, and `nami` on `gpt-6-luna`. Crew guidance reports the orchestrator's model as `model_unverified` like any other lane unless the host attests it.
 
 ## Upgrade And Diagnosis
 
@@ -49,11 +50,11 @@ Configured routing is not runtime attestation. The host must expose `agent_type`
 
 | Agent | Purpose | Profile | Model | Effort | Tier |
 | --- | --- | --- | --- | --- | --- |
-| `franky` | Bounded implementation lane. | `standard` | `gpt-6-sol` | `high` | `priority` |
-| `zoro` | Skeptical code review lane. | `deep` | `gpt-6-sol` | `xhigh` | `priority` |
-| `usopp` | QA and regression lane. | `standard` | `gpt-6-sol` | `high` | `priority` |
-| `jinbe` | Final gate integration lane. | `deep` | `gpt-6-sol` | `xhigh` | `priority` |
-| `robin` | Evidence auditor lane. | `standard` | `gpt-6-sol` | `high` | `priority` |
+| `franky` | Bounded implementation lane. | `standard` | `gpt-6.1-sol` | `high` | `priority` |
+| `zoro` | Skeptical code review lane. | `deep` | `gpt-6.1-sol` | `xhigh` | `priority` |
+| `usopp` | QA and regression lane. | `standard` | `gpt-6.1-sol` | `high` | `priority` |
+| `jinbe` | Final gate integration lane. | `deep` | `gpt-6.1-sol` | `xhigh` | `priority` |
+| `robin` | Evidence auditor lane. | `standard` | `gpt-6.1-sol` | `high` | `priority` |
 | `nami` | Read-only navigation lane. | `fast` | `gpt-6-luna` | `low` | `fast` |
 
 ## Rules

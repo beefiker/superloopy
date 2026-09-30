@@ -48,7 +48,7 @@ export async function checkModelPolicy(cwd) {
     policyPath: MODEL_POLICY_PATH,
     policyDataPath: MODEL_POLICY_DATA_PATH,
     policyDataVersion: data.version,
-    compatibilityModels: Object.fromEntries(Object.entries(codex.profiles).map(([name, profile]) => [name, profile.candidates[1].model])),
+    compatibilityModels: Object.fromEntries(Object.entries(codex.profiles).map(([name, profile]) => [name, profile.candidates.at(-1).model])),
     allowedModels: codex.allowed.models,
     allowedEfforts: codex.allowed.reasoningEfforts,
     allowedTiers: codex.allowed.serviceTiers,
@@ -159,11 +159,8 @@ function validateCodexPolicyData(codex) {
     if (profile.candidates.length < 2) {
       throw new Error(`Missing compatibility candidate for Codex profile ${profileName}`);
     }
-    if (profile.candidates.length !== 2) {
-      throw new Error(`Codex profile ${profileName} must define exactly one preferred and one compatibility candidate`);
-    }
-    if (profile.candidates[1].model === profile.candidates[0].model) {
-      throw new Error(`Codex profile ${profileName} compatibility candidate must use a different model`);
+    if (new Set(profile.candidates.map(({ model }) => model)).size !== profile.candidates.length) {
+      throw new Error(`Codex profile ${profileName} candidates must each use a different model`);
     }
   }
 }

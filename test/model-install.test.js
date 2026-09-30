@@ -20,7 +20,7 @@ const MANAGED_MARKER = "# superloopy-managed-agent v1";
 
 function fullCatalog() {
   return [
-    { id: "gpt-6-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
+    ...["gpt-6.1-sol", "gpt-6-sol"].map((id) => ({ id, reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] })),
     { id: "gpt-6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },
     { id: "gpt-5.6-terra", reasoningEfforts: ["high"], serviceTiers: ["priority"] },
     { id: "gpt-5.6-sol", reasoningEfforts: ["xhigh"], serviceTiers: ["priority"] },
@@ -126,10 +126,10 @@ test("preferred install uses the package policy root even when cwd is unrelated"
   });
 
   assert.equal(result.ok, true);
-  assert.equal(result.modelResolution.policyVersion, "2026-09-25");
+  assert.equal(result.modelResolution.policyVersion, "2026-09-30");
   assert.equal(result.modelResolution.selectionReason, "catalog_resolved");
   assert.equal(result.degraded, false);
-  assert.equal(result.agents.find(({ name }) => name === "zoro").resolvedModel, "gpt-6-sol");
+  assert.equal(result.agents.find(({ name }) => name === "zoro").resolvedModel, "gpt-6.1-sol");
   assert.match(await readFile(join(setup.targetDir, "nami.toml"), "utf8"), /^model = "gpt-6-luna"$/mu);
 });
 
@@ -201,11 +201,11 @@ test("policy-version refresh upgrades hash-matching managed files without force"
   assert.equal(result.restartRequired, true);
   assert.deepEqual(result.agents.map(({ status }) => status), SUPERLOOPY_AGENT_NAMES.map(() => "updated"));
   assert.deepEqual(new Set(result.agents.map(({ resolvedModel }) => resolvedModel)), new Set([
-    "gpt-6-sol",
+    "gpt-6.1-sol",
     "gpt-6-luna"
   ]));
   const currentState = await readState(setup);
-  assert.equal(currentState.policyVersion, "2026-09-25");
+  assert.equal(currentState.policyVersion, "2026-09-30");
 });
 
 test("policy-version refresh still preserves a user-edited managed file", async (t) => {

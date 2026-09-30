@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import * as modelPolicy from "../src/model-policy.js";
 
@@ -154,6 +155,32 @@ test("shipped model policy allows gpt-6-astra without pinning any profile to it"
   assert.equal(pinned.includes("gpt-6-astra"), false);
 });
 
+test("shipped policy prefers GPT-6.1 Sol, then GPT-6 Sol, then GPT-5.6 for the Sol lanes", async () => {
+  const loadModelPolicyData = requireExport("loadModelPolicyData");
+  const resolveCodexModelPolicy = requireExport("resolveCodexModelPolicy");
+  const loaded = await loadModelPolicyData(fileURLToPath(new URL("..", import.meta.url)));
+  assert.equal(loaded.ok, true);
+  const pick = (catalog) => Object.fromEntries(Object.entries(resolveCodexModelPolicy(loaded.data.codex, catalog).profiles)
+    .map(([name, profile]) => [name, `${profile.requestedModel}>${profile.resolvedModel}:${profile.reason}`]));
+  const sol61 = { id: "gpt-6.1-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] };
+
+  assert.deepEqual(pick([sol61, ...fullCatalog()]), {
+    standard: "gpt-6.1-sol>gpt-6.1-sol:preferred_available",
+    deep: "gpt-6.1-sol>gpt-6.1-sol:preferred_available",
+    fast: "gpt-6-luna>gpt-6-luna:preferred_available"
+  });
+  assert.deepEqual(pick(fullCatalog()), {
+    standard: "gpt-6.1-sol>gpt-6-sol:compatibility_fallback",
+    deep: "gpt-6.1-sol>gpt-6-sol:compatibility_fallback",
+    fast: "gpt-6-luna>gpt-6-luna:preferred_available"
+  });
+  assert.deepEqual(pick(fullCatalog().filter(({ id }) => id.startsWith("gpt-5.6"))), {
+    standard: "gpt-6.1-sol>gpt-5.6-terra:compatibility_fallback",
+    deep: "gpt-6.1-sol>gpt-5.6-sol:compatibility_fallback",
+    fast: "gpt-6-luna>gpt-5.6-luna:compatibility_fallback"
+  });
+});
+
 test("resolver falls back only the deep profile when Sol lacks xhigh", () => {
   const resolveCodexModelPolicy = requireExport("resolveCodexModelPolicy");
   const catalog = fullCatalog().map((item) => item.id === "gpt-6-sol"
@@ -295,22 +322,22 @@ test("policy loader rejects malformed candidate arrays", async (t) => {
   }
 });
 
-test("policy loader requires a distinct second compatibility candidate", async (t) => {
+test("policy loader requires a compatibility candidate and a distinct model per candidate", async (t) => {
   const loadModelPolicyData = requireExport("loadModelPolicyData");
   const cases = [
     ["missing candidate", (data) => {
       data.codex.profiles.standard.candidates = data.codex.profiles.standard.candidates.slice(0, 1);
     }, /Missing compatibility candidate for Codex profile standard/u],
-    ["extra candidate", (data) => {
+    ["repeated model later in the chain", (data) => {
       data.codex.profiles.standard.candidates.push({
-        model: "gpt-5.6-terra",
+        model: "gpt-6-sol",
         model_reasoning_effort: "high",
         service_tier: "priority"
       });
-    }, /must define exactly one preferred and one compatibility candidate/u],
+    }, /candidates must each use a different model/u],
     ["same model", (data) => {
       data.codex.profiles.standard.candidates[1].model = "gpt-6-sol";
-    }, /compatibility candidate must use a different model/u]
+    }, /candidates must each use a different model/u]
   ];
   for (const [name, mutate, expected] of cases) {
     await t.test(name, async () => {

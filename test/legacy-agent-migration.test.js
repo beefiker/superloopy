@@ -20,6 +20,7 @@ const LEGACY_MODELS = {
 
 function fullCatalog() {
   return [
+    { id: "gpt-6.1-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
     { id: "gpt-6-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
     { id: "gpt-6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },
     { id: "gpt-5.6-terra", reasoningEfforts: ["high"], serviceTiers: ["priority"] },
@@ -75,7 +76,7 @@ test("first managed install adopts an exact pre-managed Superloopy fleet without
   assert.equal(result.restartRequired, true);
   assert.deepEqual(result.agents.map(({ status }) => status), SUPERLOOPY_AGENT_NAMES.map(() => "updated"));
   assert.deepEqual(new Set(result.agents.map(({ resolvedModel }) => resolvedModel)), new Set([
-    "gpt-6-sol",
+    "gpt-6.1-sol",
     "gpt-6-luna"
   ]));
   for (const name of SUPERLOOPY_AGENT_NAMES) {
