@@ -1,7 +1,7 @@
 {
   "name": "superloopy",
   "description": "Strict evidence loop harness with explicit criteria and append-only evidence ledgers.",
-  "version": "0.22.1",
+  "version": "0.22.2",
   "author": {
     "name": "beefiker"
   }

@@ -4,6 +4,10 @@ Load this only from the "Repair the class" section, once the diff-anchored enume
 its candidates.
 Every disposition here is decided by a command's output, never by reasoning about intent.
 A candidate that no command can classify takes the last row, not a guess.
+The defect is the reported failure going unnoticed or unfixed, not the one site the report or your
+diff names as its cause. When a report says a failure is hidden in one place, every other site on the
+reported path that hides the same failure reaches the defect, and the reproduction has to be able to see
+it there; a site your new test cannot observe is a gap in the test, not a reason for the out-of-scope row.
 A change that compares, configures, accepts, logs or returns a secret, token, key or credential is
 decided with [data-safety § Handle secrets and credentials](data-safety.md#handle-secrets-and-credentials)
 read in full first: apply its rules to the code your diff already wrote, and where one of them covers a
