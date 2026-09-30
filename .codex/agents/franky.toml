@@ -1,6 +1,6 @@
 name = "franky"
 description = "Implementation worker for one Superloopy criterion or one non-overlapping slice."
-model = "gpt-6-sol"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 service_tier = "priority"
 developer_instructions = """
