@@ -142,14 +142,6 @@ test("backend skill keeps only rules that are decisions, each checkable from the
   // 1 reproduce first, re-run at the end, at the report's conditions
   assert.match(skill, /Reproduce first, and re-run the same reproduction at the end/u);
   assert.match(skill, /at the conditions the report describes rather than narrowed onto the cause you find/iu);
-  // Replay 2026-09-30 (design redacted from the ticket, n=2, 0.21.4): both runs saw that
-  // startup initialization stops midway, then asserted that stop point (failed step, FAILED status)
-  // as the passing outcome, so the reported symptom stayed and the test locked it in. Same input with
-  // this sentence: both runs made initialization finish (2/2). With the ticket's own "no production code
-  // change" restored, 0.22.1 already made it finish 2/2, so the effect shows only where the ticket leaves
-  // production code open. n=2 per arm, direction only.
-  assert.match(skill, /A test that expects the reported failure \(where it stops, what it throws\) certifies the symptom/u);
-  assert.match(skill, /make the path finish, supplying what the environment lacks, or report it as a blocker/u);
   // 2 extend the suite that exists -- the rule that measurably bit
   assert.match(skill, /Extend the suite that already states the contract/u);
   assert.match(skill, /put new cases in the test file that already covers the unit you are changing/iu);
@@ -288,7 +280,8 @@ test("v6: the sweep enumerates routes from the author's own diff, not by an outw
   // steps that catch-and-log their own failures out of scope because "the test does not observe them",
   // so those failures kept passing. The human PR watched every app logger and allowlisted one failure.
   // Same input with this paragraph: both runs failed the test on an ERROR from any app logger (2/2 vs
-  // 0/4). n=2, direction only.
+  // 0/4). Without it on the input that leaves production code open: 1/4 (0.22.1 0/2, 0.22.2-rc 1/2).
+  // n=2 per arm, direction only.
   assert.match(sweep, /The defect is the reported failure going unnoticed or unfixed, not the one site the report or your\ndiff names as its cause/u);
   assert.match(sweep, /a site your new test cannot observe is a gap in the test, not a reason for the out-of-scope row/u);
 });
