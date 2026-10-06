@@ -9,6 +9,7 @@ Validation must prove the defined contract and failure semantics in the project'
 - Exercise transaction, isolation, query, constraint, concurrency, and migration behavior against a disposable real database with the production driver and pooling mode when feasible. Keep fixtures synthetic and secrets out of output.
 - Prove forward and backward compatibility across the application/schema versions that coexist during rollout. Test upgrade, pause, resume, and the chosen rollback or roll-forward path.
 - For natural-language queries, test semantic postconditions and multiple representative datasets. Execution success on one fixture does not prove user intent.
+- Check the outcome where its consumer receives it — the built artifact, image, served response, or exported file — not only the code path that produces it.
 
 If a disposable environment is unavailable, run the safe static and isolated checks, state which behavior remains unproved, and do not claim database, migration, or tenant safety.
 

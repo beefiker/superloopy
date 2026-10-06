@@ -36,7 +36,11 @@ Prefer an expand-and-contract migration when old and new application versions ov
 
 Treat a proposed index, materialized view, partition, summary table, generated column, or constraint as a schema change even when it appears inside a performance plan. Either leave it as an evidence-gated lead, or include its expand-and-contract compatibility, migration ordering, resource preflight, staged rollout, and rollback or roll-forward behavior.
 
+Code is not the only holder of a name or shape. When a change renames, retypes, re-encodes, or moves a field, key, enumeration value, path, or identifier, find every place an earlier version already persisted it — columns, JSON or other serialized payloads, cache and queue entries, search indexes, file or object paths, configuration keys — and give each a decision in the change: migrate it, read both forms for a stated window, or keep it with the reason. A tolerant reader that ignores unknown fields turns an unmigrated value into silently missing data, not an error. A rewrite of stored values leaves a value already in the new form untouched and is safe to run twice.
+
 Before rollout, run a lock and resource preflight using representative data and the actual migration mechanism. Record expected lock mode and duration, scan or rewrite cost, log and replication impact, connection and storage headroom, transaction behavior, cancellation behavior, and compatibility with every live version.
+
+Each migration step asserts the exact precondition it needs and halts on a contradictory state — partly applied, or an object in a form the step does not know. A step whose postcondition already holds is a recorded no-op, not a failure. Old and new forms present together is the expected state during expand and an error only for the contract step that removes one of them. Test the halt with a case for each state the step can meet.
 
 Verify that a backup is recent, readable, complete for the affected state, and restorable through a timed exercise or equivalent project evidence. A configured backup without restore proof is not recovery evidence.
 

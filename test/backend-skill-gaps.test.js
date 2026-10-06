@@ -238,9 +238,17 @@ test("backend skill stays under its word budget and does not regrow the rules th
   // Ratchet. Four obligations were removed on 2026-09-02 because four measured rewrites did not
   // move the fault class they named while doubling the skill's cost. Re-adding one is a decision
   // that needs a measurement attached, not a sentence that reads well.
+  //
+  // 2026-10-01: budget 1,800 -> 1,900 for three decisions, each checkable from the diff or the
+  // receipt (final gate re-run after any later edit, rule 6; externally owned values keep their
+  // string, rule 7; stores an earlier version persisted are routes into the mechanism). Basis: a
+  // blind, pre-registered replay against 0.22.3 on a build/packaging task and a rename task, n=2
+  // runs each, 4 judges per pair. Head-to-head the new build won 8/8 and 6/8; the rename runs
+  // decided stored copies 2/2 (was 1/2). Rule 7 moved no run. Cost rose: tool calls x1.3-2.8,
+  // output tokens x1.4-2.5. Kept on direction; rule 7 is the first candidate to cut.
   const skill = await read(`${root}/SKILL.md`);
   const words = skill.split(/\s+/u).filter(Boolean).length;
-  assert.ok(words <= 1800, `SKILL.md is ${words} words; the budget is 1,800 (it was 3,353 before the cut)`);
+  assert.ok(words <= 1900, `SKILL.md is ${words} words; the budget is 1,900 (1,800 until 2026-10-01; 3,353 before the cut)`);
   for (const removed of [
     /^### Justify each guard by the invariant/mu,
     /^### Withdraw only as far as you can account for/mu,
@@ -290,7 +298,8 @@ test("v6: a route left out of scope is pinned by an artifact, never discharged b
   // 11 of 24 tasks: 4 notes false, 3 empty, 2 in permanent docs, 2 whole symptoms only in the report.
   const skill = await read(`${root}/SKILL.md`);
   assert.match(skill, /an assertion that locks its present behavior, a filed follow-up id the change carries, or a drafted one raised as a blocker/iu);
-  assert.match(skill, /one row per symbol, statement, writer and input shape/iu);
+  // 2026-10-01: "store" joined the row list with the repair-the-class enumeration (see the budget note).
+  assert.match(skill, /one row per symbol, statement, writer, store and input shape/iu);
   assert.match(skill, /A route recorded only in this report reaches nobody/iu);
   assert.doesNotMatch(skill, /record why it is out of scope where a reviewer will read it/iu);
   assert.doesNotMatch(skill, /WHERE that decision was published in the change itself/u);
