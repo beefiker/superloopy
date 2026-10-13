@@ -336,7 +336,7 @@ export async function mountGlassPanes(stage, { animate = true } = {}) {
     }
     const radius = Math.min(CFG.cornerRadius, 0.49 * Math.min(...cells.map((c) => c.minEdge)));
 
-    // dominant cell gets luffy, then by descending area
+    // dominant cell gets crew-01, then by descending area
     const byArea = [...cells].sort((a, b) => b.area - a.area);
     byArea.forEach((cell, rank) => {
       cell.crew = CREW_BY_AREA[rank % CREW_BY_AREA.length];

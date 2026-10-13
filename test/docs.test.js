@@ -447,7 +447,7 @@ test("public docs describe loose prompt triggers as guidance-only", async () => 
 test("project custom agents define Superloopy subagent workflow", async () => {
   const readme = await readFile("README.md", "utf8");
   const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");
-  const agents = ["franky", "zoro", "usopp", "jinbe", "robin", "nami"];
+  const agents = ["forge", "sentinel", "probe", "arbiter", "assayer", "pathfinder"];
 
   assert.match(readme, /\.codex\/agents/);
   assert.match(readme, /superloopy agents install/);
@@ -462,7 +462,7 @@ test("project custom agents define Superloopy subagent workflow", async () => {
     assert.match(content, /model_reasoning_effort = "(low|high|xhigh)"/);
     assert.match(content, /service_tier = "(priority|fast)"/);
     assert.match(content, /developer_instructions = """/);
-    if (agent !== "nami") assert.match(content, /active evidence root/);
+    if (agent !== "pathfinder") assert.match(content, /active evidence root/);
   }
 });
 
@@ -470,7 +470,7 @@ test("public docs encode crew retrospective guardrails", async () => {
   const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");
   const hostContract = await readFile("docs/superloopy-host-contract.md", "utf8");
 
-  assert.match(skill, /jinbe-final-gate-report\.md/);
+  assert.match(skill, /arbiter-final-gate-report\.md/);
   assert.match(skill, /\.superloopy\/evidence\/gate\.json/);
   assert.match(skill, /quality gate artifact.*JSON/s);
   assert.match(skill, /For full crew, record each dispatch with `superloopy loop handoff/s);

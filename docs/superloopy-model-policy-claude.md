@@ -14,17 +14,17 @@ Claude Code edition of the advisory model policy. Same principle as `docs/superl
 
 | Agent | Purpose | Profile | Model | Read-only | Maps from Codex |
 | --- | --- | --- | --- | --- | --- |
-| `franky` | Bounded implementation lane. | `standard` | `claude-opus-5-5` | no | gpt-6.1-sol / high |
-| `zoro` | Skeptical code review lane. | `deep` | `claude-opus-5-5` | no (one report) | gpt-6.1-sol / xhigh |
-| `usopp` | QA and regression lane. | `standard` | `claude-opus-5-5` | no (one report) | gpt-6.1-sol / high |
-| `jinbe` | Final gate integration lane. | `deep` | `claude-opus-5-5` | no (one report) | gpt-6.1-sol / xhigh |
-| `robin` | Evidence auditor lane. | `standard` | `claude-opus-5-5` | yes (no edit/write) | gpt-6.1-sol / high |
-| `nami` | Read-only navigation lane. | `fast` | `haiku` | yes (Read/Grep/Glob) | gpt-6-luna / low |
+| `forge` | Bounded implementation lane. | `standard` | `claude-opus-5-5` | no | gpt-6.1-sol / high |
+| `sentinel` | Skeptical code review lane. | `deep` | `claude-opus-5-5` | no (one report) | gpt-6.1-sol / xhigh |
+| `probe` | QA and regression lane. | `standard` | `claude-opus-5-5` | no (one report) | gpt-6.1-sol / high |
+| `arbiter` | Final gate integration lane. | `deep` | `claude-opus-5-5` | no (one report) | gpt-6.1-sol / xhigh |
+| `assayer` | Evidence auditor lane. | `standard` | `claude-opus-5-5` | yes (no edit/write) | gpt-6.1-sol / high |
+| `pathfinder` | Read-only navigation lane. | `fast` | `haiku` | yes (Read/Grep/Glob) | gpt-6-luna / low |
 
 ## Rules
 
 - Update `model-policy.json` first when Claude Code exposes a better default alias or pinned model for a profile, then update the resolved frontmatter pins and this document in the same change.
 - Use the `model` frontmatter as a default only. A host or user may override it.
 - A stronger model is never proof. The artifact, command transcript, audit verdict, or gate report is the proof.
-- Read-only lanes (`robin`, `nami`) constrain via the `tools` allowlist, since plugin-bundled subagents ignore `permissionMode`; the real safeguard remains the in-process, hash-bound audit re-derivation.
+- Read-only lanes (`assayer`, `pathfinder`) constrain via the `tools` allowlist, since plugin-bundled subagents ignore `permissionMode`; the real safeguard remains the in-process, hash-bound audit re-derivation.
 - The Codex and Claude policies must stay in intent-sync: review/gate lanes deepest, navigation cheapest.

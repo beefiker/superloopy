@@ -178,22 +178,22 @@ test("auditReceiptFromPayload mirrors the same direct/transcript fallback for SU
 });
 
 test("agent identity matching is exact and host-specific", () => {
-  for (const role of ["franky", "zoro", "usopp", "jinbe", "robin", "nami"]) {
+  for (const role of ["forge", "sentinel", "probe", "arbiter", "assayer", "pathfinder"]) {
     assert.equal(canonicalAgentType("codex", role), role);
     assert.equal(canonicalAgentType("claude", role), `superloopy:${role}`);
     assert.equal(matchesAgentType({ host: "codex", agentType: role, role }), true);
     assert.equal(matchesAgentType({ host: "claude", agentType: `superloopy:${role}`, role }), true);
   }
-  assert.equal(matchesAgentType({ host: "codex", agentType: "foreign:robin", role: "robin" }), false);
-  assert.equal(matchesAgentType({ host: "claude", agentType: "robin", role: "robin" }), false);
-  assert.equal(canonicalAgentType("unknown", "robin"), null);
+  assert.equal(matchesAgentType({ host: "codex", agentType: "foreign:assayer", role: "assayer" }), false);
+  assert.equal(matchesAgentType({ host: "claude", agentType: "assayer", role: "assayer" }), false);
+  assert.equal(canonicalAgentType("unknown", "assayer"), null);
   assert.equal(canonicalAgentType("codex", "unknown"), null);
 });
 
-test("Codex Nami has restrictive configured defaults", async () => {
-  const nami = await readFile(".codex/agents/nami.toml", "utf8");
-  assert.match(nami, /^sandbox_mode = "read-only"$/mu);
-  assert.match(nami, /^approval_policy = "never"$/mu);
+test("Codex Pathfinder has restrictive configured defaults", async () => {
+  const pathfinder = await readFile(".codex/agents/pathfinder.toml", "utf8");
+  assert.match(pathfinder, /^sandbox_mode = "read-only"$/mu);
+  assert.match(pathfinder, /^approval_policy = "never"$/mu);
 });
 
 test("bootstrapSuperloopy is a clean no-op on Claude Code (no ~/.codex install)", async () => {

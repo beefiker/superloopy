@@ -8,16 +8,9 @@ import { fileURLToPath } from "node:url";
 import { SUPERLOOPY_AGENT_NAMES } from "../src/agents.js";
 import { runSessionStartHook } from "../src/hooks.js";
 import { resolveModelResolutionStatePath } from "../src/model-resolution.js";
+import { expectedRemoveCommand, LEGACY_AGENT_NAMES, writeLegacyFleet } from "./helpers/legacy-fleet.js";
 
 const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const LEGACY_MODELS = {
-  franky: "gpt-5.5",
-  zoro: "gpt-5.5",
-  usopp: "gpt-5.5",
-  jinbe: "gpt-5.5",
-  robin: "gpt-5.5",
-  nami: "gpt-5.4-mini"
-};
 
 function fullCatalog() {
   return {
@@ -45,14 +38,7 @@ async function fixture(t) {
   const wrapperPath = join(binDir, process.platform === "win32" ? "superloopy.cmd" : "superloopy");
   await mkdir(targetDir, { recursive: true });
   await mkdir(binDir, { recursive: true });
-  for (const name of SUPERLOOPY_AGENT_NAMES) {
-    const preferred = await readFile(join(REPO_ROOT, ".codex", "agents", `${name}.toml`), "utf8");
-    await writeFile(
-      join(targetDir, `${name}.toml`),
-      preferred.replace(/^model = ".+"$/mu, `model = "${LEGACY_MODELS[name]}"`),
-      "utf8"
-    );
-  }
+  await writeLegacyFleet(targetDir);
   await writeFile(wrapperPath, legacyGeneratedWrapper(), "utf8");
   const env = {
     CODEX_HOME: codexHome,
@@ -108,6 +94,7 @@ test("SessionStart automatically migrates a legacy fleet and stale generated wra
   for (const name of SUPERLOOPY_AGENT_NAMES) {
     assert.match(await readFile(join(setup.targetDir, `${name}.toml`), "utf8"), /^# superloopy-managed-agent v1$/mu);
   }
+  for (const name of LEGACY_AGENT_NAMES) assert.equal(await exists(join(setup.targetDir, `${name}.toml`)), false);
   assert.equal(await exists(setup.statePath), true);
   assert.match(await readFile(setup.wrapperPath, "utf8"), new RegExp(escapeRegex(join(REPO_ROOT, "src", "cli.js")), "u"));
 
@@ -130,14 +117,11 @@ test("SessionStart automatically migrates a legacy fleet and stale generated wra
   assert.equal((await stat(setup.statePath)).mtimeMs, stateMtime);
 });
 
-test("SessionStart preserves an edited legacy fleet without prescribing a migration command", async (t) => {
+test("SessionStart keeps an edited pre-rename agent file and reports its exact removal command", async (t) => {
   const setup = await fixture(t);
   const editedPath = join(setup.targetDir, "zoro.toml");
-  await writeFile(editedPath, `${await readFile(editedPath, "utf8")}# personal edit\n`, "utf8");
-  const before = await Promise.all(SUPERLOOPY_AGENT_NAMES.map(async (name) => ({
-    name,
-    content: await readFile(join(setup.targetDir, `${name}.toml`), "utf8")
-  })));
+  const edited = `${await readFile(editedPath, "utf8")}# personal edit\n`;
+  await writeFile(editedPath, edited, "utf8");
 
   const output = await runSessionStartHook(
     { hook_event_name: "SessionStart", cwd: setup.root },
@@ -152,11 +136,13 @@ test("SessionStart preserves an edited legacy fleet without prescribing a migrat
 
   const context = JSON.parse(output).hookSpecificOutput.additionalContext;
   assert.match(context, /Superloopy automatic migration/u);
-  assert.match(context, /preserved/iu);
+  assert.match(context, /- zoro \(renamed to sentinel\): retired-kept; not provably Superloopy-owned, remove manually: /u);
+  assert.ok(context.includes(expectedRemoveCommand(editedPath)));
   assert.doesNotMatch(context, migrationCommandPattern());
-  assert.equal(await exists(setup.statePath), false);
-  for (const { name, content } of before) {
-    assert.equal(await readFile(join(setup.targetDir, `${name}.toml`), "utf8"), content);
+  assert.equal(await exists(setup.statePath), true);
+  assert.equal(await readFile(editedPath, "utf8"), edited);
+  for (const name of LEGACY_AGENT_NAMES.filter((name) => name !== "zoro")) {
+    assert.equal(await exists(join(setup.targetDir, `${name}.toml`)), false);
   }
 });
 

@@ -14,12 +14,12 @@ import {
 
 const NOW = Date.parse("2026-07-10T12:00:00.000Z");
 const AGENTS = {
-  franky: { profile: "standard", purpose: "Build." },
-  zoro: { profile: "deep", purpose: "Review." },
-  usopp: { profile: "standard", purpose: "Test." },
-  jinbe: { profile: "deep", purpose: "Gate." },
-  robin: { profile: "standard", purpose: "Audit." },
-  nami: { profile: "fast", purpose: "Navigate." }
+  forge: { profile: "standard", purpose: "Build." },
+  sentinel: { profile: "deep", purpose: "Review." },
+  probe: { profile: "standard", purpose: "Test." },
+  arbiter: { profile: "deep", purpose: "Gate." },
+  assayer: { profile: "standard", purpose: "Audit." },
+  pathfinder: { profile: "fast", purpose: "Navigate." }
 };
 
 function candidate(model, model_reasoning_effort, service_tier) {
@@ -311,7 +311,7 @@ test("successful query can fall back only an unavailable profile", async (t) => 
   assert.equal(result.state.profiles.standard.reason, "preferred_available");
   assert.equal(result.state.profiles.deep.resolvedModel, "stable");
   assert.equal(result.state.profiles.deep.reason, "compatibility_fallback");
-  assert.equal(result.state.agents.zoro.resolvedModel, "stable");
+  assert.equal(result.state.agents.sentinel.resolvedModel, "stable");
   assert.equal(result.state.profiles.fast.reason, "preferred_available");
 });
 
@@ -458,12 +458,12 @@ test("malformed, unreadable, future, and tuple-invalid state is ignored", async 
     ["read error", async (setup) => mkdir(setup.statePath, { recursive: true }), false],
     ["missing hash", async (setup) => {
       const state = persistedState(setup.policy, setup.targetDir);
-      delete state.files.nami;
+      delete state.files.pathfinder;
       await writeState(setup, state);
     }, false],
     ["uppercase hash", async (setup) => {
       const state = persistedState(setup.policy, setup.targetDir);
-      state.files.nami.sha256 = "A".repeat(64);
+      state.files.pathfinder.sha256 = "A".repeat(64);
       await writeState(setup, state);
     }, false],
     ["future time", async (setup) => writeState(setup, persistedState(setup.policy, setup.targetDir, {

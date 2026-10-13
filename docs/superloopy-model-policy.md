@@ -32,7 +32,7 @@ Availability is resolved before an agent is launched. Any selection after the pr
 
 ## Orchestrator Model
 
-The orchestrator is the user's own host session, not a bundled agent. Superloopy never sets, pins, or resolves its model; the host uses whatever the user selected. `gpt-6-astra` is allowed so the orchestrator may run on it when the user selected it, and `superloopy doctor` does not flag that selection as unsupported. The six crew lanes keep the profile pins above regardless of the orchestrator's model: an orchestrator on `gpt-6-astra` still dispatches `franky` and `zoro` on `gpt-6.1-sol`, and `nami` on `gpt-6-luna`. Crew guidance reports the orchestrator's model as `model_unverified` like any other lane unless the host attests it.
+The orchestrator is the user's own host session, not a bundled agent. Superloopy never sets, pins, or resolves its model; the host uses whatever the user selected. `gpt-6-astra` is allowed so the orchestrator may run on it when the user selected it, and `superloopy doctor` does not flag that selection as unsupported. The six crew lanes keep the profile pins above regardless of the orchestrator's model: an orchestrator on `gpt-6-astra` still dispatches `forge` and `sentinel` on `gpt-6.1-sol`, and `pathfinder` on `gpt-6-luna`. Crew guidance reports the orchestrator's model as `model_unverified` like any other lane unless the host attests it.
 
 ## Upgrade And Diagnosis
 
@@ -50,12 +50,12 @@ Configured routing is not runtime attestation. The host must expose `agent_type`
 
 | Agent | Purpose | Profile | Model | Effort | Tier |
 | --- | --- | --- | --- | --- | --- |
-| `franky` | Bounded implementation lane. | `standard` | `gpt-6.1-sol` | `high` | `priority` |
-| `zoro` | Skeptical code review lane. | `deep` | `gpt-6.1-sol` | `xhigh` | `priority` |
-| `usopp` | QA and regression lane. | `standard` | `gpt-6.1-sol` | `high` | `priority` |
-| `jinbe` | Final gate integration lane. | `deep` | `gpt-6.1-sol` | `xhigh` | `priority` |
-| `robin` | Evidence auditor lane. | `standard` | `gpt-6.1-sol` | `high` | `priority` |
-| `nami` | Read-only navigation lane. | `fast` | `gpt-6-luna` | `low` | `fast` |
+| `forge` | Bounded implementation lane. | `standard` | `gpt-6.1-sol` | `high` | `priority` |
+| `sentinel` | Skeptical code review lane. | `deep` | `gpt-6.1-sol` | `xhigh` | `priority` |
+| `probe` | QA and regression lane. | `standard` | `gpt-6.1-sol` | `high` | `priority` |
+| `arbiter` | Final gate integration lane. | `deep` | `gpt-6.1-sol` | `xhigh` | `priority` |
+| `assayer` | Evidence auditor lane. | `standard` | `gpt-6.1-sol` | `high` | `priority` |
+| `pathfinder` | Read-only navigation lane. | `fast` | `gpt-6-luna` | `low` | `fast` |
 
 ## Rules
 

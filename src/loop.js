@@ -120,7 +120,7 @@ export async function nextLoop(cwd, argv = []) {
   });
 }
 
-export async function evidenceLoop(cwd, argv) {
+export async function evidenceLoop(cwd, argv, { failureSignature } = {}) {
   const scope = readScope(argv);
   const goalId = required(argv, "--goal-id");
   const criterionId = required(argv, "--criterion-id");
@@ -156,6 +156,7 @@ export async function evidenceLoop(cwd, argv) {
       before
     };
     if (notes !== undefined) ledgerEntry.notes = notes;
+    if (status === "fail" && typeof failureSignature === "string") ledgerEntry.failureSignature = failureSignature;
     await appendLedger(cwd, ledgerEntry, scope);
     return plan;
   });

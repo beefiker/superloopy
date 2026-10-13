@@ -2,7 +2,7 @@
   "hooks": {
     "SubagentStop": [
       {
-        "matcher": "^(?:franky|zoro|usopp|jinbe)$",
+        "matcher": "^(?:forge|sentinel|probe|arbiter)$",
         "hooks": [
           {
             "type": "command",
@@ -13,7 +13,7 @@
         ]
       },
       {
-        "matcher": "^superloopy:(?:franky|zoro|usopp|jinbe)$",
+        "matcher": "^superloopy:(?:forge|sentinel|probe|arbiter)$",
         "hooks": [
           {
             "type": "command",
@@ -24,7 +24,7 @@
         ]
       },
       {
-        "matcher": "^nami$",
+        "matcher": "^pathfinder$",
         "hooks": [
           {
             "type": "command",
@@ -35,7 +35,7 @@
         ]
       },
       {
-        "matcher": "^superloopy:nami$",
+        "matcher": "^superloopy:pathfinder$",
         "hooks": [
           {
             "type": "command",

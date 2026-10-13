@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { installAgents, SUPERLOOPY_AGENT_NAMES } from "../src/agents.js";
 import { runDoctor } from "../src/doctor.js";
 import { MODEL_RESOLUTION_TTL_MS, resolveModelResolutionStatePath } from "../src/model-resolution.js";
+import { expectedRemoveCommand, writeLegacyFleet } from "./helpers/legacy-fleet.js";
 
 const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const NOW = new Date("2026-07-10T12:00:00.000Z");
@@ -97,25 +98,9 @@ function refreshAction(setup) {
   return `Run \`superloopy agents install --target "${setup.targetDir}" --refresh-models\` to refresh the managed routing state.`;
 }
 
-const LEGACY_MODELS = {
-  franky: "gpt-5.5",
-  zoro: "gpt-5.5",
-  usopp: "gpt-5.5",
-  jinbe: "gpt-5.5",
-  robin: "gpt-5.5",
-  nami: "gpt-5.4-mini"
-};
-
 async function writeExactLegacyFleet(targetDir) {
   await mkdir(targetDir, { recursive: true });
-  for (const name of SUPERLOOPY_AGENT_NAMES) {
-    const preferred = await readFile(join(REPO_ROOT, ".codex", "agents", `${name}.toml`), "utf8");
-    await writeFile(
-      join(targetDir, `${name}.toml`),
-      preferred.replace(/^model = ".+"$/mu, `model = "${LEGACY_MODELS[name]}"`),
-      "utf8"
-    );
-  }
+  await writeLegacyFleet(targetDir);
 }
 
 test("installed doctor treats absent state as healthy and makes zero catalog queries", async (t) => {
@@ -164,7 +149,7 @@ test("installed doctor identifies an exact pre-managed fleet as safely migratabl
   assert.doesNotMatch(check.next, /--force/u);
 });
 
-test("installed doctor refuses to adopt an edited pre-managed fleet", async (t) => {
+test("installed doctor warns about an edited pre-rename fleet and lists exact removal commands", async (t) => {
   const root = await mkdtemp(join(tmpdir(), "superloopy-installed-edited-legacy-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const codexHome = join(root, "codex-home");
@@ -178,9 +163,13 @@ test("installed doctor refuses to adopt an edited pre-managed fleet", async (t) 
     homeDir: join(root, "home")
   })));
 
-  assert.equal(check.ok, false);
-  assert.equal(check.selectionStatus, "unmanaged_conflict");
-  assert.match(check.next, /--force/u);
+  assert.equal(check.ok, true);
+  assert.equal(check.warning, true);
+  assert.equal(check.selectionStatus, "legacy_modified");
+  assert.equal(check.next, refreshAction({ targetDir }));
+  assert.equal(check.retiredAgents.length, 6);
+  assert.equal(check.retiredAgents.find(({ name }) => name === "nami").removeCommand, expectedRemoveCommand(editedPath));
+  assert.match(check.message, /Pre-rename agent files remain/u);
   assert.doesNotMatch(JSON.stringify(check), /personal edit/u);
 });
 
@@ -212,7 +201,7 @@ test("explicit doctor refresh reports preferred availability before managed stat
 
 test("programmatic doctor without installed options never reads process CODEX_HOME", async (t) => {
   const setup = await fixture(t);
-  await unlink(join(setup.targetDir, "nami.toml"));
+  await unlink(join(setup.targetDir, "pathfinder.toml"));
   const previous = process.env.CODEX_HOME;
   process.env.CODEX_HOME = setup.codexHome;
   try {
@@ -341,7 +330,7 @@ test("installed doctor preserves an owned custom target across policy-version re
 test("installed doctor does not promise a non-force repair when ownership hashes are invalid", async (t) => {
   const setup = await fixture(t, { customTarget: true });
   const state = await readState(setup);
-  state.files.nami.sha256 = "A".repeat(64);
+  state.files.pathfinder.sha256 = "A".repeat(64);
   await writeState(setup, state);
 
   const check = installedCheck(await runDoctor(REPO_ROOT, options(setup)));
@@ -371,8 +360,8 @@ test("installed doctor emits literal argv instead of an executable repair comman
 
 test("installed doctor distinguishes mixed-profile and unsupported routing without leaking values", async (t) => {
   const cases = [
-    ["mixed_profile", "zoro", ["gpt-6.1-sol", "high", "priority"], "mixed_profile"],
-    ["unsupported_tuple", "nami", ["credential-secret-model", "low", "fast"], "unsupported_tuple"]
+    ["mixed_profile", "sentinel", ["gpt-6.1-sol", "high", "priority"], "mixed_profile"],
+    ["unsupported_tuple", "pathfinder", ["credential-secret-model", "low", "fast"], "unsupported_tuple"]
   ];
   for (const [label, name, tuple, expectedStatus] of cases) {
     await t.test(label, async (t) => {
@@ -396,10 +385,10 @@ test("installed doctor distinguishes mixed-profile and unsupported routing witho
 
 test("installed doctor distinguishes missing marker, missing file, and managed hash mismatch", async (t) => {
   const cases = [
-    ["marker_missing", "franky", async (path) => writeFile(path, (await readFile(path, "utf8")).replace(`${MANAGED_MARKER}\n`, ""), "utf8")],
-    ["missing", "robin", async (path) => unlink(path)],
-    ["hash_mismatch", "usopp", async (path) => writeFile(path, `${await readFile(path, "utf8")}# tampered\n`, "utf8")],
-    ["symlink", "jinbe", async (path) => {
+    ["marker_missing", "forge", async (path) => writeFile(path, (await readFile(path, "utf8")).replace(`${MANAGED_MARKER}\n`, ""), "utf8")],
+    ["missing", "assayer", async (path) => unlink(path)],
+    ["hash_mismatch", "probe", async (path) => writeFile(path, `${await readFile(path, "utf8")}# tampered\n`, "utf8")],
+    ["symlink", "arbiter", async (path) => {
       const external = `${path}.external`;
       await writeFile(external, await readFile(path, "utf8"), "utf8");
       await unlink(path);
@@ -423,9 +412,9 @@ test("installed doctor distinguishes missing marker, missing file, and managed h
 test("installed doctor rejects malformed state fields and never echoes raw state errors or values", async (t) => {
   const cases = [
     ["parse", async (setup) => writeFile(setup.statePath, '{"prompt":"credential-secret"', "utf8")],
-    ["uppercase hash", async (setup) => { const state = await readState(setup); state.files.nami.sha256 = "A".repeat(64); await writeState(setup, state); }],
+    ["uppercase hash", async (setup) => { const state = await readState(setup); state.files.pathfinder.sha256 = "A".repeat(64); await writeState(setup, state); }],
     ["relative target", async (setup) => { const state = await readState(setup); state.targetDir = "account-secret/agents"; await writeState(setup, state); }],
-    ["unsafe reason", async (setup) => { const state = await readState(setup); state.profiles.fast.reason = "prompt=credential-secret"; state.agents.nami.reason = state.profiles.fast.reason; await writeState(setup, state); }]
+    ["unsafe reason", async (setup) => { const state = await readState(setup); state.profiles.fast.reason = "prompt=credential-secret"; state.agents.pathfinder.reason = state.profiles.fast.reason; await writeState(setup, state); }]
   ];
   for (const [label, mutate] of cases) {
     await t.test(label, async (t) => {
@@ -447,8 +436,8 @@ test("installed doctor rejects contradictory unknown-compatibility state without
   state.selectionReason = "probe_unknown_compatibility";
   state.catalogReason = "timeout";
   await writeState(setup, state);
-  const namiPath = join(setup.targetDir, "nami.toml");
-  await writeFile(namiPath, `${await readFile(namiPath, "utf8")}# credential-secret-content\n`, "utf8");
+  const pathfinderPath = join(setup.targetDir, "pathfinder.toml");
+  await writeFile(pathfinderPath, `${await readFile(pathfinderPath, "utf8")}# credential-secret-content\n`, "utf8");
 
   const check = installedCheck(await runDoctor(REPO_ROOT, options(setup)));
 

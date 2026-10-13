@@ -31,7 +31,7 @@ import { bindLegacyLoop, inspectRepositoryBinding } from "./repository-binding.j
 import { proveLoop } from "./prove.js";
 import { reportLoop } from "./report.js";
 import { isSourceCheckoutRoot } from "./source-checkout.js";
-import { formatTraceResult, traceLoop } from "./trace.js";
+import { formatTraceResult, formatWarningBlock, traceLoop } from "./trace.js";
 import {
   checkpointLoop,
   createLoop,
@@ -388,10 +388,10 @@ function formatLoopResult(subcommand, result) {
     return `superloopy evidence: ${result.goal.id}/${result.criterion.id} -> ${result.criterion.status}\n${formatGuideResult(result)}`;
   }
   if (subcommand === "capture") {
-    return `superloopy capture: ${result.goal.id}/${result.criterion.id} -> ${result.criterion.status} (${result.capture.artifact})\n${formatGuideResult(result)}`;
+    return `superloopy capture: ${result.goal.id}/${result.criterion.id} -> ${result.criterion.status} (${result.capture.artifact})\n${formatWarningBlock(result.warnings)}${formatGuideResult(result)}`;
   }
   if (subcommand === "prove") {
-    return `superloopy prove: ${result.goal.id}/${result.criterion.id} -> ${result.criterion.status} (${result.capture.artifact})\n${formatGuideResult(result)}`;
+    return `superloopy prove: ${result.goal.id}/${result.criterion.id} -> ${result.criterion.status} (${result.capture.artifact})\n${formatWarningBlock(result.warnings)}${formatGuideResult(result)}`;
   }
   if (subcommand === "checkpoint") {
     return `superloopy checkpoint: ${result.goal.id} -> ${result.goal.status}\n${formatGuideResult(result)}`;

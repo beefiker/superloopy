@@ -9,6 +9,7 @@ import test from "node:test";
 import { beginLoop } from "../src/begin.js";
 import { captureLoop, runCaptured } from "../src/capture.js";
 import { proveLoop } from "../src/prove.js";
+import { traceLoop } from "../src/trace.js";
 import {
 
   createLoop,
@@ -321,6 +322,33 @@ test("runCaptured does not fail a successful command because stdout exceeds 10MB
   assert.match(transcript, /stdout truncated after \d+ bytes/);
 });
 
+test("runCaptured signs the real end of a failing output longer than the 10MB transcript", async () => {
+  const repo = await tempRepo();
+  // One fixed command; only the final error (read from failure.txt) changes between runs.
+  const failWithLongLog = async (finalError) => {
+    await writeFile(join(repo, "failure.txt"), finalError, "utf8");
+    return runCaptured(repo, [
+      process.execPath,
+      "-e",
+      "process.stdout.write('build log\\n'.repeat(1.2 * 1024 * 1024)); process.stdout.write(require('fs').readFileSync('failure.txt', 'utf8')); process.exitCode = 1"
+    ], {
+      absolutePath: join(repo, ".superloopy", "evidence", "long-fail.txt"),
+      relativePath: ".superloopy/evidence/long-fail.txt"
+    });
+  };
+
+  const first = await failWithLongLog("error: missing symbol foo\n");
+  const second = await failWithLongLog("error: type mismatch in bar\n");
+  const third = await failWithLongLog("error: type mismatch in bar\n");
+  const transcript = await readFile(join(repo, ".superloopy", "evidence", "long-fail.txt"), "utf8");
+
+  assert.equal(first.status, "fail");
+  assert.match(transcript, /stdout truncated after \d+ bytes/);
+  assert.doesNotMatch(transcript, /type mismatch/, "the final error is past the transcript cut");
+  assert.notEqual(first.failureSignature, second.failureSignature, "different final errors past the transcript cut");
+  assert.equal(second.failureSignature, third.failureSignature);
+});
+
 test("captureLoop records fail evidence when the command exits nonzero", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship a CLI loop"]);
@@ -364,4 +392,77 @@ test("proveLoop records command evidence for the active next criterion", async (
   assert.equal(second.guide.state, "finish");
   assert.equal(second.guide.nextAction.command, "superloopy loop finish --evidence \"criteria passed\" --artifact .superloopy/evidence/gate.json --notes \"criteria reviewed\" --json");
   assert.equal(status.summary.criteria.pass, 2);
+});
+
+// One fixed command whose failure text comes from `failure.txt`, so a test can move the
+// failure between runs without changing the command.
+const FAIL_WITH_FILE = "console.error(require('fs').readFileSync('failure.txt', 'utf8')); process.exit(1)";
+
+function proveFailing(repo, script = FAIL_WITH_FILE) {
+  return proveLoop(repo, ["--", process.execPath, "-e", script]);
+}
+
+function streakWarnings(warnings) {
+  return warnings.filter((warning) => warning.kind === "repeated-failing-proof");
+}
+
+test("proveLoop flags repeated-failing-proof on the third identical failure despite run-to-run noise", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship a CLI loop"]);
+  await nextLoop(repo);
+  const noisy = "console.error(`${new Date().toISOString()} pid=${process.pid} boom (${performance.now().toFixed(3)}ms)`); process.exit(1)";
+
+  const first = await proveFailing(repo, noisy);
+  const second = await proveFailing(repo, noisy);
+  const third = await proveFailing(repo, noisy);
+
+  assert.deepEqual(first.warnings, []);
+  assert.deepEqual(second.warnings, []);
+  assert.equal(third.warnings.length, 1);
+  assert.equal(third.warnings[0].kind, "repeated-failing-proof");
+  assert.equal(third.warnings[0].ref, "G001/C001");
+  assert.equal(third.warnings[0].count, 3);
+  assert.equal(third.warnings[0].artifact, ".superloopy/evidence/G001-C001-capture.txt");
+  assert.deepEqual(streakWarnings((await traceLoop(repo)).warnings).map((warning) => warning.ref), ["G001/C001"]);
+});
+
+test("a moved failure or a pass resets the repeated-failing-proof streak", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship a CLI loop"]);
+  await nextLoop(repo);
+  const failure = join(repo, "failure.txt");
+
+  await writeFile(failure, "expected 3, received 4\n", "utf8");
+  await proveFailing(repo);
+  await proveFailing(repo);
+  await writeFile(failure, "expected 5, received 4\n", "utf8");
+  const moved = await proveFailing(repo);
+  assert.deepEqual(moved.warnings, [], "same command, different assertion value: not the same failure");
+
+  await proveFailing(repo);
+  const repeated = await proveFailing(repo);
+  assert.equal(repeated.warnings.length, 1);
+  assert.equal(repeated.warnings[0].count, 3);
+
+  const passed = await proveLoop(repo, ["--", process.execPath, "-e", "console.log('ok')"]);
+  assert.equal(passed.criterion.status, "pass");
+  assert.deepEqual(passed.warnings, []);
+  assert.deepEqual(streakWarnings((await traceLoop(repo)).warnings), []);
+});
+
+test("loop create --force starts repeated-failing-proof streaks over for reused criterion ids", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship a CLI loop"]);
+  await nextLoop(repo);
+  await writeFile(join(repo, "failure.txt"), "expected 3, received 4\n", "utf8");
+  await proveFailing(repo);
+  await proveFailing(repo);
+
+  await createLoop(repo, ["--brief", "Ship a CLI loop again", "--force"]);
+  await nextLoop(repo);
+  const afterReplace = await proveFailing(repo);
+
+  assert.equal(afterReplace.criterion.id, "C001");
+  assert.deepEqual(afterReplace.warnings, []);
+  assert.deepEqual(streakWarnings((await traceLoop(repo)).warnings), []);
 });

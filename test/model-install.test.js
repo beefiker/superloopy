@@ -97,7 +97,7 @@ test("first unknown install conservatively writes a complete managed compatibili
   assert.doesNotMatch(JSON.stringify(result), /secret/u);
   assert.deepEqual(result.agents.map(({ status }) => status), SUPERLOOPY_AGENT_NAMES.map(() => "installed"));
   for (const agent of result.agents) {
-    assert.equal(agent.resolvedModel, { franky: "gpt-5.6-terra", zoro: "gpt-5.6-sol", usopp: "gpt-5.6-terra", jinbe: "gpt-5.6-sol", robin: "gpt-5.6-terra", nami: "gpt-5.6-luna" }[agent.name]);
+    assert.equal(agent.resolvedModel, { forge: "gpt-5.6-terra", sentinel: "gpt-5.6-sol", probe: "gpt-5.6-terra", arbiter: "gpt-5.6-sol", assayer: "gpt-5.6-terra", pathfinder: "gpt-5.6-luna" }[agent.name]);
     assert.equal(agent.reason, "compatibility_fallback");
     assert.equal(agent.checkedAt, NOW.toISOString());
     const content = await readFile(agent.target, "utf8");
@@ -129,8 +129,8 @@ test("preferred install uses the package policy root even when cwd is unrelated"
   assert.equal(result.modelResolution.policyVersion, "2026-09-30");
   assert.equal(result.modelResolution.selectionReason, "catalog_resolved");
   assert.equal(result.degraded, false);
-  assert.equal(result.agents.find(({ name }) => name === "zoro").resolvedModel, "gpt-6.1-sol");
-  assert.match(await readFile(join(setup.targetDir, "nami.toml"), "utf8"), /^model = "gpt-6-luna"$/mu);
+  assert.equal(result.agents.find(({ name }) => name === "sentinel").resolvedModel, "gpt-6.1-sol");
+  assert.match(await readFile(join(setup.targetDir, "pathfinder.toml"), "utf8"), /^model = "gpt-6-luna"$/mu);
 });
 
 test("fresh manifest reuses exact files without querying or rewriting state", async (t) => {
@@ -211,7 +211,7 @@ test("policy-version refresh upgrades hash-matching managed files without force"
 test("policy-version refresh still preserves a user-edited managed file", async (t) => {
   const setup = await fixture(t);
   await installCompatibility(setup);
-  const editedTarget = join(setup.targetDir, "franky.toml");
+  const editedTarget = join(setup.targetDir, "forge.toml");
   const editedContent = `${await readFile(editedTarget, "utf8")}# user edit\n`;
   await writeFile(editedTarget, editedContent, "utf8");
   const previousState = await readState(setup);
@@ -225,8 +225,8 @@ test("policy-version refresh still preserves a user-edited managed file", async 
   });
 
   assert.equal(result.ok, false);
-  assert.equal(result.agents.find(({ name }) => name === "franky").status, "conflict");
-  assert.deepEqual(result.agents.filter(({ name }) => name !== "franky").map(({ status }) => status),
+  assert.equal(result.agents.find(({ name }) => name === "forge").status, "conflict");
+  assert.deepEqual(result.agents.filter(({ name }) => name !== "forge").map(({ status }) => status),
     SUPERLOOPY_AGENT_NAMES.slice(1).map(() => "blocked"));
   assert.equal(await readFile(editedTarget, "utf8"), editedContent);
   assert.equal(await readFile(setup.statePath, "utf8"), previousStateText);
@@ -258,7 +258,7 @@ test("user edits, removed markers, and foreign files conflict without changing s
     await t.test(label, async (t) => {
       const setup = await fixture(t);
       await installCompatibility(setup);
-      const target = join(setup.targetDir, "franky.toml");
+      const target = join(setup.targetDir, "forge.toml");
       const changed = mutate(await readFile(target, "utf8"));
       await writeFile(target, changed, "utf8");
       const beforeState = await readFile(setup.statePath, "utf8");
@@ -267,8 +267,8 @@ test("user edits, removed markers, and foreign files conflict without changing s
 
       assert.equal(result.ok, false);
       assert.equal(result.restartRequired, false);
-      assert.equal(result.agents.find(({ name }) => name === "franky").status, "conflict");
-      assert.deepEqual(result.agents.filter(({ name }) => name !== "franky").map(({ status }) => status),
+      assert.equal(result.agents.find(({ name }) => name === "forge").status, "conflict");
+      assert.deepEqual(result.agents.filter(({ name }) => name !== "forge").map(({ status }) => status),
         SUPERLOOPY_AGENT_NAMES.slice(1).map(() => "unchanged"));
       assert.equal(await readFile(target, "utf8"), changed);
       assert.equal(await readFile(setup.statePath, "utf8"), beforeState);
@@ -279,32 +279,32 @@ test("user edits, removed markers, and foreign files conflict without changing s
 test("one conflict blocks every other would-write file with no partial fleet or state change", async (t) => {
   const setup = await fixture(t);
   await installCompatibility(setup);
-  const zoroTarget = join(setup.targetDir, "zoro.toml");
-  const oldZoro = await readFile(zoroTarget, "utf8");
-  const zoroSource = join(setup.sourceDir, "zoro.toml");
-  await writeFile(zoroSource, (await readFile(zoroSource, "utf8")).replace("Independent code reviewer", "Skeptical code reviewer"), "utf8");
-  await writeFile(join(setup.targetDir, "franky.toml"), "foreign\n", "utf8");
-  await unlink(join(setup.targetDir, "nami.toml"));
+  const sentinelTarget = join(setup.targetDir, "sentinel.toml");
+  const oldSentinel = await readFile(sentinelTarget, "utf8");
+  const sentinelSource = join(setup.sourceDir, "sentinel.toml");
+  await writeFile(sentinelSource, (await readFile(sentinelSource, "utf8")).replace("Independent code reviewer", "Skeptical code reviewer"), "utf8");
+  await writeFile(join(setup.targetDir, "forge.toml"), "foreign\n", "utf8");
+  await unlink(join(setup.targetDir, "pathfinder.toml"));
   const beforeState = await readFile(setup.statePath, "utf8");
 
   const result = await installCompatibility(setup);
 
   assert.equal(result.ok, false);
   assert.equal(result.restartRequired, false);
-  assert.equal(result.agents.find(({ name }) => name === "franky").status, "conflict");
-  assert.equal(result.agents.find(({ name }) => name === "zoro").status, "blocked");
-  assert.equal(result.agents.find(({ name }) => name === "nami").status, "blocked");
-  assert.equal(await readFile(zoroTarget, "utf8"), oldZoro);
-  assert.equal(await exists(join(setup.targetDir, "nami.toml")), false);
+  assert.equal(result.agents.find(({ name }) => name === "forge").status, "conflict");
+  assert.equal(result.agents.find(({ name }) => name === "sentinel").status, "blocked");
+  assert.equal(result.agents.find(({ name }) => name === "pathfinder").status, "blocked");
+  assert.equal(await readFile(sentinelTarget, "utf8"), oldSentinel);
+  assert.equal(await exists(join(setup.targetDir, "pathfinder.toml")), false);
   assert.equal(await readFile(setup.statePath, "utf8"), beforeState);
 });
 
 test("failed staging write cleans a partially created temporary agent file", async (t) => {
   const setup = await fixture(t);
-  const target = join(setup.targetDir, "franky.toml");
+  const target = join(setup.targetDir, "forge.toml");
   let partialPath;
   await assert.rejects(commitManagedAgentFiles([
-    { name: "franky", target, status: "installed", content: "managed\n" }
+    { name: "forge", target, status: "installed", content: "managed\n" }
   ], setup.statePath, {}, false, {
     writeFile: async (path) => {
       partialPath = path;
@@ -320,13 +320,13 @@ test("failed staging write cleans a partially created temporary agent file", asy
 
 test("commit refuses a target changed after preflight without overwriting the edit", async (t) => {
   const setup = await fixture(t);
-  const target = join(setup.targetDir, "franky.toml");
+  const target = join(setup.targetDir, "forge.toml");
   await mkdir(setup.targetDir, { recursive: true });
   await writeFile(target, "preflight content\n", "utf8");
   let injected = false;
   await assert.rejects(commitManagedAgentFiles([
     {
-      name: "franky",
+      name: "forge",
       target,
       status: "updated",
       content: "new managed content\n",
@@ -349,13 +349,13 @@ test("commit refuses a target changed after preflight without overwriting the ed
 test("commit rolls back earlier replacements when a later rename fails", async (t) => {
   const setup = await fixture(t);
   await mkdir(setup.targetDir, { recursive: true });
-  const targets = [join(setup.targetDir, "franky.toml"), join(setup.targetDir, "zoro.toml")];
-  await writeFile(targets[0], "old franky\n", "utf8");
-  await writeFile(targets[1], "old zoro\n", "utf8");
+  const targets = [join(setup.targetDir, "forge.toml"), join(setup.targetDir, "sentinel.toml")];
+  await writeFile(targets[0], "old forge\n", "utf8");
+  await writeFile(targets[1], "old sentinel\n", "utf8");
   let renameCalls = 0;
   await assert.rejects(commitManagedAgentFiles([
-    { name: "franky", target: targets[0], status: "updated", content: "new franky\n", existingKind: "file", existing: "old franky\n" },
-    { name: "zoro", target: targets[1], status: "updated", content: "new zoro\n", existingKind: "file", existing: "old zoro\n" }
+    { name: "forge", target: targets[0], status: "updated", content: "new forge\n", existingKind: "file", existing: "old forge\n" },
+    { name: "sentinel", target: targets[1], status: "updated", content: "new sentinel\n", existingKind: "file", existing: "old sentinel\n" }
   ], setup.statePath, {}, false, {
     rename: async (source, target) => {
       renameCalls += 1;
@@ -363,24 +363,24 @@ test("commit rolls back earlier replacements when a later rename fails", async (
       return rename(source, target);
     }
   }), /injected rename failure/u);
-  assert.equal(await readFile(targets[0], "utf8"), "old franky\n");
-  assert.equal(await readFile(targets[1], "utf8"), "old zoro\n");
+  assert.equal(await readFile(targets[0], "utf8"), "old forge\n");
+  assert.equal(await readFile(targets[1], "utf8"), "old sentinel\n");
   assert.equal(await exists(setup.statePath), false);
-  assert.deepEqual((await readdir(setup.targetDir)).sort(), ["franky.toml", "zoro.toml"]);
+  assert.deepEqual((await readdir(setup.targetDir)).sort(), ["forge.toml", "sentinel.toml"]);
 });
 
 test("state persistence failure rolls the managed fleet back", async (t) => {
   const setup = await fixture(t);
-  const target = join(setup.targetDir, "franky.toml");
+  const target = join(setup.targetDir, "forge.toml");
   await mkdir(setup.targetDir, { recursive: true });
-  await writeFile(target, "old franky\n", "utf8");
+  await writeFile(target, "old forge\n", "utf8");
   const originalMode = await chmod(target, 0o600).then(async () => (await stat(target)).mode & 0o777);
   await assert.rejects(commitManagedAgentFiles([
-    { name: "franky", target, status: "updated", content: "new franky\n", existingKind: "file", existing: "old franky\n" }
+    { name: "forge", target, status: "updated", content: "new forge\n", existingKind: "file", existing: "old forge\n" }
   ], setup.statePath, {}, true, {
     writeState: async () => { throw new Error("injected state failure"); }
   }), /injected state failure/u);
-  assert.equal(await readFile(target, "utf8"), "old franky\n");
+  assert.equal(await readFile(target, "utf8"), "old forge\n");
   assert.equal((await stat(target)).mode & 0o777, originalMode);
   assert.equal(await exists(setup.statePath), false);
 });
@@ -388,8 +388,8 @@ test("state persistence failure rolls the managed fleet back", async (t) => {
 test("symlinked managed targets remain conflicts even when their content matches", async (t) => {
   const setup = await fixture(t);
   await installCompatibility(setup);
-  const target = join(setup.targetDir, "franky.toml");
-  const external = join(setup.root, "external-franky.toml");
+  const target = join(setup.targetDir, "forge.toml");
+  const external = join(setup.root, "external-forge.toml");
   const content = await readFile(target, "utf8");
   await writeFile(external, content, "utf8");
   await unlink(target);
@@ -397,13 +397,13 @@ test("symlinked managed targets remain conflicts even when their content matches
   const stateBefore = await readFile(setup.statePath, "utf8");
   const result = await installCompatibility(setup);
   assert.equal(result.ok, false);
-  assert.equal(result.agents.find(({ name }) => name === "franky").status, "conflict");
+  assert.equal(result.agents.find(({ name }) => name === "forge").status, "conflict");
   assert.equal((await lstat(target)).isSymbolicLink(), true);
   assert.equal(await readFile(external, "utf8"), content);
   assert.equal(await readFile(setup.statePath, "utf8"), stateBefore);
   const forced = await installCompatibility(setup, { force: true });
   assert.equal(forced.ok, true);
-  assert.equal(forced.agents.find(({ name }) => name === "franky").status, "updated");
+  assert.equal(forced.agents.find(({ name }) => name === "forge").status, "updated");
   assert.equal((await lstat(target)).isSymbolicLink(), false);
   assert.equal(await readFile(external, "utf8"), content);
 });
@@ -447,35 +447,35 @@ test("install serializes concurrent same-target transactions across distinct sta
 test("force replaces a foreign file and options.force overrides argv", async (t) => {
   const setup = await fixture(t);
   await mkdir(setup.targetDir, { recursive: true });
-  const target = join(setup.targetDir, "franky.toml");
+  const target = join(setup.targetDir, "forge.toml");
   await writeFile(target, "foreign\n", "utf8");
   const blocked = await installCompatibility(setup, { force: false }, ["--target", setup.targetDir, "--force", "--compat"]);
   assert.equal(blocked.ok, false);
   assert.equal(await readFile(target, "utf8"), "foreign\n");
   const forced = await installCompatibility(setup, { force: true }, ["--target", setup.targetDir, "--compat"]);
   assert.equal(forced.ok, true);
-  assert.equal(forced.agents.find(({ name }) => name === "franky").status, "updated");
+  assert.equal(forced.agents.find(({ name }) => name === "forge").status, "updated");
   assert.match(await readFile(target, "utf8"), /^# superloopy-managed-agent v1$/mu);
 });
 
 test("template and resolution failures are structured and perform zero writes", async (t) => {
   await t.test("template failure", async (t) => {
     const setup = await fixture(t);
-    const source = join(setup.sourceDir, "nami.toml");
+    const source = join(setup.sourceDir, "pathfinder.toml");
     await writeFile(source, `${await readFile(source, "utf8")}model = "duplicate"\n`, "utf8");
 
     const result = await installCompatibility(setup);
 
     assert.equal(result.ok, false);
     assert.equal(result.restartRequired, false);
-    assert.match(result.modelResolution.error, /nami.*exactly one.*model/iu);
+    assert.match(result.modelResolution.error, /pathfinder.*exactly one.*model/iu);
     assert.equal(await exists(setup.targetDir), false);
     assert.equal(await exists(setup.statePath), false);
   });
 
   await t.test("existing managed marker is rejected", async (t) => {
     const setup = await fixture(t);
-    const source = join(setup.sourceDir, "nami.toml");
+    const source = join(setup.sourceDir, "pathfinder.toml");
     await writeFile(source, `${await readFile(source, "utf8")}${MANAGED_MARKER}\n`, "utf8");
 
     const result = await installCompatibility(setup);
@@ -502,13 +502,13 @@ test("template and resolution failures are structured and perform zero writes", 
 
 test("routing fields inside a TOML table are preserved and are not counted as top-level", async (t) => {
   const setup = await fixture(t);
-  const source = join(setup.sourceDir, "nami.toml");
+  const source = join(setup.sourceDir, "pathfinder.toml");
   await writeFile(source, `${await readFile(source, "utf8")}\n[metadata]\nmodel = "documentation-only"\n`, "utf8");
 
   const result = await installCompatibility(setup);
 
   assert.equal(result.ok, true);
-  const installed = await readFile(join(setup.targetDir, "nami.toml"), "utf8");
+  const installed = await readFile(join(setup.targetDir, "pathfinder.toml"), "utf8");
   assert.match(installed, /^model = "gpt-5\.6-luna"$/mu);
   assert.match(installed, /\[metadata\]\nmodel = "documentation-only"/u);
 });

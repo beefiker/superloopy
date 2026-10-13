@@ -75,7 +75,7 @@ test("recover restores a lost receipt but can never satisfy a re-attempt id", as
   t.after(() => removePublishedTestTree(sandbox));
 
   const evidenceRoot = ".superloopy/evidence";
-  const firstAttempt = "goal-g001-criterion-c001-worker-franky";
+  const firstAttempt = "goal-g001-criterion-c001-worker-forge";
   const secondAttempt = `${firstAttempt}-attempt-2`;
 
   // The helper returns a project-relative path, so resolve it before touching the filesystem.
@@ -85,7 +85,7 @@ test("recover restores a lost receipt but can never satisfy a re-attempt id", as
     reportId: firstAttempt,
     content: boundReport(firstAttempt, "# First attempt\n"),
   });
-  assert.match(published, /goal-g001-criterion-c001-worker-franky/u);
+  assert.match(published, /goal-g001-criterion-c001-worker-forge/u);
   assert.ok(existsSync(join(sandbox, published)), "first attempt should publish a report file");
 
   // A genuinely lost receipt for THIS invocation is recoverable.

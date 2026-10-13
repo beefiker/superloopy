@@ -31,8 +31,8 @@ const auditCommand = 'node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" hook subagent-stop
 const fullCrew = {
   hooks: {
     SubagentStop: [
-      stopEntry("^superloopy:(?:franky|zoro|usopp|jinbe|nami)$"),
-      stopEntry("^superloopy:robin$", auditCommand)
+      stopEntry("^superloopy:(?:forge|sentinel|probe|arbiter|pathfinder)$"),
+      stopEntry("^superloopy:assayer$", auditCommand)
     ]
   }
 };
@@ -44,14 +44,14 @@ test("checkClaudeHostWiring passes for a valid namespaced config", async () => {
 });
 
 test("checkClaudeHostWiring does NOT throw on an invalid regex matcher; reports it as a problem [round1-3]", async () => {
-  const hooks = { hooks: { SubagentStop: [stopEntry("(?:superloopy:)?(?:franky|zoro|usopp|jinbe|nami)"), stopEntry("(robin", auditCommand)] } };
+  const hooks = { hooks: { SubagentStop: [stopEntry("(?:superloopy:)?(?:forge|sentinel|probe|arbiter|pathfinder)"), stopEntry("(assayer", auditCommand)] } };
   const result = await checkClaudeHostWiring(await repo({ hooks }));
   assert.equal(result.ok, false);
   assert.match(result.message, /not a valid regex/);
 });
 
 test("checkClaudeHostWiring rejects a bare (un-namespaced) matcher via anchored coverage [round1-7]", async () => {
-  const hooks = { hooks: { SubagentStop: [stopEntry("franky|zoro|usopp|jinbe|nami"), stopEntry("robin", auditCommand)] } };
+  const hooks = { hooks: { SubagentStop: [stopEntry("forge|sentinel|probe|arbiter|pathfinder"), stopEntry("assayer", auditCommand)] } };
   const result = await checkClaudeHostWiring(await repo({ hooks }));
   assert.equal(result.ok, false);
   assert.match(result.message, /plugin-namespaced agents/);
@@ -61,35 +61,35 @@ test("checkClaudeHostWiring requires the SAME entry to both match AND invoke the
   const hooks = {
     hooks: {
       SubagentStop: [
-        stopEntry("(?:superloopy:)?(?:franky|zoro|usopp|jinbe|nami)"),
-        stopEntry("(?:superloopy:)?robin", "echo broken-audit")
+        stopEntry("(?:superloopy:)?(?:forge|sentinel|probe|arbiter|pathfinder)"),
+        stopEntry("(?:superloopy:)?assayer", "echo broken-audit")
       ]
     }
   };
   const result = await checkClaudeHostWiring(await repo({ hooks }));
   assert.equal(result.ok, false);
-  assert.match(result.message, /superloopy:robin/);
+  assert.match(result.message, /superloopy:assayer/);
 });
 
 test("checkClaudeHostWiring requires each exact matcher to invoke its own stop handler", async () => {
   const hooks = {
     hooks: {
       SubagentStop: [
-        stopEntry("^superloopy:(?:franky|zoro|usopp|jinbe|nami)$", auditCommand),
-        stopEntry("^superloopy:robin$", auditCommand)
+        stopEntry("^superloopy:(?:forge|sentinel|probe|arbiter|pathfinder)$", auditCommand),
+        stopEntry("^superloopy:assayer$", auditCommand)
       ]
     }
   };
   const result = await checkClaudeHostWiring(await repo({ hooks }));
   assert.equal(result.ok, false);
-  assert.match(result.message, /superloopy:franky/);
+  assert.match(result.message, /superloopy:forge/);
 });
 
 test("checkClaudeHostWiring rejects a CLI entry that matches nothing propped up by a non-CLI entry that covers [round2-5]", async () => {
   const hooks = {
     hooks: {
       SubagentStop: [
-        stopEntry("(?:superloopy:)?(?:franky|zoro|usopp|jinbe|nami|robin)", "echo not-the-cli"),
+        stopEntry("(?:superloopy:)?(?:forge|sentinel|probe|arbiter|pathfinder|assayer)", "echo not-the-cli"),
         stopEntry("(?:superloopy:)?nonexistent") // CLI, but matches no real agent
       ]
     }
@@ -104,8 +104,8 @@ test("checkClaudeHostWiring does not crash on a null element in the SubagentStop
     hooks: {
       SubagentStop: [
         null,
-        stopEntry("^superloopy:(?:franky|zoro|usopp|jinbe|nami)$"),
-        stopEntry("^superloopy:robin$", auditCommand)
+        stopEntry("^superloopy:(?:forge|sentinel|probe|arbiter|pathfinder)$"),
+        stopEntry("^superloopy:assayer$", auditCommand)
       ]
     }
   };
@@ -167,6 +167,6 @@ test("README locales use Claude's update command and shell-specific cleanup bloc
 
 test("Claude validation guide documents exact namespaced role identities", async () => {
   const guide = await readFile("docs/superloopy-claude-validation.md", "utf8");
-  assert.match(guide, /\^superloopy:\(\?:franky\|zoro\|usopp\|jinbe\|nami\)\$/);
+  assert.match(guide, /\^superloopy:\(\?:forge\|sentinel\|probe\|arbiter\|pathfinder\)\$/);
   assert.doesNotMatch(guide, /normalizeAgentType|\(\?:superloopy:\)\?/);
 });

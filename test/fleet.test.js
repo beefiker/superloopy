@@ -41,8 +41,8 @@ test("normalizeVerdict treats lifecycle verdicts safely (inconclusive is never a
 
 test("fleetLoop drops an inconclusive worker from outstanding and never counts it as accept", async () => {
   const repo = await tempRepo();
-  await handoffLoop(repo, ["--agent", "franky", "--assignment", "impl", "--verdict", "PASS", "--artifact", await writeEvidence(repo, "impl.txt")]);
-  await handoffLoop(repo, ["--agent", "nami", "--assignment", "navigate", "--verdict", "inconclusive"]);
+  await handoffLoop(repo, ["--agent", "forge", "--assignment", "impl", "--verdict", "PASS", "--artifact", await writeEvidence(repo, "impl.txt")]);
+  await handoffLoop(repo, ["--agent", "pathfinder", "--assignment", "navigate", "--verdict", "inconclusive"]);
 
   const fleet = await fleetLoop(repo, []);
   assert.equal(fleet.summary.dispatched, 2);
@@ -50,18 +50,18 @@ test("fleetLoop drops an inconclusive worker from outstanding and never counts i
   assert.equal(fleet.summary.byVerdict["needs-context"], 1);
   assert.equal(fleet.summary.byVerdict.pending, 0);
   assert.deepEqual(fleet.outstanding.map((item) => item.agent), []);
-  assert.deepEqual(fleet.attention.map((item) => item.agent), ["nami"]);
+  assert.deepEqual(fleet.attention.map((item) => item.agent), ["pathfinder"]);
 });
 
 test("handoffLoop records a worker handoff with a normalized verdict", async () => {
   const repo = await tempRepo();
   const artifact = await writeEvidence(repo, "done.txt");
-  const result = await handoffLoop(repo, ["--agent", "franky", "--assignment", "G001/C001 implement", "--status", "done", "--verdict", "DONE", "--artifact", artifact]);
+  const result = await handoffLoop(repo, ["--agent", "forge", "--assignment", "G001/C001 implement", "--status", "done", "--verdict", "DONE", "--artifact", artifact]);
   assert.equal(result.handoff.id, "H001");
-  assert.equal(result.handoff.agent, "franky");
+  assert.equal(result.handoff.agent, "forge");
   assert.equal(result.handoff.normalizedVerdict, "accept");
   assert.equal(result.handoff.artifact, artifact);
-  assert.equal(result.crewLine.speaker, "Franky");
+  assert.equal(result.crewLine.speaker, "Forge");
   assert.equal(result.handoff.crewLine.line, "Parts fit. The build holds.");
   const state = JSON.parse(await readFile(join(repo, ".superloopy", "handoffs.json"), "utf8"));
   assert.equal(state.handoffs.length, 1);
@@ -71,45 +71,45 @@ test("handoffLoop records a worker handoff with a normalized verdict", async () 
 test("handoffLoop rejects accepted verdicts without evidence artifacts", async () => {
   const repo = await tempRepo();
   await assert.rejects(
-    handoffLoop(repo, ["--agent", "franky", "--assignment", "impl", "--verdict", "PASS"]),
+    handoffLoop(repo, ["--agent", "forge", "--assignment", "impl", "--verdict", "PASS"]),
     /Accepted handoffs require/
   );
 });
 
 test("fleetLoop reconciles dispatched workers and lists outstanding ones", async () => {
   const repo = await tempRepo();
-  await handoffLoop(repo, ["--agent", "franky", "--assignment", "impl", "--verdict", "PASS", "--artifact", await writeEvidence(repo, "impl.txt")]);
-  await handoffLoop(repo, ["--agent", "zoro", "--assignment", "review", "--verdict", "CHANGES_REQUESTED"]);
-  await handoffLoop(repo, ["--agent", "usopp", "--assignment", "qa"]);
+  await handoffLoop(repo, ["--agent", "forge", "--assignment", "impl", "--verdict", "PASS", "--artifact", await writeEvidence(repo, "impl.txt")]);
+  await handoffLoop(repo, ["--agent", "sentinel", "--assignment", "review", "--verdict", "CHANGES_REQUESTED"]);
+  await handoffLoop(repo, ["--agent", "probe", "--assignment", "qa"]);
 
   const fleet = await fleetLoop(repo, []);
   assert.equal(fleet.summary.dispatched, 3);
   assert.equal(fleet.summary.byVerdict.accept, 1);
   assert.equal(fleet.summary.byVerdict.reject, 1);
   assert.equal(fleet.summary.byVerdict.pending, 1);
-  assert.equal(fleet.handoffs.find((item) => item.agent === "franky").crewLine.speaker, "Franky");
-  assert.equal(fleet.attention[0].crewLine.speaker, "Zoro");
-  assert.deepEqual(fleet.outstanding.map((item) => item.agent), ["usopp"]);
-  assert.deepEqual(fleet.attention.map((item) => item.agent), ["zoro"]);
+  assert.equal(fleet.handoffs.find((item) => item.agent === "forge").crewLine.speaker, "Forge");
+  assert.equal(fleet.attention[0].crewLine.speaker, "Sentinel");
+  assert.deepEqual(fleet.outstanding.map((item) => item.agent), ["probe"]);
+  assert.deepEqual(fleet.attention.map((item) => item.agent), ["sentinel"]);
 });
 
 test("fleetLoop decorates handoffs in the scoped brief language", async () => {
   const repo = await tempRepo();
   await mkdir(join(repo, ".superloopy", "sessions", "ko-user"), { recursive: true });
   await writeFile(join(repo, ".superloopy", "sessions", "ko-user", "brief.md"), "사용자는 한국어로 작업을 요청했다.\n", "utf8");
-  await handoffLoop(repo, ["--session-id", "ko-user", "--agent", "robin", "--assignment", "audit", "--verdict", "PASS", "--artifact", await writeEvidence(repo, "audit.txt", "proof\n", "ko-user")]);
+  await handoffLoop(repo, ["--session-id", "ko-user", "--agent", "assayer", "--assignment", "audit", "--verdict", "PASS", "--artifact", await writeEvidence(repo, "audit.txt", "proof\n", "ko-user")]);
 
   const fleet = await fleetLoop(repo, ["--session-id", "ko-user"]);
 
-  assert.equal(fleet.handoffs[0].crewLine.speaker, "로빈");
+  assert.equal(fleet.handoffs[0].crewLine.speaker, "어세이어");
   assert.equal(fleet.handoffs[0].crewLine.language, "ko");
   assert.equal(fleet.handoffs[0].crewLine.line, "기록 확인. 증거와 결론이 일치한다.");
 });
 
 test("handoffLoop updates an existing handoff by id", async () => {
   const repo = await tempRepo();
-  await handoffLoop(repo, ["--agent", "usopp", "--assignment", "qa"]);
-  const updated = await handoffLoop(repo, ["--id", "H001", "--agent", "usopp", "--assignment", "qa", "--status", "done", "--verdict", "PASS", "--artifact", await writeEvidence(repo, "qa.txt")]);
+  await handoffLoop(repo, ["--agent", "probe", "--assignment", "qa"]);
+  const updated = await handoffLoop(repo, ["--id", "H001", "--agent", "probe", "--assignment", "qa", "--status", "done", "--verdict", "PASS", "--artifact", await writeEvidence(repo, "qa.txt")]);
   assert.equal(updated.handoff.normalizedVerdict, "accept");
   const fleet = await fleetLoop(repo, []);
   assert.equal(fleet.summary.dispatched, 1);
@@ -119,11 +119,11 @@ test("handoffLoop updates an existing handoff by id", async () => {
 
 test("handoffLoop --id update merges: omitted flags are preserved, not wiped", async () => {
   const repo = await tempRepo();
-  await handoffLoop(repo, ["--agent", "usopp", "--assignment", "qa run", "--status", "dispatched"]);
+  await handoffLoop(repo, ["--agent", "probe", "--assignment", "qa run", "--status", "dispatched"]);
   // Update with ONLY --status and --verdict; agent and assignment must survive.
   const artifact = await writeEvidence(repo, "qa.txt");
   const updated = await handoffLoop(repo, ["--id", "H001", "--status", "done", "--verdict", "PASS", "--artifact", artifact]);
-  assert.equal(updated.handoff.agent, "usopp");
+  assert.equal(updated.handoff.agent, "probe");
   assert.equal(updated.handoff.assignment, "qa run");
   assert.equal(updated.handoff.status, "done");
   assert.equal(updated.handoff.normalizedVerdict, "accept");
@@ -134,16 +134,16 @@ test("handoffLoop --id update merges: omitted flags are preserved, not wiped", a
 
 test("handoffLoop --id update ignores an empty --agent and preserves identity", async () => {
   const repo = await tempRepo();
-  await handoffLoop(repo, ["--agent", "franky", "--assignment", "build"]);
+  await handoffLoop(repo, ["--agent", "forge", "--assignment", "build"]);
   const updated = await handoffLoop(repo, ["--id", "H001", "--agent", "", "--status", "done"]);
-  assert.equal(updated.handoff.agent, "franky");
+  assert.equal(updated.handoff.agent, "forge");
   assert.equal(updated.handoff.status, "done");
 });
 
 test("fleetLoop warns when outstanding handoffs exceed SUPERLOOPY_MAX_PARALLEL", async () => {
   const repo = await tempRepo();
-  await handoffLoop(repo, ["--agent", "franky", "--assignment", "a"]);
-  await handoffLoop(repo, ["--agent", "zoro", "--assignment", "b"]);
+  await handoffLoop(repo, ["--agent", "forge", "--assignment", "a"]);
+  await handoffLoop(repo, ["--agent", "sentinel", "--assignment", "b"]);
   const prev = process.env.SUPERLOOPY_MAX_PARALLEL;
   process.env.SUPERLOOPY_MAX_PARALLEL = "1";
   try {

@@ -12,7 +12,7 @@
   <a href="README.es.md">Español</a>
 </p>
 
-<img src=".github/assets/franky.png" width="92" alt="franky" />&nbsp;<img src=".github/assets/zoro.png" width="92" alt="zoro" />&nbsp;<img src=".github/assets/usopp.png" width="92" alt="usopp" />&nbsp;<img src=".github/assets/jinbe.png" width="92" alt="jinbe" />&nbsp;<img src=".github/assets/robin.png" width="92" alt="robin" />&nbsp;<img src=".github/assets/nami.png" width="92" alt="nami" />
+<img src=".github/assets/forge.webp" width="92" alt="forge" />&nbsp;<img src=".github/assets/sentinel.webp" width="92" alt="sentinel" />&nbsp;<img src=".github/assets/probe.webp" width="92" alt="probe" />&nbsp;<img src=".github/assets/arbiter.webp" width="92" alt="arbiter" />&nbsp;<img src=".github/assets/assayer.webp" width="92" alt="assayer" />&nbsp;<img src=".github/assets/pathfinder.webp" width="92" alt="pathfinder" />
 
 <sub><b>the crew</b> — 필요할 때 부르는 서브에이전트들</sub>
 
@@ -101,14 +101,14 @@ agent 정의가 실제로 바뀐 경우에만 Codex를 재시작해야 합니다
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src=".github/assets/franky.png" width="190" alt="franky" /><br /><b>franky</b><br /><sub>구현</sub></td>
-    <td align="center" width="33%"><img src=".github/assets/zoro.png" width="190" alt="zoro" /><br /><b>zoro</b><br /><sub>리뷰</sub></td>
-    <td align="center" width="33%"><img src=".github/assets/usopp.png" width="190" alt="usopp" /><br /><b>usopp</b><br /><sub>테스트</sub></td>
+    <td align="center" width="33%"><img src=".github/assets/forge.webp" width="190" alt="forge" /><br /><b>forge</b><br /><sub>구현</sub></td>
+    <td align="center" width="33%"><img src=".github/assets/sentinel.webp" width="190" alt="sentinel" /><br /><b>sentinel</b><br /><sub>리뷰</sub></td>
+    <td align="center" width="33%"><img src=".github/assets/probe.webp" width="190" alt="probe" /><br /><b>probe</b><br /><sub>테스트</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src=".github/assets/jinbe.png" width="190" alt="jinbe" /><br /><b>jinbe</b><br /><sub>게이트 검토</sub></td>
-    <td align="center"><img src=".github/assets/robin.png" width="190" alt="robin" /><br /><b>robin</b><br /><sub>감사</sub></td>
-    <td align="center"><img src=".github/assets/nami.png" width="190" alt="nami" /><br /><b>nami</b><br /><sub>탐색</sub></td>
+    <td align="center"><img src=".github/assets/arbiter.webp" width="190" alt="arbiter" /><br /><b>arbiter</b><br /><sub>게이트 검토</sub></td>
+    <td align="center"><img src=".github/assets/assayer.webp" width="190" alt="assayer" /><br /><b>assayer</b><br /><sub>감사</sub></td>
+    <td align="center"><img src=".github/assets/pathfinder.webp" width="190" alt="pathfinder" /><br /><b>pathfinder</b><br /><sub>탐색</sub></td>
   </tr>
 </table>
 
@@ -232,11 +232,21 @@ codex plugin marketplace remove beefiker
 
 ```sh
 rm -f ~/.local/bin/superloopy
-rm -f ~/.codex/agents/franky.toml ~/.codex/agents/zoro.toml ~/.codex/agents/usopp.toml ~/.codex/agents/jinbe.toml ~/.codex/agents/robin.toml ~/.codex/agents/nami.toml
+rm -f ~/.codex/agents/forge.toml ~/.codex/agents/sentinel.toml ~/.codex/agents/probe.toml ~/.codex/agents/arbiter.toml ~/.codex/agents/assayer.toml ~/.codex/agents/pathfinder.toml
 ```
 
 ```powershell
 Remove-Item "$env:APPDATA\npm\superloopy.cmd" -ErrorAction SilentlyContinue
+Remove-Item "$env:USERPROFILE\.codex\agents\forge.toml", "$env:USERPROFILE\.codex\agents\sentinel.toml", "$env:USERPROFILE\.codex\agents\probe.toml", "$env:USERPROFILE\.codex\agents\arbiter.toml", "$env:USERPROFILE\.codex\agents\assayer.toml", "$env:USERPROFILE\.codex\agents\pathfinder.toml" -ErrorAction SilentlyContinue
+```
+
+업그레이드하면 이름이 바뀌기 전의 에이전트 파일은 수정하지 않은 경우 자동으로 지워집니다. 직접 수정한 파일이 있다면 아래 명령으로 지우세요.
+
+```sh
+rm -f ~/.codex/agents/franky.toml ~/.codex/agents/zoro.toml ~/.codex/agents/usopp.toml ~/.codex/agents/jinbe.toml ~/.codex/agents/robin.toml ~/.codex/agents/nami.toml
+```
+
+```powershell
 Remove-Item "$env:USERPROFILE\.codex\agents\franky.toml", "$env:USERPROFILE\.codex\agents\zoro.toml", "$env:USERPROFILE\.codex\agents\usopp.toml", "$env:USERPROFILE\.codex\agents\jinbe.toml", "$env:USERPROFILE\.codex\agents\robin.toml", "$env:USERPROFILE\.codex\agents\nami.toml" -ErrorAction SilentlyContinue
 ```
 

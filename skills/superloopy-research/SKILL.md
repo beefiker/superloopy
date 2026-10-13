@@ -51,7 +51,7 @@ When waiting on a slow lane, back off between checks rather than spinning short 
 
 Research lanes are read-only. Assume:
 
-- **Read-only.** Most research workers cannot write files. Never ask a worker to write the journal, the claim ledger, or any session file — every session write is yours. The bundled read-only navigator role (`nami`) is the natural fit for lookup lanes; the auditor role (`robin`) reviews evidence.
+- **Read-only.** Most research workers cannot write files. Never ask a worker to write the journal, the claim ledger, or any session file — every session write is yours. The bundled read-only navigator role (`pathfinder`) is the natural fit for lookup lanes; the auditor role (`assayer`) reviews evidence.
 - **No recursion.** Workers cannot spawn their own subagents. Depth comes from your expansion waves, not from worker-side recursion.
 - **Built-in brakes.** Workers ship with their own retrieval budgets ("stop when answered") and rigid output templates. Your dispatch message must explicitly lift the budget and demand both reply tails, or the worker returns a thin single-pass answer with no leads and no verdicts.
 - **Capability routing.** When the host lets you choose, dispatch research workers on a capable model at high reasoning effort — saturation research on a minimal or fast tier returns shallow results. When you cannot choose, narrow each worker's scope and dispatch more workers instead. Model fields are advisory steering, never proof.

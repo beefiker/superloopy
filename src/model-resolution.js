@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 
-import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
+import { RETIRED_AGENT_NAMES, SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
 import { queryCodexModelCatalog } from "./model-catalog.js";
 import { loadModelPolicyData, resolveCodexModelPolicy } from "./model-policy.js";
 
@@ -67,7 +67,12 @@ export async function prepareCodexModelResolution(options = {}) {
   if (!policyResult.ok) return fail(policyResult.message);
   const policy = policyResult.data;
   const storedState = await readState(statePath);
-  const previousFileManifest = readPreviousFileManifest(storedState, targetDir);
+  // Read both manifests before the stored state is discarded: a pre-rename state fails validation
+  // (its keys are the retired names) but still proves which retired files Superloopy wrote.
+  const fileManifests = {
+    previousFileManifest: readPreviousFileManifest(storedState, targetDir),
+    retiredFileManifest: readRetiredFileManifest(storedState, targetDir)
+  };
   const previousState = validateModelResolutionState(storedState, policy, { targetDir, nowMs }).ok
     ? storedState
     : null;
@@ -82,11 +87,11 @@ export async function prepareCodexModelResolution(options = {}) {
       availabilitySource: "policy",
       selectionReason: "compatibility_override",
       resolution
-    }), "compatibility_override", previousFileManifest);
+    }), "compatibility_override", fileManifests);
   }
 
   if (options.refreshModels !== true && previousState !== null && isFresh(previousState, nowMs)) {
-    return success(policy, previousState, previousState, "fresh", previousFileManifest);
+    return success(policy, previousState, previousState, "fresh", fileManifests);
   }
 
   const query = options.queryModelCatalog ?? queryCodexModelCatalog;
@@ -113,7 +118,7 @@ export async function prepareCodexModelResolution(options = {}) {
       availabilitySource: "model_list",
       selectionReason: "catalog_resolved",
       resolution
-    }), "refreshed", previousFileManifest);
+    }), "refreshed", fileManifests);
   }
 
   const catalogReason = sanitizeCatalogReason(catalogResult?.reason);
@@ -125,7 +130,7 @@ export async function prepareCodexModelResolution(options = {}) {
       selectionReason: "probe_unknown_kept_cached",
       catalogReason
     };
-    return success(policy, previousState, state, "unknown_kept_cached", previousFileManifest);
+    return success(policy, previousState, state, "unknown_kept_cached", fileManifests);
   }
 
   const resolution = resolveCompatibility(policy.codex);
@@ -138,7 +143,7 @@ export async function prepareCodexModelResolution(options = {}) {
     selectionReason: "probe_unknown_compatibility",
     catalogReason,
     resolution
-  }), "unknown_compatibility", previousFileManifest);
+  }), "unknown_compatibility", fileManifests);
 }
 
 function resolveCompatibility(codexPolicy) {
@@ -283,13 +288,22 @@ function validateFiles(files) {
 }
 
 function readPreviousFileManifest(state, targetDir) {
-  if (!isRecord(state)
-    || state.schemaVersion !== MODEL_RESOLUTION_SCHEMA_VERSION
-    || state.targetDir !== targetDir
-    || !validateFiles(state.files)) {
-    return null;
-  }
+  if (!ownsTargetState(state, targetDir) || !validateFiles(state.files)) return null;
   return state.files;
+}
+
+function readRetiredFileManifest(state, targetDir) {
+  if (!ownsTargetState(state, targetDir) || !isRecord(state.files)) return {};
+  return Object.fromEntries(Object.keys(RETIRED_AGENT_NAMES).flatMap((name) => {
+    const record = state.files[name];
+    return isRecord(record) && typeof record.sha256 === "string" && SHA256_PATTERN.test(record.sha256)
+      ? [[name, { sha256: record.sha256 }]]
+      : [];
+  }));
+}
+
+function ownsTargetState(state, targetDir) {
+  return isRecord(state) && state.schemaVersion === MODEL_RESOLUTION_SCHEMA_VERSION && state.targetDir === targetDir;
 }
 
 function tupleMatches(value, candidate) {
@@ -341,8 +355,8 @@ function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function success(policy, previousState, state, cacheStatus, previousFileManifest) {
-  return { ok: true, policy, previousState, previousFileManifest, state, cacheStatus };
+function success(policy, previousState, state, cacheStatus, fileManifests) {
+  return { ok: true, policy, previousState, ...fileManifests, state, cacheStatus };
 }
 
 function invalid(reason) {

@@ -167,27 +167,27 @@ test("managed install operations stay on locked canonical paths after an alias r
       await symlink(secondRoot, aliasRoot, process.platform === "win32" ? "junction" : "dir");
       await mkdir(targetDir, { recursive: true });
       await mkdir(dirname(statePath), { recursive: true });
-      await writeFile(join(targetDir, "franky.toml"), "locked target\n", "utf8");
+      await writeFile(join(targetDir, "forge.toml"), "locked target\n", "utf8");
       await writeFile(statePath, "locked state\n", "utf8");
     }
   );
 
-  assert.equal(await readFile(join(firstRoot, "agents", "franky.toml"), "utf8"), "locked target\n");
+  assert.equal(await readFile(join(firstRoot, "agents", "forge.toml"), "utf8"), "locked target\n");
   assert.equal(await readFile(join(firstRoot, "state", "model-resolution.json"), "utf8"), "locked state\n");
-  assert.equal(existsSync(join(secondRoot, "agents", "franky.toml")), false);
+  assert.equal(existsSync(join(secondRoot, "agents", "forge.toml")), false);
   assert.equal(existsSync(join(secondRoot, "state", "model-resolution.json")), false);
 });
 
 test("managed rollback never deletes a same-content replacement inode", async () => {
   const dir = await mkdtemp(join(tmpdir(), "superloopy-inode-race-"));
-  const target = join(dir, "franky.toml");
+  const target = join(dir, "forge.toml");
   const statePath = join(dir, "state", "model-resolution.json");
   await mkdir(dir, { recursive: true });
   await writeFile(target, "old\n", "utf8");
   let replacementIdentity;
 
   await assert.rejects(commitManagedAgentFiles([
-    { name: "franky", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
+    { name: "forge", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
   ], statePath, {}, true, {
     writeState: async () => {
       const replacement = join(dir, "replacement.toml");
@@ -205,13 +205,13 @@ test("managed rollback never deletes a same-content replacement inode", async ()
 
 test("managed rollback never deletes an in-place edit on the staged inode", async () => {
   const dir = await mkdtemp(join(tmpdir(), "superloopy-inode-edit-race-"));
-  const target = join(dir, "franky.toml");
+  const target = join(dir, "forge.toml");
   const statePath = join(dir, "state", "model-resolution.json");
   const userEdit = "concurrent user edit\n";
   await writeFile(target, "old\n", "utf8");
 
   await assert.rejects(commitManagedAgentFiles([
-    { name: "franky", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
+    { name: "forge", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
   ], statePath, {}, true, {
     writeState: async () => {
       await writeFile(target, userEdit, "utf8");
@@ -224,7 +224,7 @@ test("managed rollback never deletes an in-place edit on the staged inode", asyn
 
 test("managed rollback preserves a replacement installed after target verification", async () => {
   const dir = await mkdtemp(join(tmpdir(), "superloopy-rollback-path-race-"));
-  const target = join(dir, "franky.toml");
+  const target = join(dir, "forge.toml");
   const replacement = join(dir, "replacement.toml");
   const userContent = "concurrent replacement\n";
   let rollbackStarted = false;
@@ -232,7 +232,7 @@ test("managed rollback preserves a replacement installed after target verificati
   await writeFile(target, "old\n", "utf8");
 
   await assert.rejects(commitManagedAgentFiles([
-    { name: "franky", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
+    { name: "forge", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
   ], join(dir, "state.json"), {}, true, {
     writeState: async () => {
       rollbackStarted = true;
@@ -255,14 +255,14 @@ test("managed rollback preserves a replacement installed after target verificati
 
 test("managed rollback does not overwrite a file created before original restoration", async () => {
   const dir = await mkdtemp(join(tmpdir(), "superloopy-rollback-restore-race-"));
-  const target = join(dir, "franky.toml");
+  const target = join(dir, "forge.toml");
   const userContent = "concurrent creation\n";
   let rollbackStarted = false;
   let created = false;
   await writeFile(target, "old\n", "utf8");
 
   await assert.rejects(commitManagedAgentFiles([
-    { name: "franky", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
+    { name: "forge", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
   ], join(dir, "state.json"), {}, true, {
     writeState: async () => {
       rollbackStarted = true;
@@ -283,12 +283,12 @@ test("managed rollback does not overwrite a file created before original restora
 
 test("managed commit surfaces an old-backup cleanup failure", async () => {
   const dir = await mkdtemp(join(tmpdir(), "superloopy-backup-cleanup-"));
-  const target = join(dir, "franky.toml");
+  const target = join(dir, "forge.toml");
   await writeFile(target, "old\n", "utf8");
   let unlinkCalls = 0;
 
   await assert.rejects(commitManagedAgentFiles([
-    { name: "franky", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
+    { name: "forge", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
   ], join(dir, "state.json"), {}, true, {
     writeState: async () => {},
     unlink: async (path) => {
@@ -303,14 +303,14 @@ test("managed commit surfaces an old-backup cleanup failure", async () => {
 
 test("managed commit preserves an old backup edited through an open handle", async () => {
   const dir = await mkdtemp(join(tmpdir(), "superloopy-backup-edit-race-"));
-  const target = join(dir, "franky.toml");
+  const target = join(dir, "forge.toml");
   const userEdit = "concurrent edit through open handle\n";
   await writeFile(target, "old\n", "utf8");
   const handle = await open(target, "r+");
 
   try {
     await assert.rejects(commitManagedAgentFiles([
-      { name: "franky", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
+      { name: "forge", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
     ], join(dir, "state.json"), {}, true, {
       writeState: async () => {
         await handle.truncate(0);
@@ -322,14 +322,14 @@ test("managed commit preserves an old backup edited through an open handle", asy
   }
 
   assert.equal(await readFile(target, "utf8"), "new\n");
-  const backups = (await readdir(dir)).filter((name) => name.startsWith(".franky.toml.") && name.endsWith(".tmp"));
+  const backups = (await readdir(dir)).filter((name) => name.startsWith(".forge.toml.") && name.endsWith(".tmp"));
   assert.equal(backups.length, 1);
   assert.equal(await readFile(join(dir, backups[0]), "utf8"), userEdit);
 });
 
 test("managed cleanup preserves a backup replacement installed after verification", async () => {
   const dir = await mkdtemp(join(tmpdir(), "superloopy-backup-path-race-"));
-  const target = join(dir, "franky.toml");
+  const target = join(dir, "forge.toml");
   const replacement = join(dir, "replacement.toml");
   const userContent = "concurrent backup replacement\n";
   let stateWritten = false;
@@ -337,7 +337,7 @@ test("managed cleanup preserves a backup replacement installed after verificatio
   await writeFile(target, "old\n", "utf8");
 
   await assert.rejects(commitManagedAgentFiles([
-    { name: "franky", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
+    { name: "forge", target, status: "updated", content: "new\n", existingKind: "file", existing: "old\n" }
   ], join(dir, "state.json"), {}, true, {
     writeState: async () => { stateWritten = true; },
     readFile: async (path, encoding) => {
@@ -353,7 +353,7 @@ test("managed cleanup preserves a backup replacement installed after verificatio
 
   assert.equal(replaced, true);
   assert.equal(await readFile(target, "utf8"), "new\n");
-  const backups = (await readdir(dir)).filter((name) => name.startsWith(".franky.toml.") && name.endsWith(".tmp"));
+  const backups = (await readdir(dir)).filter((name) => name.startsWith(".forge.toml.") && name.endsWith(".tmp"));
   assert.equal(backups.length, 1);
   assert.equal(await readFile(join(dir, backups[0]), "utf8"), userContent);
 });

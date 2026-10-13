@@ -3,10 +3,12 @@ import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { readFlag } from "./args.js";
 import { resolveEvidenceOutputPath, writeEvidenceOutputFile } from "./artifacts.js";
+import { FAILURE_TAIL_BYTES, failureSignature } from "./failure-signature.js";
 import { evidenceLoop } from "./loop.js";
 import { recordTrustedCommand } from "./plan-trust.js";
 import { resolveSpawnInvocation } from "./spawn-command.js";
-import { ensureSuperloopyDirs, evidenceRelativeDir, nowIso, scopeFromSessionId } from "./store.js";
+import { ensureSuperloopyDirs, evidenceRelativeDir, nowIso, readLedger, scopeFromSessionId } from "./store.js";
+import { repeatedFailureWarnings } from "./trace.js";
 
 const MAX_CAPTURE_STREAM_BYTES = 10 * 1024 * 1024;
 
@@ -34,6 +36,11 @@ export async function runCaptured(cwd, command, artifact) {
     finishedAt
   };
   if (commandResult.error) capture.error = commandResult.error.message;
+  // The transcript keeps each stream's first 10 MiB; the signature needs the real end of
+  // the output, where the decisive error usually is, so it reads the separate tail buffer.
+  if (status === "fail") {
+    capture.failureSignature = failureSignature(command, { ...commandResult, stdout: commandResult.stdoutTail, stderr: commandResult.stderrTail });
+  }
   await writeEvidenceOutputFile(artifact, renderCaptureTranscript(cwd, capture, commandResult));
   return capture;
 }
@@ -69,8 +76,12 @@ export async function captureLoop(cwd, argv) {
   ];
   if (notes !== undefined) evidenceArgs.push("--notes", notes);
   if (scope?.sessionId) evidenceArgs.push("--session-id", scope.sessionId);
-  const result = await evidenceLoop(cwd, evidenceArgs);
-  return { ...result, capture };
+  const result = await evidenceLoop(cwd, evidenceArgs, { failureSignature: capture.failureSignature });
+  const ref = `${goalId}/${criterionId}`;
+  const warnings = capture.status === "fail"
+    ? repeatedFailureWarnings(await readLedger(cwd, scope)).filter((warning) => warning.ref === ref)
+    : [];
+  return { ...result, capture, warnings };
 }
 
 function splitCaptureArgv(argv) {
@@ -132,6 +143,8 @@ function runCommand(invocation, cwd) {
         error,
         stdout: stdout.text(),
         stderr: stderr.text(),
+        stdoutTail: stdout.tail(),
+        stderrTail: stderr.tail(),
         stdoutTruncatedBytes: stdout.truncatedBytes(),
         stderrTruncatedBytes: stderr.truncatedBytes()
       });
@@ -139,10 +152,14 @@ function runCommand(invocation, cwd) {
   });
 }
 
+// Keeps the first MAX_CAPTURE_STREAM_BYTES for the transcript and, independently, the last
+// FAILURE_TAIL_BYTES for the failure signature, so truncation never hides the final error.
 function captureStreamBuffer() {
   const chunks = [];
   let kept = 0;
   let truncated = 0;
+  const tailChunks = [];
+  let tailBytes = 0;
   return {
     push(chunk) {
       const buffer = Buffer.from(chunk);
@@ -155,9 +172,15 @@ function captureStreamBuffer() {
       } else {
         truncated += buffer.length;
       }
+      tailChunks.push(buffer);
+      tailBytes += buffer.length;
+      while (tailBytes - tailChunks[0].length >= FAILURE_TAIL_BYTES) tailBytes -= tailChunks.shift().length;
     },
     text() {
       return Buffer.concat(chunks).toString("utf8");
+    },
+    tail() {
+      return Buffer.concat(tailChunks).subarray(-FAILURE_TAIL_BYTES).toString("utf8");
     },
     truncatedBytes() {
       return truncated;

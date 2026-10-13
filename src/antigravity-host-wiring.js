@@ -140,7 +140,7 @@ export async function checkAntigravityHostWiring(cwd) {
           });
 
           const uncoveredBare = SUPERLOOPY_AGENT_NAMES.filter((name) => {
-            const isAuditor = name === "robin";
+            const isAuditor = name === "assayer";
             return !entries.some((entry) =>
               entry.regex !== null
               && entry.regex.test(name)
@@ -152,7 +152,7 @@ export async function checkAntigravityHostWiring(cwd) {
           }
 
           const uncoveredNamespaced = SUPERLOOPY_AGENT_NAMES.filter((name) => {
-            const isAuditor = name === "robin";
+            const isAuditor = name === "assayer";
             return !entries.some((entry) =>
               entry.regex !== null
               && entry.regex.test(`superloopy:${name}`)

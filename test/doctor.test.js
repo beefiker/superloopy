@@ -135,17 +135,17 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.reviewability.maxLines, 550);
   assert.equal(parsed.checks.reviewability.oversized.length, 0);
   assert.equal(parsed.checks.dispatchCoherence.ok, true);
-  assert.ok(parsed.checks.dispatchCoherence.dispatched.includes("robin"));
+  assert.ok(parsed.checks.dispatchCoherence.dispatched.includes("assayer"));
   assert.equal(parsed.checks.modelPolicy.ok, true);
   assert.equal(parsed.checks.modelPolicy.policyPath, "docs/superloopy-model-policy.md");
   assert.equal(parsed.checks.modelPolicy.policyDataPath, "model-policy.json");
   assert.equal(parsed.checks.modelPolicy.policyDataVersion, "2026-09-30");
   assert.deepEqual(parsed.checks.modelPolicy.compatibilityModels, { standard: "gpt-5.6-terra", deep: "gpt-5.6-sol", fast: "gpt-5.6-luna" });
-  assert.equal(parsed.checks.modelPolicy.agents.nami.profile, "fast");
+  assert.equal(parsed.checks.modelPolicy.agents.pathfinder.profile, "fast");
   assert.equal(parsed.checks.modelPolicy.profiles.standard.candidates[0].model, "gpt-6.1-sol");
-  assert.equal(parsed.checks.modelPolicy.agents.nami.model, "gpt-6-luna");
-  assert.equal(parsed.checks.modelPolicy.agents.zoro.model, "gpt-6.1-sol");
-  assert.equal(parsed.checks.modelPolicy.agents.zoro.model_reasoning_effort, "xhigh");
+  assert.equal(parsed.checks.modelPolicy.agents.pathfinder.model, "gpt-6-luna");
+  assert.equal(parsed.checks.modelPolicy.agents.sentinel.model, "gpt-6.1-sol");
+  assert.equal(parsed.checks.modelPolicy.agents.sentinel.model_reasoning_effort, "xhigh");
   assert.equal(parsed.checks.hostContract.ok, true);
   assert.ok(parsed.checks.hostContract.cannotVerify.length >= 3);
   assert.ok(parsed.checks.hostContract.cannotVerify.some((item) => /resolved model/u.test(item)));
@@ -161,9 +161,9 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.claudeModelPolicy.policyPath, "docs/superloopy-model-policy-claude.md");
   assert.equal(parsed.checks.claudeModelPolicy.policyDataPath, "model-policy.json");
   assert.equal(parsed.checks.claudeModelPolicy.policyDataVersion, "2026-09-30");
-  assert.equal(parsed.checks.claudeModelPolicy.agents.nami, "haiku");
-  assert.equal(parsed.checks.claudeModelPolicy.agents.zoro, "claude-opus-5-5");
-  assert.equal(parsed.checks.claudeModelPolicy.agents.franky, "claude-opus-5-5");
+  assert.equal(parsed.checks.claudeModelPolicy.agents.pathfinder, "haiku");
+  assert.equal(parsed.checks.claudeModelPolicy.agents.sentinel, "claude-opus-5-5");
+  assert.equal(parsed.checks.claudeModelPolicy.agents.forge, "claude-opus-5-5");
   assert.deepEqual(
     { ok: parsed.checks.installedModelPolicy.ok, installed: parsed.checks.installedModelPolicy.installed, degraded: parsed.checks.installedModelPolicy.degraded, restartRequired: parsed.checks.installedModelPolicy.restartRequired },
     { ok: true, installed: false, degraded: false, restartRequired: false }
@@ -243,14 +243,14 @@ test("doctor CLI rejects ambiguous or malformed selectors before running checks"
 
 test("doctor model policy fails when bundled agent defaults drift", async () => {
   const repo = await tempRepoCopy();
-  const agentPath = join(repo, ".codex", "agents", "nami.toml");
+  const agentPath = join(repo, ".codex", "agents", "pathfinder.toml");
   const agent = await readFile(agentPath, "utf8");
   await writeFile(agentPath, agent.replace('model = "gpt-6-luna"', 'model = "gpt-5.6-luna"'), "utf8");
 
   const result = await runDoctor(repo);
   assert.equal(result.ok, false);
   assert.equal(result.checks.modelPolicy.ok, false);
-  assert.match(result.checks.modelPolicy.message, /nami\.toml model/);
+  assert.match(result.checks.modelPolicy.message, /pathfinder\.toml model/);
 });
 
 test("doctor model policy resolves bundled defaults from the model policy data", async () => {
@@ -264,29 +264,29 @@ test("doctor model policy resolves bundled defaults from the model policy data",
   const result = await runDoctor(repo);
   assert.equal(result.ok, false);
   assert.equal(result.checks.modelPolicy.ok, false);
-  assert.match(result.checks.modelPolicy.message, /nami\.toml model must be gpt-5\.6-terra/);
+  assert.match(result.checks.modelPolicy.message, /pathfinder\.toml model must be gpt-5\.6-terra/);
 });
 
 test("doctor model policy reports invalid model policy data entries", async () => {
   const repo = await tempRepoCopy();
   const policyDataPath = join(repo, "model-policy.json");
   const policyData = JSON.parse(await readFile(policyDataPath, "utf8"));
-  delete policyData.codex.agents.nami;
+  delete policyData.codex.agents.pathfinder;
   await writeFile(policyDataPath, `${JSON.stringify(policyData, null, 2)}\n`, "utf8");
 
   const result = await runDoctor(repo);
   assert.equal(result.ok, false);
   assert.equal(result.checks.modelPolicy.ok, false);
-  assert.match(result.checks.modelPolicy.message, /model policy data\.codex\.agents\.nami/);
+  assert.match(result.checks.modelPolicy.message, /model policy data\.codex\.agents\.pathfinder/);
 });
 
 test("doctor dispatch coherence fails when a dispatched agent is not installed", async () => {
   const repo = await tempRepoCopy();
-  await rm(join(repo, ".codex", "agents", "robin.toml"), { force: true });
+  await rm(join(repo, ".codex", "agents", "assayer.toml"), { force: true });
 
   const result = await runDoctor(repo);
   assert.equal(result.checks.dispatchCoherence.ok, false);
-  assert.match(result.checks.dispatchCoherence.message, /robin/);
+  assert.match(result.checks.dispatchCoherence.message, /assayer/);
 });
 
 test("doctor ignores Codex marketplace install metadata in plugin cache", async () => {

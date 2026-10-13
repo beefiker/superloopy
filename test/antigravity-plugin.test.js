@@ -35,12 +35,12 @@ test("isAntigravityHost detects Antigravity plugin and host environment signals"
 });
 
 test("canonicalAgentType and matchesAgentType resolve Antigravity host agent types", () => {
-  assert.equal(canonicalAgentType("antigravity", "franky"), "superloopy:franky");
-  assert.equal(canonicalAgentType("antigravity", "zoro"), "superloopy:zoro");
+  assert.equal(canonicalAgentType("antigravity", "forge"), "superloopy:forge");
+  assert.equal(canonicalAgentType("antigravity", "sentinel"), "superloopy:sentinel");
   assert.equal(canonicalAgentType("antigravity", "unknown"), null);
-  assert.equal(matchesAgentType({ host: "antigravity", agentType: "franky", role: "franky" }), true);
-  assert.equal(matchesAgentType({ host: "antigravity", agentType: "superloopy:franky", role: "franky" }), true);
-  assert.equal(matchesAgentType({ host: "antigravity", agentType: "zoro", role: "franky" }), false);
+  assert.equal(matchesAgentType({ host: "antigravity", agentType: "forge", role: "forge" }), true);
+  assert.equal(matchesAgentType({ host: "antigravity", agentType: "superloopy:forge", role: "forge" }), true);
+  assert.equal(matchesAgentType({ host: "antigravity", agentType: "sentinel", role: "forge" }), false);
 });
 
 test("the agent install guide documents the working Antigravity commands", async () => {

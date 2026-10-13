@@ -2,14 +2,15 @@ import { createHash } from "node:crypto";
 import { lstat, readFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 
-import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
+import { RETIRED_AGENT_NAMES, SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
 import { MANAGED_AGENT_MARKER, parseManagedAgentRouting } from "./managed-agents.js";
 import { queryCodexModelCatalog } from "./model-catalog.js";
 import { loadModelPolicyData, resolveCodexModelPolicy } from "./model-policy.js";
 import {
   inspectLegacyAgentFleet,
   loadLegacyAgentManifests,
-  resolveDefaultAgentTarget
+  resolveDefaultAgentTarget,
+  retiredAgentRemovalCommand
 } from "./legacy-agents.js";
 import {
   isAllowedCodexModelTuple,
@@ -33,6 +34,37 @@ const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 const SHELL_SAFE_TARGET_PATTERN = /^[\p{L}\p{N}_./:@+,= -]+$/u;
 
 export async function checkInstalledModelPolicy(policyRoot, options = {}) {
+  const result = await inspectInstalledModelPolicy(policyRoot, options);
+  const targetDir = typeof result.targetDir === "string" ? result.targetDir
+    : typeof options.homeDir === "string" && options.homeDir.length > 0 ? resolveDefaultAgentTarget(options.env ?? {}, options.homeDir)
+      : null;
+  return targetDir === null ? result : withRetiredAgentFiles(result, targetDir, options.platform);
+}
+
+// Codex loads every file in the agents directory, so pre-rename files the installer could not prove
+// it owns keep shadow lanes alive. Report them with exact removal commands; never remove them here.
+async function withRetiredAgentFiles(result, targetDir, platform) {
+  const leftovers = (await Promise.all(Object.entries(RETIRED_AGENT_NAMES).map(async ([name, replacement]) => {
+    const path = join(targetDir, `${name}.toml`);
+    try {
+      const stats = await lstat(path);
+      const kind = stats.isSymbolicLink() ? "symlink" : stats.isFile() ? "file" : "other";
+      return { name, replacement, path, removeCommand: retiredAgentRemovalCommand(path, kind, platform) };
+    } catch {
+      return null;
+    }
+  }))).filter((leftover) => leftover !== null);
+  if (leftovers.length === 0) return result;
+  const notice = `Pre-rename agent files remain in ${targetDir} (${leftovers.map(({ name }) => `${name}.toml`).join(", ")}); Codex still loads them. Run \`superloopy agents install\` to retire Superloopy-owned copies, or remove them manually: ${leftovers.map(({ removeCommand }) => removeCommand).join("; ")}`;
+  return {
+    ...result,
+    ...(result.ok ? { warning: true } : {}),
+    retiredAgents: leftovers,
+    message: result.message === undefined ? notice : `${result.message} ${notice}`
+  };
+}
+
+async function inspectInstalledModelPolicy(policyRoot, options) {
   const statePath = resolveStatePath(options);
   if (statePath === null) return absent();
   let raw;
@@ -142,7 +174,7 @@ async function compareAvailableBeforeInstall(base, policy, options) {
 }
 
 function unmanagedFleet(targetDir, status) {
-  const migratable = status === "legacy_unmanaged";
+  const migratable = status === "legacy_unmanaged" || status === "legacy_modified";
   return {
     ok: migratable,
     ...(migratable ? { warning: true } : {}),
@@ -158,12 +190,14 @@ function unmanagedFleet(targetDir, status) {
     agents: Object.fromEntries(SUPERLOOPY_AGENT_NAMES.map((name) => [name, {
       requestedModel: null,
       resolvedModel: null,
-      reason: migratable ? "known_legacy_template" : "unmanaged_or_modified",
+      reason: status === "legacy_unmanaged" ? "known_legacy_template" : "unmanaged_or_modified",
       status
     }])),
-    message: migratable
+    message: status === "legacy_unmanaged"
       ? "Exact pre-managed Superloopy agents are installed and can be migrated safely."
-      : "Personal agent files exist without trusted managed state and require review.",
+      : status === "legacy_modified"
+        ? "Pre-rename Superloopy agent files exist and some were modified; install retires the unmodified ones and keeps the rest for review."
+        : "Personal agent files exist without trusted managed state and require review.",
     next: migratable
       ? refreshAction(targetDir)
       : `Review personal agents under ${targetDir}, then run the installer with --force only if replacement is intended.`
@@ -306,19 +340,20 @@ function inspectRepairState(state) {
   const targetDir = typeof state.targetDir === "string" && isAbsolute(state.targetDir) ? state.targetDir : null;
   if (targetDir === null) return null;
   const files = state.files;
+  const ownedNames = [SUPERLOOPY_AGENT_NAMES, Object.keys(RETIRED_AGENT_NAMES)];
+  // A pre-rename state still proves ownership: the installer reads it to retire the old files.
   const ownershipProven = state.schemaVersion === 1
     && files !== null
     && typeof files === "object"
     && !Array.isArray(files)
-    && Object.keys(files).length === SUPERLOOPY_AGENT_NAMES.length
-    && SUPERLOOPY_AGENT_NAMES.every((name) => {
+    && ownedNames.some((names) => Object.keys(files).length === names.length && names.every((name) => {
       const entry = files[name];
       return entry !== null
         && typeof entry === "object"
         && !Array.isArray(entry)
         && Object.keys(entry).length === 1
         && SHA256_PATTERN.test(entry.sha256 ?? "");
-    });
+    }));
   return { targetDir, ownershipProven };
 }
 
