@@ -1,0 +1,282 @@
+---
+import "../styles/site.css";
+import { LOCALES, LOCALE_LABELS, LOCALE_TAGS, OG_LOCALES, STRINGS } from "../i18n/strings.js";
+import Mark from "./Mark.astro";
+import forge from "../assets/crew/forge.webp";
+import sentinel from "../assets/crew/sentinel.webp";
+import probe from "../assets/crew/probe.webp";
+import arbiter from "../assets/crew/arbiter.webp";
+import assayer from "../assets/crew/assayer.webp";
+import pathfinder from "../assets/crew/pathfinder.webp";
+
+const { lang = "en" } = Astro.props;
+const t = STRINGS[lang];
+const SITE = "https://superloopy.dev";
+const REPO = "https://github.com/beefiker/superloopy";
+const pathFor = (locale) => (locale === "en" ? "/" : `/${locale}/`);
+
+// Star count at build time; the page never calls GitHub from the browser.
+let stars = null;
+try {
+  const response = await fetch("https://api.github.com/repos/beefiker/superloopy", { headers: { accept: "application/vnd.github+json" } });
+  if (response.ok) stars = (await response.json()).stargazers_count ?? null;
+} catch {}
+
+const installs = {
+  codex: { label: "Codex", note: t.install.codexNote, lines: ["codex plugin marketplace add https://github.com/beefiker/superloopy", "codex plugin add superloopy@beefiker"] },
+  claude: { label: "Claude Code", note: t.install.claudeNote, lines: ["/plugin marketplace add beefiker/superloopy", "/plugin install superloopy@beefiker"] },
+};
+
+const stepCommands = ["loop begin", "loop prove -- <cmd>", "loop check · loop finish", ".superloopy/evidence/"];
+
+// Recorded from the real CLI (see the repository's web-superloopy/README.md).
+const transcript = [
+  { kind: "cmd", text: 'superloopy loop begin --brief "Fix cart total" --mode light' },
+  { kind: "out", text: "superloopy began: G001 Fix cart total" },
+  { kind: "gap" },
+  { kind: "cmd", text: "superloopy loop prove -- npm test" },
+  { kind: "fail", label: "fail", text: "G001/C001", artifact: "(.superloopy/evidence/G001-C001-capture.txt)" },
+  { kind: "note", text: t.how.fix },
+  { kind: "cmd", text: "superloopy loop prove -- npm test" },
+  { kind: "pass", label: "pass", text: "G001/C001", artifact: "(.superloopy/evidence/G001-C001-capture.txt)" },
+  { kind: "cmd", text: "superloopy loop prove -- node --test total.test.js" },
+  { kind: "pass", label: "pass", text: "G001/C002", artifact: "(.superloopy/evidence/G001-C002-capture.txt)" },
+  { kind: "gap" },
+  { kind: "cmd", text: "superloopy loop check" },
+  { kind: "out", text: "superloopy check: ok" },
+  { kind: "out", text: "Evidence summary: 2 artifact-backed criteria, 0 unresolved, 0 invalid" },
+  { kind: "gap" },
+  { kind: "cmd", text: "superloopy loop finish" },
+  { kind: "done", text: "superloopy finish: complete" },
+];
+
+const crew = [
+  { id: "forge", name: "Forge", image: forge, receipt: "SUPERLOOPY_EVIDENCE", tint: "#f4c7a1" },
+  { id: "sentinel", name: "Sentinel", image: sentinel, receipt: "SUPERLOOPY_EVIDENCE", tint: "#d9ccf2" },
+  { id: "probe", name: "Probe", image: probe, receipt: "SUPERLOOPY_EVIDENCE", tint: "#bfe6d3" },
+  { id: "arbiter", name: "Arbiter", image: arbiter, receipt: "SUPERLOOPY_EVIDENCE", tint: "#c7ddf5" },
+  { id: "assayer", name: "Assayer", image: assayer, receipt: "SUPERLOOPY_AUDIT", tint: "#f5e3a6", readOnly: true },
+  { id: "pathfinder", name: "Pathfinder", image: pathfinder, receipt: null, tint: "#f3c6cf", readOnly: true },
+];
+
+const skills = [
+  ["superloopy-loop", "loopy <task>"],
+  ["superloopy-backend", "loopy <backend task>"],
+  ["superloopy-frontend", "$superloopy:superloopy-frontend"],
+  ["superloopy-clone", "loopy clone <url>"],
+  ["superloopy-slides", "loopy slides <topic>"],
+  ["superloopy-research", "loopy <research question>"],
+  ["superloopy-doctor", "superloopy doctor"],
+  ["humanize-korean", "$superloopy:humanize-korean"],
+  ["say-it-straight", "$superloopy:say-it-straight"],
+  ["i-have-adhd", "$superloopy:i-have-adhd"],
+];
+---
+<!doctype html>
+<html lang={LOCALE_TAGS[lang]}>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{t.meta.title}</title>
+  <meta name="description" content={t.meta.description} />
+  <meta name="theme-color" content="#0b0d18" />
+  <link rel="canonical" href={`${SITE}${pathFor(lang)}`} />
+  {LOCALES.map((locale) => <link rel="alternate" hreflang={LOCALE_TAGS[locale]} href={`${SITE}${pathFor(locale)}`} />)}
+  <link rel="alternate" hreflang="x-default" href={`${SITE}/`} />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Superloopy" />
+  <meta property="og:locale" content={OG_LOCALES[lang]} />
+  <meta property="og:url" content={`${SITE}${pathFor(lang)}`} />
+  <meta property="og:title" content={t.meta.title} />
+  <meta property="og:description" content={t.meta.description} />
+  <meta property="og:image" content={`${SITE}/og.jpg?v=3`} />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Superloopy: Done means proven. A glowing loop drawn in halftone dots on a night sky." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={t.meta.title} />
+  <meta name="twitter:description" content={t.meta.description} />
+  <meta name="twitter:image" content={`${SITE}/og.jpg?v=3`} />
+  <link rel="icon" href="/favicon/favicon.ico?v=2" sizes="any" />
+  <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg?v=2" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png?v=2" />
+  <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png?v=2" />
+  <link rel="preload" href="/fonts/manrope.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/silkscreen.woff2" as="font" type="font/woff2" crossorigin />
+  <script is:inline>
+    document.documentElement.classList.add("js");
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("motion");
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="nav">
+    <div class="nav__inner">
+      <a class="wordmark" href={pathFor(lang)} aria-label="Superloopy">
+        <Mark class="wordmark__mark" /><span class="wordmark__text">SUPERLOOPY</span>
+      </a>
+      <nav class="nav__links" aria-label="Sections">
+        <a href="#how">{t.nav.how}</a>
+        <a href="#crew">{t.nav.crew}</a>
+        <a href="#skills">{t.nav.skills}</a>
+        <a href="#faq">{t.nav.faq}</a>
+      </nav>
+      <div class="nav__end">
+        <nav class="lang" aria-label={t.nav.language}>
+          {LOCALES.map((locale) => (
+            <a href={pathFor(locale)} hreflang={LOCALE_TAGS[locale]} lang={LOCALE_TAGS[locale]} aria-current={locale === lang ? "page" : undefined}>{LOCALE_LABELS[locale]}</a>
+          ))}
+        </nav>
+        <a class="star" href={REPO} rel="noopener">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.22 1.87.87 2.33.67.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>
+          <span>GitHub</span>{stars !== null && <span class="star__count">{stars}</span>}
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <canvas class="hero__field" data-field aria-hidden="true"></canvas>
+      <div class="hero__veil" aria-hidden="true"></div>
+      <div class="hero__inner wrap">
+        <p class="pill" data-reveal><span class="pill__dot" aria-hidden="true"></span>{t.hero.eyebrow}</p>
+        <h1 id="hero-title" class="hero__title" data-reveal><span>{t.hero.titleLead}</span> <em>{t.hero.titleAccent}</em></h1>
+        <p class="hero__lead" data-reveal>{t.hero.lead}</p>
+        <div class="install" data-install data-reveal>
+          <div class="install__bar">
+            <span class="install__label">{t.install.label}</span>
+            <div class="tabs" role="tablist" aria-label={t.install.label}>
+              {Object.entries(installs).map(([key, host], index) => (
+                <button type="button" role="tab" id={`tab-${key}`} aria-controls={`panel-${key}`} aria-selected={index === 0 ? "true" : "false"} tabindex={index === 0 ? 0 : -1} data-tab={key}>{host.label}</button>
+              ))}
+            </div>
+            <button type="button" class="copy" data-copy-active data-label={t.install.copy} data-done={t.install.copied}>{t.install.copy}</button>
+          </div>
+          {Object.entries(installs).map(([key, host], index) => (
+            <div class="install__panel" role="tabpanel" id={`panel-${key}`} aria-labelledby={`tab-${key}`} hidden={index !== 0} data-lines={host.lines.join("\n")}>
+              <pre><code>{host.lines.map((line) => <span class="install__line"><span class="prompt" aria-hidden="true">$</span>{line}{"\n"}</span>)}</code></pre>
+              <p class="install__note">{host.note}</p>
+            </div>
+          ))}
+          <p class="install__after">{t.install.after} <code>loopy</code>{t.install.afterTail}</p>
+        </div>
+        <div class="hero__actions" data-reveal>
+          <a class="button button--solid" href="#how">{t.hero.primary}<span aria-hidden="true">↓</span></a>
+          <a class="button button--ghost" href={REPO} rel="noopener">{t.hero.secondary}<span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+      <button type="button" class="hero__pause" data-pause data-pause-label={t.nav.pause} data-play-label={t.nav.play} aria-pressed="false">{t.nav.pause}</button>
+    </section>
+
+    <section id="how" class="section wrap" aria-labelledby="how-title">
+      <header class="section__head" data-reveal>
+        <p class="kicker">{t.how.kicker}</p>
+        <h2 id="how-title" class="title"><span>{t.how.titleLead}</span> {t.how.titleRest}</h2>
+      </header>
+      <div class="how">
+        <ol class="steps">
+          {t.how.steps.map((step, index) => (
+            <li class="step" data-reveal>
+              <span class="step__index">{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <h3 class="step__title">{step.title}</h3>
+                <p class="step__body">{index < 3 && <code>{stepCommands[index]}</code>} {step.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <figure class="terminal" data-reveal>
+          <div class="terminal__bar" aria-hidden="true"><span></span><span></span><span></span><b>~/cart</b></div>
+          <pre class="terminal__body"><code>{transcript.map((line) =>
+            line.kind === "gap" ? "\n"
+            : line.kind === "cmd" ? <span class="t-line t-cmd"><span class="t-prompt">$</span> {line.text}{"\n"}</span>
+            : line.kind === "note" ? <span class="t-line t-note"># {line.text}{"\n"}</span>
+            : line.kind === "pass" || line.kind === "fail" ? <span class="t-line">superloopy prove: {line.text} -&gt; <span class={`t-${line.kind}`}>{line.label}</span> <span class="t-dim">{line.artifact}</span>{"\n"}</span>
+            : line.kind === "done" ? <span class="t-line t-done">{line.text}{"\n"}</span>
+            : <span class="t-line">{line.text}{"\n"}</span>
+          )}</code></pre>
+          <figcaption>{t.how.caption}</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="crew" class="section wrap" aria-labelledby="crew-title">
+      <header class="section__head" data-reveal>
+        <p class="kicker">{t.crew.kicker}</p>
+        <h2 id="crew-title" class="title"><span>{t.crew.titleLead}</span> {t.crew.titleRest}</h2>
+      </header>
+      <ul class="crew">
+        {crew.map((member, index) => (
+          <li class="role" data-reveal style={`--tint: ${member.tint}`}>
+            <img class="role__face" src={member.image.src} width="120" height="120" alt="" loading="lazy" decoding="async" />
+            <div class="role__text">
+              <p class="role__meta"><span>{String(index + 1).padStart(2, "0")}</span>{member.readOnly && <span class="tag">{t.crew.readOnly}</span>}</p>
+              <h3 class="role__name"><code>{member.id}</code></h3>
+              <p class="role__job">{t.crew.roles[member.id]}</p>
+              <p class="role__receipt">{member.receipt ? <code>{member.receipt}</code> : <span>{t.crew.noReceipt}</span>}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p class="aside" data-reveal><a href="https://backend.superloopy.dev/#crew" rel="noopener">{t.crew.guide} <span aria-hidden="true">↗</span></a></p>
+    </section>
+
+    <section id="skills" class="section wrap" aria-labelledby="skills-title">
+      <header class="section__head" data-reveal>
+        <p class="kicker">{t.skills.kicker}</p>
+        <h2 id="skills-title" class="title"><span>{t.skills.titleLead}</span> {t.skills.titleRest}</h2>
+      </header>
+      <ol class="registry">
+        {skills.map(([name, invoke], index) => (
+          <li class="registry__row" data-reveal>
+            <span class="registry__index">{String(index + 1).padStart(2, "0")}</span>
+            <a class="registry__name" href={`${REPO}/tree/main/skills/${name}`} rel="noopener">{name}<span aria-hidden="true">↗</span></a>
+            <span class="registry__desc">{t.skills.items[name]}</span>
+            <code class="registry__invoke">{invoke}</code>
+          </li>
+        ))}
+      </ol>
+      <p class="aside" data-reveal>{t.skills.invoke} <code>$superloopy:&lt;skill&gt;</code> (Codex) · <code>/superloopy:&lt;skill&gt;</code> (Claude Code)</p>
+    </section>
+
+    <section id="faq" class="section wrap" aria-labelledby="faq-title">
+      <header class="section__head" data-reveal>
+        <p class="kicker">{t.faq.kicker}</p>
+        <h2 id="faq-title" class="title"><span>{t.faq.titleLead}</span> {t.faq.titleRest}</h2>
+      </header>
+      <div class="faq">
+        {t.faq.items.map((item) => (
+          <details class="faq__item" data-reveal>
+            <summary>{item.q}<span class="faq__icon" aria-hidden="true"></span></summary>
+            <p>{item.a}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+
+    <section class="cta wrap" aria-labelledby="cta-title">
+      <h2 id="cta-title" class="title title--xl" data-reveal><span>{t.cta.titleLead}</span> {t.cta.titleRest}</h2>
+      <div class="hero__actions" data-reveal>
+        <a class="button button--solid" href="#main" data-to-install>{t.cta.primary}<span aria-hidden="true">↑</span></a>
+        <a class="button button--ghost" href={`${REPO}#readme`} rel="noopener">{t.cta.secondary}<span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer wrap">
+    <span class="wordmark wordmark--small"><Mark class="wordmark__mark" /><span class="wordmark__text">SUPERLOOPY</span></span>
+    <nav class="footer__links" aria-label="Footer">
+      <a href={REPO} rel="noopener">{t.footer.source}</a>
+      <a href="https://backend.superloopy.dev/" rel="noopener">{t.footer.guide}</a>
+      <a href={`${REPO}/blob/main/LICENSE`} rel="noopener">{t.footer.license}</a>
+    </nav>
+    <span class="footer__copy">© 2026 Superloopy</span>
+  </footer>
+
+  <script>
+    import "../scripts/site.js";
+  </script>
+</body>
+</html>

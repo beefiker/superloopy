@@ -288,96 +288,44 @@ Total: 100 points.
 | `package-lock.json` | Hashgraph catalog readiness and npm audit surface. | Must lock only the dependency-free package root unless real dependencies are intentionally added. |
 | `package.json` | `npm test`, doctor dependency check. | Must stay dependency-free and expose `superloopy`, `test`, `check`, and `sync-version` scripts. |
 | `plugin.json` | `test/antigravity-plugin.test.js`, `test/antigravity-host-wiring.test.js`, doctor Antigravity host wiring check. | Must expose name, version, and repository metadata for Antigravity plugin validation and import. |
-| `scripts/serve-web.mjs` | Browser QA preview server. | Must serve `web-superloopy/dist/` without dependencies and expose MIME types for landing WebGL assets. |
+| `scripts/serve-web.mjs` | Browser QA preview server. | Must serve `web-superloopy/dist/` and its locale directories without dependencies. |
 | `scripts/calque-reverse-test.mjs` | `test/calque-reverse-test.test.js`, audit coverage and reviewability check. | Must fail a phrase with under 40 pre-ChatGPT hits or a footer share above baseline plus three points, pass 기준 데이터-class phrases, issue three quoted searches per phrase, and stay out of `npm test` network paths. |
 | `scripts/upstream-drift.mjs` | `test/upstream-drift.test.js`, audit coverage and reviewability check. | Must read the sync commit from the shipped notice and fail loudly without one, list non-merge commit subjects, changed files, and added `X-n.` taxonomy headings, and stay out of `npm test` network paths. |
 | `scripts/sync-version.mjs` | `test/sync-version.test.js`. | Must stamp package metadata, the lockfile root, both host plugin manifests, and the Claude marketplace entry from one authoritative version without publishing or adding dependencies. |
-| `web-superloopy/README.md` | Landing workspace notes: stack, vendored orbit runtime layout, and build commands. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/astro.config.mjs` | Astro static-site configuration for the Superloopy landing page. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/package-lock.json` | npm lockfile for the isolated Astro landing workspace. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/package.json` | Isolated Astro landing workspace with build, preview, and dev scripts. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_headers` | Cloudflare Pages cache and security headers for the landing deployment. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/B3ZW860h.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/B5CWAcHC.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/BGJUq9Xl.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/B_u25p9U.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/Bf5EjdSh.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/Bxf0_WhZ.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/BzE5KGSD.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/C_jbpiZQ.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/CdqAplfn.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/Cw6SDRPZ.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/D3SU_gFM.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/DRhX74SU.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/DTod98oU.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/Dp6Br8A9.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/GMIvKI3C.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/Geist_Mono-300-6.B_7UjwxQ.woff2` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/Instrument_Sans-400-13.B5bTHO_g.woff2` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/Instrument_Sans-400-14.BbzFLZTg.woff2` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/KkTQbRs5.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/LogoTile.B-K2MDYy.css` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/XT-f8BUK.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/builds/meta/587bbe40-e7b6-4f66-ab17-632623d299f6.json` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/entry.Bn-A-Q0v.css` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/index.DJdoYH0P.css` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/kOqgKnzc.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/ty4JC5yh.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_nuxt/w4_qzAi3.js` | Vendored deferred orbit-runtime chunk that boots the hero orbit iframe scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/_payload.json` | Vendored orbit-runtime hydration payload consumed by the hero orbit iframe. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/basis/basis_transcoder.js` | Basis/KTX2 texture transcoder used by the vendored orbit runtime and eye scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/basis/basis_transcoder.wasm` | Basis/KTX2 texture transcoder used by the vendored orbit runtime and eye scene. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/draco/draco_decoder.wasm` | Draco geometry decoder used by the landing WebGL model loaders. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/draco/draco_wasm_wrapper.js` | Draco geometry decoder used by the landing WebGL model loaders. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/favicon/android-chrome-192x192.png` | Favicon asset served by the landing page. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/favicon/android-chrome-512x512.png` | Favicon asset served by the landing page. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/favicon/apple-touch-icon.png` | Favicon asset served by the landing page. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/favicon/favicon-16x16.png` | Favicon asset served by the landing page. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/favicon/favicon-32x32.png` | Favicon asset served by the landing page. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/favicon/favicon.ico` | Favicon asset served by the landing page. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/fonts/0ce88599d2e95665-s.p.woff2` | Self-hosted landing-page display/body font. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/fonts/5efb1f4cfe660729-s.p.woff2` | Self-hosted landing-page display/body font. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/fonts/7fc63d81ed48df9b-s.p.woff2` | Self-hosted landing-page display/body font. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/fonts/c610bdeb33344a72-s.p.woff2` | Self-hosted landing-page display/body font. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/fonts/edfa245493c4c854-s.p.woff2` | Self-hosted landing-page display/body font. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/matcaps/1.webp` | Matcap texture for the crew glass pane sheen overlay. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/models/circles.gltf` | Landing WebGL model rendered by the loops band, footer, or steps scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/models/star.gltf` | Landing WebGL model rendered by the loops band, footer, or steps scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/og.jpg` | Open Graph share image for social link previews. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/orbit.html` | Vendored orbit-runtime host page embedded as the hero orbit iframe. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/webgl/models/crypto-inner-sphere-points.glb` | Orbit WebGL model or texture asset served to the landing hero and eye scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/webgl/models/crypto-outer-sphere-points.glb` | Orbit WebGL model or texture asset served to the landing hero and eye scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/webgl/models/eye.glb` | Orbit WebGL model or texture asset served to the landing hero and eye scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/webgl/textures/eye-env.webp` | Eye scene environment panorama. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/webgl/textures/blurry_silver_mirrorball.ktx2` | Orbit WebGL model or texture asset served to the landing hero and eye scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/webgl/textures/chrome-ring.ktx2` | Orbit WebGL model or texture asset served to the landing hero and eye scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/webgl/textures/gradient-noise.jpg` | Orbit WebGL model or texture asset served to the landing hero and eye scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/webgl/textures/hex-ao.ktx2` | Orbit WebGL model or texture asset served to the landing hero and eye scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/webgl/textures/hex-normal.ktx2` | Orbit WebGL model or texture asset served to the landing hero and eye scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/webgl/textures/normalMapSphere.ktx2` | Orbit WebGL model or texture asset served to the landing hero and eye scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/webgl/textures/soft-light-env.webp` | Orbit WebGL model or texture asset served to the landing hero and eye scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/webgl/textures/studio-env.ktx2` | Orbit WebGL model or texture asset served to the landing hero and eye scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/webgl/textures/team-orb-env.jpg` | Orbit WebGL model or texture asset served to the landing hero and eye scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/assets/generated/eye-glb-preview.webp` | Generated proof illustration used by the landing feature cards and carousel. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/assets/generated/final-gate.webp` | Generated proof illustration used by the landing feature cards and carousel. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/assets/generated/proof-evidence.webp` | Generated proof illustration used by the landing feature cards and carousel. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/assets/generated/skill-lanes.webp` | Generated proof illustration used by the landing feature cards and carousel. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/assets/generated/visible-progress.webp` | Generated proof illustration used by the landing feature cards and carousel. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/assets/panes/crew-01.webp` | Original pathfinder crew avatar (Superloopy-generated, no third-party characters) rendered by the glass pane scene and its fallback grid. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/assets/panes/crew-02.webp` | Original arbiter crew avatar (Superloopy-generated, no third-party characters) rendered by the glass pane scene and its fallback grid. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/assets/panes/crew-03.webp` | Original assayer crew avatar (Superloopy-generated, no third-party characters) rendered by the glass pane scene and its fallback grid. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/assets/panes/crew-04.webp` | Original sentinel crew avatar (Superloopy-generated, no third-party characters) rendered by the glass pane scene and its fallback grid. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/assets/panes/crew-05.webp` | Original probe crew avatar (Superloopy-generated, no third-party characters) rendered by the glass pane scene and its fallback grid. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/assets/panes/crew-06.webp` | Original forge crew avatar (Superloopy-generated, no third-party characters) rendered by the glass pane scene and its fallback grid. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/pages/index.astro` | Single-page landing markup: hero orbit, crew glass, feature cards, loops band, proof carousel, steps eye, install tabs, FAQ, and footer. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/scripts/app.js` | Landing interaction orchestrator: smooth scroll, preloader, header, menu, reveals, carousel, steps rail, install tabs, and accordions. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/scripts/eye-scene.js` | Native three.js port of the biology eye scene with cursor gaze tracking. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/scripts/glass-panes.js` | First-party Voronoi glass pane scene for the crew section. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/scripts/i18n.js` | Landing locale engine that re-renders copy from the EN markup source of truth. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/scripts/locales.js` | Landing locale dictionary (EN source text to de/ko/es). | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/scripts/orbit-embed.js` | Hero orbit iframe mount with readiness polling and NDC pointer forwarding. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/scripts/webgl.js` | Landing WebGL layers: dot-grid mouse-trail background and per-section GLTF model scenes. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/src/styles/global.css` | Landing design system: fonts, fluid type, gradients, component classes, keyframes, and section layouts. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/README.md` | Website notes: page layout, locale model, how the terminal transcript was recorded, build and deploy commands. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/astro.config.mjs` | Astro static-site configuration for superloopy.dev. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/package-lock.json` | npm lockfile for the isolated Astro website workspace. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/package.json` | Isolated Astro website workspace with build, preview, and dev scripts. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/_headers` | Cloudflare Pages cache and security headers for superloopy.dev. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/fonts/OFL-IBM-Plex-Mono.txt` | SIL Open Font License text for IBM Plex Mono. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/fonts/OFL-Manrope.txt` | SIL Open Font License text for Manrope. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/fonts/OFL-Silkscreen.txt` | SIL Open Font License text for Silkscreen. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/fonts/ibm-plex-mono.woff2` | Latin subset of IBM Plex Mono for commands, indexes, and dot-field glyphs. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/fonts/manrope.woff2` | Latin subset of Manrope (variable weight) for display and body text. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/fonts/silkscreen.woff2` | Latin subset of Silkscreen for the wordmark and the dot-field LOOPY lanes. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/loop-night.webp` | Original 640px pixel-art night scene with a glowing infinity loop that the hero dot field samples. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/og.jpg` | 1200x630 share image: a still frame of the hero dot field with the headline. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/src/assets/crew/arbiter.webp` | 240px original 3D avatar for the arbiter crew card. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/src/assets/crew/assayer.webp` | 240px original 3D avatar for the assayer crew card. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/src/assets/crew/forge.webp` | 240px original 3D avatar for the forge crew card. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/src/assets/crew/pathfinder.webp` | 240px original 3D avatar for the pathfinder crew card. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/src/assets/crew/probe.webp` | 240px original 3D avatar for the probe crew card. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/src/assets/crew/sentinel.webp` | 240px original 3D avatar for the sentinel crew card. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/src/components/Mark.astro` | The Superloopy pixel infinity mark as inline SVG for the nav and footer lockups. | Must keep the same 16x8 pixel grid as the favicons and share images. |
+| `web-superloopy/public/favicon/favicon.svg` | Scalable favicon: the 16x16 pixel infinity mark on the night tile. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/src/components/Page.astro` | The whole superloopy.dev page: nav, hero, how it works with a real CLI transcript, crew, skills registry, FAQ, CTA, footer, hreflang and share metadata. | Must show only real CLI output in the transcript and stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/src/i18n/strings.js` | All site copy for EN, KO, DE, and ES, rendered as separate static pages. | Must keep protected tokens identical in every locale and keep Korean copy free of humanize-korean audit tells. |
+| `web-superloopy/src/pages/[lang]/index.astro` | Prerendered /ko/, /de/, and /es/ routes for the shared page. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/src/pages/index.astro` | English route that renders the shared page. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/src/scripts/dot-field.js` | Hero halftone dot field: samples the night-loop art into a stationary glyph lattice and drifts LOOPY lanes through it, capped at 24 fps. | Must render one canvas, stay under 24 fps, and stop when off screen, hidden, reduced-motion, or paused. |
+| `web-superloopy/src/scripts/site.js` | Page behavior: install tabs, copy button, dot-field start and pause control, one-time reveals. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/src/styles/site.css` | Site design system: night palette, type scale, hairline layout, motion tokens, responsive rules. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/favicon/android-chrome-192x192.png` | Pixel infinity-mark favicon or app icon rasterized from the shared 16x16 grid. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/favicon/android-chrome-512x512.png` | Pixel infinity-mark favicon or app icon rasterized from the shared 16x16 grid. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/favicon/apple-touch-icon.png` | Pixel infinity-mark favicon or app icon rasterized from the shared 16x16 grid. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/favicon/favicon-16x16.png` | Pixel infinity-mark favicon or app icon rasterized from the shared 16x16 grid. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/favicon/favicon-32x32.png` | Pixel infinity-mark favicon or app icon rasterized from the shared 16x16 grid. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/favicon/favicon.ico` | Pixel infinity-mark favicon or app icon rasterized from the shared 16x16 grid. | Must stay website-only with no Superloopy CLI package coupling. |
 | `skills/humanize-korean/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must trigger for Korean AI-tone removal, preserve protected spans and register, run the audit for file-backed output, own semantic misplaced-modifier review, and remain separate from product-behavior policy. |
 | `skills/humanize-korean/agents/openai.yaml` | `test/plugin.test.js`, audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for Korean humanization. |
 | `skills/humanize-korean/references/golden-set.md` | `test/humanize-korean-golden.test.js`, audit coverage and reviewability check. | Must retain 29 established pairs, the eight P calque pairs G-30 to G-37, the eight upstream v2.7 adoption pairs G-38 to G-45, and the Q-1 chatbot-frame pair G-46, with all 46 audit-passing at grade A or B, as a must-not-change `keep` case, a must-not-flag `clear` case, or a density `reduce` case. |
