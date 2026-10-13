@@ -8,18 +8,14 @@ const port = Number(process.env.PORT || 4179);
 
 const mime = {
   ".css": "text/css; charset=utf-8",
-  ".glb": "model/gltf-binary",
   ".html": "text/html; charset=utf-8",
   ".ico": "image/x-icon",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".ktx2": "image/ktx2",
-  ".mp4": "video/mp4",
   ".png": "image/png",
   ".svg": "image/svg+xml",
-  ".wasm": "application/wasm",
   ".webmanifest": "application/manifest+json; charset=utf-8",
   ".webp": "image/webp",
   ".woff2": "font/woff2"
@@ -33,12 +29,7 @@ function safePath(pathname) {
 createServer((request, response) => {
   try {
     const url = new URL(request.url, `http://${request.headers.host}`);
-    let pathname = url.pathname;
-
-    if (pathname === "/_next/image") {
-      const original = url.searchParams.get("url") || "";
-      pathname = `/uploads/${original.split("/").pop()}`;
-    }
+    const pathname = url.pathname;
 
     let filePath = safePath(pathname);
     try {

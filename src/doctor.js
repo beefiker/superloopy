@@ -255,7 +255,6 @@ async function checkReviewability(cwd) {
 }
 
 export function isReviewableTextFile(file) {
-  // web-superloopy/public/_nuxt holds vendored minified orbit-runtime bundles audited by provenance, not line count.
   // skills/superloopy-slides/bold-template-pack holds the vendored frontend-slides template pack audited by provenance, not line count.
   // The two inventory documents carry one row per Git-visible file, so their length tracks repository
   // size rather than authoring verbosity: a fixed line cap would make repository growth a violation.
@@ -263,8 +262,6 @@ export function isReviewableTextFile(file) {
   // golden set records the judgment trail. Every other doc, source, and test stays under the cap.
   return /\.(?:[cm]?js|md|json|ya?ml)$/u.test(file)
     && !file.endsWith("package-lock.json")
-    && !file.startsWith("web-superloopy/public/_nuxt/")
-    && !file.startsWith("web-superloopy/public/_payload.json")
     && !file.startsWith("skills/superloopy-slides/bold-template-pack/")
     && !INVENTORY_DOCS.has(file);
 }
