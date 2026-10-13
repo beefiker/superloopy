@@ -1,0 +1,21 @@
+---
+// The Superloopy mark: a 16x8 pixel infinity loop. Two rings meet at a 2x2 crossing;
+// the mint pixels on the right edge stand for the proof that closes the loop.
+// The favicons and share images are rasterized from this same grid.
+const ART = [
+  "..aaa......bbb..",
+  ".a...a....b...b.",
+  "a.....a..b.....b",
+  "a......cc......m",
+  "a......cc......m",
+  "a.....a..b.....b",
+  ".a...a....b...b.",
+  "..aaa......bbb..",
+];
+const COLORS = { a: "#f9cd86", b: "#e2804f", c: "#f2a65a", m: "#5ec9a0" };
+const pixels = ART.flatMap((row, y) => [...row].map((key, x) => ({ x, y, fill: COLORS[key] })).filter((pixel) => pixel.fill));
+const { class: className } = Astro.props;
+---
+<svg class={className} viewBox="0 0 16 8" shape-rendering="crispEdges" aria-hidden="true" focusable="false">
+  {pixels.map(({ x, y, fill }) => <rect x={x} y={y} width="1.02" height="1.02" fill={fill} />)}
+</svg>

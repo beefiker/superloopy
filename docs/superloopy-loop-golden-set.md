@@ -311,6 +311,8 @@ Total: 100 points.
 | `web-superloopy/src/assets/crew/pathfinder.webp` | 240px original 3D avatar for the pathfinder crew card. | Must stay website-only with no Superloopy CLI package coupling. |
 | `web-superloopy/src/assets/crew/probe.webp` | 240px original 3D avatar for the probe crew card. | Must stay website-only with no Superloopy CLI package coupling. |
 | `web-superloopy/src/assets/crew/sentinel.webp` | 240px original 3D avatar for the sentinel crew card. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/src/components/Mark.astro` | The Superloopy pixel infinity mark as inline SVG for the nav and footer lockups. | Must keep the same 16x8 pixel grid as the favicons and share images. |
+| `web-superloopy/public/favicon/favicon.svg` | Scalable favicon: the 16x16 pixel infinity mark on the night tile. | Must stay website-only with no Superloopy CLI package coupling. |
 | `web-superloopy/src/components/Page.astro` | The whole superloopy.dev page: nav, hero, how it works with a real CLI transcript, crew, skills registry, FAQ, CTA, footer, hreflang and share metadata. | Must show only real CLI output in the transcript and stay website-only with no Superloopy CLI package coupling. |
 | `web-superloopy/src/i18n/strings.js` | All site copy for EN, KO, DE, and ES, rendered as separate static pages. | Must keep protected tokens identical in every locale and keep Korean copy free of humanize-korean audit tells. |
 | `web-superloopy/src/pages/[lang]/index.astro` | Prerendered /ko/, /de/, and /es/ routes for the shared page. | Must stay website-only with no Superloopy CLI package coupling. |
@@ -318,12 +320,12 @@ Total: 100 points.
 | `web-superloopy/src/scripts/dot-field.js` | Hero halftone dot field: samples the night-loop art into a stationary glyph lattice and drifts LOOPY lanes through it, capped at 24 fps. | Must render one canvas, stay under 24 fps, and stop when off screen, hidden, reduced-motion, or paused. |
 | `web-superloopy/src/scripts/site.js` | Page behavior: install tabs, copy button, dot-field start and pause control, one-time reveals. | Must stay website-only with no Superloopy CLI package coupling. |
 | `web-superloopy/src/styles/site.css` | Site design system: night palette, type scale, hairline layout, motion tokens, responsive rules. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/favicon/android-chrome-192x192.png` | Favicon asset served by the landing page. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/favicon/android-chrome-512x512.png` | Favicon asset served by the landing page. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/favicon/apple-touch-icon.png` | Favicon asset served by the landing page. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/favicon/favicon-16x16.png` | Favicon asset served by the landing page. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/favicon/favicon-32x32.png` | Favicon asset served by the landing page. | Must stay website-only with no Superloopy CLI package coupling. |
-| `web-superloopy/public/favicon/favicon.ico` | Favicon asset served by the landing page. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/favicon/android-chrome-192x192.png` | Pixel infinity-mark favicon or app icon rasterized from the shared 16x16 grid. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/favicon/android-chrome-512x512.png` | Pixel infinity-mark favicon or app icon rasterized from the shared 16x16 grid. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/favicon/apple-touch-icon.png` | Pixel infinity-mark favicon or app icon rasterized from the shared 16x16 grid. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/favicon/favicon-16x16.png` | Pixel infinity-mark favicon or app icon rasterized from the shared 16x16 grid. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/favicon/favicon-32x32.png` | Pixel infinity-mark favicon or app icon rasterized from the shared 16x16 grid. | Must stay website-only with no Superloopy CLI package coupling. |
+| `web-superloopy/public/favicon/favicon.ico` | Pixel infinity-mark favicon or app icon rasterized from the shared 16x16 grid. | Must stay website-only with no Superloopy CLI package coupling. |
 | `skills/humanize-korean/SKILL.md` | `test/plugin.test.js`, audit coverage. | Must trigger for Korean AI-tone removal, preserve protected spans and register, run the audit for file-backed output, own semantic misplaced-modifier review, and remain separate from product-behavior policy. |
 | `skills/humanize-korean/agents/openai.yaml` | `test/plugin.test.js`, audit coverage and reviewability check. | Must remain minimal Superloopy discovery metadata for Korean humanization. |
 | `skills/humanize-korean/references/golden-set.md` | `test/humanize-korean-golden.test.js`, audit coverage and reviewability check. | Must retain 29 established pairs, the eight P calque pairs G-30 to G-37, the eight upstream v2.7 adoption pairs G-38 to G-45, and the Q-1 chatbot-frame pair G-46, with all 46 audit-passing at grade A or B, as a must-not-change `keep` case, a must-not-flag `clear` case, or a density `reduce` case. |
