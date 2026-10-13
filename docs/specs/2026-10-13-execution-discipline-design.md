@@ -72,9 +72,11 @@ Normalization rewrites run-to-run noise to fixed placeholders: ANSI escapes, CRL
 
 The window is cut after normalization and aligned to a line boundary: 64KB raw, then 8KB normalized. Cutting raw text first would shift the window whenever earlier noise changes length, so long outputs would never match. A single line longer than the window keeps its last 8KB instead of being dropped as a partial line. Every rule is linear on 64KB of hostile input; a late-failing Windows temp-path rule measured 1.1s and was replaced with whole-token matching.
 
+The signature reads its own trailing buffer, not the transcript. `runCaptured` keeps each stream's first 10 MiB for the transcript and, separately, its last 256 KiB (`FAILURE_TAIL_BYTES`, enough bytes to decode the 64KB raw window); without that, a failure past the 10 MiB cut would be signed from the retained prefix, and three runs with different final errors but the same early log would warn falsely.
+
 ### Streak detection
 
-`repeatedFailureWarnings(ledger)` in `src/trace.js` walks the ledger in order per `goalId/criterionId`. A `criterion_fail` entry with a signature extends the streak when the signature matches and starts a new one otherwise. Any other entry carrying that criterion's ids ends it: a pass, a manual `loop evidence --status fail` (no signature), an audit failure, or `criterion_revised`. Three in a row raise `repeated-failing-proof`.
+`repeatedFailureWarnings(ledger)` in `src/trace.js` walks the ledger in order per `goalId/criterionId`. A `criterion_fail` entry with a signature extends the streak when the signature matches and starts a new one otherwise. Any other entry carrying that criterion's ids ends it: a pass, a manual `loop evidence --status fail` (no signature), an audit failure, or `criterion_revised`. A `plan_created` entry clears every streak, because `loop create --force` keeps the ledger and reuses ids such as `G001/C001`. Three in a row raise `repeated-failing-proof`.
 
 Surfaces: `trace`, `check`, and `report` through the shared `collectWarnings`; `prove` and `capture` return the captured criterion's warning in `warnings` and print it above the guide. The compaction capsule lists each failing criterion with its recorded artifact so the agent re-reads it instead of re-running the command.
 
@@ -97,7 +99,7 @@ Surfaces: `trace`, `check`, and `report` through the shared `collectWarnings`; `
 ## Acceptance Criteria
 
 - `test/failure-signature.test.js`: noise keeps one signature; a changed assertion value, failing test, pass/fail count, exit status, or command changes it; long output keeps a stable window; hostile output normalizes in linear time.
-- `test/loop.test.js`: the third identical noisy failure warns through `prove` and `trace`; with the command held fixed, a moved assertion resets the streak, the same failure three times warns again, and a pass clears it.
+- `test/loop.test.js`: the third identical noisy failure warns through `prove` and `trace`; with the command held fixed, a moved assertion resets the streak, the same failure three times warns again, and a pass clears it; a failing output past the 10 MiB transcript cut is signed by its real end; `loop create --force` starts streaks over for reused ids.
 - `test/compaction-recovery.test.js`: the capsule lists failing proof with its artifact path, and a fresh loop has no such line.
 - `npm test` passes, including the 550-line reviewability audit and both file inventories.
 

@@ -7,6 +7,9 @@ import { createHash } from "node:crypto";
 // stay significant because assertion values and pass/fail counts are signal.
 const RAW_TAIL_CHARS = 64 * 1024;
 const SIGNATURE_TAIL_CHARS = 8192;
+// Bytes of trailing output a caller must keep so that decoding them yields at least
+// RAW_TAIL_CHARS UTF-16 units (UTF-8 spends at most 3 bytes per unit, 4 per surrogate pair).
+export const FAILURE_TAIL_BYTES = RAW_TAIL_CHARS * 4;
 
 // Order matters: whole timestamps and paths are rewritten before the stack-position and
 // long-number rules could split them into partial matches. Every pattern must stay linear

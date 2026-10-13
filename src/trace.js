@@ -127,9 +127,15 @@ function collectWarnings(plan, timeline, ledger) {
 
 // Consecutive failing proofs of one criterion with an identical failure signature
 // (see failure-signature.js). Any other ledger event for that criterion ends the streak.
+// `loop create --force` keeps the ledger and reuses ids like G001/C001, so a new plan
+// starts every streak over.
 export function repeatedFailureWarnings(ledger) {
   const streaks = new Map();
   for (const entry of ledger) {
+    if (entry.kind === "plan_created") {
+      streaks.clear();
+      continue;
+    }
     if (typeof entry.goalId !== "string" || typeof entry.criterionId !== "string") continue;
     const ref = `${entry.goalId}/${entry.criterionId}`;
     const signature = entry.kind === "criterion_fail" && typeof entry.failureSignature === "string" ? entry.failureSignature : null;
