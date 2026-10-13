@@ -149,6 +149,7 @@ function renderStart(payload, orchestrate, interop, adhdOverlay, sayItStraightOv
       `- Follow \`${cli} loop guide --json\` for each next command; do not ask the user to run Superloopy.`,
       `- Prove every criterion with \`${cli} loop prove -- <validation-command>\` (real artifacts only).`,
       `- Preflight \`${cli} loop check\`, then \`${cli} loop finish --evidence "<summary>" --artifact .superloopy/evidence/gate.json --json\`.`,
+      ...executionDisciplineLines(),
       ...reassuranceCopyGateLines(),
       ...interopBlock(interop),
       ...(orchestrate ? ["", ...orchestrationLines(interop)] : [])
@@ -168,6 +169,7 @@ function renderStart(payload, orchestrate, interop, adhdOverlay, sayItStraightOv
     `- Preflight with \`${cli} loop check\`, then complete with \`${cli} loop finish --evidence "<summary>" --artifact .superloopy/evidence/gate.json --json\`.`,
     "- Report progress in plain terms (criteria proven, next step), not raw command dumps.",
     "- Keep it light unless the task needs heavier review. The Stop hook blocks completion until evidence exists.",
+    ...executionDisciplineLines(),
     ...reassuranceCopyGateLines(),
     ...interopBlock(interop),
     "",
@@ -180,6 +182,7 @@ function renderResume(context, orchestrate, interop, adhdOverlay, sayItStraightO
     HEADER,
     "",
     "A loop is already in progress. Resume as the loop engineer and run the next action yourself; do not start a second plan or ask the user to run Superloopy commands.",
+    ...executionDisciplineLines(),
     ...reassuranceCopyGateLines(),
     ...interopBlock(interop),
     ...(orchestrate
@@ -245,26 +248,38 @@ function baselineDelegationLine() {
   return "- If the work splits into 2+ genuinely independent slices, you may delegate them in parallel with the native subagent controls exposed by the current host. Use the configured name when named selection is available, keep every assignment self-contained, and record each worker's artifact-backed proof; for a single cohesive change, stay solo. Type `loopy team <task>` to run the full crew.";
 }
 
+// Execution discipline from the harness-design study (arXiv 2609.20804): for strong models
+// the avoidable cost is redundant re-verification, unchanged re-runs of a failing check, and
+// fine-grained re-patching of the same file.
+function executionDisciplineLines() {
+  return [
+    "- Prove each criterion once with the narrowest command that decides it, then move on. Do not re-run passing proof or broad suites between criteria; `loop finish` re-runs every passed command-backed criterion before it completes.",
+    "- When a proof fails, read the failing part of its capture artifact (tail or search, not the whole transcript) and change the code or the proof command before proving again; if the criterion itself is wrong, ask the user to revise it. An unchanged re-run usually returns the same failure, and Superloopy flags `repeated-failing-proof` after 3 identical failures.",
+    "- Batch independent reads and shell steps into one call, and land each file change as one coherent edit instead of repeated patches to the same file."
+  ];
+}
+
 // Tier 2 (escalation): the crew fan-out playbook, wired to Superloopy's receipt gate.
 function orchestrationLines(interop) {
   const cli = superloopyCommand();
   return [
     "Crew fan-out (team mode):",
     ...(interop && interop.installed === true
-      ? ["- Superpowers is installed: pick ONE orchestrator for this task. If Superpowers drives planning and implementation, keep the Superloopy crew for evidence lanes (usopp QA, robin audit, jinbe gate) and the command-backed final gate — do not run both on the same slices."]
+      ? ["- Superpowers is installed: pick ONE orchestrator for this task. If Superpowers drives planning and implementation, keep the Superloopy crew for evidence lanes (probe QA, assayer audit, arbiter gate) and the command-backed final gate — do not run both on the same slices."]
       : []),
     "- If the requested repository path differs from `cwd`, verify and state the exact target path before editing or dispatching workers.",
     "- This task is big enough to split. Delegate independent slices to parallel workers instead of doing everything in one thread.",
     "- Use the native subagent controls exposed by the current host. Use the configured name when named selection is available, but do not invent arguments the host schema does not expose.",
     "- Configured names provide steering, while the host-owned stop callback observes the actual role identity. If the host cannot attest that identity, report `role_unverified`; if it cannot attest the resolved model, report `model_unverified`. Never claim the configured GPT-6 pin was enforced without attestation.",
     "- You, the orchestrator, run on the model the user selected in the host; `gpt-6-astra` is an allowed orchestrator model when the user selected it. Do not switch your own model for this task, and do not re-route any crew lane to the orchestrator's model: crew lanes keep their configured pins from `model-policy.json`.",
-    "- Route one lane per configured crew name: `franky` builds one slice, `zoro` reviews a diff, `usopp` tests, `jinbe` gates, `robin` audits (read-only), and `nami` finds files (read-only). Dispatch `nami` first to scope a slice before assigning `franky`.",
+    "- Route one lane per configured crew name: `forge` builds one slice, `sentinel` reviews a diff, `probe` tests, `arbiter` gates, `assayer` audits (read-only), and `pathfinder` finds files (read-only). Dispatch `pathfinder` first to scope a slice before assigning `forge`.",
     "- Make every assignment self-contained: lead with `TASK: act as <role>` and paste all needed context so the worker can execute the bounded lane correctly.",
+    "- Size each assignment to its lane's profile: give the `fast`-profile `pathfinder` one concrete lookup with named targets and tell it to use the host's dedicated read/search tools; keep open-ended exploration and multi-step shell work for `standard`/`deep` lanes, and tell editors to run the VERIFY command once their slice is complete, not after every patch.",
     "- The implementation worker must own a real bounded implementation slice before the parent edits or completes that slice. If no safe independent implementation slice exists, stay solo or use a smaller read-only crew.",
-    "- Parallelize read-heavy lanes first (`nami` navigation, `zoro` review, `usopp` QA); never run two editors on overlapping files at once.",
-    "- Each worker ends its report with `SUPERLOOPY_EVIDENCE: <path-under-active-evidence-root>` (`robin` uses `SUPERLOOPY_AUDIT:`). Collect them with the host's native lifecycle controls; treat a running child as alive, not a timeout.",
+    "- Parallelize read-heavy lanes first (`pathfinder` navigation, `sentinel` review, `probe` QA); never run two editors on overlapping files at once.",
+    "- Each worker ends its report with `SUPERLOOPY_EVIDENCE: <path-under-active-evidence-root>` (`assayer` uses `SUPERLOOPY_AUDIT:`). Collect them with the host's native lifecycle controls; treat a running child as alive, not a timeout.",
     "- After each worker returns, show a concise role completion line with role, normalized verdict, artifact path, risk, and next action before closing or respawning that lane.",
-    "- Give `jinbe` a Markdown final gate report such as `.superloopy/evidence/jinbe-final-gate-report.md`; keep it separate from the machine quality gate `.superloopy/evidence/gate.json`.",
+    "- Give `arbiter` a Markdown final gate report such as `.superloopy/evidence/arbiter-final-gate-report.md`; keep it separate from the machine quality gate `.superloopy/evidence/gate.json`.",
     `- You own the plan: record a criterion pass only from a real artifact via \`${cli} loop prove\` or \`${cli} loop evidence\`, never from a worker's claim alone. Track each dispatch with \`${cli} loop handoff\` and run \`${cli} loop fleet --json\` before the final gate.`,
     "- Before the final summary, run `git status --short --untracked-files=all` and `git ls-files --others --exclude-standard` so untracked evidence, scripts, and reports are not omitted.",
     `- Keep the Superloopy loop the source of truth: you still begin, prove, check, and finish through the CLI yourself with \`${cli} loop finish --evidence "<summary>" --artifact .superloopy/evidence/gate.json --json\`.`

@@ -10,8 +10,8 @@ is visible and testable.
 directory (`$CODEX_HOME/agents` when set, otherwise `~/.codex/agents`). On Claude Code and Google
 Antigravity, agent definitions are bundled within the plugin and ingested directly by the host runtime.
 The host spawns them through its native multi-agent dispatch when the parent delegates: the receipt workers
-`franky`, `zoro`, `usopp`, `jinbe`, the read-only auditor `robin`, and the read-only navigator
-`nami`. `superloopy doctor` (dispatchCoherence) fails if any agent Superloopy dispatches is not installed
+`forge`, `sentinel`, `probe`, `arbiter`, the read-only auditor `assayer`, and the read-only navigator
+`pathfinder`. `superloopy doctor` (dispatchCoherence) fails if any agent Superloopy dispatches is not installed
 or not matched by a hook.
 
 Superloopy provisions and tracks these agents; the host spawns them. Superloopy never spawns.
@@ -56,7 +56,7 @@ Superloopy's `SubagentStop` handlers read these fields from the JSON piped on st
 | Field | Use |
 |---|---|
 | `hook_event_name` | Must equal `SubagentStop`; otherwise the handler is a no-op. |
-| `agent_type` | Matched against the hook matcher to pick the worker path (`franky`/`zoro`/`usopp`/`jinbe`), the auditor path (`robin`), or the read-only navigator path (`nami`, which writes no receipt so its handler is a no-op). |
+| `agent_type` | Matched against the hook matcher to pick the worker path (`forge`/`sentinel`/`probe`/`arbiter`), the auditor path (`assayer`), or the read-only navigator path (`pathfinder`, which writes no receipt so its handler is a no-op). |
 | `agent_id` | Keys the per-attempt counter. Optional — Superloopy falls back to a session/cwd key so the 3-attempt cap still counts. |
 | `session_id` | Selects scoped `.superloopy/sessions/<id>/` state when present. |
 | `cwd` | Repo root; required. |

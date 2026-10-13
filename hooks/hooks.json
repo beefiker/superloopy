@@ -23,13 +23,13 @@
     ],
     "SubagentStop": [
       {
-        "matcher": "^superloopy:(?:franky|zoro|usopp|jinbe|nami)$",
+        "matcher": "^superloopy:(?:forge|sentinel|probe|arbiter|pathfinder)$",
         "hooks": [
           { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli.js\" hook subagent-stop", "timeout": 5 }
         ]
       },
       {
-        "matcher": "^superloopy:robin$",
+        "matcher": "^superloopy:assayer$",
         "hooks": [
           { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli.js\" hook subagent-stop-audit", "timeout": 5 }
         ]

@@ -36,13 +36,13 @@ const validHooks = {
     ],
     SubagentStop: [
       {
-        matcher: "^(?:superloopy:)?(?:franky|zoro|usopp|jinbe|nami)$",
+        matcher: "^(?:superloopy:)?(?:forge|sentinel|probe|arbiter|pathfinder)$",
         hooks: [
           { type: "command", command: cliCommand, timeout: 5 }
         ]
       },
       {
-        matcher: "^(?:superloopy:)?robin$",
+        matcher: "^(?:superloopy:)?assayer$",
         hooks: [
           { type: "command", command: auditCommand, timeout: 5 }
         ]
@@ -129,11 +129,11 @@ test("checkAntigravityHostWiring fails if SubagentStop does not cover namespaced
       SessionStart: validHooks.superloopy.SessionStart,
       SubagentStop: [
         {
-          matcher: "^(?:franky|zoro|usopp|jinbe|nami)$",
+          matcher: "^(?:forge|sentinel|probe|arbiter|pathfinder)$",
           hooks: [{ type: "command", command: cliCommand }]
         },
         {
-          matcher: "^robin$",
+          matcher: "^assayer$",
           hooks: [{ type: "command", command: auditCommand }]
         }
       ]
@@ -171,8 +171,8 @@ test("checkAntigravityHostWiring fails if hooks lack --host antigravity", async 
         { hooks: [{ type: "command", command: 'node "${PLUGIN_ROOT}/src/cli.js" hook user-prompt-submit' }] }
       ],
       SubagentStop: [
-        { matcher: "^(?:superloopy:)?(?:franky|zoro|usopp|jinbe|nami)$", hooks: [{ type: "command", command: 'node "${PLUGIN_ROOT}/src/cli.js" hook subagent-stop' }] },
-        { matcher: "^(?:superloopy:)?robin$", hooks: [{ type: "command", command: 'node "${PLUGIN_ROOT}/src/cli.js" hook subagent-stop-audit' }] }
+        { matcher: "^(?:superloopy:)?(?:forge|sentinel|probe|arbiter|pathfinder)$", hooks: [{ type: "command", command: 'node "${PLUGIN_ROOT}/src/cli.js" hook subagent-stop' }] },
+        { matcher: "^(?:superloopy:)?assayer$", hooks: [{ type: "command", command: 'node "${PLUGIN_ROOT}/src/cli.js" hook subagent-stop-audit' }] }
       ]
     }
   };

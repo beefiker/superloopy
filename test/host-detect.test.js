@@ -82,7 +82,7 @@ test("CLI hook rejects an unrecognized host instead of silently dropping the evi
   const repo = await tempRepo();
   const subagentStop = (host) => JSON.stringify({
     hook_event_name: "SubagentStop",
-    agent_type: "franky",
+    agent_type: "forge",
     session_id: `s-${host}`,
     agent_id: "a",
     cwd: repo,
@@ -106,7 +106,7 @@ test("CLI hook rejects an unrecognized host instead of silently dropping the evi
   assert.match(viaEnv.stderr, /SUPERLOOPY_HOST must be one of codex, claude, antigravity/u);
 
   // Every recognized host still gates, each under its own agent-type namespace.
-  for (const [host, agentType] of [["codex", "franky"], ["claude", "superloopy:franky"], ["antigravity", "franky"]]) {
+  for (const [host, agentType] of [["codex", "forge"], ["claude", "superloopy:forge"], ["antigravity", "forge"]]) {
     const gated = runCli(["hook", "subagent-stop", "--host", host], {
       cwd: repo,
       input: JSON.stringify({

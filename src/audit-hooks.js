@@ -1,4 +1,4 @@
-// SubagentStop handler for the read-only robin subagent. It validates
+// SubagentStop handler for the read-only assayer subagent. It validates
 // the auditor's verdict RECEIPT deterministically. Crucially it does NOT trust the
 // recorded .superloopy/audit-state.json (worker-writable): on each receipt it RE-DERIVES
 // the cited criterion's floor in-process (auditOneCriterion) and accepts the verdict
@@ -23,7 +23,7 @@ const MAX_AUDIT_ATTEMPTS = 3;
 export async function runAuditorStopHook(payload, context = { host: "codex" }) {
   if (payload === null || typeof payload !== "object") return "";
   if (payload.hook_event_name !== "SubagentStop") return "";
-  if (!matchesAgentType({ host: context.host, agentType: payload.agent_type, role: "robin" })) return "";
+  if (!matchesAgentType({ host: context.host, agentType: payload.agent_type, role: "assayer" })) return "";
   if (typeof payload.cwd !== "string") return "";
   // Read the SAME transcript the audit receipt recovery reads (agent_transcript_path on Claude),
   // so a marker in a different transcript can't skip the audit gate.

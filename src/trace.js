@@ -3,6 +3,8 @@ import { buildGuide, formatGuideResult, unresolvedCriterionLine } from "./guide.
 import { summarizePlan } from "./plan-summary.js";
 import { evidenceRelativeDir, ledgerRelativePath, readLedger, readPlan, scopeFromSessionId } from "./store.js";
 
+const REPEATED_FAILURE_THRESHOLD = 3; // matches Superloopy's other caps (stall, receipt, audit)
+
 export async function traceLoop(cwd, argv = []) {
   const scope = scopeFromSessionId(readFlag(argv, "--session-id"));
   const plan = await readPlan(cwd, scope);
@@ -11,7 +13,7 @@ export async function traceLoop(cwd, argv = []) {
   const artifacts = collectArtifacts(plan);
   const missingCriteria = collectMissingCriteria(plan, plan.evidencePath ?? evidenceRelativeDir(scope));
   const timeline = ledger.map(timelineEntry);
-  const warnings = collectWarnings(plan, timeline);
+  const warnings = collectWarnings(plan, timeline, ledger);
   return {
     ok: true,
     kind: "trace",
@@ -115,11 +117,42 @@ function timelineEntry(entry, index) {
   };
 }
 
-function collectWarnings(plan, timeline) {
+function collectWarnings(plan, timeline, ledger) {
   return [
     ...manualProofWarnings(plan),
-    ...attemptExhaustionWarnings(timeline)
+    ...attemptExhaustionWarnings(timeline),
+    ...repeatedFailureWarnings(ledger)
   ];
+}
+
+// Consecutive failing proofs of one criterion with an identical failure signature
+// (see failure-signature.js). Any other ledger event for that criterion ends the streak.
+export function repeatedFailureWarnings(ledger) {
+  const streaks = new Map();
+  for (const entry of ledger) {
+    if (typeof entry.goalId !== "string" || typeof entry.criterionId !== "string") continue;
+    const ref = `${entry.goalId}/${entry.criterionId}`;
+    const signature = entry.kind === "criterion_fail" && typeof entry.failureSignature === "string" ? entry.failureSignature : null;
+    if (signature === null) {
+      streaks.delete(ref);
+      continue;
+    }
+    const current = streaks.get(ref);
+    streaks.set(ref, { signature, count: current?.signature === signature ? current.count + 1 : 1, artifact: entry.artifact ?? null });
+  }
+  return [...streaks]
+    .filter(([, streak]) => streak.count >= REPEATED_FAILURE_THRESHOLD)
+    .map(([ref, streak]) => ({
+      kind: "repeated-failing-proof",
+      ref,
+      artifact: streak.artifact,
+      count: streak.count,
+      message: `${ref} failed ${streak.count} times in a row with the same command and the same output (timestamps, durations, and other run-to-run noise ignored). If nothing relevant changed since the last run, re-running will not help: read the failure in \`${streak.artifact}\`, then change the code or the proof command, or ask the user to revise the criterion (\`SUPERLOOPY_STEER\` \`revise_criterion\`), before proving again.`
+    }));
+}
+
+export function formatWarningBlock(warnings) {
+  return !Array.isArray(warnings) || warnings.length === 0 ? "" : `Warnings:\n${warnings.map(warningLine).join("\n")}\n`;
 }
 
 function manualProofWarnings(plan) {

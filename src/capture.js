@@ -3,10 +3,12 @@ import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { readFlag } from "./args.js";
 import { resolveEvidenceOutputPath, writeEvidenceOutputFile } from "./artifacts.js";
+import { failureSignature } from "./failure-signature.js";
 import { evidenceLoop } from "./loop.js";
 import { recordTrustedCommand } from "./plan-trust.js";
 import { resolveSpawnInvocation } from "./spawn-command.js";
-import { ensureSuperloopyDirs, evidenceRelativeDir, nowIso, scopeFromSessionId } from "./store.js";
+import { ensureSuperloopyDirs, evidenceRelativeDir, nowIso, readLedger, scopeFromSessionId } from "./store.js";
+import { repeatedFailureWarnings } from "./trace.js";
 
 const MAX_CAPTURE_STREAM_BYTES = 10 * 1024 * 1024;
 
@@ -34,6 +36,7 @@ export async function runCaptured(cwd, command, artifact) {
     finishedAt
   };
   if (commandResult.error) capture.error = commandResult.error.message;
+  if (status === "fail") capture.failureSignature = failureSignature(command, commandResult);
   await writeEvidenceOutputFile(artifact, renderCaptureTranscript(cwd, capture, commandResult));
   return capture;
 }
@@ -69,8 +72,12 @@ export async function captureLoop(cwd, argv) {
   ];
   if (notes !== undefined) evidenceArgs.push("--notes", notes);
   if (scope?.sessionId) evidenceArgs.push("--session-id", scope.sessionId);
-  const result = await evidenceLoop(cwd, evidenceArgs);
-  return { ...result, capture };
+  const result = await evidenceLoop(cwd, evidenceArgs, { failureSignature: capture.failureSignature });
+  const ref = `${goalId}/${criterionId}`;
+  const warnings = capture.status === "fail"
+    ? repeatedFailureWarnings(await readLedger(cwd, scope)).filter((warning) => warning.ref === ref)
+    : [];
+  return { ...result, capture, warnings };
 }
 
 function splitCaptureArgv(argv) {

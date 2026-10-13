@@ -79,27 +79,27 @@
       }
     },
     "agents": {
-      "franky": {
+      "forge": {
         "profile": "standard",
         "purpose": "Bounded implementation lane."
       },
-      "zoro": {
+      "sentinel": {
         "profile": "deep",
         "purpose": "Skeptical code review lane."
       },
-      "usopp": {
+      "probe": {
         "profile": "standard",
         "purpose": "QA and regression lane."
       },
-      "jinbe": {
+      "arbiter": {
         "profile": "deep",
         "purpose": "Final gate integration lane."
       },
-      "robin": {
+      "assayer": {
         "profile": "standard",
         "purpose": "Evidence auditor lane."
       },
-      "nami": {
+      "pathfinder": {
         "profile": "fast",
         "purpose": "Read-only navigation lane."
       }
@@ -124,27 +124,27 @@
       }
     },
     "agents": {
-      "franky": {
+      "forge": {
         "profile": "standard",
         "purpose": "Bounded implementation lane."
       },
-      "zoro": {
+      "sentinel": {
         "profile": "deep",
         "purpose": "Skeptical code review lane."
       },
-      "usopp": {
+      "probe": {
         "profile": "standard",
         "purpose": "QA and regression lane."
       },
-      "jinbe": {
+      "arbiter": {
         "profile": "deep",
         "purpose": "Final gate integration lane."
       },
-      "robin": {
+      "assayer": {
         "profile": "standard",
         "purpose": "Evidence auditor lane."
       },
-      "nami": {
+      "pathfinder": {
         "profile": "fast",
         "purpose": "Read-only navigation lane."
       }

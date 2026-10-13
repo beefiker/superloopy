@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { link, lstat, mkdir, readFile, readlink, realpath, rename, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 
-import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
+import { RETIRED_AGENT_NAMES, SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
 import { legacyAgentSha256 } from "./legacy-agents.js";
 import { withFileLock } from "./store.js";
 
@@ -121,27 +121,59 @@ export function parseManagedAgentRouting(content) {
   return { ok: true, routing };
 }
 
-export async function preflightManagedAgentFiles(files, previousFileManifest, force, legacyManifests = []) {
+export async function preflightManagedAgentFiles(files, options = {}) {
+  const { targetDir, previousFileManifest = null, retiredFileManifest = {}, force = false, legacyManifests = [] } = options;
   const inspected = await Promise.all(files.map(async (file) => ({
     ...file,
     ...await inspectTarget(file.target)
   })));
-  const legacyFleet = matchingLegacyFleet(inspected, legacyManifests);
   const planned = inspected.map((file) => ({
     ...file,
-    status: plannedStatus(file, previousFileManifest, force, legacyFleet !== null)
+    status: plannedStatus(file, previousFileManifest, force)
   }));
+  const retired = typeof targetDir === "string"
+    ? await preflightRetiredAgentFiles(targetDir, retiredFileManifest, legacyManifests, force)
+    : [];
   const hasConflict = planned.some(({ status }) => status === "conflict");
-  const filesWithFinalStatus = hasConflict
-    ? planned.map((file) => file.status === "installed" || file.status === "updated" ? { ...file, status: "blocked" } : file)
-    : planned;
+  const block = (file) => hasConflict && (file.status === "installed" || file.status === "updated" || file.status === "retired")
+    ? { ...file, status: "blocked" }
+    : file;
+  const filesWithFinalStatus = planned.map(block);
   return {
     ok: !hasConflict,
     files: filesWithFinalStatus,
+    retired: retired.map(block),
     conflicts: filesWithFinalStatus.filter(({ status }) => status === "conflict")
   };
 }
 
+// Codex loads every file in the agents directory, so a pre-rename fleet left beside the current one
+// doubles every lane. Only provably Superloopy-owned files are retired: the managed file recorded in
+// the previous state, an exact published pre-managed template, or (with --force) any managed file.
+// Everything else is kept and reported; no other file in the directory is ever inspected.
+async function preflightRetiredAgentFiles(targetDir, retiredFileManifest, legacyManifests, force) {
+  const inspected = await Promise.all(Object.entries(RETIRED_AGENT_NAMES).map(async ([name, replacement]) => ({
+    name,
+    replacement,
+    target: join(targetDir, `${name}.toml`),
+    ...await inspectTarget(join(targetDir, `${name}.toml`))
+  })));
+  return inspected
+    .filter(({ existingKind }) => existingKind !== "absent")
+    .map((file) => ({ ...file, status: retiredStatus(file, retiredFileManifest, legacyManifests, force) }));
+}
+
+function retiredStatus(file, retiredFileManifest, legacyManifests, force) {
+  if (file.existingKind !== "file") return "retired-kept";
+  const managed = file.existing.startsWith(`${MANAGED_AGENT_MARKER}\n`);
+  if (managed && retiredFileManifest?.[file.name]?.sha256 === sha256(file.existing)) return "retired";
+  const legacyHash = legacyAgentSha256(file.existing);
+  if (legacyManifests.some((manifest) => manifest?.files?.[file.name]?.sha256 === legacyHash)) return "retired";
+  return force && managed ? "retired" : "retired-kept";
+}
+
+// `options.retired` lists preflighted retired-name files; those with status "retired" are moved
+// aside inside the same transaction and restored by rollback, like replaced managed files.
 export async function commitManagedAgentFiles(files, statePath, state, writeState, options = {}) {
   const writeFileImpl = options.writeFile ?? writeFile;
   const linkImpl = options.link ?? link;
@@ -149,7 +181,9 @@ export async function commitManagedAgentFiles(files, statePath, state, writeStat
   const unlinkImpl = options.unlink ?? unlink;
   const writeStateImpl = options.writeState ?? writeStateAtomically;
   const changed = files.filter(({ status }) => status === "installed" || status === "updated");
+  const retiring = (options.retired ?? []).filter(({ status }) => status === "retired");
   const staged = [];
+  const removed = [];
   let committed = false;
   try {
     for (const file of changed) {
@@ -159,7 +193,7 @@ export async function commitManagedAgentFiles(files, statePath, state, writeStat
       await writeFileImpl(path, file.content, { encoding: "utf8", flag: "wx" });
       staged.at(-1).stagedIdentity = (await inspectTarget(path, options)).existingIdentity;
     }
-    await assertPreflightStillCurrent(files, options);
+    await assertPreflightStillCurrent([...files, ...retiring], options);
     for (const entry of staged) {
       if (entry.file.status === "updated") {
         entry.backup = temporarySibling(entry.target);
@@ -173,11 +207,25 @@ export async function commitManagedAgentFiles(files, statePath, state, writeStat
       await linkImpl(entry.path, entry.target);
       entry.targetCreated = true;
     }
+    for (const file of retiring) {
+      const entry = { target: file.target, file, backup: temporarySibling(file.target), originalMoved: false, targetCreated: false };
+      removed.push(entry);
+      await renameImpl(entry.target, entry.backup);
+      entry.originalMoved = true;
+      if (!sameSnapshot(await inspectTarget(entry.backup, options), preflightSnapshot(file))) {
+        throw new Error(`Retired agent ${file.name} target changed after preflight.`);
+      }
+    }
     await assertFinalFleet(files, staged, options);
+    for (const file of retiring) {
+      if ((await inspectTarget(file.target, options)).existingKind !== "absent") {
+        throw new Error(`Retired agent ${file.name} target reappeared during commit.`);
+      }
+    }
     if (writeState) await writeStateImpl(statePath, state);
     committed = true;
   } catch (error) {
-    const rollbackErrors = await rollbackOperations(staged, { linkImpl, renameImpl, unlinkImpl, inspectOptions: options });
+    const rollbackErrors = await rollbackOperations([...staged, ...removed], { linkImpl, renameImpl, unlinkImpl, inspectOptions: options });
     if (rollbackErrors.length > 0) {
       throw new AggregateError([error, ...rollbackErrors], "Managed agent rollback failed after a commit error.");
     }
@@ -185,7 +233,7 @@ export async function commitManagedAgentFiles(files, statePath, state, writeStat
   } finally {
     await Promise.all(staged.map(({ path }) => unlinkImpl(path).catch(() => {})));
     if (committed) {
-      const failures = await cleanupCommittedBackups(staged, { linkImpl, renameImpl, unlinkImpl, inspectOptions: options });
+      const failures = await cleanupCommittedBackups([...staged, ...removed], { linkImpl, renameImpl, unlinkImpl, inspectOptions: options });
       if (failures.length > 0) throw new AggregateError(failures, "Managed agent backup cleanup failed.");
     }
   }
@@ -201,23 +249,15 @@ export function manifestsMatch(left, right) {
     && Object.keys(right ?? {}).length === SUPERLOOPY_AGENT_NAMES.length;
 }
 
-function plannedStatus(file, previousFileManifest, force, legacyFleet) {
+function plannedStatus(file, previousFileManifest, force) {
   if (file.existingKind === "absent") return "installed";
   if (file.existingKind === "symlink") return force ? "updated" : "conflict";
   if (file.existingKind !== "file") return "conflict";
   if (file.existing === file.content) return "unchanged";
   if (force) return "updated";
-  if (legacyFleet) return "updated";
   const previousHash = previousFileManifest?.[file.name]?.sha256;
   const stillManaged = file.existing.startsWith(`${MANAGED_AGENT_MARKER}\n`);
   return stillManaged && previousHash === sha256(file.existing) ? "updated" : "conflict";
-}
-
-function matchingLegacyFleet(files, manifests) {
-  return manifests.find((manifest) => files.every((file) =>
-    file.existingKind === "file"
-      && manifest?.files?.[file.name]?.sha256 === legacyAgentSha256(file.existing)
-  )) ?? null;
 }
 
 async function inspectTarget(path, options = {}) {

@@ -8,12 +8,12 @@ import { fileURLToPath } from "node:url";
 import * as modelPolicy from "../src/model-policy.js";
 
 const AGENTS = {
-  franky: { profile: "standard", purpose: "Bounded implementation lane." },
-  zoro: { profile: "deep", purpose: "Skeptical code review lane." },
-  usopp: { profile: "standard", purpose: "QA and regression lane." },
-  jinbe: { profile: "deep", purpose: "Final gate integration lane." },
-  robin: { profile: "standard", purpose: "Evidence auditor lane." },
-  nami: { profile: "fast", purpose: "Read-only navigation lane." }
+  forge: { profile: "standard", purpose: "Bounded implementation lane." },
+  sentinel: { profile: "deep", purpose: "Skeptical code review lane." },
+  probe: { profile: "standard", purpose: "QA and regression lane." },
+  arbiter: { profile: "deep", purpose: "Final gate integration lane." },
+  assayer: { profile: "standard", purpose: "Evidence auditor lane." },
+  pathfinder: { profile: "fast", purpose: "Read-only navigation lane." }
 };
 
 function codexPolicy() {
@@ -122,7 +122,7 @@ test("resolver selects every preferred GPT-6 tuple when fully available", () => 
     resolvedModel: "gpt-6-luna",
     reason: "preferred_available"
   });
-  assert.deepEqual(result.agents.franky, {
+  assert.deepEqual(result.agents.forge, {
     profile: "standard",
     purpose: "Bounded implementation lane.",
     ...result.profiles.standard
@@ -194,8 +194,8 @@ test("resolver falls back only the deep profile when Sol lacks xhigh", () => {
   assert.equal(result.profiles.deep.requestedModel, "gpt-6-sol");
   assert.equal(result.profiles.deep.resolvedModel, "gpt-5.6-sol");
   assert.equal(result.profiles.deep.reason, "compatibility_fallback");
-  assert.equal(result.agents.zoro.resolvedModel, "gpt-5.6-sol");
-  assert.equal(result.agents.jinbe.resolvedModel, "gpt-5.6-sol");
+  assert.equal(result.agents.sentinel.resolvedModel, "gpt-5.6-sol");
+  assert.equal(result.agents.arbiter.resolvedModel, "gpt-5.6-sol");
   assert.equal(result.profiles.fast.reason, "preferred_available");
 });
 

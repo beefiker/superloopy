@@ -66,7 +66,7 @@ test("SessionStart reuses a fresh manifest without querying or rewriting state a
   const binDir = join(repo, "bin");
   const statePath = join(codexHome, "superloopy", "model-resolution.json");
   await mkdir(sourceDir, { recursive: true });
-  for (const name of ["franky", "zoro", "usopp", "jinbe", "robin", "nami"]) {
+  for (const name of ["forge", "sentinel", "probe", "arbiter", "assayer", "pathfinder"]) {
     const source = await readFile(join(process.cwd(), ".codex", "agents", `${name}.toml`), "utf8");
     await writeFile(join(sourceDir, `${name}.toml`), source, "utf8");
   }
@@ -97,7 +97,7 @@ test("SessionStart reuses a fresh manifest without querying or rewriting state a
     assert.equal(queries, 0);
     assert.equal(fresh, "");
     assert.equal((await stat(statePath)).mtimeMs, oldTime.getTime());
-    const source = join(sourceDir, "franky.toml");
+    const source = join(sourceDir, "forge.toml");
     await writeFile(source, (await readFile(source, "utf8")).replace("Implementation worker", "Focused implementation worker"), "utf8");
     const changed = await runSessionStartHook({ hook_event_name: "SessionStart", cwd: repo }, baseOptions);
     assert.equal(queries, 0);
@@ -124,14 +124,14 @@ test("runPreToolUseHook allows create_goal payloads with objective only", () => 
 test("runSubagentStopHook allows non-empty receipt under .superloopy/evidence", async () => {
   const repo = await tempRepo();
   const artifact = await writeEvidence(repo, "receipt.txt");
-  const output = subagentStopHook(repo, { agent_type: "franky", last_assistant_message: `done\nSUPERLOOPY_EVIDENCE: ${artifact}` });
+  const output = subagentStopHook(repo, { agent_type: "forge", last_assistant_message: `done\nSUPERLOOPY_EVIDENCE: ${artifact}` });
   assert.equal(output, "");
 });
 
 test("runSubagentStopHook validates Superloopy review worker receipts", async () => {
   const repo = await tempRepo();
   const artifact = await writeEvidence(repo, "review-report.txt");
-  const output = subagentStopHook(repo, { agent_type: "zoro", last_assistant_message: `reviewed\nSUPERLOOPY_EVIDENCE: ${artifact}` });
+  const output = subagentStopHook(repo, { agent_type: "sentinel", last_assistant_message: `reviewed\nSUPERLOOPY_EVIDENCE: ${artifact}` });
   assert.equal(output, "");
 });
 
@@ -141,8 +141,8 @@ test("runSubagentStopHook uses scoped evidence root when session_id is present",
   const globalArtifact = await writeEvidence(repo, "global-receipt.txt");
   const scopedArtifact = await writeSessionEvidence(repo, "sess.1", "scoped-receipt.txt");
 
-  const globalOutput = subagentStopHook(repo, { agent_type: "franky", session_id: "sess.1", last_assistant_message: `done\nEVIDENCE_RECORDED: ${globalArtifact}` });
-  const scopedOutput = subagentStopHook(repo, { agent_type: "franky", session_id: "sess.1", last_assistant_message: `done\nEVIDENCE_RECORDED: ${scopedArtifact}` });
+  const globalOutput = subagentStopHook(repo, { agent_type: "forge", session_id: "sess.1", last_assistant_message: `done\nEVIDENCE_RECORDED: ${globalArtifact}` });
+  const scopedOutput = subagentStopHook(repo, { agent_type: "forge", session_id: "sess.1", last_assistant_message: `done\nEVIDENCE_RECORDED: ${scopedArtifact}` });
 
   const globalBlock = JSON.parse(globalOutput).reason;
   assert.match(globalBlock, /receipt missing or invalid/);
@@ -157,7 +157,7 @@ test("runSubagentStopHook suppresses on a context-pressure marker in the transcr
   const transcript = join(repo, "transcript.txt");
   await writeFile(transcript, `${"earlier turn\n".repeat(50)}... context compacted ...\n`, "utf8");
 
-  const output = subagentStopHook(repo, { agent_type: "franky", transcript_path: transcript, last_assistant_message: "done" });
+  const output = subagentStopHook(repo, { agent_type: "forge", transcript_path: transcript, last_assistant_message: "done" });
   assert.equal(output, "");
 });
 
@@ -168,7 +168,7 @@ test("runSubagentStopHook ignores a marker outside the bounded transcript tail",
   // the bounded read must not see it, so the hook still blocks for a receipt.
   await writeFile(transcript, `context compacted\n${"x".repeat(TRANSCRIPT_TAIL_BYTES + 4096)}`, "utf8");
 
-  const output = subagentStopHook(repo, { agent_type: "franky", transcript_path: transcript, last_assistant_message: "done" });
+  const output = subagentStopHook(repo, { agent_type: "forge", transcript_path: transcript, last_assistant_message: "done" });
   assert.match(JSON.parse(output).reason, /receipt missing or invalid/);
 });
 

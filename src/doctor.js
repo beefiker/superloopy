@@ -427,7 +427,7 @@ async function collectSubagentStopMatchers(cwd) {
 // `.claude-plugin/plugin.json`, and `hooks/hooks.json` (auto-loaded by Claude). The Codex checks
 // above never touch these, so without this a broken Claude install would still show doctor green.
 // The key guarantee is that the SubagentStop matchers fire on Claude's PLUGIN-NAMESPACED agent
-// types (`superloopy:franky`), not just the bare Codex names.
+// types (`superloopy:forge`), not just the bare Codex names.
 export async function checkClaudeHostWiring(cwd) {
   const problems = [];
   const manifestPath = join(cwd, ".claude-plugin", "plugin.json");
@@ -463,9 +463,9 @@ export async function checkClaudeHostWiring(cwd) {
       if (subagentStop.length === 0) {
         problems.push("hooks/hooks.json declares no SubagentStop hooks");
       } else {
-        const workerMatcher = "^superloopy:(?:franky|zoro|usopp|jinbe|nami)$";
-        const robinMatcher = "^superloopy:robin$";
-        const exactMatchers = new Set([workerMatcher, robinMatcher]);
+        const workerMatcher = "^superloopy:(?:forge|sentinel|probe|arbiter|pathfinder)$";
+        const assayerMatcher = "^superloopy:assayer$";
+        const exactMatchers = new Set([workerMatcher, assayerMatcher]);
         const entries = subagentStop.map((entry) => {
           const commands = (Array.isArray(entry.hooks) ? entry.hooks : [])
             .map((hook) => hook?.command)
@@ -476,7 +476,7 @@ export async function checkClaudeHostWiring(cwd) {
           if (!exactMatcher) {
             problems.push(`hooks/hooks.json SubagentStop entry needs an exact plugin identity matcher: ${matcher || "<missing>"}`);
           }
-          const expectedSubcommand = matcher === robinMatcher ? "subagent-stop-audit" : "subagent-stop";
+          const expectedSubcommand = matcher === assayerMatcher ? "subagent-stop-audit" : "subagent-stop";
           const invokesExpectedCli = commands.some(
             (command) => command.includes("${CLAUDE_PLUGIN_ROOT}/src/cli.js")
               && new RegExp(`(?:^|\\s)hook\\s+${expectedSubcommand}(?:\\s|$)`, "u").test(command)

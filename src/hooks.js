@@ -21,7 +21,7 @@ import { isSayItStraightEnabled, parseLoopOutputStyleControl, renderSayItStraigh
 
 export { runPreToolUseHook } from "./pre-tool-use.js";
 
-const EVIDENCE_RECEIPT_AGENT_TYPES = new Set(["franky", "zoro", "usopp", "jinbe"]);
+const EVIDENCE_RECEIPT_AGENT_TYPES = new Set(["forge", "sentinel", "probe", "arbiter"]);
 // An artifact up to this size must carry non-whitespace content to satisfy the receipt gate;
 // only larger artifacts (assumed non-trivial) skip the read. Closes the blank-placeholder hole.
 const MAX_BLANK_CHECK_BYTES = 1_000_000;
@@ -391,8 +391,9 @@ function renderContinuationDirective(status, guide) {
     "1. Run `superloopy loop status --json` and inspect current state.",
     `2. Run \`${guide.commands.guide}\` to confirm the exact next command.`,
     `3. Execute next action: \`${guide.nextAction.command}\`.`,
-    `4. Produce a real artifact under \`${status.plan.evidencePath ?? ".superloopy/evidence"}\` before recording criterion evidence.`,
-    "5. Checkpoint only after required criteria pass.",
+    "4. Prove only the next unresolved criterion; do not re-run criteria that already pass (`loop finish` re-runs them). If its last proof failed, read its recorded evidence artifact and change something before proving again.",
+    `5. Produce a real artifact under \`${status.plan.evidencePath ?? ".superloopy/evidence"}\` before recording criterion evidence.`,
+    "6. Checkpoint only after required criteria pass.",
     ...(sayItStraightOverlay.length === 0 ? [] : ["", sayItStraightOverlay])
   ].filter(Boolean).join("\n");
 }

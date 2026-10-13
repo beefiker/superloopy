@@ -6,7 +6,7 @@ import { hasFlag, readFlag } from "./args.js";
 import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
 import { binShimContent, isGeneratedSuperloopyBinShim } from "./bin-shim.js";
 export { binShimSupportsSiblingFallback, parseBinShimCliPath, parseBinShimHost } from "./bin-shim.js";
-import { loadLegacyAgentManifests } from "./legacy-agents.js";
+import { loadLegacyAgentManifests, retiredAgentRemovalCommand } from "./legacy-agents.js";
 import {
   commitManagedAgentFiles,
   managedFileManifest,
@@ -17,9 +17,9 @@ import {
 } from "./managed-agents.js";
 import { prepareCodexModelResolution, resolveModelResolutionStatePath } from "./model-resolution.js";
 import { installOneTextFile } from "./text-file-install.js";
-// Worker agents (franky/zoro/usopp/jinbe) report evidence receipts; robin is the
-// read-only auditor; nami is the read-only navigator (no receipt). All are installed so
-// the host can dispatch them; robin was historically shipped only as un-installable skill
+// Worker agents (forge/sentinel/probe/arbiter) report evidence receipts; assayer is the
+// read-only auditor; pathfinder is the read-only navigator (no receipt). All are installed so
+// the host can dispatch them; assayer was historically shipped only as un-installable skill
 // metadata (the auditor-install gap). Host role-by-name routing is NOT guaranteed, so a
 // dispatch must be self-contained — see docs/superloopy-host-contract.md.
 export { SUPERLOOPY_AGENT_NAMES };
@@ -56,8 +56,15 @@ async function installAgentsLocked({ argv, options, force, target, source, state
     return failedAgentsInstall({ source, target: publicTarget, force, statePath: publicStatePath, message: rendered.message, resolution });
   }
   const legacyManifests = options.legacyManifests ?? await loadLegacyAgentManifests(options.policyRoot ?? REPO_ROOT);
-  const preflight = await preflightManagedAgentFiles(rendered.files, resolution.previousFileManifest, force, legacyManifests);
+  const preflight = await preflightManagedAgentFiles(rendered.files, {
+    targetDir: target,
+    previousFileManifest: resolution.previousFileManifest,
+    retiredFileManifest: resolution.retiredFileManifest,
+    force,
+    legacyManifests
+  });
   const agents = preflight.files.map((file) => publicManagedAgent(file, resolution.state, publicTarget));
+  const retired = preflight.retired.map((file) => publicRetiredAgent(file, publicTarget, options.platform));
   const metadata = modelResolutionMetadata(resolution, publicStatePath);
   if (!preflight.ok) {
     return {
@@ -67,6 +74,7 @@ async function installAgentsLocked({ argv, options, force, target, source, state
       target: publicTarget,
       force,
       agents,
+      retired,
       conflicts: agents.filter(({ status }) => status === "conflict"),
       modelResolution: metadata,
       degraded: resolution.state.degraded,
@@ -81,8 +89,10 @@ async function installAgentsLocked({ argv, options, force, target, source, state
   const reuseExactFreshManifest = resolution.cacheStatus === "fresh"
     && allUnchanged
     && manifestsMatch(manifest, resolution.previousState?.files);
-  await commitManagedAgentFiles(preflight.files, statePath, state, !reuseExactFreshManifest);
-  const restartRequired = agents.some(({ status }) => status === "installed" || status === "updated");
+  await commitManagedAgentFiles(preflight.files, statePath, state, !reuseExactFreshManifest, { retired: preflight.retired });
+  const restartRequired = agents.some(({ status }) => status === "installed" || status === "updated")
+    || retired.some(({ status }) => status === "retired");
+  const kept = retired.filter(({ status }) => status === "retired-kept");
   return {
     ok: true,
     kind: "agents_install",
@@ -90,16 +100,24 @@ async function installAgentsLocked({ argv, options, force, target, source, state
     target: publicTarget,
     force,
     agents,
+    retired,
     conflicts: [],
     modelResolution: metadata,
     degraded: resolution.state.degraded,
     restartRequired,
-    next: restartRequired
-      ? "Restart Codex so the changed custom agent definitions are loaded."
-      : resolution.state.degraded
-        ? "Compatibility routing remains active; no agent files changed and no restart is required."
-        : "Agent definitions are current; no restart is required."
+    next: [
+      restartRequired
+        ? "Restart Codex so the changed custom agent definitions are loaded."
+        : resolution.state.degraded
+          ? "Compatibility routing remains active; no agent files changed and no restart is required."
+          : "Agent definitions are current; no restart is required.",
+      ...(kept.length === 0 ? [] : [retiredKeptNext(kept)])
+    ].join(" ")
   };
+}
+
+function retiredKeptNext(kept) {
+  return `Superloopy kept ${kept.length} pre-rename agent file(s) it could not prove it owns; Codex still loads them. Remove them if they are not personal agents: ${kept.map(({ removeCommand }) => removeCommand).join("; ")}`;
 }
 
 export function formatAgentsInstallResult(result) {
@@ -108,6 +126,7 @@ export function formatAgentsInstallResult(result) {
     `target: ${result.target}`,
     `model resolution: ${formatModelResolution(result)}`,
     ...result.agents.map((agent) => `- ${agent.name}: ${agent.status} (${agent.requestedModel} -> ${agent.resolvedModel}, ${agent.reason})`),
+    ...(result.retired ?? []).map(formatRetiredAgent),
     `restart required: ${result.restartRequired ? "yes" : "no"}`,
     result.next
   ];
@@ -122,6 +141,7 @@ function failedAgentsInstall({ source, target, force, statePath, message, resolu
     target,
     force,
     agents: [],
+    retired: [],
     conflicts: [],
     modelResolution: {
       ...(resolution === undefined ? { statePath } : modelResolutionMetadata(resolution, statePath)),
@@ -145,6 +165,22 @@ function publicManagedAgent(file, state, targetDir) {
     reason: resolution.reason,
     checkedAt: state.checkedAt
   };
+}
+
+function publicRetiredAgent(file, targetDir, platform) {
+  const target = join(targetDir, `${file.name}.toml`);
+  return {
+    name: file.name,
+    replacement: file.replacement,
+    target,
+    status: file.status,
+    ...(file.status === "retired-kept" ? { removeCommand: retiredAgentRemovalCommand(target, file.existingKind, platform) } : {})
+  };
+}
+
+function formatRetiredAgent(agent) {
+  const detail = agent.status === "retired-kept" ? `; not provably Superloopy-owned, remove manually: ${agent.removeCommand}` : "";
+  return `- ${agent.name} (renamed to ${agent.replacement}): ${agent.status}${detail}`;
 }
 
 function modelResolutionMetadata(resolution, statePath) {
@@ -290,6 +326,7 @@ export async function bootstrapSuperloopy(cwd, argv = [], options = {}) {
     refreshModels: options.refreshModels,
     compatibility: options.compatibility,
     withFileLock: options.withFileLock,
+    platform: options.platform,
     force: options.force ?? hasFlag(argv, "--force")
   });
   const ok = bin.ok && agents.ok;
@@ -318,6 +355,7 @@ export function formatBootstrapResult(result) {
     `superloopy install: ${result.ok ? "ok" : "conflict or failure"}`,
     `bin: ${result.bin.status} ${result.bin.target}`,
     `agents: ${formatAgentCounts(agentCounts) || "none"}`,
+    ...(result.agents.retired ?? []).map(formatRetiredAgent),
     `model resolution: ${formatModelResolution(result.agents)}`,
     `restart required: ${result.restartRequired ? "yes" : "no"}`,
     result.next,
@@ -332,7 +370,8 @@ export function bootstrapHasUserSignal(result) {
     || result.restartRequired === true
     || result.bin.status !== "unchanged"
     || result.bin.onPath === false
-    || result.agents.agents.some((agent) => agent.status !== "unchanged");
+    || result.agents.agents.some((agent) => agent.status !== "unchanged")
+    || (result.agents.retired ?? []).length > 0;
 }
 
 export function formatBootstrapHookContext(result) {
@@ -341,6 +380,7 @@ export function formatBootstrapHookContext(result) {
     "",
     `- CLI wrapper: ${result.bin.status} at ${result.bin.target}`,
     `- Agents: ${formatAgentCounts(countAgentStatuses(result.agents.agents))}`,
+    ...(result.agents.retired ?? []).map(formatRetiredAgent),
     `- Model routing: ${formatModelResolution(result.agents)}`,
     `- Restart required: ${result.restartRequired ? "yes" : "no"}`,
     `- ${result.next}`,

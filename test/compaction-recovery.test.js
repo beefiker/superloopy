@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import "./helpers/trust-isolate.js";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { captureLoop } from "../src/capture.js";
 import { buildRecoveryProjection, renderRecoveryCapsule } from "../src/compaction-recovery.js";
 import { runSessionStartHook } from "../src/hooks.js";
 import { createLoop, nextLoop, statusLoop } from "../src/loop.js";
@@ -33,6 +35,17 @@ test("compaction projection preserves durable loop semantics", async () => {
   assert.deepEqual(recovered.unresolved, ["G001/C001", "G001/C002"]);
   assert.equal(recovered.aggregateComplete, false);
   assert.deepEqual(recovered.outstanding, ["H001"]);
+});
+
+test("compaction capsule lists failing proof with its artifact path", async () => {
+  const repo = await activeRepo();
+  await captureLoop(repo, ["--goal-id", "G001", "--criterion-id", "C001", "--", process.execPath, "-e", "process.exit(2)"]);
+
+  assert.match(
+    renderRecoveryCapsule(projection(await statusLoop(repo))),
+    /Failing proof \(re-read the artifact; do not re-run unchanged\): G001\/C001 -> \.superloopy\/evidence\/G001-C001-capture\.txt/u
+  );
+  assert.doesNotMatch(renderRecoveryCapsule(projection(await statusLoop(await activeRepo()))), /Failing proof/u);
 });
 
 test("compaction recovery carries the effective loop output style", async () => {

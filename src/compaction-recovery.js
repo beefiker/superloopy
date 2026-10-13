@@ -17,6 +17,11 @@ export function buildRecoveryProjection({ status, guide, fleet }) {
     mode: status.plan.mode,
     activeGoal: activeGoal === null ? null : { id: activeGoal.id, title: activeGoal.title },
     unresolved,
+    failing: status.plan.goals.flatMap((goal) =>
+      goal.criteria
+        .filter((criterion) => criterion.status === "fail" && typeof criterion.artifact === "string")
+        .map((criterion) => `${goal.id}/${criterion.id} -> ${criterion.artifact}`)
+    ),
     sayItStraight: isSayItStraightEnabled(status.plan),
     aggregateComplete: status.summary.aggregateComplete,
     nextAction: guide?.nextAction?.command ?? status.binding?.next ?? null,
@@ -51,8 +56,9 @@ export function renderRecoveryCapsule(projection, { maxChars = 4000 } = {}) {
     `Session: ${projection.sessionId ?? "default"} · mode: ${projection.mode}`,
     projection.activeGoal === null ? "Active goal: none" : `Active goal: ${projection.activeGoal.id} ${projection.activeGoal.title}`,
     `Unresolved criteria: ${summarizeRecoveryIds(projection.unresolved)}`,
+    projection.failing.length === 0 ? null : `Failing proof (re-read the artifact; do not re-run unchanged): ${summarizeRecoveryIds(projection.failing)}`,
     `Outstanding handoffs: ${summarizeRecoveryIds(projection.outstanding)}`
-  ];
+  ].filter((line) => line !== null);
   return prependDetails(details, mandatoryCore, budget);
 }
 
