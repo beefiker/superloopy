@@ -376,6 +376,13 @@ test("default gate re-derives the floor and blocks completion when a command no 
     reviewLoop(repo, ["--status", "passed", "--artifact", ".superloopy/evidence/gate.json", "--notes", "reviewed"]),
     /did not re-derive to a passing floor/
   );
+  await assert.rejects(
+    finishLoop(repo, ["--evidence", "criteria passed", "--artifact", ".superloopy/evidence/gate.json", "--notes", "reviewed"]),
+    /did not re-derive to a passing floor/
+  );
+  // A refused gate must not leave a "passed" quality gate file (or ledger entry) behind for people or tools to read.
+  assert.equal(existsSync(join(repo, ".superloopy", "evidence", "gate.json")), false);
+  assert.doesNotMatch(await readFile(join(repo, ".superloopy", "ledger.jsonl"), "utf8"), /quality_gate_passed/);
 });
 
 test("default gate completes when a command-backed criterion still reproduces (P0.1)", async () => {

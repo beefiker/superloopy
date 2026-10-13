@@ -239,12 +239,13 @@ export async function reviewLoop(cwd, argv) {
     summary: summarizePlan(plan)
   };
   if (notes) gate.notes = notes;
-  await ensureSuperloopyDirs(cwd, scope);
-  await writeJsonAtomic(artifact.absolutePath, gate);
   const validatedGate = validateQualityGate(cwd, gate, scope);
   // A "passed" quality gate that carries an audit section must have genuine,
   // re-derived verdicts behind it — not just a structurally valid section.
   await enforceAuditProvenance(cwd, scope, validatedGate.audit);
+  // Publish only after every check passed: a refused finish must not leave a "passed" gate on disk.
+  await ensureSuperloopyDirs(cwd, scope);
+  await writeJsonAtomic(artifact.absolutePath, gate);
   await appendLedger(cwd, {
     at: now,
     kind: "quality_gate_passed",
