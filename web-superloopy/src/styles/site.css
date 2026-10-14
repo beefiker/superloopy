@@ -151,21 +151,6 @@ html:not(.js) .hero__pause { display: none; }
 .t-dim { color: var(--dim); }
 .terminal figcaption { padding: 12px 20px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--dim); }
 
-/* Crew */
-.crew { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
-.role { display: flex; gap: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(180deg, rgba(238, 234, 224, 0.03), rgba(238, 234, 224, 0)); transition: border-color var(--medium) var(--ease), background var(--medium) var(--ease); }
-.role:hover { border-color: var(--line-strong); background: linear-gradient(180deg, rgba(238, 234, 224, 0.05), rgba(238, 234, 224, 0)); }
-.role__face { flex: none; width: 84px; height: 84px; border-radius: 14px; background: var(--tint); object-fit: cover; transition: transform var(--medium) var(--ease); }
-.role:hover .role__face { transform: scale(1.03) rotate(-1.5deg); }
-.role__text { display: flex; flex-direction: column; min-width: 0; }
-.role__meta { display: flex; align-items: center; gap: 8px; font: 500 11px/1.4 var(--mono); color: var(--dim); }
-.tag { padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px; font-size: 10px; letter-spacing: 0.04em; }
-.role__name { margin-top: 4px; font-size: 19px; font-weight: 500; }
-.role__name code { color: var(--text); letter-spacing: -0.01em; }
-.role__job { margin-top: 2px; font-size: 14.5px; line-height: 1.45; color: var(--muted); }
-.role__receipt { margin-top: auto; padding-top: 10px; font: 400 11px/1.4 var(--mono); color: var(--dim); }
-.role__receipt code { color: var(--accent); opacity: 0.85; }
-
 /* Skills registry */
 .registry { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
 .registry__row { display: grid; grid-template-columns: 44px minmax(190px, 260px) minmax(0, 1fr) auto; align-items: baseline; gap: 18px; padding-block: 17px; border-bottom: 1px solid var(--line); }
@@ -194,7 +179,8 @@ html:not(.js) .hero__pause { display: none; }
 .footer { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 32px; padding-block: 32px 40px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--dim); }
 .wordmark--small { font-size: 12px; color: var(--muted); }
 .wordmark--small .wordmark__mark { width: 24px; height: 12px; }
-.footer__links { display: flex; gap: 22px; }
+.footer__links { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.footer__links a { white-space: nowrap; }
 .footer__copy { margin-left: auto; font-family: var(--mono); font-size: 12px; }
 
 /* One-time reveal: opt-in by JS and motion, so content never hides without both. */
@@ -204,7 +190,6 @@ html.motion [data-reveal].is-in { opacity: 1; transform: none; filter: none; }
 @media (max-width: 1000px) {
   .nav__links { display: none; }
   .how { grid-template-columns: 1fr; }
-  .crew { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .registry__row { grid-template-columns: 36px minmax(0, 1fr) auto; }
   .registry__desc { grid-column: 2 / -1; }
 }
@@ -220,7 +205,6 @@ html.motion [data-reveal].is-in { opacity: 1; transform: none; filter: none; }
   .tabs { margin-left: 0; }
   .copy { margin-left: auto; }
   .install__line { white-space: pre-wrap; overflow-wrap: anywhere; padding-left: 1.6em; text-indent: -1.6em; }
-  .crew { grid-template-columns: 1fr; }
   .registry__row { grid-template-columns: 30px minmax(0, 1fr); gap: 6px 12px; }
   .registry__desc, .registry__invoke { grid-column: 2; justify-self: start; }
   .footer__copy { margin-left: 0; }

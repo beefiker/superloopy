@@ -1,6 +1,8 @@
 ---
 import "../styles/site.css";
+import "../styles/crew.css";
 import { LOCALES, LOCALE_LABELS, LOCALE_TAGS, OG_LOCALES, STRINGS } from "../i18n/strings.js";
+import CrewBoard from "./CrewBoard.astro";
 import Mark from "./Mark.astro";
 import forge from "../assets/crew/forge.webp";
 import sentinel from "../assets/crew/sentinel.webp";
@@ -50,13 +52,14 @@ const transcript = [
   { kind: "done", text: "superloopy finish: complete" },
 ];
 
+// Profiles and receipts follow model-policy.json and the hook receipt rules.
 const crew = [
-  { id: "forge", name: "Forge", image: forge, receipt: "SUPERLOOPY_EVIDENCE", tint: "#f4c7a1" },
-  { id: "sentinel", name: "Sentinel", image: sentinel, receipt: "SUPERLOOPY_EVIDENCE", tint: "#d9ccf2" },
-  { id: "probe", name: "Probe", image: probe, receipt: "SUPERLOOPY_EVIDENCE", tint: "#bfe6d3" },
-  { id: "arbiter", name: "Arbiter", image: arbiter, receipt: "SUPERLOOPY_EVIDENCE", tint: "#c7ddf5" },
-  { id: "assayer", name: "Assayer", image: assayer, receipt: "SUPERLOOPY_AUDIT", tint: "#f5e3a6", readOnly: true },
-  { id: "pathfinder", name: "Pathfinder", image: pathfinder, receipt: null, tint: "#f3c6cf", readOnly: true },
+  { id: "forge", name: "Forge", image: forge, profile: "standard", receipt: "SUPERLOOPY_EVIDENCE", tint: "#f4c7a1" },
+  { id: "sentinel", name: "Sentinel", image: sentinel, profile: "deep", receipt: "SUPERLOOPY_EVIDENCE", tint: "#d9ccf2" },
+  { id: "probe", name: "Probe", image: probe, profile: "standard", receipt: "SUPERLOOPY_EVIDENCE", tint: "#bfe6d3" },
+  { id: "arbiter", name: "Arbiter", image: arbiter, profile: "deep", receipt: "SUPERLOOPY_EVIDENCE", tint: "#c7ddf5" },
+  { id: "assayer", name: "Assayer", image: assayer, profile: "standard", receipt: "SUPERLOOPY_AUDIT", tint: "#f5e3a6" },
+  { id: "pathfinder", name: "Pathfinder", image: pathfinder, profile: "fast", receipt: null, tint: "#f3c6cf" },
 ];
 
 const skills = [
@@ -202,25 +205,18 @@ const skills = [
       </div>
     </section>
 
-    <section id="crew" class="section wrap" aria-labelledby="crew-title">
-      <header class="section__head" data-reveal>
-        <p class="kicker">{t.crew.kicker}</p>
-        <h2 id="crew-title" class="title"><span>{t.crew.titleLead}</span> {t.crew.titleRest}</h2>
-      </header>
-      <ul class="crew">
-        {crew.map((member, index) => (
-          <li class="role" data-reveal style={`--tint: ${member.tint}`}>
-            <img class="role__face" src={member.image.src} width="120" height="120" alt="" loading="lazy" decoding="async" />
-            <div class="role__text">
-              <p class="role__meta"><span>{String(index + 1).padStart(2, "0")}</span>{member.readOnly && <span class="tag">{t.crew.readOnly}</span>}</p>
-              <h3 class="role__name"><code>{member.id}</code></h3>
-              <p class="role__job">{t.crew.roles[member.id]}</p>
-              <p class="role__receipt">{member.receipt ? <code>{member.receipt}</code> : <span>{t.crew.noReceipt}</span>}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-      <p class="aside" data-reveal><a href="https://backend.superloopy.dev/#crew" rel="noopener">{t.crew.guide} <span aria-hidden="true">↗</span></a></p>
+    <section id="crew" class="section" aria-labelledby="crew-title">
+      <div class="wrap">
+        <header class="section__head" data-reveal>
+          <p class="kicker">{t.crew.kicker}</p>
+          <h2 id="crew-title" class="title"><span>{t.crew.titleLead}</span> {t.crew.titleRest}</h2>
+        </header>
+      </div>
+      <CrewBoard t={t} members={crew} />
+      <p class="aside crew-guides wrap" data-reveal>
+        <a href="https://backend.superloopy.dev/#crew" rel="noopener">{t.crew.guide} <span aria-hidden="true">↗</span></a>
+        <a href="https://frontend.superloopy.dev/#crew" rel="noopener">{t.crew.frontendGuide} <span aria-hidden="true">↗</span></a>
+      </p>
     </section>
 
     <section id="skills" class="section wrap" aria-labelledby="skills-title">
@@ -270,6 +266,7 @@ const skills = [
     <nav class="footer__links" aria-label="Footer">
       <a href={REPO} rel="noopener">{t.footer.source}</a>
       <a href="https://backend.superloopy.dev/" rel="noopener">{t.footer.guide}</a>
+      <a href="https://frontend.superloopy.dev/" rel="noopener">{t.footer.frontendGuide}</a>
       <a href={`${REPO}/blob/main/LICENSE`} rel="noopener">{t.footer.license}</a>
     </nav>
     <span class="footer__copy">© 2026 Superloopy</span>

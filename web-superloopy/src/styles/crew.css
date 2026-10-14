@@ -1,0 +1,89 @@
+/* Crew cards: six role cards hanging from one rope. Shared design with the
+   backend.superloopy.dev and frontend.superloopy.dev explainers. */
+
+.crew { overflow: hidden; line-height: normal; }
+.crew p { margin: 0; }
+
+.crew__board { margin-top: 8px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; }
+.crew__board::-webkit-scrollbar { display: none; }
+.crew__board:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.crew__line { position: relative; width: max-content; margin-inline: auto; padding: 0 var(--board-side) 36px; }
+.crew__rope { position: absolute; z-index: 0; left: calc(var(--board-side) + var(--card-w) / 2); top: calc(var(--rope-top) - 2px); width: var(--rope-span); height: calc(var(--rope-sag) * 2 + 4px); overflow: visible; pointer-events: none; }
+.crew__rope path { fill: none; stroke: #8a919c; stroke-width: 1.3; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.crew__list { display: flex; align-items: flex-start; gap: var(--card-gap); margin: 0; padding: 0; list-style: none; }
+
+/* One hanging card. The swing rotates around the hook on the rope. */
+.crew-card { position: relative; flex: 0 0 var(--card-w); width: var(--card-w); height: calc(var(--wire) + var(--card-h) + 14px); margin-top: var(--drop); transform-origin: 50% var(--rope-top); }
+.crew-card__swing { position: absolute; inset: 0; transform-origin: 50% var(--rope-top); transform: rotate(calc(var(--rest) + var(--sway, 0deg))); }
+.crew-card__hook { position: absolute; z-index: 2; left: 50%; top: calc(var(--rope-top) - 4px); width: 9px; height: 9px; border: 2px solid #8a919c; border-radius: 50%; background: var(--ground); transform: translateX(-50%); }
+.crew-card__wire { position: absolute; z-index: 1; left: 50%; top: calc(var(--rope-top) + 4px); width: 1.2px; height: calc(var(--wire) - var(--rope-top) - 8px); background: linear-gradient(#9aa1ad, #c3c8d0); transform: translateX(-50%); }
+.crew-card__body { position: absolute; left: 0; top: var(--wire); width: var(--card-w); height: var(--card-h); perspective: 1000px; }
+.crew-card__tilt { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transform-origin: 50% 0; transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)); }
+
+/* Lanyard clip: a small metal tab with a slot, pinned over the card's top edge. */
+.crew-card__clip { position: absolute; z-index: 4; left: 50%; top: -10px; width: 30px; height: 15px; border-radius: 7px 7px 4px 4px; background: linear-gradient(#eceef1, #b6bbc3); box-shadow: 0 1px 2px rgba(16, 18, 23, 0.2), inset 0 1px 0 #fff; transform: translateX(-50%); }
+.crew-card__clip::before { content: ""; position: absolute; left: 50%; top: 4px; width: 14px; height: 3px; border-radius: 2px; background: #6f7580; transform: translateX(-50%); }
+
+.crew-card__flip { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 700ms cubic-bezier(0.22, 0.9, 0.24, 1); }
+.crew-card.is-flipped .crew-card__flip { transform: rotateY(180deg); }
+.crew-card__face { position: absolute; inset: 0; display: flex; flex-direction: column; margin: 0; padding: 17px; border: 1px solid var(--line); border-radius: 22px; background: #12152b; box-shadow: 0 18px 36px -24px rgba(0, 0, 0, 0.8); color: var(--text); font: inherit; text-align: left; overflow: hidden; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.crew-card__face--front { appearance: none; cursor: pointer; }
+.crew-card__face--back { transform: rotateY(180deg); cursor: pointer; }
+.crew-card.is-flipped .crew-card__face--front, .crew-card:not(.is-flipped) .crew-card__face--back { pointer-events: none; }
+.crew-card__face:focus-visible, .crew-card__close:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+
+.crew-card__meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex: none; font-family: var(--mono); font-size: 7.5px; font-weight: 600; letter-spacing: 0.12em; color: var(--muted); }
+.crew-card__photo { display: block; flex: none; height: 52%; margin-top: 10px; border-radius: 14px; overflow: hidden; background: var(--tint); }
+.crew-card__photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
+.crew-card__name { display: block; margin-top: 12px; font-size: 23px; font-weight: 500; line-height: 1.1; letter-spacing: -0.04em; }
+.crew-card__role { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted); }
+.crew-card__foot { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 9px; border-top: 1px solid var(--line); font-size: 8px; font-weight: 600; letter-spacing: 0.12em; }
+.crew-card__turn { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--text); color: var(--ground); font-size: 13px; }
+
+/* Pointer-following sheen: an iridescent band plus a soft spotlight. */
+.crew-card__sheen { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: var(--glow, 0);
+  background:
+    radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(125deg, rgba(255, 255, 255, 0) 8%, rgba(255, 168, 206, 0.16) 28%, rgba(144, 208, 255, 0.16) 46%, rgba(204, 244, 150, 0.16) 61%, rgba(184, 150, 255, 0.16) 77%, rgba(255, 255, 255, 0) 94%);
+  background-size: 100% 100%, 240% 240%;
+  background-position: center, var(--gx, 50%) var(--gy, 50%);
+  mix-blend-mode: screen; }
+
+.crew-card__close { width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: rgba(238, 234, 224, 0.1); color: var(--text); font-size: 11px; line-height: 1; cursor: pointer; }
+.crew-card__who { display: flex; align-items: center; gap: 9px; margin-top: 10px; }
+.crew-card__who img { flex: none; width: 38px; height: 38px; border-radius: 50%; object-fit: cover; object-position: 50% 25%; background: var(--tint); }
+.crew-card__who span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.crew-card__who b { font-size: 15px; font-weight: 700; letter-spacing: -0.03em; }
+.crew-card__who small { font-size: 9.5px; color: var(--muted); }
+.crew .crew-card__about { margin: 8px 0 0; font-size: 10.5px; line-height: 1.5; color: #b9b8bf; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.crew .crew-card__label { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 7.5px; font-weight: 700; letter-spacing: 0.12em; color: var(--muted); }
+.crew-card__tasks { margin: 4px 0 0; padding: 0; list-style: none; }
+.crew-card__tasks li { padding: 3px 0; border-bottom: 1px solid var(--line); font-size: 10.5px; font-weight: 600; }
+.crew .crew-card__receipt { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 6px; margin-top: auto; padding-top: 6px; font-size: 9px; color: var(--muted); }
+.crew-card__receipt code { font-size: 8px; }
+
+.crew-guides { display: flex; flex-wrap: wrap; gap: 10px 28px; }
+.crew__notes { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding-inline: var(--board-side); font-size: 9px; letter-spacing: 0.1em; color: var(--muted); }
+
+/* One-time arrival when the section first scrolls into view. */
+.crew.is-arriving .crew-card { animation: crew-card-arrive 1050ms cubic-bezier(0.2, 0.9, 0.25, 1) both; animation-delay: calc(var(--order) * 85ms); }
+@keyframes crew-card-arrive {
+  0% { opacity: 0; transform: translateY(-30px) rotate(-5deg); }
+  45% { opacity: 1; transform: translateY(5px) rotate(2.4deg); }
+  70% { transform: translateY(-2px) rotate(-1deg); }
+  100% { opacity: 1; transform: none; }
+}
+
+@media (max-width: 900px) {
+  .crew__board { scroll-snap-type: x proximity; scroll-padding-inline: var(--board-side); }
+  .crew-card { scroll-snap-align: start; }
+}
+@media (max-width: 720px) {
+  .crew__notes { flex-direction: column; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .crew.is-arriving .crew-card { animation: none; }
+  .crew-card__flip { transition-duration: 1ms; }
+  .crew-card__tilt { transform: none; }
+  .crew-card__sheen { display: none; }
+}

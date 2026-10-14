@@ -1,6 +1,8 @@
 // Page behavior: install tabs, copy buttons, the hero dot field with its pause control,
-// and one-time reveals. Everything works without JS except the canvas and copying.
+// the crew cards, and one-time reveals. Everything works without JS except the canvas,
+// the crew card motion, and copying.
 import { startDotField } from "./dot-field.js";
+import "./crew.js";
 
 const motionAllowed = () => !matchMedia("(prefers-reduced-motion: reduce)").matches;
 

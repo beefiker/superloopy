@@ -1,0 +1,86 @@
+---
+// Six crew role cards hanging from one rope. Layout is computed here so the page ships
+// static HTML; src/scripts/crew.js adds tilt, sway, sheen, flip, and the one-time arrival.
+const { t, members } = Astro.props;
+
+const CARD = { width: 204, height: 286 };
+const GAP = 24;
+const SIDE = 12;
+const ROPE_TOP = 12;
+const SAG = 22;
+const WIRE_BASE = 64;
+const WIRE_RANGE = 70;
+const REST_TILT = [-2, 1.6, -1.2, 1.9, -1.6, 1.3]; // degrees each card settles at
+const WIRE_SHAPE = [0, 0.78, 0.3, 1, 0.5, 0.68]; // share of WIRE_RANGE per card
+
+const fixed = (value) => Number(value.toFixed(2));
+const span = (members.length - 1) * (CARD.width + GAP); // rope length between the first and last hook
+const ropeDrop = (index) => {
+  const at = members.length === 1 ? 0.5 : index / (members.length - 1);
+  return 4 * SAG * at * (1 - at); // parabola through both end hooks
+};
+const fill = (template, values) => template.replace(/\{(\w+)\}/g, (_, key) => values[key]);
+
+const cards = members.map((member, index) => {
+  const copy = t.crew.members[member.id];
+  const wire = WIRE_BASE + WIRE_RANGE * WIRE_SHAPE[index % WIRE_SHAPE.length];
+  return {
+    ...member,
+    ...copy,
+    number: String(index + 1).padStart(2, "0"),
+    style: `--drop: ${fixed(ropeDrop(index))}px; --wire: ${fixed(wire)}px; --rest: ${REST_TILT[index % REST_TILT.length]}deg; --tint: ${member.tint}; --order: ${index};`,
+  };
+});
+const boardStyle = `--card-w: ${CARD.width}px; --card-h: ${CARD.height}px; --card-gap: ${GAP}px; --board-side: ${SIDE}px; --rope-top: ${ROPE_TOP}px; --rope-span: ${span}px; --rope-sag: ${SAG}px;`;
+---
+<div class="crew" data-crew style={boardStyle}>
+  <div class="crew__board" tabindex="0" aria-label={t.crew.boardLabel}>
+    <div class="crew__line">
+      <svg class="crew__rope" aria-hidden="true" viewBox={`0 0 ${span} ${SAG * 2 + 4}`} preserveAspectRatio="none"><path d={`M 0 2 Q ${span / 2} ${2 + SAG * 2} ${span} 2`}></path></svg>
+      <ol class="crew__list">
+        {cards.map((card, index) => (
+          <li class="crew-card" style={card.style}>
+            <div class="crew-card__swing">
+              <span class="crew-card__hook" aria-hidden="true"></span>
+              <span class="crew-card__wire" aria-hidden="true"></span>
+              <div class="crew-card__body">
+                <div class="crew-card__tilt">
+                  <span class="crew-card__clip" aria-hidden="true"></span>
+                  <div class="crew-card__flip">
+                    <button type="button" class="crew-card__face crew-card__face--front" aria-expanded="false" aria-controls={`crew-back-${card.id}`} aria-label={fill(t.crew.openLabel, { name: card.name, role: card.role })}>
+                      <span class="crew-card__meta"><span>SUPERLOOPY CREW</span><span>No. {card.number}</span></span>
+                      <span class="crew-card__photo"><img src={card.image.src} alt="" width="440" height="440" loading={index > 2 ? "lazy" : "eager"} decoding="async" draggable="false" /></span>
+                      <span class="crew-card__name">{card.name}</span>
+                      <span class="crew-card__role">{card.role}</span>
+                      <span class="crew-card__foot"><span>VIEW ROLE</span><span class="crew-card__turn" aria-hidden="true">↻</span></span>
+                      <span class="crew-card__sheen" aria-hidden="true"></span>
+                    </button>
+                    <div class="crew-card__face crew-card__face--back" id={`crew-back-${card.id}`} role="group" aria-label={fill(t.crew.backLabel, { name: card.name })} aria-hidden="true">
+                      <div class="crew-card__meta"><span>ROLE {card.number}</span><button type="button" class="crew-card__close" tabindex="-1" aria-label={fill(t.crew.closeLabel, { name: card.name })}>✕</button></div>
+                      <div class="crew-card__who">
+                        <img src={card.image.src} alt="" width="440" height="440" loading="lazy" decoding="async" draggable="false" />
+                        <span><b>{card.name}</b><small>{card.role}</small></span>
+                      </div>
+                      <p class="crew-card__about">{card.about}</p>
+                      <p class="crew-card__label">{t.crew.tasksLabel}</p>
+                      <ul class="crew-card__tasks">
+                        {card.tasks.map((task) => <li>{task}</li>)}
+                      </ul>
+                      <p class="crew-card__label">{t.crew.receiptLabel}</p>
+                      <p class="crew-card__receipt"><span>{card.profile}</span>{card.receipt ? <code>{card.receipt}</code> : <span>{t.crew.noReceipt}</span>}</p>
+                      <span class="crew-card__sheen" aria-hidden="true"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </div>
+  <div class="crew__notes wrap">
+    <span>THE CREW DOES THE WORK. THE LOOP CHECKS IT.</span>
+    <span>{t.crew.hint}</span>
+  </div>
+</div>
