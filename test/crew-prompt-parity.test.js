@@ -20,7 +20,7 @@ async function rewrite(path, transform) {
 }
 
 function lineOf(content, text) {
-  return content.split("\n").indexOf(text) + 1;
+  return content.split(/\r?\n/u).indexOf(text) + 1;
 }
 
 test("shipped Claude and Codex crew prompts match beyond the host-specific allowlist", async () => {
@@ -66,7 +66,7 @@ test("crew prompt parity reports a changed line on both sides", async () => {
 
 test("crew prompt parity ignores CRLF, indentation, repeated spaces, blank lines, and TOML escapes", async () => {
   const root = await tempCrewCopy();
-  await rewrite(join(root, "agents", "assayer.md"), (text) => text.replace(/\n/gu, "\r\n").replace("\r\n\r\n", "\r\n\r\n\r\n"));
+  await rewrite(join(root, "agents", "assayer.md"), (text) => text.replace(/\r?\n/gu, "\r\n").replace("\r\n\r\n", "\r\n\r\n\r\n"));
   await rewrite(join(root, ".codex", "agents", "assayer.toml"), (text) => text.replace("You are assayer", "  You  are \\u0061ssayer"));
 
   const result = await checkCrewPromptParity(root);
@@ -86,10 +86,12 @@ test("crew prompt parity fails when an allowlisted host-specific line no longer 
 test("crew prompt parity reports missing agent files and unreadable instructions", async () => {
   const root = await tempCrewCopy();
   await rewrite(join(root, ".codex", "agents", "pathfinder.toml"), (text) => text.replace('developer_instructions = """', 'instructions = """'));
-  await rewrite(join(root, "agents", "probe.md"), (text) => text.replace(/^---\n[\s\S]*?\n---\n/u, ""));
+  await rewrite(join(root, "agents", "probe.md"), (text) => text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/u, ""));
+  await rewrite(join(root, ".codex", "agents", "arbiter.toml"), (text) => text.replace("You are arbiter", "\\UFFFFFFFF You are arbiter"));
 
   const result = await checkCrewPromptParity(root);
   assert.equal(result.ok, false);
   assert.match(result.message, /\.codex\/agents\/pathfinder\.toml has no readable instructions body/u);
   assert.match(result.message, /agents\/probe\.md has no readable instructions body/u);
+  assert.match(result.message, /\.codex\/agents\/arbiter\.toml has no readable instructions body/u);
 });

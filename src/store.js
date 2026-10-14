@@ -255,30 +255,27 @@ export async function readPlanUnchecked(cwd, scope) {
   return parsed;
 }
 
-export async function readLedger(cwd, scope) {
-  return (await inspectLedger(cwd, scope)).entries;
-}
-
 // The ledger is advisory telemetry appended without a lock, so a crash mid-append can leave a
-// torn record. One bad line must not make trace/report/capture unusable: unparseable lines are
-// skipped and returned as `malformedLines` (1-based) so callers can surface them.
-export async function inspectLedger(cwd, scope) {
+// torn record. One bad line must not make trace/report/capture unusable, so an unparseable line
+// becomes a `{ kind: MALFORMED_LEDGER_LINE, line }` placeholder (1-based) in its original position:
+// readers can surface it, and order-sensitive readers can treat it as an unknown event (it may
+// have been a torn `plan_created`) instead of joining the records around it.
+export const MALFORMED_LEDGER_LINE = "ledger_malformed_line";
+
+export async function readLedger(cwd, scope) {
   let raw;
   try {
     raw = await readFile(ledgerPath(cwd, scope), "utf8");
   } catch (error) {
-    if (error && error.code === "ENOENT") return { entries: [], malformedLines: [] };
+    if (error && error.code === "ENOENT") return [];
     throw error;
   }
   const entries = [];
-  const malformedLines = [];
   raw.split(/\r?\n/).forEach((line, index) => {
     if (line.trim().length === 0) return;
-    const entry = parseLedgerLine(line);
-    if (entry === undefined) malformedLines.push(index + 1);
-    else entries.push(entry);
+    entries.push(parseLedgerLine(line) ?? { kind: MALFORMED_LEDGER_LINE, line: index + 1 });
   });
-  return { entries, malformedLines };
+  return entries;
 }
 
 export async function writePlan(cwd, plan, scope) {

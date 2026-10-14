@@ -9,10 +9,11 @@
 // Not covered: shell redirection from lanes that keep Bash (sentinel, probe, arbiter need it to
 // run tests and the Superloopy CLI). Codex exposes no path-scoped sandbox (`read-only` would also
 // block the report), so these lanes stay prompt-guarded there. The completion floor still decides.
+import { existsSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import { projectRealPath, resolveEvidenceOutputPath } from "./artifacts.js";
 import { matchesAgentType } from "./receipt.js";
-import { scopeFromSessionId } from "./store.js";
+import { evidenceRelativeDir, goalsPath, scopeFromSessionId } from "./store.js";
 import { resolveWorkspaceRoot } from "./workspace-identity.js";
 
 export const WRITE_SCOPED_ROLES = ["sentinel", "probe", "arbiter", "assayer"];
@@ -29,16 +30,17 @@ export function crewWriteDenial(payload, host) {
     return `Superloopy ${role} lane: ${payload.tool_name} call has no resolvable target path; ${role} may write only under the active evidence root.`;
   }
   const root = resolveWorkspaceRoot(payload.cwd);
+  // One active root, chosen the way receipt resolution chooses it: the session-scoped root when
+  // that session has a plan, else the global one. A scoped lane may not touch the global loop.
+  const sessionScope = scopeFromSessionId(payload.session_id);
+  const scope = sessionScope !== undefined && existsSync(goalsPath(root, sessionScope)) ? sessionScope : undefined;
   // Compare real paths: the host may report /var/... while the workspace root resolves to
   // /private/var/..., and a symlinked directory under the evidence root must count as outside it.
   const realTarget = projectRealPath(isAbsolute(target) ? resolve(target) : resolve(payload.cwd, target));
-  for (const scope of [scopeFromSessionId(payload.session_id), undefined]) {
-    try {
-      resolveEvidenceOutputPath(root, realTarget, scope);
-      return null;
-    } catch {
-      // try the next evidence root
-    }
+  try {
+    resolveEvidenceOutputPath(root, realTarget, scope);
+    return null;
+  } catch {
+    return `Superloopy ${role} lane is not an implementer: ${payload.tool_name} to ${target} is outside the active evidence root (${evidenceRelativeDir(scope)}/). Write only your report or verdict there; leave product files to forge.`;
   }
-  return `Superloopy ${role} lane is not an implementer: ${payload.tool_name} to ${target} is outside the active evidence root (.superloopy/evidence/). Write only your report or verdict there; leave product files to forge.`;
 }

@@ -481,3 +481,18 @@ test("a torn ledger record is skipped and surfaced, and the next append is not s
   assert.equal(malformed.length, 1);
   assert.match(malformed[0].message, /line 2\)/);
 });
+
+test("a torn ledger line ends repeated-failing-proof streaks, since it may have been a plan reset", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship a CLI loop"]);
+  await nextLoop(repo);
+  await writeFile(join(repo, "failure.txt"), "expected 3, received 4\n", "utf8");
+  await proveFailing(repo);
+  await proveFailing(repo);
+  await appendFile(join(repo, ".superloopy", "ledger.jsonl"), '{"at":"2026-10-14T00:00:00Z","kind":"plan_cre', "utf8");
+
+  const afterTear = await proveFailing(repo);
+
+  assert.deepEqual(afterTear.warnings, []);
+  assert.deepEqual(streakWarnings((await traceLoop(repo)).warnings), []);
+});

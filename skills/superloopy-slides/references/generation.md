@@ -36,9 +36,9 @@ If the user selected a self-generated custom wildcard, treat that preview's CSS 
 
 **Before generating, read these supporting files:**
 
-- [html-template.md](html-template.md) — HTML architecture and JS features
-- [viewport-base.css](viewport-base.css) — Mandatory CSS (include in full)
-- [animation-patterns.md](animation-patterns.md) — Animation reference for the chosen feeling. Its patterns follow the frontend skill's shared motion floor ([`motion-core.md`](../superloopy-frontend/references/motion-core.md)): animate transform/opacity/filter only, and respect `prefers-reduced-motion`
+- [html-template.md](../html-template.md) — HTML architecture and JS features
+- [viewport-base.css](../viewport-base.css) — Mandatory CSS (include in full)
+- [animation-patterns.md](../animation-patterns.md) — Animation reference for the chosen feeling. Its patterns follow the frontend skill's shared motion floor ([`motion-core.md`](../../superloopy-frontend/references/motion-core.md)): animate transform/opacity/filter only, and respect `prefers-reduced-motion`
 
 **Key requirements:**
 

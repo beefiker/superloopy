@@ -82,8 +82,9 @@ dangerous-command blocker.
 On Claude Code `hooks/hooks.json` matches `Write`, `Edit`, `MultiEdit`, and `NotebookEdit`. Claude
 fires plugin hooks inside subagents with `agent_type` set to the plugin-scoped name, so when the
 caller is `superloopy:sentinel`, `superloopy:probe`, `superloopy:arbiter`, or `superloopy:assayer`
-the hook denies any target whose real path is outside the active evidence root
-(`src/crew-write-guard.js`). Their frontmatter also removes `Edit`/`MultiEdit`/`NotebookEdit`, and
+the hook denies any target whose real path is outside the active evidence root: the session's
+root when that session has its own plan, otherwise the global root, the same choice receipt
+resolution makes (`src/crew-write-guard.js`). Their frontmatter also removes `Edit`/`MultiEdit`/`NotebookEdit`, and
 `assayer` is limited to `Read, Grep, Glob, Write`. Limits: sentinel, probe, and arbiter keep `Bash`
 to run tests and the CLI, so a shell redirect is not blocked; Codex has no path-scoped sandbox
 (`read-only` would also block the report), so those lanes stay prompt-guarded there. Neither hook

@@ -141,7 +141,16 @@ test("Claude crew guard keeps reviewer, QA, gate, and audit lanes inside the evi
 test("Claude crew guard follows the session-scoped evidence root and rejects a symlinked escape", async () => {
   const repo = await tempRepo();
   const scoped = join(repo, ".superloopy", "sessions", "sess-1", "evidence", "qa.md");
+  const global = join(repo, ".superloopy", "evidence", "qa.md");
+  // No scoped plan yet: receipts resolve to the global root, so only it is writable.
+  assert.equal(crewWrite(repo, "superloopy:probe", global, { session_id: "sess-1" }), "");
+  assert.equal(denial(crewWrite(repo, "superloopy:probe", scoped, { session_id: "sess-1" }))?.permissionDecision, "deny");
+  // Once the session has its own plan, the lane is confined to that root and cannot touch the global loop.
+  await createLoop(repo, ["--session-id", "sess-1", "--brief", "Scoped task"]);
   assert.equal(crewWrite(repo, "superloopy:probe", scoped, { session_id: "sess-1" }), "");
+  const crossed = denial(crewWrite(repo, "superloopy:probe", global, { session_id: "sess-1" }));
+  assert.equal(crossed?.permissionDecision, "deny");
+  assert.match(crossed.permissionDecisionReason, /\.superloopy\/sessions\/sess-1\/evidence\//u);
 
   const outside = await tempRepo();
   await mkdir(join(repo, ".superloopy", "evidence"), { recursive: true });

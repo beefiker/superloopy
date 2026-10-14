@@ -35,7 +35,7 @@ If user provides an image folder:
 
 1. **Scan** — List all image files (.png, .jpg, .svg, .webp, etc.)
 2. **Inspect each image** — Use the agent's available image-understanding capability. If image reading is unavailable, use filenames/metadata and ask the user to clarify only when needed
-3. **Evaluate** — For each: what it shows, USABLE or NOT USABLE (with reason), what concept it represents, dominant colors. Classify each asset's authority the way [`image-first.md`](../superloopy-frontend/references/image-first.md) does — authorized capture, approved generated asset, or supplied reference — and never present a rebuilt mock as a real product screenshot or use marks the user is not authorized to show
+3. **Evaluate** — For each: what it shows, USABLE or NOT USABLE (with reason), what concept it represents, dominant colors. Classify each asset's authority the way [`image-first.md`](../../superloopy-frontend/references/image-first.md) does — authorized capture, approved generated asset, or supplied reference — and never present a rebuilt mock as a real product screenshot or use marks the user is not authorized to show
 4. **Co-design the outline** — Curated images inform slide structure alongside text. This is NOT "plan slides then add images" — design around both from the start (e.g., 3 screenshots → 3 feature slides, 1 logo → title/closing slide)
 5. **Confirm the outline** using the same structured-question mechanism when available: "Does this slide outline and image selection look right?" Options: Looks good / Adjust images / Adjust outline
 

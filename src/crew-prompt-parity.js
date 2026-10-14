@@ -88,7 +88,16 @@ function decodeBasicString(raw) {
   const decoded = raw.replace(/\\(?:([btnfr"\\])|u([0-9A-Fa-f]{4})|U([0-9A-Fa-f]{8})|[ \t]*\n\s*|(.))/gu, (_, simple, short, long, invalid) => {
     if (invalid !== undefined) valid = false;
     if (simple !== undefined) return SIMPLE_ESCAPES[simple];
-    if (short !== undefined || long !== undefined) return String.fromCodePoint(Number.parseInt(short ?? long, 16));
+    if (short !== undefined || long !== undefined) {
+      // TOML permits only Unicode scalar values; anything else makes the body unreadable instead
+      // of throwing a RangeError out of doctor.
+      const codePoint = Number.parseInt(short ?? long, 16);
+      if (codePoint > 0x10ffff || (codePoint >= 0xd800 && codePoint <= 0xdfff)) {
+        valid = false;
+        return "";
+      }
+      return String.fromCodePoint(codePoint);
+    }
     return "";
   });
   return valid ? decoded : null;

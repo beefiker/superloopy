@@ -1,18 +1,19 @@
 import { readFlag } from "./args.js";
 import { buildGuide, formatGuideResult, unresolvedCriterionLine } from "./guide.js";
 import { summarizePlan } from "./plan-summary.js";
-import { evidenceRelativeDir, inspectLedger, ledgerRelativePath, readPlan, scopeFromSessionId } from "./store.js";
+import { MALFORMED_LEDGER_LINE, evidenceRelativeDir, ledgerRelativePath, readLedger, readPlan, scopeFromSessionId } from "./store.js";
 
 const REPEATED_FAILURE_THRESHOLD = 3; // matches Superloopy's other caps (stall, receipt, audit)
 
 export async function traceLoop(cwd, argv = []) {
   const scope = scopeFromSessionId(readFlag(argv, "--session-id"));
   const plan = await readPlan(cwd, scope);
-  const { entries: ledger, malformedLines } = await inspectLedger(cwd, scope);
+  const ledger = await readLedger(cwd, scope);
+  const malformedLines = ledger.filter((entry) => entry.kind === MALFORMED_LEDGER_LINE).map((entry) => entry.line);
   const summary = summarizePlan(plan);
   const artifacts = collectArtifacts(plan);
   const missingCriteria = collectMissingCriteria(plan, plan.evidencePath ?? evidenceRelativeDir(scope));
-  const timeline = ledger.map(timelineEntry);
+  const timeline = ledger.filter((entry) => entry.kind !== MALFORMED_LEDGER_LINE).map(timelineEntry);
   const warnings = [...collectWarnings(plan, timeline, ledger), ...malformedLedgerWarnings(malformedLines, plan.ledgerPath ?? ledgerRelativePath(scope))];
   return {
     ok: true,
@@ -128,11 +129,11 @@ function collectWarnings(plan, timeline, ledger) {
 // Consecutive failing proofs of one criterion with an identical failure signature
 // (see failure-signature.js). Any other ledger event for that criterion ends the streak.
 // `loop create --force` keeps the ledger and reuses ids like G001/C001, so a new plan
-// starts every streak over.
+// starts every streak over; so does an unparseable line, which may have been that reset.
 export function repeatedFailureWarnings(ledger) {
   const streaks = new Map();
   for (const entry of ledger) {
-    if (entry.kind === "plan_created") {
+    if (entry.kind === "plan_created" || entry.kind === MALFORMED_LEDGER_LINE) {
       streaks.clear();
       continue;
     }
