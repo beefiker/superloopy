@@ -63,7 +63,6 @@ const en = {
     openLabel: "{name}: {role}. Show role details",
     backLabel: "{name} role",
     closeLabel: "Back to the front of the {name} card",
-    guide: "See the crew in the backend guide (Korean)",
     frontendGuide: "See the crew in the frontend guide (Korean)",
   },
   skills: {
@@ -155,7 +154,6 @@ const ko = {
     openLabel: "{name}: {role}. 역할 자세히 보기",
     backLabel: "{name} 역할",
     closeLabel: "{name} 카드 앞면으로",
-    guide: "백엔드 안내서에서 크루 보기",
     frontendGuide: "프론트엔드 안내서에서 크루 보기",
   },
   skills: {
@@ -247,7 +245,6 @@ const de = {
     openLabel: "{name}: {role}. Rolle ansehen",
     backLabel: "Rolle {name}",
     closeLabel: "Zur Vorderseite der Karte {name}",
-    guide: "Die Crew im Backend-Guide (Koreanisch)",
     frontendGuide: "Die Crew im Frontend-Guide (Koreanisch)",
   },
   skills: {
@@ -339,7 +336,6 @@ const es = {
     openLabel: "{name}: {role}. Ver el rol",
     backLabel: "Rol de {name}",
     closeLabel: "Volver al frente de la tarjeta de {name}",
-    guide: "Ver el equipo en la guía de backend (coreano)",
     frontendGuide: "Ver el equipo en la guía de frontend (coreano)",
   },
   skills: {
