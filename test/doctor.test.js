@@ -105,7 +105,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.deepEqual(Object.keys(parsed.checks), [
     "pluginManifest", "hooks", "skills", "cli", "dependencies", "runtimeBoundary", "fileAudit",
     "gateNotes", "designAudit", "comparisonSimilarity", "reviewability", "dispatchCoherence",
-    "claudeHostWiring", "antigravityHostWiring", "modelPolicy", "claudeModelPolicy",
+    "claudeHostWiring", "antigravityHostWiring", "modelPolicy", "claudeModelPolicy", "crewPromptParity",
     "installedModelPolicy", "installedPluginTruth", "hostContract", "interop", "wrapper"
   ]);
   assert.equal(parsed.checks.pluginManifest.ok, true);
@@ -164,6 +164,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.claudeModelPolicy.agents.pathfinder, "haiku");
   assert.equal(parsed.checks.claudeModelPolicy.agents.sentinel, "claude-opus-5-5");
   assert.equal(parsed.checks.claudeModelPolicy.agents.forge, "claude-opus-5-5");
+  assert.deepEqual({ ok: parsed.checks.crewPromptParity.ok, policy: parsed.checks.crewPromptParity.policy }, { ok: true, policy: "crew-prompts-match-across-hosts" });
   assert.deepEqual(
     { ok: parsed.checks.installedModelPolicy.ok, installed: parsed.checks.installedModelPolicy.installed, degraded: parsed.checks.installedModelPolicy.degraded, restartRequired: parsed.checks.installedModelPolicy.restartRequired },
     { ok: true, installed: false, degraded: false, restartRequired: false }

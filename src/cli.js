@@ -346,7 +346,7 @@ async function runHook(subcommand, stdin, stdout, rest = []) {
     return 0;
   }
   if (subcommand === "pre-tool-use") {
-    stdout.write(runPreToolUseHook(payload));
+    stdout.write(runPreToolUseHook(payload, context));
     return 0;
   }
   if (subcommand === "subagent-stop") {

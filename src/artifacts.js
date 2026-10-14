@@ -129,7 +129,7 @@ export async function writeEvidenceOutputFile(artifact, content, options = "utf8
 // not-yet-created suffix. This surfaces symlinked directories anywhere in the
 // chain (e.g. .superloopy/evidence itself replaced by a link out of the repo):
 // the projected real path lands outside the projected real root and is rejected.
-function projectRealPath(path) {
+export function projectRealPath(path) {
   let existing = path;
   const suffix = [];
   while (!existsSync(existing)) {
@@ -147,7 +147,7 @@ export function validateQualityGate(cwd, value, scope) {
     throw new Error("Quality gate must be an object.");
   }
   if (isReviewQualityGate(value)) {
-    return validateReviewQualityGate(value, (artifactPath) => resolveEvidenceArtifact(cwd, artifactPath, scope).relativePath);
+    return requireIndependentReviewActors(validateReviewQualityGate(value, (artifactPath) => resolveEvidenceArtifact(cwd, artifactPath, scope).relativePath));
   }
   if (isMatrixQualityGate(value)) {
     return validateMatrixQualityGate(value, (artifactPath) => resolveEvidenceArtifact(cwd, artifactPath, scope).relativePath);
@@ -166,6 +166,18 @@ export function validateQualityGate(cwd, value, scope) {
     result.audit = validateAuditSection(value.audit, (artifactPath) => resolveEvidenceArtifact(cwd, artifactPath, scope).relativePath);
   }
   return result;
+}
+
+// The review gate stands for three separate judgments (code review, QA, final gate). Actor names
+// are self-declared, so this is a mechanical minimum: it stops one agent from signing every lane.
+function requireIndependentReviewActors(gate) {
+  const seen = new Map();
+  for (const lane of ["codeReview", "manualQa", "gateReview"]) {
+    const actor = gate[lane].by.trim().toLowerCase();
+    if (seen.has(actor)) fail(`Review quality gate ${lane}.by repeats ${seen.get(actor)}.by (${gate[lane].by}); code review, manual QA, and gate review must come from different actors.`);
+    seen.set(actor, lane);
+  }
+  return gate;
 }
 
 function fail(message) {

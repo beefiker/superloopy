@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import "./helpers/trust-isolate.js";
 import { Buffer } from "node:buffer";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -465,4 +465,19 @@ test("loop create --force starts repeated-failing-proof streaks over for reused 
   assert.equal(afterReplace.criterion.id, "C001");
   assert.deepEqual(afterReplace.warnings, []);
   assert.deepEqual(streakWarnings((await traceLoop(repo)).warnings), []);
+});
+
+test("a torn ledger record is skipped and surfaced, and the next append is not swallowed", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship a CLI loop"]);
+  const ledgerFile = join(repo, ".superloopy", "ledger.jsonl");
+  await appendFile(ledgerFile, '{"at":"2026-10-14T00:00:00Z","kind":"goal_sta', "utf8"); // process died mid-append
+
+  await nextLoop(repo);
+  const trace = await traceLoop(repo);
+
+  assert.deepEqual(trace.timeline.map((entry) => entry.kind), ["plan_created", "goal_started"]);
+  const malformed = trace.warnings.filter((warning) => warning.kind === "ledger-malformed-lines");
+  assert.equal(malformed.length, 1);
+  assert.match(malformed[0].message, /line 2\)/);
 });

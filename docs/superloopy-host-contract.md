@@ -16,6 +16,11 @@ or not matched by a hook.
 
 Superloopy provisions and tracks these agents; the host spawns them. Superloopy never spawns.
 
+Each agent ships twice: `agents/<name>.md` for Claude Code and Google Antigravity, and
+`.codex/agents/<name>.toml` for Codex. `superloopy doctor` (crewPromptParity) fails with a per-agent
+line diff when the two instruction bodies differ, except for the host-specific lines allowlisted in
+`src/crew-prompt-parity.js`. Edit both files together.
+
 ## Full-crew bookkeeping
 
 For `loopy team`, `loopy crew`, `loopycrew`, and `ultrawork` runs, full-crew handoffs are mandatory bookkeeping even though they are not a spawn mechanism. The parent records each dispatch with `superloopy loop handoff`, updates the same handoff when the worker returns, and runs `superloopy loop fleet --json` before the final gate. The fleet summary is the durable place to see accepted, rejected, needs-context, and still-outstanding lanes before the parent records completion evidence.
@@ -66,17 +71,24 @@ Superloopy's `SubagentStop` handlers read these fields from the JSON piped on st
 Handler output (stdout): a `block` decision re-prompts the subagent; an empty string allows the
 stop.
 
-## PreToolUse hook (Codex planning nudge, not a command blocker)
+## PreToolUse hook (Codex planning nudge; Claude crew write scope)
 
 On Codex a `PreToolUse` hook matches only the native planning tools `create_goal` and
 `update_goal`. It denies a `create_goal` that carries anything beyond `objective`, and denies an
 `update_goal status=complete` issued before Superloopy has recorded aggregate completion. That is a
-workflow nudge — it keeps the Codex plan from being marked done ahead of the evidence — **not** a
-dangerous-command blocker: it never inspects shell, file, or network tools. Claude Code registers
-no `PreToolUse` hook and has no `create_goal`/`update_goal` tools, so this nudge is Codex-only and
-inert on Claude. As with every hook, completion authority never rests here — it is the
-deterministic in-process floor (`loop check`/`review`/`finish`); the hook layer is advisory on both
-hosts.
+workflow nudge — it keeps the Codex plan from being marked done ahead of the evidence — not a
+dangerous-command blocker.
+
+On Claude Code `hooks/hooks.json` matches `Write`, `Edit`, `MultiEdit`, and `NotebookEdit`. Claude
+fires plugin hooks inside subagents with `agent_type` set to the plugin-scoped name, so when the
+caller is `superloopy:sentinel`, `superloopy:probe`, `superloopy:arbiter`, or `superloopy:assayer`
+the hook denies any target whose real path is outside the active evidence root
+(`src/crew-write-guard.js`). Their frontmatter also removes `Edit`/`MultiEdit`/`NotebookEdit`, and
+`assayer` is limited to `Read, Grep, Glob, Write`. Limits: sentinel, probe, and arbiter keep `Bash`
+to run tests and the CLI, so a shell redirect is not blocked; Codex has no path-scoped sandbox
+(`read-only` would also block the report), so those lanes stay prompt-guarded there. Neither hook
+inspects shell or network tools. As with every hook, completion authority never rests here — it is
+the deterministic in-process floor (`loop check`/`review`/`finish`).
 
 Research worker/query/wave profiles are also advisory on every host. Codex can expose local
 `Agent` dispatches to `PreToolUse`, but Superloopy intentionally does not deny dispatch based on a

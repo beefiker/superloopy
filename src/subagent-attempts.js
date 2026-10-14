@@ -5,7 +5,7 @@
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { goalsPath, ledgerPath, scopeFromSessionId } from "./store.js";
+import { goalsPath, ledgerLine, ledgerPath, scopeFromSessionId } from "./store.js";
 
 export const MAX_SUBAGENT_ATTEMPTS = 3;
 
@@ -18,7 +18,7 @@ export function recordSubagentLedger(payload, kind, attempts) {
     const path = ledgerPath(payload.cwd, useScope);
     mkdirSync(dirname(path), { recursive: true });
     const entry = { at: new Date().toISOString(), kind, agentType: payload.agent_type ?? null, agentId: payload.agent_id ?? null, attempts };
-    appendFileSync(path, `${JSON.stringify(entry)}\n`, "utf8");
+    appendFileSync(path, ledgerLine(path, entry), "utf8");
   } catch {
     // ledger is advisory; never fail the hook over a write error
   }
