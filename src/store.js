@@ -1,4 +1,4 @@
-import { closeSync, openSync, readFileSync, rmSync, statSync, writeSync } from "node:fs";
+import { closeSync, fstatSync, openSync, readFileSync, readSync, rmSync, statSync, writeSync } from "node:fs";
 import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, join, posix } from "node:path";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -255,17 +255,27 @@ export async function readPlanUnchecked(cwd, scope) {
   return parsed;
 }
 
+// The ledger is advisory telemetry appended without a lock, so a crash mid-append can leave a
+// torn record. One bad line must not make trace/report/capture unusable, so an unparseable line
+// becomes a `{ kind: MALFORMED_LEDGER_LINE, line }` placeholder (1-based) in its original position:
+// readers can surface it, and order-sensitive readers can treat it as an unknown event (it may
+// have been a torn `plan_created`) instead of joining the records around it.
+export const MALFORMED_LEDGER_LINE = "ledger_malformed_line";
+
 export async function readLedger(cwd, scope) {
+  let raw;
   try {
-    const raw = await readFile(ledgerPath(cwd, scope), "utf8");
-    return raw
-      .split(/\r?\n/)
-      .filter((line) => line.trim().length > 0)
-      .map((line, index) => parseLedgerLine(line, index));
+    raw = await readFile(ledgerPath(cwd, scope), "utf8");
   } catch (error) {
     if (error && error.code === "ENOENT") return [];
     throw error;
   }
+  const entries = [];
+  raw.split(/\r?\n/).forEach((line, index) => {
+    if (line.trim().length === 0) return;
+    entries.push(parseLedgerLine(line) ?? { kind: MALFORMED_LEDGER_LINE, line: index + 1 });
+  });
+  return entries;
 }
 
 export async function writePlan(cwd, plan, scope) {
@@ -275,7 +285,32 @@ export async function writePlan(cwd, plan, scope) {
 
 export async function appendLedger(cwd, entry, scope) {
   await ensureSuperloopyDirs(cwd, scope);
-  await appendFile(ledgerPath(cwd, scope), `${JSON.stringify(entry)}\n`, "utf8");
+  const path = ledgerPath(cwd, scope);
+  await appendFile(path, ledgerLine(path, entry), "utf8");
+}
+
+// A torn previous record has no trailing newline; start on a fresh line so it cannot swallow this one.
+export function ledgerLine(path, entry) {
+  return `${endsWithoutNewline(path) ? "\n" : ""}${JSON.stringify(entry)}\n`;
+}
+
+function endsWithoutNewline(path) {
+  let fd;
+  try {
+    fd = openSync(path, "r");
+  } catch (error) {
+    if (error && error.code === "ENOENT") return false;
+    throw error;
+  }
+  try {
+    const { size } = fstatSync(fd);
+    if (size === 0) return false;
+    const byte = Buffer.alloc(1);
+    readSync(fd, byte, 0, 1, size - 1);
+    return byte[0] !== 0x0a;
+  } finally {
+    closeSync(fd);
+  }
 }
 
 export async function writeBrief(cwd, brief, scope) {
@@ -287,11 +322,12 @@ export function nowIso() {
   return new Date().toISOString();
 }
 
-function parseLedgerLine(line, index) {
+function parseLedgerLine(line) {
   try {
-    return JSON.parse(line);
-  } catch (error) {
-    throw new Error(`Invalid Superloopy ledger JSON on line ${index + 1}.`);
+    const entry = JSON.parse(line);
+    return entry !== null && typeof entry === "object" && !Array.isArray(entry) ? entry : undefined;
+  } catch {
+    return undefined;
   }
 }
 

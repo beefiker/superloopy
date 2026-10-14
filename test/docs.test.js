@@ -7,16 +7,16 @@ import { assertAutomaticReassuranceCopyDocs, parseGoldenFileColumnPaths } from "
 test("public docs describe hook proof-plan context and active evidence receipts", async () => {
   const readme = await readFile("README.md", "utf8");
   const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");
-  assert.match(skill, /next command, proof target, recorded evidence.*proof plan, capture template, and evidence template/s);
+  assert.match(await readFile("skills/superloopy-loop/references/cli-flow.md", "utf8"), /next command, proof target, recorded evidence.*proof plan, capture template, and evidence template/s);
   assert.match(skill, /SUPERLOOPY_EVIDENCE: <path-under-active-evidence-root>/);
 });
 test("public docs describe guide, trace, report, and check evidence surfaces", async () => {
   const readme = await readFile("README.md", "utf8");
-  const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");
+  const cliFlow = await readFile("skills/superloopy-loop/references/cli-flow.md", "utf8");
   const notes = await readFile("docs/superloopy-gate-notes.md", "utf8");
   const audit = await readFile("docs/superloopy-file-audit.md", "utf8");
-  assert.match(skill, /manual evidence notes/i);
-  assert.match(skill, /flow checklist/i);
+  assert.match(cliFlow, /manual evidence notes/i);
+  assert.match(cliFlow, /flow checklist/i);
   assert.match(notes, /Evidence trace:.*summary counts/is);
   assert.match(notes, /Flow checklist guide:/);
   assert.match(audit, /src\/trace\.js.*summary counts/is);
@@ -453,7 +453,7 @@ test("project custom agents define Superloopy subagent workflow", async () => {
   assert.match(readme, /superloopy agents install/);
   assert.match(skill, /## Optional Subagent-Driven Mode/);
   assert.match(skill, /superloopy agents install/);
-  assert.match(skill, /allowed files, active evidence root, report artifact target/i);
+  assert.match(await readFile("skills/superloopy-loop/references/crew.md", "utf8"), /allowed files, active evidence root, report artifact target/i);
 
   for (const agent of agents) {
     const content = await readFile(`.codex/agents/${agent}.toml`, "utf8");
@@ -469,29 +469,29 @@ test("project custom agents define Superloopy subagent workflow", async () => {
 test("public docs encode crew retrospective guardrails", async () => {
   const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");
   const hostContract = await readFile("docs/superloopy-host-contract.md", "utf8");
-
+  const crew = await readFile("skills/superloopy-loop/references/crew.md", "utf8");
   assert.match(skill, /arbiter-final-gate-report\.md/);
   assert.match(skill, /\.superloopy\/evidence\/gate\.json/);
   assert.match(skill, /quality gate artifact.*JSON/s);
-  assert.match(skill, /For full crew, record each dispatch with `superloopy loop handoff/s);
-  assert.match(skill, /run `superloopy loop fleet --json` before the final gate/);
-  assert.match(skill, /must own a real bounded implementation slice before the parent edits or completes that slice/);
-  assert.match(skill, /If the requested repository path differs from `cwd`/);
-  assert.match(skill, /git status --short --untracked-files=all/);
-  assert.match(skill, /git ls-files --others --exclude-standard/);
+  assert.match(crew, /For full crew, record each dispatch with `superloopy loop handoff/s);
+  assert.match(crew, /run `superloopy loop fleet --json` before the final gate/);
+  assert.match(crew, /must own a real bounded implementation slice before the parent edits or completes that slice/);
+  assert.match(crew, /If the requested repository path differs from `cwd`/);
+  assert.match(crew, /git status --short --untracked-files=all/);
+  assert.match(crew, /git ls-files --others --exclude-standard/);
   assert.match(hostContract, /full-crew handoffs are mandatory bookkeeping/);
 });
 
 test("public docs describe crew lines as presentation-only status", async () => {
   const readme = await readFile("README.md", "utf8");
-  const skill = await readFile("skills/superloopy-loop/SKILL.md", "utf8");
+  const crew = await readFile("skills/superloopy-loop/references/crew.md", "utf8");
   const crewLines = await readFile("docs/superloopy-crew-lines.md", "utf8");
   const designAudit = await readFile("docs/superloopy-design-audit.md", "utf8");
 
   assert.match(readme, /one original crew line/);
   assert.match(readme, /supported catalog/);
-  assert.match(skill, /presentation only/);
-  assert.match(skill, /SUPERLOOPY_CREW_LANGUAGE/);
+  assert.match(crew, /presentation only/);
+  assert.match(crew, /SUPERLOOPY_CREW_LANGUAGE/);
   assert.match(crewLines, /Do not copy source-character quotes/);
   assert.match(crewLines, /`en`, `ko`, `ja`, `zh`, `es`, `fr`, `de`, `it`, `pt`, `id`, `hi`, `tr`, `vi`, `ru`, `ar`, and `th`/);
   assert.match(crewLines, /fall back to English/);

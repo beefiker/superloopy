@@ -21,38 +21,35 @@ function reviewGateForSurface(surface, kinds, scope = {}) {
 const identityArtifactPath = (value) => value;
 const target = (id, platform, environment) => ({ id, platform, environment });
 
-test("golden: checkpoint accepts Superloopy review quality gate", async () => {
+// A two-criterion plan with both criteria passed, plus a review gate over real artifacts.
+async function passedPlanWithGate() {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Ship"]);
   const c1 = await writeEvidence(repo, "c1.txt");
   const c2 = await writeEvidence(repo, "c2.txt");
-  runCli(["loop", "evidence", "--goal-id", "G001", "--criterion-id", "C001", "--status", "pass", "--artifact", c1], {
-    cwd: repo
-  });
-  runCli(["loop", "evidence", "--goal-id", "G001", "--criterion-id", "C002", "--status", "pass", "--artifact", c2], {
-    cwd: repo
-  });
-  const gatePath = join(repo, ".superloopy", "evidence", "review-gate.json");
-  const gate = reviewStyleQualityGate(await writeQualityGateArtifacts(repo));
+  runCli(["loop", "evidence", "--goal-id", "G001", "--criterion-id", "C001", "--status", "pass", "--artifact", c1], { cwd: repo });
+  runCli(["loop", "evidence", "--goal-id", "G001", "--criterion-id", "C002", "--status", "pass", "--artifact", c2], { cwd: repo });
+  return { repo, c1, gate: reviewStyleQualityGate(await writeQualityGateArtifacts(repo)) };
+}
+
+async function checkpointWithGate(repo, gate, name, extra = []) {
+  await writeFile(join(repo, ".superloopy", "evidence", name), JSON.stringify(gate), "utf8");
+  return runCli(["loop", "checkpoint", "--goal-id", "G001", "--status", "complete", "--evidence", "done", "--quality-gate", `.superloopy/evidence/${name}`, ...extra], { cwd: repo });
+}
+
+async function assertNotCompleted(repo) {
+  const plan = JSON.parse(await readFile(join(repo, ".superloopy", "goals.json"), "utf8"));
+  assert.equal(plan.aggregateCompletion, null); // never force-completed
+}
+
+test("golden: checkpoint accepts Superloopy review quality gate", async () => {
+  const { repo, c1, gate } = await passedPlanWithGate();
   gate.manualQa.surfaceEvidence[0].surface = ["t", "m", "u", "x"].join("");
   // Completion-time provenance now re-derives every cited audit verdict, so the gate
   // must carry a genuine verdict bound to a real criterion's re-run, not a dummy.
   gate.audit.verdicts = [await writeGenuineAuditVerdict(repo, { criterion: "G001/C001", artifact: c1 })];
-  await writeFile(gatePath, JSON.stringify(gate), "utf8");
 
-  const result = runCli([
-    "loop",
-    "checkpoint",
-    "--goal-id",
-    "G001",
-    "--status",
-    "complete",
-    "--evidence",
-    "done",
-    "--quality-gate",
-    ".superloopy/evidence/review-gate.json",
-    "--json"
-  ], { cwd: repo });
+  const result = await checkpointWithGate(repo, gate, "review-gate.json", ["--json"]);
 
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
@@ -60,27 +57,28 @@ test("golden: checkpoint accepts Superloopy review quality gate", async () => {
   assert.equal(parsed.plan.aggregateCompletion.qualityGate.manualQa.surfaceEvidence[0].surface, ["t", "m", "u", "x"].join(""));
 });
 
+test("golden: completion rejects a review gate where one actor signs more than one lane", async () => {
+  const { repo, c1, gate } = await passedPlanWithGate();
+  gate.audit.verdicts = [await writeGenuineAuditVerdict(repo, { criterion: "G001/C001", artifact: c1 })];
+  gate.gateReview.by = " Sentinel "; // same actor as codeReview.by modulo case/whitespace
+
+  const result = await checkpointWithGate(repo, gate, "self-approved-gate.json");
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /gateReview\.by repeats codeReview\.by/);
+  await assertNotCompleted(repo);
+});
+
 test("golden: completion rejects a hand-written audit verdict not bound to a re-derived re-run", async () => {
-  const repo = await tempRepo();
-  await createLoop(repo, ["--brief", "Ship"]);
-  const c1 = await writeEvidence(repo, "c1.txt");
-  const c2 = await writeEvidence(repo, "c2.txt");
-  runCli(["loop", "evidence", "--goal-id", "G001", "--criterion-id", "C001", "--status", "pass", "--artifact", c1], { cwd: repo });
-  runCli(["loop", "evidence", "--goal-id", "G001", "--criterion-id", "C002", "--status", "pass", "--artifact", c2], { cwd: repo });
   // Default helper cites a dummy {"verdict":"pass"} file — structurally resolvable, but
   // not a genuine hash-bound verdict. Completion-time provenance must reject it.
-  const gate = reviewStyleQualityGate(await writeQualityGateArtifacts(repo));
-  await writeFile(join(repo, ".superloopy", "evidence", "dummy-verdict-gate.json"), JSON.stringify(gate), "utf8");
+  const { repo, gate } = await passedPlanWithGate();
 
-  const result = runCli([
-    "loop", "checkpoint", "--goal-id", "G001", "--status", "complete", "--evidence", "done",
-    "--quality-gate", ".superloopy/evidence/dummy-verdict-gate.json"
-  ], { cwd: repo });
+  const result = await checkpointWithGate(repo, gate, "dummy-verdict-gate.json");
 
   assert.equal(result.status, 1);
   assert.match(result.stderr, /verdict|audit/i);
-  const plan = JSON.parse(await readFile(join(repo, ".superloopy", "goals.json"), "utf8"));
-  assert.equal(plan.aggregateCompletion, null); // never force-completed
+  await assertNotCompleted(repo);
 });
 
 test("audit provenance direct: rejects hand-written verdict artifacts", async () => {

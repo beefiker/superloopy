@@ -1,13 +1,14 @@
-// Plan-discipline hook, NOT a dangerous-command blocker.
+// PreToolUse hook: Codex plan discipline plus the Claude crew write-scope guard.
 //
-// This matches ONLY the Codex native planning tools `create_goal`/`update_goal`: it rejects a
+// On Codex it matches only the native planning tools `create_goal`/`update_goal`: it rejects a
 // `create_goal` that carries anything beyond `objective`, and an `update_goal status=complete`
-// issued before Superloopy has recorded aggregate completion. It never inspects shell, file, or
-// network tools, so it does nothing to sandbox what an agent runs. Claude Code has no
-// `create_goal`/`update_goal` tools and registers no PreToolUse hook, so this is effectively a
-// no-op there. The real completion authority is the evidence gate (see audit-gate-verify.js);
-// this hook only keeps the host's native plan state honest. See docs/superloopy-host-contract.md.
+// issued before Superloopy has recorded aggregate completion. On Claude Code it matches the file
+// write tools and keeps the non-implementing crew lanes inside the evidence root (see
+// crew-write-guard.js). It is not a dangerous-command blocker: it never inspects shell or network
+// tools. The real completion authority is the evidence gate (see audit-gate-verify.js). See
+// docs/superloopy-host-contract.md.
 import { existsSync, readFileSync } from "node:fs";
+import { crewWriteDenial } from "./crew-write-guard.js";
 import { goalsPath, scopeFromSessionId } from "./store.js";
 import { appendContextCost } from "./context-cost.js";
 import { resolveWorkspaceRoot } from "./workspace-identity.js";
@@ -19,9 +20,11 @@ const UPDATE_GOAL_COMPLETE_WARNING =
 const UPDATE_GOAL_UNREADABLE_WARNING =
   "Superloopy plan exists but could not be read. Refusing update_goal completion until `superloopy loop status --json` can verify aggregate completion.";
 
-export function runPreToolUseHook(payload) {
+export function runPreToolUseHook(payload, context = { host: "codex" }) {
   if (!isRecord(payload)) return "";
   if (payload.hook_event_name !== "PreToolUse") return "";
+  const crewDenial = crewWriteDenial(payload, context.host);
+  if (crewDenial !== null) return denyPreToolUse(crewDenial);
   if (payload.tool_name === "create_goal" && hasInvalidCreateGoalInput(payload.tool_input)) {
     return denyPreToolUse(CREATE_GOAL_PAYLOAD_WARNING);
   }

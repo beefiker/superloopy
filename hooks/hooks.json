@@ -21,6 +21,14 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "^(?:Write|Edit|MultiEdit|NotebookEdit)$",
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli.js\" hook pre-tool-use", "timeout": 5 }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "matcher": "^superloopy:(?:forge|sentinel|probe|arbiter|pathfinder)$",
