@@ -439,8 +439,8 @@ function formatLoopResult(subcommand, result) {
 function topHelp() {
   return [
     "Usage:",
-    "  npx superloopy@latest [setup|update|doctor]   install, update, or check Superloopy in Claude Code, Codex, and Antigravity",
-    "  superloopy setup [--host claude,codex,antigravity] [--yes] [--dry-run] [--json]",
+    "  npx superloopy@latest [setup|update|doctor]   install, update, or check Superloopy in Claude Code, Codex, Antigravity, and omp",
+    "  superloopy setup [--host claude,codex,antigravity,omp] [--yes] [--dry-run] [--json]",
     "  superloopy update [--host ...] [--dry-run] [--json]",
     "  superloopy loop <subcommand> [args]",
     "  superloopy install [--bin-dir PATH] [--target PATH] [--refresh-models] [--compat] [--force] [--json]",

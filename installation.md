@@ -24,7 +24,7 @@ Prerequisite for all flows: Node.js >= 22.
 When a shell with network access is available, this runs the per-host flows below through each host's own plugin CLI, then reports what happened:
 
 ```bash
-npx superloopy@latest setup --host <claude|codex|antigravity> --yes --json
+npx superloopy@latest setup --host <claude|codex|antigravity|omp> --yes --json
 npx superloopy@latest doctor --host <same host> --json
 ```
 
@@ -102,6 +102,19 @@ agy plugin list
 
 Superloopy runs as a native Antigravity plugin: skills (`skills/`), custom subagents (`agents/`), and lifecycle hooks (`hooks.json`) load through Antigravity's plugin ingestion. On SessionStart, Superloopy installs the `superloopy` command wrapper into PATH (`~/.local/bin`) so CLI workflows (`superloopy loop ...`) are directly callable, while skills and agents stay plugin-bundled without writing into `~/.codex`.
 
+## omp Flow
+
+omp installs the Claude Code plugin from the same marketplace:
+
+```bash
+omp plugin marketplace add beefiker/superloopy
+omp plugin install superloopy@beefiker
+```
+
+Then run `/reload-plugins` in open omp sessions. Verify with `omp plugin list --json`: `superloopy@beefiker` must be listed with the expected `version`, and its entry must not say `"enabled": false`.
+
+omp loads the skills and crew agents but does not run Claude-format `hooks.json`: there is no Stop-hook continuation, no subagent receipt check, and no `SessionStart` bootstrap. The `superloopy loop …` commands need a `superloopy` command on `PATH`. A Codex install provides it; otherwise run `node "<installPath>/src/cli.js" bin install` with the `installPath` from `omp plugin list --json`, again after each omp upgrade. To update: `omp plugin marketplace update beefiker`, then `omp plugin upgrade superloopy@beefiker`.
+
 ## Local Checkout Flow
 
 Use this only when the user asked for a checkout install or when marketplace install is unavailable:
@@ -149,7 +162,7 @@ node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json
 
 Before saying the install is done, report:
 
-- Host installed: Codex, Claude Code, Google Antigravity, or local checkout.
+- Host installed: Codex, Claude Code, Google Antigravity, omp, or local checkout.
 - Command path used: marketplace, plugin install, or checkout.
-- Verification result: `superloopy doctor --json`, `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`, `claude plugin validate`, or `agy plugin validate` plus `agy plugin list`.
+- Verification result: `superloopy doctor --json`, `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`, `claude plugin validate`, `agy plugin validate` plus `agy plugin list`, or `omp plugin list --json`.
 - Any blocker, such as missing Node.js >= 22, old Codex CLI, auth/login failure, hook approval needed, or missing `PATH` entry.

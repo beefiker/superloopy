@@ -1,7 +1,8 @@
 // Installs, updates, and checks Superloopy in each host through that host's own plugin CLI
-// (`claude plugin …`, `codex plugin …`, `agy plugin …`). Superloopy never writes host config files
-// itself: the host stays the owner of what is installed, so a later `/plugin update`,
-// `codex plugin marketplace upgrade`, or uninstall keeps working the way the host documents it.
+// (`claude plugin …`, `codex plugin …`, `agy plugin …`, `omp plugin …`). Superloopy never writes
+// host config files itself: the host stays the owner of what is installed, so a later
+// `/plugin update`, `codex plugin marketplace upgrade`, or uninstall keeps working the way the host
+// documents it.
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -10,21 +11,25 @@ import { compareVersions, parseVersion } from "./auto-update-plan.js";
 
 export const REPO = "beefiker/superloopy";
 export const PLUGIN_ID = "superloopy@beefiker";
-export const SETUP_HOSTS = ["claude", "codex", "antigravity"];
+export const SETUP_HOSTS = ["claude", "codex", "antigravity", "omp"];
 const MARKETPLACE = "beefiker";
 const REPO_URL = `https://github.com/${REPO}`;
-const LABELS = { claude: "Claude Code", codex: "Codex", antigravity: "Google Antigravity" };
-const BINARIES = { claude: "claude", codex: "codex", antigravity: "agy" };
+const LABELS = { claude: "Claude Code", codex: "Codex", antigravity: "Google Antigravity", omp: "omp" };
+const BINARIES = { claude: "claude", codex: "codex", antigravity: "agy", omp: "omp" };
 // Codex has no `plugin enable` subcommand; its plugin browser is where a plugin is switched on.
 const ENABLE = {
   claude: `claude plugin enable ${PLUGIN_ID}`,
   codex: "turn superloopy on in Codex's /plugins menu",
-  antigravity: "agy plugin enable superloopy"
+  antigravity: "agy plugin enable superloopy",
+  omp: `omp plugin enable ${PLUGIN_ID}`
 };
+// omp installs the Claude-format plugin from the same marketplace and loads its skills and agents;
+// it does not run Claude-format hooks.json, so there is no hook approval step.
 const AFTER = {
   claude: "Run /reload-plugins in open Claude Code sessions (or restart them).",
   codex: "Restart Codex and approve Modified hooks; the next session reconciles the wrapper and agents.",
-  antigravity: "Start a new Antigravity session."
+  antigravity: "Start a new Antigravity session.",
+  omp: "Run /reload-plugins in open omp sessions (or restart them)."
 };
 const QUERY_TIMEOUT_MS = 30_000;
 const CHANGE_TIMEOUT_MS = 300_000; // installs clone the repository
@@ -57,6 +62,7 @@ export function inspectHost(host, { run = defaultRun, env = process.env } = {}) 
   const base = { host, available: true, cliVersion: firstLine(version.stdout) };
   if (host === "claude") return { ...base, ...inspectClaude(run) };
   if (host === "codex") return { ...base, ...inspectCodex(run, env) };
+  if (host === "omp") return { ...base, ...inspectOmp(run) };
   return { ...base, ...inspectAntigravity(run) };
 }
 
@@ -102,6 +108,29 @@ function inspectAntigravity(run) {
   };
 }
 
+// `omp plugin list --json` reports one `marketplace` item per install scope (user, project), each
+// with the same plugin id and its own `entries`. Upgrading without `--scope` reinstalls every
+// scope, so the oldest scope decides whether an update is due; the plugin counts as on while any
+// scope has it enabled (a disabled project install does not shadow an enabled user install).
+function inspectOmp(run) {
+  const listed = run("omp", ["plugin", "list", "--json"]);
+  const plugins = jsonOutput(listed);
+  if (plugins === null || !Array.isArray(plugins.marketplace)) return { error: listError("omp plugin list --json", listed) };
+  const entries = plugins.marketplace
+    .filter((item) => item?.id === PLUGIN_ID && Array.isArray(item.entries))
+    .flatMap((item) => item.entries)
+    .filter((entry) => entry !== null && typeof entry === "object");
+  const oldest = entries.reduce((found, entry) => (found === null || !isCurrent(String(entry.version ?? ""), String(found.version ?? "")) ? entry : found), null);
+  const foreign = plugins.marketplace.find((item) => typeof item?.id === "string" && item.id.startsWith("superloopy@") && item.id !== PLUGIN_ID);
+  // `marketplace list` prints a table even with `--json`: one `<name>  <source>` row per marketplace.
+  const marketplaces = run("omp", ["plugin", "marketplace", "list"]);
+  return {
+    installed: oldest === null ? null : { version: String(oldest.version ?? ""), path: oldest.installPath ?? null, enabled: entries.some((entry) => entry.enabled !== false) },
+    foreign: foreign?.id ?? null,
+    marketplace: marketplaces.error === undefined && marketplaces.status === 0 && new RegExp(`^\\s*${MARKETPLACE}\\s`, "mu").test(String(marketplaces.stdout ?? ""))
+  };
+}
+
 // Older host CLIs lack plugin commands or fail on their own config; pass their words through.
 function listError(command, result) {
   const detail = String(result.stderr || result.stdout || result.error?.message || "").trim().split(/\r?\n/u).filter(Boolean).slice(0, 3).join(" ");
@@ -139,6 +168,12 @@ function installSteps(host, inspection) {
       step("codex", ["plugin", "add", PLUGIN_ID])
     ];
   }
+  if (host === "omp") {
+    return [
+      ...(inspection.marketplace ? [] : [step("omp", ["plugin", "marketplace", "add", REPO])]),
+      step("omp", ["plugin", "install", PLUGIN_ID])
+    ];
+  }
   return [step("agy", ["plugin", "install", REPO_URL])];
 }
 
@@ -149,6 +184,8 @@ function updateSteps(host, inspection) {
   }
   // A marketplace upgrade only refreshes Codex's snapshot; `plugin add` reinstalls from it.
   if (host === "codex") return [step("codex", ["plugin", "marketplace", "upgrade", MARKETPLACE]), step("codex", ["plugin", "add", PLUGIN_ID])];
+  // `marketplace update` refreshes omp's catalog only; `plugin upgrade` reinstalls every scope from it.
+  if (host === "omp") return [step("omp", ["plugin", "marketplace", "update", MARKETPLACE]), step("omp", ["plugin", "upgrade", PLUGIN_ID])];
   // Antigravity documents re-running the install as its update; it replaces the clone, which a
   // `git pull --ff-only` cannot do once the repository's history was rewritten.
   return [step("agy", ["plugin", "install", REPO_URL])];
@@ -170,7 +207,8 @@ export function validateHost(inspection, { run = defaultRun } = {}) {
     const result = run("agy", ["plugin", "validate", path]);
     return { ok: result.status === 0, command: `agy plugin validate ${path}` };
   }
-  return null; // Codex has no plugin validator; `superloopy doctor` inside a Codex session covers it.
+  // Codex and omp have no plugin validator; `superloopy doctor` inside a Codex session covers Codex.
+  return null;
 }
 
 // mode: "setup" installs where allowed and updates existing installs; "update" only updates;
@@ -264,7 +302,7 @@ export function formatHostSetupResult(result) {
     if (report.next) lines.push(`  next: ${report.next}`);
   }
   lines.push("", `Node ${result.node.version}: ${result.node.ok ? "ok" : `Superloopy needs Node ${result.node.required}; its hooks run with the node on PATH.`}`);
-  if (!result.hosts.some((report) => report.available)) lines.push("No supported host CLI (claude, codex, agy) was found on PATH.");
+  if (!result.hosts.some((report) => report.available)) lines.push("No supported host CLI (claude, codex, agy, omp) was found on PATH.");
   return `${lines.join("\n")}\n`;
 }
 

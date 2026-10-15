@@ -80,7 +80,7 @@ export async function runSetupCommand(mode, argv, { root, stdin, stdout, stderr,
   else {
     stdout.write(formatHostSetupResult(result));
     if (mode === "setup" && result.hosts.some((report) => report.action === "not-installed")) {
-      stdout.write("Hosts without Superloopy were skipped. Add one with `npx superloopy@latest setup --host <claude|codex|antigravity>` or all with `--yes`.\n");
+      stdout.write("Hosts without Superloopy were skipped. Add one with `npx superloopy@latest setup --host <claude|codex|antigravity|omp>` or all with `--yes`.\n");
     }
   }
   return result.ok ? 0 : 1;
@@ -125,12 +125,12 @@ export function wantsHostDoctor(argv, root) {
 }
 
 function parseHosts(raw) {
-  if (raw === undefined || raw.startsWith("-")) throw new SetupUsageError("Missing --host value: claude, codex, or antigravity (agy).");
+  if (raw === undefined || raw.startsWith("-")) throw new SetupUsageError("Missing --host value: claude, codex, antigravity (agy), or omp.");
   const names = raw.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean)
     .map((value) => (value === "agy" ? "antigravity" : value));
   const unknown = names.filter((value) => !SETUP_HOSTS.includes(value));
   if (names.length === 0 || unknown.length > 0) {
-    throw new SetupUsageError(`--host must list claude, codex, or antigravity (agy); received ${JSON.stringify(raw)}.`);
+    throw new SetupUsageError(`--host must list claude, codex, antigravity (agy), or omp; received ${JSON.stringify(raw)}.`);
   }
   return SETUP_HOSTS.filter((host) => names.includes(host));
 }
@@ -160,11 +160,11 @@ function targetVersion(currentVersion, latestVersion) {
 export function setupHelp() {
   return [
     "Usage:",
-    "  npx superloopy@latest [setup] [--host claude,codex,antigravity] [--yes] [--dry-run] [--json]",
+    "  npx superloopy@latest [setup] [--host claude,codex,antigravity,omp] [--yes] [--dry-run] [--json]",
     "  npx superloopy@latest update [--host ...] [--dry-run] [--json]",
     "  npx superloopy@latest doctor [--host ...] [--json]",
     "",
-    "setup   Installs Superloopy into each host CLI found on PATH (claude, codex, agy) through the host's",
+    "setup   Installs Superloopy into each host CLI found on PATH (claude, codex, agy, omp) through the host's",
     "        own plugin commands, and updates hosts that already have it. In a terminal it asks per host;",
     "        otherwise it installs only into hosts named with --host, or all with --yes.",
     "update  Updates hosts that already have Superloopy; installs nothing new.",
