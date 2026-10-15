@@ -11,7 +11,7 @@ import {
   matchesAgentType,
   receiptFromPayload
 } from "../src/receipt.js";
-import { bootstrapSuperloopy } from "../src/agents.js";
+import { bootstrapSuperloopy, installBinShim } from "../src/agents.js";
 import { isClaudeHost } from "../src/host-detect.js";
 import { runSessionStartHook } from "../src/hooks.js";
 
@@ -243,4 +243,12 @@ test("a declared Antigravity host bootstraps as Antigravity even with CLAUDE_PLU
   const result = await bootstrapSuperloopy(home, [], { env, homeDir: home, platform: "linux" });
   assert.equal(result.host, "antigravity");
   assert.match(await readFile(join(binDir, "superloopy"), "utf8"), /SUPERLOOPY_HOST='antigravity'/u);
+});
+
+test("a declared Codex host writes an untagged wrapper even with CLAUDE_PLUGIN_ROOT set", async () => {
+  const home = await mkdtemp(join(tmpdir(), "superloopy-declared-codex-home-"));
+  const binDir = await mkdtemp(join(tmpdir(), "superloopy-declared-codex-bin-"));
+  const env = { SUPERLOOPY_HOST: "codex", CLAUDE_PLUGIN_ROOT: "/plugins/superloopy", SUPERLOOPY_BIN_DIR: binDir, PATH: binDir };
+  await installBinShim(home, [], { env, homeDir: home, platform: "linux" });
+  assert.doesNotMatch(await readFile(join(binDir, "superloopy"), "utf8"), /SUPERLOOPY_HOST=/u);
 });

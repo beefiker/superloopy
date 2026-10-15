@@ -33,16 +33,21 @@ const CLAUDE_PATH_SEGMENTS = new Set([".claude"]);
 // Antigravity signal labels a Codex install "antigravity" and silently exempts it from the
 // Codex-only installedPluginTruth and installedModelPolicy checks.
 export function detectHost(root, env = process.env) {
-  // A recognized `SUPERLOOPY_HOST` is the host's (or our shim's) own declaration, so it outranks
-  // both the plugin-root signals and the install path. Without this branch only "antigravity" was
-  // honored: `isAntigravityHost` reads the value, while "claude" still needed `CLAUDE_PLUGIN_ROOT`
-  // and fell through to "codex" -- which pointed the Codex-only installedPluginTruth and
-  // installedModelPolicy checks at a Claude install -- and "codex" lost to a `.gemini` path segment.
-  // Unknown values are ignored rather than trusted here; the CLI rejects them at its entry points.
+  return hostFromEnv(env) ?? hostFromInstallPath(typeof root === "string" ? root : "");
+}
+
+// The host the runtime declares, or null when env carries no host signal. A recognized
+// `SUPERLOOPY_HOST` is the host's (or our shim's) own declaration, so it outranks the plugin-root
+// signals (and, in `detectHost`, the install path). Without that order only "antigravity" was
+// honored: `isAntigravityHost` reads the value, while "claude" still needed `CLAUDE_PLUGIN_ROOT`
+// and fell through to "codex" -- which pointed the Codex-only installedPluginTruth and
+// installedModelPolicy checks at a Claude install -- and "codex" lost to a `.gemini` path segment.
+// Unknown values are ignored rather than trusted here; the CLI rejects them at its entry points.
+export function hostFromEnv(env = process.env) {
   if (isKnownHost(env.SUPERLOOPY_HOST)) return env.SUPERLOOPY_HOST;
   if (isAntigravityHost(env)) return "antigravity";
   if (isClaudeHost(env)) return "claude";
-  return hostFromInstallPath(typeof root === "string" ? root : "");
+  return null;
 }
 
 // A plugin install lives under a directory the host owns (`~/.gemini/config/plugins/superloopy`,

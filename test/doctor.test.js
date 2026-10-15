@@ -14,6 +14,7 @@ import {
   isReviewableTextFile,
   runDoctor
 } from "../src/doctor.js";
+import { pathWithForeignWrapper } from "./helpers/foreign-wrapper.js";
 
 const EXPECTED_SKILLS = ["humanize-korean", "i-have-adhd", "say-it-straight", "superloopy-backend", "superloopy-clone", "superloopy-doctor", "superloopy-frontend", "superloopy-loop", "superloopy-research", "superloopy-slides"];
 test("reviewability counts physical lines and recognizes supported script/config extensions", () => {
@@ -95,7 +96,7 @@ function toCrLf(content) {
 }
 
 test("doctor --json reports Superloopy packaging, audit, and reviewability checks", () => {
-  const result = runCli(["doctor", "--json"]);
+  const result = runCli(["doctor", "--json"], { env: { PATH: pathWithForeignWrapper() } });
 
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
@@ -174,9 +175,9 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.interop.ok, true);
   assert.equal(parsed.checks.interop.informational, true);
   assert.equal(typeof parsed.checks.interop.installed, "boolean");
-  // Wrapper currency is advisory: upgrade is a suggestion, so it never gates health.
+  // A wrapper that is not ours is reported, never gating; wrapper-check tests cover the rest.
   assert.equal(parsed.checks.wrapper.ok, true);
-  assert.equal(parsed.checks.wrapper.informational, true);
+  assert.equal(parsed.checks.wrapper.recognized, false);
 });
 
 test("doctor CLI falls back to the CLI root outside a Superloopy checkout", async () => {
@@ -413,7 +414,7 @@ test("doctor CLI gates installed scope through the real Codex authority seam", a
   for (const scenario of scenarios) {
     const result = runCli(["doctor", "--scope=installed", "--json"], {
       cwd: fixture,
-      env: { PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`, SUPERLOOPY_FAKE_INSTALLED_VERSION: scenario.version }
+      env: { PATH: pathWithForeignWrapper(`${binDir}${delimiter}${process.env.PATH ?? ""}`), SUPERLOOPY_FAKE_INSTALLED_VERSION: scenario.version }
     });
     const parsed = JSON.parse(result.stdout);
     const failedChecks = Object.entries(parsed.checks).filter(([, check]) => !check.ok).map(([name]) => name);
