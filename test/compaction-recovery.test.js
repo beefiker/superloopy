@@ -151,8 +151,9 @@ test("compact recovery is read-only and repeatable", async () => {
   const ledgerPath = join(repo, ".superloopy", "ledger.jsonl");
   const before = [await readFile(planPath, "utf8"), await readFile(ledgerPath, "utf8")];
   const payload = { hook_event_name: "SessionStart", source: "compact", cwd: repo, transcript_path: null };
-  await runSessionStartHook(payload, { env: { SUPERLOOPY_HOST: "claude" } });
-  await runSessionStartHook(payload, { env: { SUPERLOOPY_HOST: "claude" } });
+  const options = { env: { SUPERLOOPY_HOST: "claude" }, homeDir: await mkdtemp(join(tmpdir(), "superloopy-compact-home-")) };
+  await runSessionStartHook(payload, options);
+  await runSessionStartHook(payload, options);
   assert.deepEqual([await readFile(planPath, "utf8"), await readFile(ledgerPath, "utf8")], before);
 });
 
@@ -162,7 +163,7 @@ test("compact recovery survives a transcript context-pressure marker", async () 
   await writeFile(transcript, "You have 1000 weighted tokens left\n", "utf8");
   const output = await runSessionStartHook(
     { hook_event_name: "SessionStart", source: "compact", cwd: repo, transcript_path: transcript },
-    { env: { SUPERLOOPY_HOST: "claude" } }
+    { env: { SUPERLOOPY_HOST: "claude" }, homeDir: await mkdtemp(join(tmpdir(), "superloopy-compact-home-")) }
   );
   assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /Superloopy compaction recovery/u);
 });

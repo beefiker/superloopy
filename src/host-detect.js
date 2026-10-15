@@ -1,4 +1,15 @@
-import { isAntigravityHost, isClaudeHost } from "./agents.js";
+// Claude Code exports CLAUDE_PLUGIN_ROOT into the plugin's hook subprocess; Codex does not.
+// It is the host signal that distinguishes the two runtimes at bootstrap time.
+export function isClaudeHost(env = process.env) {
+  return typeof env.CLAUDE_PLUGIN_ROOT === "string" && env.CLAUDE_PLUGIN_ROOT.trim().length > 0;
+}
+
+export function isAntigravityHost(env = process.env) {
+  if (env.SUPERLOOPY_HOST === "antigravity") return true;
+  if (env.SUPERLOOPY_HOST === "codex" || env.SUPERLOOPY_HOST === "claude") return false;
+  const isSet = (k) => typeof env[k] === "string" && env[k].trim().length > 0;
+  return isSet("ANTIGRAVITY_PLUGIN_ROOT") || isSet("GEMINI_PLUGIN_ROOT");
+}
 
 // The only host identities Superloopy resolves. Anything else is a broken declaration, not a
 // fourth host: `canonicalAgentType` returns null for an unknown host, so every receipt lookup
@@ -22,16 +33,21 @@ const CLAUDE_PATH_SEGMENTS = new Set([".claude"]);
 // Antigravity signal labels a Codex install "antigravity" and silently exempts it from the
 // Codex-only installedPluginTruth and installedModelPolicy checks.
 export function detectHost(root, env = process.env) {
-  // A recognized `SUPERLOOPY_HOST` is the host's (or our shim's) own declaration, so it outranks
-  // both the plugin-root signals and the install path. Without this branch only "antigravity" was
-  // honored: `isAntigravityHost` reads the value, while "claude" still needed `CLAUDE_PLUGIN_ROOT`
-  // and fell through to "codex" -- which pointed the Codex-only installedPluginTruth and
-  // installedModelPolicy checks at a Claude install -- and "codex" lost to a `.gemini` path segment.
-  // Unknown values are ignored rather than trusted here; the CLI rejects them at its entry points.
+  return hostFromEnv(env) ?? hostFromInstallPath(typeof root === "string" ? root : "");
+}
+
+// The host the runtime declares, or null when env carries no host signal. A recognized
+// `SUPERLOOPY_HOST` is the host's (or our shim's) own declaration, so it outranks the plugin-root
+// signals (and, in `detectHost`, the install path). Without that order only "antigravity" was
+// honored: `isAntigravityHost` reads the value, while "claude" still needed `CLAUDE_PLUGIN_ROOT`
+// and fell through to "codex" -- which pointed the Codex-only installedPluginTruth and
+// installedModelPolicy checks at a Claude install -- and "codex" lost to a `.gemini` path segment.
+// Unknown values are ignored rather than trusted here; the CLI rejects them at its entry points.
+export function hostFromEnv(env = process.env) {
   if (isKnownHost(env.SUPERLOOPY_HOST)) return env.SUPERLOOPY_HOST;
   if (isAntigravityHost(env)) return "antigravity";
   if (isClaudeHost(env)) return "claude";
-  return hostFromInstallPath(typeof root === "string" ? root : "");
+  return null;
 }
 
 // A plugin install lives under a directory the host owns (`~/.gemini/config/plugins/superloopy`,

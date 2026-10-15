@@ -10,9 +10,7 @@ import {
   formatBinInstallResult,
   formatBootstrapResult,
   installAgents,
-  installBinShim,
-  isClaudeHost,
-  isAntigravityHost
+  installBinShim
 } from "./agents.js";
 import { auditLoop } from "./audit.js";
 import { runAuditorStopHook } from "./audit-hooks.js";
@@ -350,7 +348,7 @@ async function runHook(subcommand, stdin, stdout, rest = []) {
     process.env.SUPERLOOPY_HOST = explicitHost;
   }
   requireKnownHost(process.env.SUPERLOOPY_HOST, "SUPERLOOPY_HOST");
-  const host = explicitHost ?? (isClaudeHost(process.env) ? "claude" : (isAntigravityHost(process.env) ? "antigravity" : "codex"));
+  const host = explicitHost ?? detectHost(CLI_ROOT, process.env);
   const context = { host };
   if (subcommand === "session-start") {
     stdout.write(await runSessionStartHook(payload, { env: process.env, host }));

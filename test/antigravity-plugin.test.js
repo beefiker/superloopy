@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { isAntigravityHost } from "../src/agents.js";
+import { isAntigravityHost } from "../src/host-detect.js";
 import { canonicalAgentType, matchesAgentType } from "../src/receipt.js";
 
 test("Antigravity and Gemini plugin manifests match package version and author", async () => {
