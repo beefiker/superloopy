@@ -10,7 +10,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
-import { hasFlag, readFlag } from "./args.js";
+import { hasFlag } from "./args.js";
 import { compareVersions, parseVersion, resolveLatestVersion } from "./auto-update-plan.js";
 import { formatHostSetupResult, hostLabel, runHostSetup, SETUP_HOSTS } from "./host-setup.js";
 import { resolveSpawnInvocation } from "./spawn-command.js";
@@ -39,12 +39,14 @@ export function selfUpdatePlan({ root, currentVersion, latestVersion, argv, env 
 
 // mode: "setup" | "update" | "doctor". Returns the process exit code.
 export async function runSetupCommand(mode, argv, { root, stdin, stdout, stderr, env = process.env, deps = {} }) {
-  if (hasFlag(argv, "--help") || hasFlag(argv, "-h")) {
+  // Parsed in full before anything runs: a typo such as `--hots` or `--dyr-run` must stop here,
+  // not fall back to every host with real changes.
+  const options = parseSetupArgs(mode, argv);
+  if (options.help) {
     stdout.write(setupHelp());
     return 0;
   }
-  const hosts = parseHosts(argv);
-  const json = hasFlag(argv, "--json");
+  const { hosts, json } = options;
   const currentVersion = readPackageVersion(root);
 
   const latestVersion = (deps.resolveLatestVersion ?? resolveLatestVersion)({ SUPERLOOPY_LATEST_VERSION_TIMEOUT_MS: LATEST_TIMEOUT_MS, ...env });
@@ -58,8 +60,7 @@ export async function runSetupCommand(mode, argv, { root, stdin, stdout, stderr,
   }
 
   const interactive = stdin?.isTTY === true && stdout?.isTTY === true && !json;
-  const yes = hasFlag(argv, "--yes") || hasFlag(argv, "-y");
-  const explicitHosts = readFlag(argv, "--host") !== undefined;
+  const { yes, explicitHosts } = options;
   const confirmInstall = deps.confirmInstall ?? (async (host) => {
     if (yes || explicitHosts) return true;
     if (!interactive) return false;
@@ -70,7 +71,7 @@ export async function runSetupCommand(mode, argv, { root, stdin, stdout, stderr,
     mode,
     target: targetVersion(currentVersion, latestVersion),
     hosts,
-    dryRun: hasFlag(argv, "--dry-run"),
+    dryRun: options.dryRun,
     confirmInstall,
     run: deps.run,
     env
@@ -85,9 +86,42 @@ export async function runSetupCommand(mode, argv, { root, stdin, stdout, stderr,
   return result.ok ? 0 : 1;
 }
 
-function parseHosts(argv) {
-  const raw = readFlag(argv, "--host");
-  if (raw === undefined) return SETUP_HOSTS;
+const SETUP_FLAGS = new Set(["--json", "--yes", "-y", "--dry-run", "--no-self-update", "--help", "-h"]);
+
+export function parseSetupArgs(mode, argv) {
+  const options = { hosts: SETUP_HOSTS, explicitHosts: false, json: false, yes: false, dryRun: false, help: false };
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+    if (token === "--host" || token.startsWith("--host=")) {
+      if (options.explicitHosts) throw new Error("Duplicate --host.");
+      const raw = token === "--host" ? argv[++index] : token.slice("--host=".length);
+      options.hosts = parseHosts(raw);
+      options.explicitHosts = true;
+    } else if (mode === "doctor" && token === "--hosts") {
+      continue;
+    } else if (SETUP_FLAGS.has(token)) {
+      if (token === "--json") options.json = true;
+      if (token === "--yes" || token === "-y") options.yes = true;
+      if (token === "--dry-run") options.dryRun = true;
+      if (token === "--help" || token === "-h") options.help = true;
+    } else {
+      throw new Error(`${token.startsWith("-") ? "Unknown" : "Unexpected"} ${mode} argument: ${token}. Run \`superloopy ${mode} --help\`.`);
+    }
+  }
+  return options;
+}
+
+// `doctor --hosts`, or plain `doctor` from an npm/npx install (there is no plugin root to check
+// there), reports each host's install. Any package-doctor option keeps the package doctor.
+const PACKAGE_DOCTOR_FLAGS = ["--root", "--plugin-root", "--scope", "--comparison-path", "--refresh-models"];
+export function wantsHostDoctor(argv, root) {
+  if (argv.includes("--hosts")) return true;
+  if (!isNpmPackageRoot(root)) return false;
+  return !argv.some((token) => PACKAGE_DOCTOR_FLAGS.some((flag) => token === flag || token.startsWith(`${flag}=`)));
+}
+
+function parseHosts(raw) {
+  if (raw === undefined || raw.startsWith("-")) throw new Error("Missing --host value: claude, codex, or antigravity (agy).");
   const names = raw.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean)
     .map((value) => (value === "agy" ? "antigravity" : value));
   const unknown = names.filter((value) => !SETUP_HOSTS.includes(value));

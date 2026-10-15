@@ -1,15 +1,15 @@
 name: Publish to npm
 
-# Publishes `superloopy` when a GitHub release is published for a `v<version>` tag. Uses npm
-# trusted publishing (OIDC), so no npm token is stored in the repository and npm attaches a
-# provenance attestation automatically. Configure it once on npmjs.com:
-# package `superloopy` -> Settings -> Trusted publishing -> GitHub Actions,
+# Publishes `superloopy` when a GitHub release is published for a `v<version>` tag, and only
+# then: there is no manual trigger, because a manual run could pick any branch and publish code
+# that was never released. Uses npm trusted publishing (OIDC), so no npm token is stored in the
+# repository and npm attaches a provenance attestation automatically. Configure it once on
+# npmjs.com: package `superloopy` -> Settings -> Trusted publishing -> GitHub Actions,
 # repository `beefiker/superloopy`, workflow `publish.yml`.
 
 on:
   release:
     types: [published]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -33,7 +33,6 @@ jobs:
         run: npm install -g npm@latest
 
       - name: Check the release tag matches package.json
-        if: github.event_name == 'release'
         run: |
           version="$(node -p "require('./package.json').version")"
           if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then

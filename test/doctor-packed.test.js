@@ -13,17 +13,18 @@ import { isSourceCheckoutRoot } from "../src/source-checkout.js";
 // doc still lists their inventory rows. Doctor must not report the install as broken.
 const NPM_PACK_STRIPPED = new Set([".gitignore", "package-lock.json"]);
 
-// Mirrors an `npm pack` extract: every Git-visible file except the npm-stripped set,
-// with no .git directory. Built by copy instead of running `npm pack` + `tar` so the
-// test stays dependency-free on the Windows CI runners.
-async function copyGitVisibleFiles(repo, skip) {
+// Mirrors an `npm pack` extract: the Git-visible files that package.json `files` selects, plus
+// the files npm always ships (package.json, README*, LICENSE*), with no .git directory. Built by
+// copy instead of running `npm pack` + `tar` so the test stays dependency-free on the Windows CI
+// runners; honoring `files` keeps it from passing on a file the real tarball leaves out.
+async function copyGitVisibleFiles(repo, keep) {
   const result = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
     cwd: process.cwd(),
     encoding: "utf8"
   });
   assert.equal(result.status, 0, result.stderr);
   for (const file of result.stdout.split("\n").filter(Boolean)) {
-    if (skip.has(file)) continue;
+    if (!keep(file)) continue;
     const source = join(process.cwd(), file);
     if (!existsSync(source)) continue;
     const target = join(repo, file);
@@ -33,14 +34,24 @@ async function copyGitVisibleFiles(repo, skip) {
   return repo;
 }
 
+async function packedFileFilter() {
+  const entries = JSON.parse(await readFile(join(process.cwd(), "package.json"), "utf8")).files;
+  assert.ok(Array.isArray(entries), "package.json must list the files npm ships");
+  return (file) => {
+    if (NPM_PACK_STRIPPED.has(file)) return false;
+    if (/^(?:package\.json|README[^/]*|LICEN[CS]E[^/]*)$/iu.test(file)) return true;
+    return entries.some((entry) => (entry.endsWith("/") ? file.startsWith(entry) : file === entry));
+  };
+}
+
 async function tempNpmPackedCopy(destination) {
   const repo = destination ?? await mkdtemp(join(tmpdir(), "superloopy-packed-"));
-  return copyGitVisibleFiles(repo, NPM_PACK_STRIPPED);
+  return copyGitVisibleFiles(repo, await packedFileFilter());
 }
 
 // Full source-tree copy: keeps the repo-only files a checkout ships with.
 async function tempSourceTreeCopy(destination) {
-  return copyGitVisibleFiles(destination, new Set());
+  return copyGitVisibleFiles(destination, () => true);
 }
 
 test("doctor accepts an npm-packed install run from an arbitrary cwd", async () => {

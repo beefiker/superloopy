@@ -15,6 +15,12 @@ const MARKETPLACE = "beefiker";
 const REPO_URL = `https://github.com/${REPO}`;
 const LABELS = { claude: "Claude Code", codex: "Codex", antigravity: "Google Antigravity" };
 const BINARIES = { claude: "claude", codex: "codex", antigravity: "agy" };
+// Codex has no `plugin enable` subcommand; its plugin browser is where a plugin is switched on.
+const ENABLE = {
+  claude: `claude plugin enable ${PLUGIN_ID}`,
+  codex: "turn superloopy on in Codex's /plugins menu",
+  antigravity: "agy plugin enable superloopy"
+};
 const AFTER = {
   claude: "Run /reload-plugins in open Claude Code sessions (or restart them).",
   codex: "Restart Codex and approve Modified hooks; the next session reconciles the wrapper and agents.",
@@ -113,8 +119,11 @@ export function planHost(inspection, { target, allowInstall }) {
     if (!allowInstall) return { action: "not-installed", steps: [] };
     return { action: "install", steps: installSteps(host, inspection) };
   }
-  if (isCurrent(inspection.installed.version, target)) return { action: "current", steps: [] };
-  return { action: "update", steps: updateSteps(host, inspection) };
+  if (!isCurrent(inspection.installed.version, target)) return { action: "update", steps: updateSteps(host, inspection) };
+  // Installed and current but switched off contributes no hooks, skills, or agents. Turning it
+  // back on is the user's call (they may have disabled it on purpose), so report, don't enable.
+  if (!inspection.installed.enabled) return { action: "disabled", steps: [], message: `Installed but disabled. Enable it with \`${ENABLE[host]}\`.` };
+  return { action: "current", steps: [] };
 }
 
 function installSteps(host, inspection) {
@@ -167,6 +176,10 @@ export function validateHost(inspection, { run = defaultRun } = {}) {
 // mode: "setup" installs where allowed and updates existing installs; "update" only updates;
 // "doctor" changes nothing. `confirmInstall(host)` resolves whether a missing host gets Superloopy.
 export async function runHostSetup({ mode, target, hosts = SETUP_HOSTS, dryRun = false, confirmInstall = async () => false, run = defaultRun, env = process.env, nodeVersion = process.versions.node } = {}) {
+  // Superloopy's hooks run on the node found on PATH, so an install under an older Node would
+  // leave hosts with hooks that cannot start. Check first and change nothing when it fails.
+  const nodeOk = Number.parseInt(String(nodeVersion).split(".")[0], 10) >= MIN_NODE_MAJOR;
+  const apply = mode !== "doctor" && !dryRun && nodeOk;
   const reports = [];
   for (const host of hosts) {
     const before = inspectHost(host, { run, env });
@@ -175,17 +188,19 @@ export async function runHostSetup({ mode, target, hosts = SETUP_HOSTS, dryRun =
       : false;
     const plan = planHost(before, { target, allowInstall });
     const report = { host, label: LABELS[host], available: before.available, cliVersion: before.cliVersion ?? null, before: before.installed?.version ?? null, action: plan.action, steps: plan.steps.map(renderStep), message: plan.message ?? null };
-    if (mode !== "doctor" && !dryRun && plan.steps.length > 0) {
+    if (apply && plan.steps.length > 0) {
       const failure = applySteps(plan.steps, run);
       const after = inspectHost(host, { run, env });
       report.after = after.installed?.version ?? null;
-      report.ok = failure === null && after.installed !== null;
+      // Success means the host reached the target, not merely that every command exited 0.
+      report.ok = failure === null && report.after !== null && isCurrent(report.after, target);
       if (failure !== null) report.message = failure;
-      else if (report.after !== null && !isCurrent(report.after, target)) report.message = `The ${MARKETPLACE} marketplace serves ${report.after}; npm latest is ${target}. The repository may not have caught up yet.`;
-      if (report.ok) report.next = AFTER[host];
+      else if (report.after !== null && !isCurrent(report.after, target)) report.message = `GitHub serves ${report.after} through the ${MARKETPLACE} marketplace; the target is ${target}. Rerun after the release reaches GitHub main.`;
+      if (failure === null && report.after !== null) report.next = AFTER[host];
     } else {
       report.after = report.before;
-      report.ok = plan.action !== "error";
+      report.ok = plan.action !== "error" && plan.action !== "disabled";
+      if (!nodeOk && mode !== "doctor" && plan.steps.length > 0) report.message = `Skipped: Node ${nodeVersion} is below ${MIN_NODE_MAJOR}; nothing was changed.`;
     }
     if (mode === "doctor") {
       report.validate = before.installed === null ? null : validateHost(before, { run });
@@ -194,7 +209,6 @@ export async function runHostSetup({ mode, target, hosts = SETUP_HOSTS, dryRun =
     }
     reports.push(report);
   }
-  const nodeOk = Number.parseInt(String(nodeVersion).split(".")[0], 10) >= MIN_NODE_MAJOR;
   const anyHost = reports.some((report) => report.available);
   return {
     ok: nodeOk && anyHost && reports.every((report) => report.ok !== false),
@@ -214,6 +228,7 @@ function doctorOk(report) {
 
 function doctorNext(report) {
   if (report.action === "update") return "npx superloopy@latest update";
+  if (report.action === "disabled") return ENABLE[report.host];
   if (report.action === "not-installed") return `npx superloopy@latest setup --host ${report.host}`;
   if (report.validate?.ok === false) return `${report.validate.command} (then reinstall with npx superloopy@latest setup --host ${report.host})`;
   return undefined;
@@ -240,9 +255,10 @@ function errorSummary(text) {
 export function formatHostSetupResult(result) {
   const title = result.mode === "doctor" ? "Superloopy host check" : `Superloopy ${result.mode}${result.dryRun ? " (dry run)" : ""}`;
   const lines = [`${title} - target ${result.target}`, ""];
+  const applied = !result.dryRun && result.mode !== "doctor" && result.node.ok;
   for (const report of result.hosts) {
-    lines.push(`${report.label}: ${describe(report, result)}`);
-    if (result.dryRun || result.mode === "doctor") for (const command of report.steps) lines.push(`  would run: ${command}`);
+    lines.push(`${report.label}: ${describe(report, applied)}`);
+    if (!applied) for (const command of report.steps) lines.push(`  would run: ${command}`);
     if (report.validate) lines.push(`  ${report.validate.ok ? "validated" : "validation failed"}: ${report.validate.command}`);
     if (report.message) lines.push(`  ${report.message}`);
     if (report.next) lines.push(`  next: ${report.next}`);
@@ -252,15 +268,16 @@ export function formatHostSetupResult(result) {
   return `${lines.join("\n")}\n`;
 }
 
-function describe(report, result) {
+function describe(report, applied) {
   if (!report.available) return "not found on PATH";
   const cli = report.cliVersion ? ` (${report.cliVersion})` : "";
-  const changed = !result.dryRun && result.mode !== "doctor" && report.steps.length > 0;
+  const changed = applied && report.steps.length > 0;
   switch (report.action) {
     case "current": return `${report.before} is current${cli}`;
     case "not-installed": return `Superloopy not installed${cli}`;
     case "foreign": return `another Superloopy install${cli}`;
     case "error": return `check failed${cli}`;
+    case "disabled": return `${report.before} is installed but disabled${cli}`;
     case "install": return changed ? (report.ok ? `installed ${report.after}${cli}` : `install failed${cli}`) : `would install${cli}`;
     case "update": return changed ? (report.ok ? `updated ${report.before} -> ${report.after}${cli}` : `update failed${cli}`) : `${report.before} is outdated${cli}`;
     default: return report.action;

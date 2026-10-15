@@ -21,10 +21,11 @@ export async function checkFileAudit(cwd, options) {
     const sourceCheckout = options.sourceCheckout ?? existsSync(join(cwd, ".git"));
     const missing = files.filter((file) => !audit.includes(`\`${file}\``));
     const missingRows = files.filter((file) => !rowByFile.has(file));
+    const shipped = sourceCheckout ? () => true : await shippedByPackage(cwd);
     const staleRows = rows
       .map((row) => row.file)
       .filter((file) => !fileSet.has(file))
-      .filter((file) => sourceCheckout || !PACKAGING_STRIPPED_FILES.has(file));
+      .filter((file) => sourceCheckout || (!PACKAGING_STRIPPED_FILES.has(file) && shipped(file)));
     const incompleteRows = files.filter((file) => {
       const row = rowByFile.get(file);
       return row !== undefined && (row.role.length === 0 || row.referenceBoundary.length === 0);
@@ -81,4 +82,19 @@ function parseAuditRows(audit) {
 
 function fail(message) {
   return { ok: false, message };
+}
+
+// A packed root holds only what package.json `files` selects (plus the files npm always ships),
+// so an inventory row for anything else, such as tests or examples, is not stale there. Without a
+// `files` field npm ships everything, and every row must still resolve.
+async function shippedByPackage(cwd) {
+  let entries;
+  try {
+    entries = JSON.parse(await readFile(join(cwd, "package.json"), "utf8")).files;
+  } catch {
+    return () => true;
+  }
+  if (!Array.isArray(entries)) return () => true;
+  return (file) => /^(?:package\.json|README[^/]*|LICEN[CS]E[^/]*)$/iu.test(file)
+    || entries.some((entry) => typeof entry === "string" && (entry.endsWith("/") ? file.startsWith(entry) : file === entry));
 }

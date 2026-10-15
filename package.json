@@ -24,6 +24,10 @@
     "docs/superloopy-model-policy.md",
     "docs/superloopy-model-policy-claude.md",
     "docs/superloopy-host-contract.md",
+    "docs/superloopy-file-audit.md",
+    "docs/superloopy-loop-golden-set.md",
+    "docs/superloopy-gate-notes.md",
+    "docs/superloopy-design-audit.md",
     "installation.md"
   ],
   "scripts": {

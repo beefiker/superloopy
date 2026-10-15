@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { runHostSetup } from "../src/host-setup.js";
-import { runSetupCommand, selfUpdatePlan } from "../src/setup-command.js";
+import { runSetupCommand, selfUpdatePlan, wantsHostDoctor } from "../src/setup-command.js";
 
 const RELEASED = "0.26.0";
 
@@ -21,12 +21,12 @@ function fakeHosts(state) {
     if (command !== "git" && (current === undefined || current.cli === false)) return { status: null, stdout: "", stderr: "", error: Object.assign(new Error("spawn ENOENT"), { code: "ENOENT" }) };
     if (args[0] === "--version") return ok(`${command} 9.9.9\n`);
     if (command === "claude") {
-      if (line === "claude plugin list --json") return ok(JSON.stringify(current.version ? [{ id: "superloopy@beefiker", version: current.version, scope: "user", installPath: "/c/superloopy" }] : []));
+      if (line === "claude plugin list --json") return ok(JSON.stringify(current.version ? [{ id: "superloopy@beefiker", version: current.version, scope: "user", installPath: "/c/superloopy", enabled: current.enabled !== false }] : []));
       if (line === "claude plugin marketplace list --json") return ok(JSON.stringify(current.marketplace ? [{ name: "beefiker" }] : []));
       if (line === "claude plugin marketplace add beefiker/superloopy") { current.marketplace = true; return ok(); }
       if (line === "claude plugin install superloopy@beefiker" && current.marketplace) { current.version = RELEASED; return ok(); }
       if (line === "claude plugin marketplace update beefiker") return ok();
-      if (line === "claude plugin update superloopy@beefiker") { current.version = RELEASED; return ok(); }
+      if (line === "claude plugin update superloopy@beefiker") { current.version = current.serves ?? RELEASED; return ok(); }
       if (line.startsWith("claude plugin validate")) return ok(JSON.stringify({ success: current.valid !== false }));
     }
     if (command === "codex") {
@@ -159,4 +159,50 @@ test("an outdated npm copy hands the whole command to the latest release and ret
   });
   assert.equal(code, 7);
   assert.deepEqual(spawned, ["npx --yes superloopy@99.0.0 update --host claude"]);
+});
+
+test("a mistyped option or stray word stops setup before any host or registry call", async () => {
+  const untouched = { resolveLatestVersion: () => { throw new Error("registry must not be asked"); }, run: () => { throw new Error("hosts must not be touched"); } };
+  const quiet = { write() {} };
+  for (const argv of [["--hots", "claude", "--yes"], ["--dyr-run"], ["claude"], ["--host"]]) {
+    await assert.rejects(runSetupCommand("setup", argv, { root: process.cwd(), stdout: quiet, stderr: quiet, env: {}, deps: untouched }), /setup argument|--host value/u, argv.join(" "));
+  }
+});
+
+test("under Node older than 22 nothing is installed or updated", async () => {
+  const { run, calls } = fakeHosts({ claude: { version: "0.22.3", marketplace: true }, codex: { version: null, marketplace: true }, antigravity: { cli: false } });
+  const result = await runHostSetup({ mode: "setup", target: RELEASED, run, confirmInstall: async () => true, nodeVersion: "20.19.0" });
+
+  assert.deepEqual(changing(calls), []);
+  assert.equal(result.ok, false);
+  assert.match(report(result, "claude").message, /Node 20\.19\.0 is below 22; nothing was changed/u);
+});
+
+test("an update that lands below the target is a failure, not a success", async () => {
+  const { run } = fakeHosts({ claude: { version: "0.22.3", marketplace: true, serves: "0.24.0" }, codex: { cli: false }, antigravity: { cli: false } });
+  const result = await runHostSetup({ mode: "update", target: RELEASED, run, nodeVersion: "22.1.0" });
+
+  assert.equal(report(result, "claude").after, "0.24.0");
+  assert.equal(result.ok, false);
+  assert.match(report(result, "claude").message, /GitHub serves 0\.24\.0 .* the target is 0\.26\.0/u);
+});
+
+test("a current but disabled plugin fails doctor and points at the enable command without enabling it", async () => {
+  const { run, calls } = fakeHosts({ claude: { version: RELEASED, marketplace: true, enabled: false }, codex: { cli: false }, antigravity: { cli: false } });
+  const doctor = await runHostSetup({ mode: "doctor", target: RELEASED, run, nodeVersion: "22.1.0" });
+  assert.equal(doctor.ok, false);
+  assert.equal(report(doctor, "claude").next, "claude plugin enable superloopy@beefiker");
+
+  const setup = await runHostSetup({ mode: "setup", target: RELEASED, run, nodeVersion: "22.1.0" });
+  assert.equal(report(setup, "claude").action, "disabled");
+  assert.deepEqual(changing(calls), []);
+});
+
+test("plain doctor from an npm install reports hosts, unless a package-doctor option is given", () => {
+  const npmRoot = "/home/u/.npm/_npx/abc/node_modules/superloopy";
+  assert.equal(wantsHostDoctor([], npmRoot), true);
+  assert.equal(wantsHostDoctor(["--json"], npmRoot), true);
+  for (const option of [["--refresh-models"], ["--scope", "installed"], ["--root=/x"]]) assert.equal(wantsHostDoctor(option, npmRoot), false, option.join(" "));
+  assert.equal(wantsHostDoctor([], "/work/superloopy"), false, "a checkout keeps the package doctor");
+  assert.equal(wantsHostDoctor(["--hosts"], "/work/superloopy"), true);
 });
