@@ -10,6 +10,7 @@ import { isMissingPlanError, runOutputStyleControlHook } from "./output-style-ho
 import { matchesAgentType, receiptFromPayload, subagentTranscriptPath } from "./receipt.js";
 import { hasEngineerTrigger, runEngineerTriggerHook } from "./engineer.js";
 import { applySteeringIdempotent, statusLoop } from "./loop.js";
+import { CONTINUATION_MARKER, recordPromptIntent, shouldDriveStop, takeWorkerExhaustion } from "./loop-engagement.js";
 import { appendLedger, evidenceRelativeDir, goalsPath, scopeFromSessionId } from "./store.js";
 import { MAX_SUBAGENT_ATTEMPTS, clearAttemptState, nextAttemptState, recordSubagentLedger } from "./subagent-attempts.js";
 import { resolveWorkspaceRoot } from "./workspace-identity.js";
@@ -75,10 +76,20 @@ export async function runUserPromptSubmitHook(payload, options = {}) {
   if (typeof payload.prompt !== "string" || typeof payload.cwd !== "string") return "";
   payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
   if (hasContextPressureMarker(payload.prompt) || transcriptHasContextPressureMarker(payload.transcript_path)) return "";
+  recordPromptIntent(payload.cwd, payload.session_id, promptIntent(payload.prompt));
   const output = await runUserPromptSubmitCore(payload, options);
   // Opt-in write-time calque nudge (SUPERLOOPY_CALQUE_NUDGE=on): advisory context about the
   // previous reply, folded into whatever this hook already emits. Never a block.
   return mergeAdditionalContext(output, "UserPromptSubmit", calqueNudgeContext(payload, options.env ?? process.env));
+}
+
+// What this prompt means for Stop continuation (see loop-engagement.js): a loop trigger engages
+// the session; steering, an output-style toggle, or a replayed continuation keeps it; anything else
+// means the user is driving again, so automatic continuation stops for this session.
+function promptIntent(prompt) {
+  if (hasEngineerTrigger(prompt) || hasLoosePromptTrigger(prompt)) return "engage";
+  if (prompt.includes(CONTINUATION_MARKER) || hasSteeringMarker(prompt) || parseLoopOutputStyleControl(prompt) !== null) return "keep";
+  return "release";
 }
 
 async function runUserPromptSubmitCore(payload, options) {
@@ -154,8 +165,8 @@ export async function runStopHook(payload) {
   if (payload.hook_event_name !== "Stop" && payload.hook_event_name !== "SubagentStop") return "";
   if (typeof payload.cwd !== "string") return "";
   payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
-  if (!envOn(process.env, "SUPERLOOPY_STOP_HOOK")) return "";
-  return await decideContinuation(payload, { statusForPayload, guideForPayload, renderContinuationDirective, scopeFromPayload, appendLedger, contextPressureMarkers: CONTEXT_PRESSURE_MARKERS, env: process.env });
+  if (!shouldDriveStop(payload, process.env)) return "";
+  return await decideContinuation(payload, { statusForPayload, guideForPayload, renderContinuationDirective, scopeFromPayload, appendLedger, takeWorkerExhaustion, contextPressureMarkers: CONTEXT_PRESSURE_MARKERS, env: process.env });
 }
 
 export function parseSteeringDirective(prompt) {
@@ -394,6 +405,7 @@ function renderContinuationDirective(status, guide) {
     "4. Prove only the next unresolved criterion; do not re-run criteria that already pass (`loop finish` re-runs them). If its last proof failed, read its recorded evidence artifact and change something before proving again.",
     `5. Produce a real artifact under \`${status.plan.evidencePath ?? ".superloopy/evidence"}\` before recording criterion evidence.`,
     "6. Checkpoint only after required criteria pass.",
+    `7. If only the user can unblock a criterion (a decision, credentials, access), write the question to an artifact under \`${status.plan.evidencePath ?? ".superloopy/evidence"}\`, record that criterion with \`--status blocked\`, and stop; blocked criteria are not re-driven.`,
     ...(sayItStraightOverlay.length === 0 ? [] : ["", sayItStraightOverlay])
   ].filter(Boolean).join("\n");
 }

@@ -62,7 +62,7 @@ Finish in one command after all criteria pass:
 superloopy loop finish --evidence "<summary>" --artifact .superloopy/evidence/gate.json --json
 ```
 
-For custom gate workflows:
+For custom gate workflows (`loop review` writes the default gate and overwrites the target file; a hand-written review gate skips `review` and goes straight to `checkpoint --quality-gate`, signed as [Crew](crew.md) describes under "Review gate actors"):
 
 ```sh
 superloopy loop review --status passed --artifact .superloopy/evidence/gate.json --notes "<summary>" --json

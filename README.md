@@ -26,7 +26,7 @@ After installing, type your task in Codex, Claude Code, or Antigravity with a le
 loopy add the payments module
 ```
 
-The agent plans it, proves each piece with a real file, and reports back — you don't run any commands yourself. The packaged Stop hook stays quiet unless `SUPERLOOPY_STOP_HOOK=on`. Set `SUPERLOOPY_CALQUE_NUDGE=on` to get an advisory note at your next prompt when the previous Korean reply carried an English calque such as 조용히 실패 or 우아하게 종료.
+The agent plans it, proves each piece with a real file, and reports back — you don't run any commands yourself. The packaged Stop hook keeps a session going only after you start or resume a loop there with `loopy`, and only until you send a plain prompt; set `SUPERLOOPY_STOP_HOOK=on` to drive every session with unfinished work, or `SUPERLOOPY_STOP_HOOK=off` to turn it off. Set `SUPERLOOPY_CALQUE_NUDGE=on` to get an advisory note at your next prompt when the previous Korean reply carried an English calque such as 조용히 실패 or 우아하게 종료.
 
 ## Why Superloopy?
 

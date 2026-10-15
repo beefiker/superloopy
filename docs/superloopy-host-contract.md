@@ -85,16 +85,52 @@ caller is `superloopy:sentinel`, `superloopy:probe`, `superloopy:arbiter`, or `s
 the hook denies any target whose real path is outside the active evidence root: the session's
 root when that session has its own plan, otherwise the global root, the same choice receipt
 resolution makes (`src/crew-write-guard.js`). Their frontmatter also removes `Edit`/`MultiEdit`/`NotebookEdit`, and
-`assayer` is limited to `Read, Grep, Glob, Write`. Limits: sentinel, probe, and arbiter keep `Bash`
-to run tests and the CLI, so a shell redirect is not blocked; Codex has no path-scoped sandbox
-(`read-only` would also block the report), so those lanes stay prompt-guarded there. Neither hook
-inspects shell or network tools. As with every hook, completion authority never rests here — it is
-the deterministic in-process floor (`loop check`/`review`/`finish`).
+`assayer` is limited to `Read, Grep, Glob, Write`. Neither hook inspects shell or network tools. As
+with every hook, completion authority never rests here — it is the deterministic in-process floor
+(`loop check`/`review`/`finish`).
+
+### What neither host can restrict further
+
+Checked against the host docs on 2026-10-15; the remaining crew write limits are prompt text:
+
+- **Shell writes from sentinel, probe, and arbiter.** They keep `Bash` to run tests and the CLI,
+  and test runs write build output and caches inside the repo (`target/`, `build/`,
+  `node_modules/.cache`, `__pycache__`), so no path rule can allow those and still block product
+  edits. Claude's Bash sandbox is session-wide and a plugin cannot enable it; plugin subagents
+  ignore `permissionMode` and `hooks` frontmatter ([sub-agents](https://code.claude.com/docs/en/sub-agents.md)).
+  `isolation: worktree` would hide the uncommitted diff under review and keep the report out of
+  the parent's evidence root.
+- **Every Codex lane.** A custom agent file can only switch capabilities off
+  (`features.shell_tool`, …); `sandbox_mode` and `approval_policy` in it are ignored and the
+  agent inherits the parent session's sandbox ([Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents.md)).
+  So `pathfinder.toml`'s `sandbox_mode = "read-only"` states intent and is not enforced. Turning
+  the shell off is no option either: on Codex the shell is how a lane reads files.
+
+A lane that edits product files anyway is still caught where it matters: the parent records proof
+only through the CLI, and completion re-runs every command-backed criterion in-process.
 
 Research worker/query/wave profiles are also advisory on every host. Codex can expose local
 `Agent` dispatches to `PreToolUse`, but Superloopy intentionally does not deny dispatch based on a
 usage target. Hosted searches are not universally observable by hooks, so query totals may be
 journal-derived or `unknown`; they are never presented as enforced limits.
+
+## Stop hook (bounded continuation)
+
+Plugin hooks are installed for every session, so the Stop hook must not take over a session that
+never asked for a loop. With `SUPERLOOPY_STOP_HOOK` unset it drives only a host session whose
+user started or resumed a loop with a trigger (`loopy …`, `loopycrew`, `ultrawork`, `loopywork`):
+UserPromptSubmit writes `.superloopy/stop-engaged/<session_id>.json`, and any later plain prompt
+from that user removes it. A `SUPERLOOPY_STEER` prompt, an output-style toggle, or Codex replaying
+the continuation reason as a prompt (it carries `This is an automatic Superloopy continuation.`)
+keeps it. `on` drives every session with unresolved work; any other non-empty value disables it.
+A payload without `session_id` is never engaged by default. Claude Code does not fire Stop on a
+user interrupt, and Codex reports an interrupt as its own `Interrupt` event.
+
+While engaged, the bounded engine in `src/continuation.js` decides; its stall and iteration caps
+mark the loop `blocked` rather than run on. Each continuation also lists, once, every worker or
+auditor that exhausted its receipt attempts since the last report (`subagent_attempt_exhausted`,
+`audit_attempt_exhausted`, then `worker_exhaustion_reported` in the ledger), because the parent
+otherwise sees only that worker's last message.
 
 ## What Superloopy cannot verify (advisory limits)
 
