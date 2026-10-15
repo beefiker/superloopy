@@ -75,20 +75,23 @@ export async function runUserPromptSubmitHook(payload, options = {}) {
   if (payload.hook_event_name !== "UserPromptSubmit") return "";
   if (typeof payload.prompt !== "string" || typeof payload.cwd !== "string") return "";
   payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
-  if (hasContextPressureMarker(payload.prompt) || transcriptHasContextPressureMarker(payload.transcript_path)) return "";
+  // A prompt that is itself a compaction artifact says nothing about the user; any real prompt
+  // still updates Stop engagement even while the transcript tail shows context pressure.
+  if (hasContextPressureMarker(payload.prompt)) return "";
   recordPromptIntent(payload.cwd, payload.session_id, promptIntent(payload.prompt));
+  if (transcriptHasContextPressureMarker(payload.transcript_path)) return "";
   const output = await runUserPromptSubmitCore(payload, options);
   // Opt-in write-time calque nudge (SUPERLOOPY_CALQUE_NUDGE=on): advisory context about the
   // previous reply, folded into whatever this hook already emits. Never a block.
   return mergeAdditionalContext(output, "UserPromptSubmit", calqueNudgeContext(payload, options.env ?? process.env));
 }
 
-// What this prompt means for Stop continuation (see loop-engagement.js): a loop trigger engages
-// the session; steering, an output-style toggle, or a replayed continuation keeps it; anything else
-// means the user is driving again, so automatic continuation stops for this session.
+// What this prompt means for Stop continuation (see loop-engagement.js): a full-loop trigger engages
+// the session; guidance-only triggers (`loopywork`, `lpy`, `$lpy`), steering, an output-style toggle,
+// or a replayed continuation keep it as it is; anything else means the user is driving again.
 function promptIntent(prompt) {
-  if (hasEngineerTrigger(prompt) || hasLoosePromptTrigger(prompt)) return "engage";
-  if (prompt.includes(CONTINUATION_MARKER) || hasSteeringMarker(prompt) || parseLoopOutputStyleControl(prompt) !== null) return "keep";
+  if (hasEngineerTrigger(prompt)) return "engage";
+  if (hasLoosePromptTrigger(prompt) || prompt.includes(CONTINUATION_MARKER) || hasSteeringMarker(prompt) || parseLoopOutputStyleControl(prompt) !== null) return "keep";
   return "release";
 }
 

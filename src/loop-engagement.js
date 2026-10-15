@@ -4,8 +4,8 @@
 // Plugin hooks are installed for every session, so continuation must never take over a session
 // that did not ask for a loop. `SUPERLOOPY_STOP_HOOK` picks the mode:
 // - `on`: drive every session that has unresolved work (the original opt-in behavior);
-// - unset or empty: drive only a host session whose user started or resumed a loop with a trigger
-//   (`loopy …`, `loopycrew`, `ultrawork`, `loopywork`), until that user sends a plain prompt;
+// - unset or empty: drive only a host session whose user started or resumed a loop with a full-loop
+//   trigger (`loopy …`, `loopycrew`, `ultrawork`), until that user sends a plain prompt;
 // - anything else (`off`, `0`, …): never.
 // Engagement is a per-host-session marker under `.superloopy/stop-engaged/`, so a second session in
 // the same repo is unaffected. Claude Code skips Stop on a user interrupt and Codex reports an
@@ -59,14 +59,18 @@ export function recordPromptIntent(cwd, sessionId, intent) {
 
 // Exhaustion records since the last report or plan replacement, oldest first; records the report so
 // each is told once. `loop create --force` keeps the ledger, so a new plan starts the window over.
+// The report records how many ledger lines it read (`through`): workers finish in parallel, and an
+// entry appended between this read and the report line must stay in the next window. Two Stops
+// reading the same lines may both report them; a repeated notice is harmless, a lost one is not.
 export async function takeWorkerExhaustion(cwd, scope) {
   const ledger = await readLedger(cwd, scope);
   let start = 0;
   ledger.forEach((entry, index) => {
-    if (entry.kind === WORKER_EXHAUSTION_REPORTED || entry.kind === "plan_created") start = index + 1;
+    if (entry.kind === "plan_created") start = Math.max(start, index + 1);
+    if (entry.kind === WORKER_EXHAUSTION_REPORTED) start = Math.max(start, Number.isInteger(entry.through) ? entry.through : index + 1);
   });
   const pending = ledger.slice(start).filter((entry) => EXHAUSTION_KINDS.has(entry.kind));
-  if (pending.length > 0) await appendLedger(cwd, { at: nowIso(), kind: WORKER_EXHAUSTION_REPORTED, count: pending.length }, scope);
+  if (pending.length > 0) await appendLedger(cwd, { at: nowIso(), kind: WORKER_EXHAUSTION_REPORTED, count: pending.length, through: ledger.length }, scope);
   return pending;
 }
 

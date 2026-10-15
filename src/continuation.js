@@ -117,7 +117,8 @@ export async function decideContinuation(payload, deps) {
     // and ask for a re-check. A transient mid-write race self-heals on the next Stop.
     return `${JSON.stringify({ decision: "block", reason: [
       "Superloopy could not read the plan — `.superloopy/goals.json` may be corrupt or mid-write.",
-      "The loop will not complete until the plan is readable again; if this persists, repair the plan file."
+      "The loop will not complete until the plan is readable again; if this persists, repair the plan file.",
+      `- ${CONTINUATION_MARKER}`
     ].join("\n") })}\n`;
   }
 
@@ -200,7 +201,9 @@ export async function decideContinuation(payload, deps) {
     return "";
   }
 
-  if (decision.blocked) return "";
+  // The loop just stopped on a backstop. No continuation follows, so workers that gave up without
+  // proof are shown to the user now instead of waiting for a continuation that never comes.
+  if (decision.blocked) return await blockedNotice(payload, status, deps);
 
   await safeLedger(deps, cwd, scope, {
     at: decision.now,
@@ -223,17 +226,27 @@ async function blockReason(payload, status, deps) {
   return `${JSON.stringify({ decision: "block", reason })}\n`;
 }
 
-// Workers that exhausted their receipt attempts are reported in the plan's own scope, the same
-// ledger SubagentStop wrote to. Best-effort: a ledger failure never stops the continuation.
 async function directiveWithWorkerNotices(payload, status, deps) {
   const directive = deps.renderContinuationDirective(status, deps.guideForPayload(payload, status.plan));
-  if (typeof deps.takeWorkerExhaustion !== "function") return directive;
+  return [directive, ...renderWorkerExhaustion(await takeNotices(payload, status, deps))].join("\n");
+}
+
+// Workers that exhausted their receipt attempts are reported in the plan's own scope, the same
+// ledger SubagentStop wrote to. Best-effort: a ledger failure never stops the continuation.
+async function takeNotices(payload, status, deps) {
+  if (typeof deps.takeWorkerExhaustion !== "function") return [];
   try {
-    const entries = await deps.takeWorkerExhaustion(payload.cwd, scopeFromSessionId(status.plan.sessionId));
-    return [directive, ...renderWorkerExhaustion(entries)].join("\n");
+    return await deps.takeWorkerExhaustion(payload.cwd, scopeFromSessionId(status.plan.sessionId));
   } catch {
-    return directive;
+    return [];
   }
+}
+
+async function blockedNotice(payload, status, deps) {
+  const lines = renderWorkerExhaustion(await takeNotices(payload, status, deps));
+  if (lines.length === 0) return "";
+  const systemMessage = ["Superloopy stopped the loop (no progress or iteration cap); `superloopy loop status` shows why.", ...lines].join("\n");
+  return `${JSON.stringify({ systemMessage })}\n`;
 }
 
 function defaultLoopControl(scope) {
