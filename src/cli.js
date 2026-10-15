@@ -51,7 +51,7 @@ import {
 } from "./hooks.js";
 import { resolveWorkspaceRoot } from "./workspace-identity.js";
 import { readPlanUnchecked, scopeFromSessionId } from "./store.js";
-import { runSetupCommand, wantsHostDoctor } from "./setup-command.js";
+import { runSetupCommand, SetupUsageError, wantsHostDoctor } from "./setup-command.js";
 
 const CLI_FILE = fileURLToPath(import.meta.url);
 const CLI_ROOT = dirname(dirname(CLI_FILE));
@@ -97,7 +97,7 @@ async function main(argv, stdin, stdout, stderr, cwd) {
     return 1;
   } catch (error) {
     stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-    return error instanceof CliUsageError ? 2 : 1;
+    return error instanceof CliUsageError || error instanceof SetupUsageError ? 2 : 1;
   }
 }
 

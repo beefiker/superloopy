@@ -88,12 +88,16 @@ export async function runSetupCommand(mode, argv, { root, stdin, stdout, stderr,
 
 const SETUP_FLAGS = new Set(["--json", "--yes", "-y", "--dry-run", "--no-self-update", "--help", "-h"]);
 
+// A bad command line exits 2, like the package doctor's usage errors, so scripts can tell a typo
+// from a host that failed (exit 1).
+export class SetupUsageError extends Error {}
+
 export function parseSetupArgs(mode, argv) {
   const options = { hosts: SETUP_HOSTS, explicitHosts: false, json: false, yes: false, dryRun: false, help: false };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     if (token === "--host" || token.startsWith("--host=")) {
-      if (options.explicitHosts) throw new Error("Duplicate --host.");
+      if (options.explicitHosts) throw new SetupUsageError("Duplicate --host.");
       const raw = token === "--host" ? argv[++index] : token.slice("--host=".length);
       options.hosts = parseHosts(raw);
       options.explicitHosts = true;
@@ -105,7 +109,7 @@ export function parseSetupArgs(mode, argv) {
       if (token === "--dry-run") options.dryRun = true;
       if (token === "--help" || token === "-h") options.help = true;
     } else {
-      throw new Error(`${token.startsWith("-") ? "Unknown" : "Unexpected"} ${mode} argument: ${token}. Run \`superloopy ${mode} --help\`.`);
+      throw new SetupUsageError(`${token.startsWith("-") ? "Unknown" : "Unexpected"} ${mode} argument: ${token}. Run \`superloopy ${mode} --help\`.`);
     }
   }
   return options;
@@ -121,12 +125,12 @@ export function wantsHostDoctor(argv, root) {
 }
 
 function parseHosts(raw) {
-  if (raw === undefined || raw.startsWith("-")) throw new Error("Missing --host value: claude, codex, or antigravity (agy).");
+  if (raw === undefined || raw.startsWith("-")) throw new SetupUsageError("Missing --host value: claude, codex, or antigravity (agy).");
   const names = raw.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean)
     .map((value) => (value === "agy" ? "antigravity" : value));
   const unknown = names.filter((value) => !SETUP_HOSTS.includes(value));
   if (names.length === 0 || unknown.length > 0) {
-    throw new Error(`--host must list claude, codex, or antigravity (agy); received ${JSON.stringify(raw)}.`);
+    throw new SetupUsageError(`--host must list claude, codex, or antigravity (agy); received ${JSON.stringify(raw)}.`);
   }
   return SETUP_HOSTS.filter((host) => names.includes(host));
 }

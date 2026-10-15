@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { runHostSetup } from "../src/host-setup.js";
+import { main } from "../src/cli.js";
+import { formatHostSetupResult, runHostSetup } from "../src/host-setup.js";
 import { runSetupCommand, selfUpdatePlan, wantsHostDoctor } from "../src/setup-command.js";
 
 const RELEASED = "0.26.0";
@@ -167,6 +168,22 @@ test("a mistyped option or stray word stops setup before any host or registry ca
   for (const argv of [["--hots", "claude", "--yes"], ["--dyr-run"], ["claude"], ["--host"]]) {
     await assert.rejects(runSetupCommand("setup", argv, { root: process.cwd(), stdout: quiet, stderr: quiet, env: {}, deps: untouched }), /setup argument|--host value/u, argv.join(" "));
   }
+
+  // Through the CLI a usage error exits 2, so scripts can tell a typo from a failed host (1).
+  const sink = { text: "", write(chunk) { this.text += chunk; } };
+  assert.equal(await main(["setup", "--hots", "claude"], null, sink, sink, process.cwd()), 2);
+  assert.match(sink.text, /Unknown setup argument: --hots/u);
+});
+
+test("doctor --hosts --json reports every host as JSON without changing anything", async () => {
+  const { run, calls } = fakeHosts({ claude: { version: RELEASED, marketplace: true }, codex: { cli: false }, antigravity: { version: "0.19.0" } });
+  const out = { text: "", write(chunk) { this.text += chunk; } };
+  const code = await runSetupCommand("doctor", ["--hosts", "--json"], { root: process.cwd(), stdout: out, stderr: out, env: {}, deps: { resolveLatestVersion: () => null, run } });
+  const result = JSON.parse(out.text);
+  assert.equal(result.mode, "doctor");
+  assert.equal(code, 1, "the outdated Antigravity install fails the check");
+  assert.equal(report(result, "antigravity").next, "npx superloopy@latest update");
+  assert.deepEqual(changing(calls), []);
 });
 
 test("under Node older than 22 nothing is installed or updated", async () => {
@@ -176,6 +193,10 @@ test("under Node older than 22 nothing is installed or updated", async () => {
   assert.deepEqual(changing(calls), []);
   assert.equal(result.ok, false);
   assert.match(report(result, "claude").message, /Node 20\.19\.0 is below 22; nothing was changed/u);
+  const rendered = formatHostSetupResult(result);
+  assert.match(rendered, /Claude Code: 0\.22\.3 is outdated/u);
+  assert.match(rendered, /would run: claude plugin update superloopy@beefiker/u);
+  assert.doesNotMatch(rendered, /updated|installed /u);
 });
 
 test("an update that lands below the target is a failure, not a success", async () => {
