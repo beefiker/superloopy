@@ -99,8 +99,15 @@ export function renderGuideText(guideResult, summary) {
   return lines.filter(Boolean).join("\n");
 }
 
+// A blocked criterion waits on the user, so point at any other unresolved one first; fall back to
+// it only when nothing else in the goal is open.
+export function nextOpenCriterion(goal) {
+  return goal.criteria.find((candidate) => candidate.status !== "pass" && candidate.status !== "blocked")
+    ?? goal.criteria.find((candidate) => candidate.status !== "pass");
+}
+
 function guideForGoal(plan, goal, context) {
-  const criterion = goal.criteria.find((candidate) => candidate.status !== "pass");
+  const criterion = nextOpenCriterion(goal);
   if (criterion !== undefined) {
     const artifact = `${context.evidenceRoot}/${goal.id}-${criterion.id}.txt`;
     return guide("record_evidence", plan, {

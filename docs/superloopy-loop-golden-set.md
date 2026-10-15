@@ -638,7 +638,7 @@ Total: 100 points.
 | `src/finish.js` | CLI evidence and loop-gate tests. | Must only finalize after all criteria have valid pass artifacts, then write gate and report artifacts. |
 | `src/fleet.js` | `test/fleet.test.js`, `test/crew-lines.test.js`. | Must record handoffs under a lock, require evidence for accepted verdicts, reconcile dispatched-vs-outstanding, normalize APPROVE/PASS/REJECT-style verdicts, and decorate terminal known crew lanes for output only. |
 | `src/goals.js` | `test/goals.test.js`, loop tests. | Must keep deterministic goal parsing, criteria lookup, completion guards, and evidence collection. |
-| `src/guide.js` | CLI, docs, hook, and evidence tests. | Must produce next action, proof target, proof plan, templates, recorded evidence, and blockers. |
+| `src/guide.js` | CLI, docs, hook, and evidence tests, `test/stop-engagement.test.js`. | Must produce next action, proof target, proof plan, templates, recorded evidence, and blockers, pointing at an open criterion before one blocked on the user. |
 | `src/help.js` | CLI help tests. | Must show the shortest evidence-backed flow and pass-artifact rule. |
 | `src/hooks.js` | Hook, model-install, and golden-hook tests. | Must run managed bootstrap at SessionStart, reuse fresh state without a catalog query, surface compatibility/restart status, and keep continuation, steering, and receipt validation fail-closed. |
 | `src/host-detect.js` | `test/host-detect.test.js`, `test/doctor-packed.test.js`, doctor tests. | Must resolve the host from host/shim env or a host-owned install path only, never from shipped manifests, so a packed Codex install keeps the Codex-only installed-authority checks armed. |
@@ -736,7 +736,7 @@ Total: 100 points.
 | `test/skill-references.test.js` | `npm test`. | Must fail when the loop, research, or slides `SKILL.md` exceeds its word budget or omits a link to any file in its `references/`. |
 | `test/session-start-migration.test.js` | `npm test`. | Must prove approved SessionStart automatically migrates an exact legacy fleet, repairs a stale generated wrapper, stays silent and query-free when fresh, and preserves conflicts without prescribing force or a migration command. |
 | `test/subagent-receipt.test.js` | `npm test`. | Must prove the attempt cap counts without agent_id and records a ledger signal on exhaustion. |
-| `test/stop-engagement.test.js` | `npm test`. | Must prove a session is continued only after its user's loop trigger and until a plain prompt, that the env overrides win, and that an exhausted worker is reported once. |
+| `test/stop-engagement.test.js` | `npm test`. | Must prove a session is continued only after its user's loop trigger and until a plain prompt, that the env overrides win, that an exhausted worker is reported once and never against a replacement plan, and that the continuation skips a criterion blocked on the user. |
 | `test/calque-reverse-test.test.js` | `node --test test/calque-reverse-test.test.js`. | Must reproduce the 2026-09-10 pass/fail verdicts offline and assert the three quoted search queries. |
 | `test/upstream-drift.test.js` | `node --test test/upstream-drift.test.js`. | Must assert the recorded sync sha parses, a missing sync line throws, and added rule headings are extracted from a taxonomy patch. |
 | `test/sync-version.test.js` | `npm test`. | Must prove package metadata, the lockfile root, both host plugin manifests, and the Claude marketplace entry are stamped from one release version. |

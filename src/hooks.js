@@ -3,7 +3,7 @@ import { bootstrapHasUserSignal, bootstrapSuperloopy, formatBootstrapHookContext
 import { runAutoUpdateCheck } from "./auto-update.js";
 import { parseJson } from "./args.js";
 import { resolveEvidenceArtifact } from "./artifacts.js";
-import { buildGuide, flowStepLine, proofPlanLine, recordedEvidenceLine } from "./guide.js";
+import { buildGuide, flowStepLine, nextOpenCriterion, proofPlanLine, recordedEvidenceLine } from "./guide.js";
 import { CONTEXT_PRESSURE_MARKERS, decideContinuation, transcriptTailHasMarker } from "./continuation.js";
 import { calqueNudgeContext, mergeAdditionalContext } from "./calque-nudge.js";
 import { isMissingPlanError, runOutputStyleControlHook } from "./output-style-hook.js";
@@ -374,7 +374,7 @@ function renderContinuationDirective(status, guide) {
   const nextGoal = status.plan.goals.find((goal) => goal.status === "in_progress")
     ?? status.plan.goals.find((goal) => goal.status === "pending")
     ?? null;
-  const nextCriterion = nextGoal?.criteria.find((criterion) => criterion.status !== "pass") ?? null;
+  const nextCriterion = nextGoal === null ? null : nextOpenCriterion(nextGoal) ?? null;
   const sayItStraightOverlay = renderSayItStraightLoopOverlay(isSayItStraightEnabled(status.plan));
   return [
     "Superloopy continuation",
@@ -405,7 +405,7 @@ function renderContinuationDirective(status, guide) {
     "4. Prove only the next unresolved criterion; do not re-run criteria that already pass (`loop finish` re-runs them). If its last proof failed, read its recorded evidence artifact and change something before proving again.",
     `5. Produce a real artifact under \`${status.plan.evidencePath ?? ".superloopy/evidence"}\` before recording criterion evidence.`,
     "6. Checkpoint only after required criteria pass.",
-    `7. If only the user can unblock a criterion (a decision, credentials, access), write the question to an artifact under \`${status.plan.evidencePath ?? ".superloopy/evidence"}\`, record that criterion with \`--status blocked\`, and stop; blocked criteria are not re-driven.`,
+    `7. If only the user can unblock a criterion (a decision, credentials, access), write the question to an artifact under \`${status.plan.evidencePath ?? ".superloopy/evidence"}\` and record that criterion with \`--status blocked\`; it is not re-driven. If nothing else in the goal can proceed, \`superloopy loop checkpoint --goal-id <id> --status blocked --evidence "<question>"\` and move to the next goal; when nothing at all can proceed, stop.`,
     ...(sayItStraightOverlay.length === 0 ? [] : ["", sayItStraightOverlay])
   ].filter(Boolean).join("\n");
 }

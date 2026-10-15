@@ -57,12 +57,13 @@ export function recordPromptIntent(cwd, sessionId, intent) {
   }
 }
 
-// Exhaustion records since the last report, oldest first; records the report so each is told once.
+// Exhaustion records since the last report or plan replacement, oldest first; records the report so
+// each is told once. `loop create --force` keeps the ledger, so a new plan starts the window over.
 export async function takeWorkerExhaustion(cwd, scope) {
   const ledger = await readLedger(cwd, scope);
   let start = 0;
   ledger.forEach((entry, index) => {
-    if (entry.kind === WORKER_EXHAUSTION_REPORTED) start = index + 1;
+    if (entry.kind === WORKER_EXHAUSTION_REPORTED || entry.kind === "plan_created") start = index + 1;
   });
   const pending = ledger.slice(start).filter((entry) => EXHAUSTION_KINDS.has(entry.kind));
   if (pending.length > 0) await appendLedger(cwd, { at: nowIso(), kind: WORKER_EXHAUSTION_REPORTED, count: pending.length }, scope);

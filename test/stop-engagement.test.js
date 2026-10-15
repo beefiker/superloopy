@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
 import { runStopHook, runSubagentStopHook, runUserPromptSubmitHook } from "../src/hooks.js";
-import { createLoop } from "../src/loop.js";
+import { createLoop, evidenceLoop, nextLoop } from "../src/loop.js";
 import { readLedger } from "../src/store.js";
 
 async function tempRepo() { return mkdtemp(join(tmpdir(), "superloopy-stop-engagement-")); }
@@ -70,4 +70,28 @@ test("a worker that exhausts its receipt attempts is reported to the parent once
   assert.match(first, /Workers that stopped without proof:\n- probe \(w1\) returned after 3 attempts with no valid SUPERLOOPY_EVIDENCE receipt/u);
   assert.doesNotMatch(await stopReason(repo), /Workers that stopped without proof/u);
   assert.equal((await readLedger(repo)).filter((entry) => entry.kind === "worker_exhaustion_reported").length, 1);
+}));
+
+test("a worker exhausted under a replaced plan is not reported against the new one", () => withStopHookEnv("on", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Old plan"]);
+  const worker = { hook_event_name: "SubagentStop", cwd: repo, agent_type: "probe", agent_id: "w1", last_assistant_message: "done" };
+  for (let attempt = 1; attempt <= 4; attempt += 1) runSubagentStopHook(worker);
+  await createLoop(repo, ["--brief", "New plan", "--force"]);
+
+  assert.doesNotMatch(await stopReason(repo), /Workers that stopped without proof/u);
+}));
+
+test("the continuation points at an open criterion, not one blocked on the user", () => withStopHookEnv("on", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Ship"]);
+  await nextLoop(repo);
+  await mkdir(join(repo, ".superloopy", "evidence"), { recursive: true });
+  await writeFile(join(repo, ".superloopy", "evidence", "question.md"), "Which API key should staging use?\n", "utf8");
+  await evidenceLoop(repo, ["--goal-id", "G001", "--criterion-id", "C001", "--status", "blocked", "--artifact", ".superloopy/evidence/question.md"]);
+
+  const reason = await stopReason(repo);
+  assert.match(reason, /- Next criterion: C002 /u);
+  assert.match(reason, /- Proof target: G001\/C002 pass/u);
+  assert.doesNotMatch(reason, /Proof target: G001\/C001/u);
 }));

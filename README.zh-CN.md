@@ -26,7 +26,7 @@
 loopy 添加支付模块
 ```
 
-代理会规划任务，用真实文件证明每一部分，然后返回结果。你不需要自己运行命令。随包提供的 Stop hook 只有在 `SUPERLOOPY_STOP_HOOK=on` 时才会介入。
+代理会规划任务，用真实文件证明每一部分，然后返回结果。你不需要自己运行命令。随包提供的 Stop hook 只会让你用 `loopy` 开始或继续循环的会话继续运行，直到你发送一条普通消息为止；`SUPERLOOPY_STOP_HOOK=on` 会让它在所有会话中生效，`SUPERLOOPY_STOP_HOOK=off` 则将其关闭。
 
 ## 为什么选择 Superloopy？
 
