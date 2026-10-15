@@ -211,6 +211,28 @@ test("a goal blocked on the user ends in a stable wait state, and the plan finis
   assert.equal(finished.plan.aggregateCompletion.status, "complete");
 }));
 
+test("an answered goal is checkpointed complete while another goal still waits on the user", () => withStopHookEnv("on", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "@goal Staging key\nCall the staging API.\n\n@goal Prod key\nCall the prod API."]);
+  for (const goalId of ["G001", "G002"]) {
+    await nextLoop(repo);
+    await mkdir(join(repo, ".superloopy", "evidence"), { recursive: true });
+    await writeFile(join(repo, ".superloopy", "evidence", "question.md"), "Which key?\n", "utf8");
+    for (const id of ["C001", "C002"]) await evidenceLoop(repo, ["--goal-id", goalId, "--criterion-id", id, "--status", "blocked", "--artifact", ".superloopy/evidence/question.md"]);
+    await checkpointLoop(repo, ["--goal-id", goalId, "--status", "blocked", "--evidence", `Need the ${goalId} key`]);
+  }
+
+  for (const id of ["C001", "C002"]) await evidenceLoop(repo, ["--goal-id", "G001", "--criterion-id", id, "--status", "pass", "--artifact", ".superloopy/evidence/question.md"]);
+  const answered = buildGuide(await readPlan(repo), { cwd: repo });
+  assert.equal(answered.state, "checkpoint_goal", "the answered goal is not still waiting on the user");
+  assert.match(answered.nextAction.command, /checkpoint --goal-id G001 --status complete/u);
+
+  await checkpointLoop(repo, ["--goal-id", "G001", "--status", "complete", "--evidence", "key supplied"]);
+  const waiting = buildGuide(await readPlan(repo), { cwd: repo });
+  assert.equal(waiting.state, "blocked_on_user");
+  assert.match(waiting.nextAction.reason, /G002 is blocked on the user: Need the G002 key/u);
+}));
+
 test("a torn line where plan_created would be keeps an old plan's worker out of the new plan's notice", () => withStopHookEnv("on", async () => {
   const repo = await tempRepo();
   await createLoop(repo, ["--brief", "Old plan"]);

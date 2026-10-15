@@ -139,10 +139,12 @@ function guideForGoal(plan, goal, context) {
   }
 
   // buildGuide only reaches a goal already checkpointed blocked once no other goal can move, so the
-  // loop is waiting on the user: say so, instead of repeating the checkpoint that put it here.
+  // loop is waiting on the user: say so, instead of repeating the checkpoint that put it here. Once
+  // the user's answers are recorded no criterion is blocked any more, and the goal falls through to
+  // the ordinary checkpoint below.
   const blocked = goal.criteria.filter((candidate) => candidate.status === "blocked");
-  if (goal.status === "blocked") {
-    const waiting = blocked.length > 0 ? blocked : goal.criteria.filter((candidate) => candidate.status !== "pass");
+  if (goal.status === "blocked" && blocked.length > 0) {
+    const waiting = blocked;
     return guide("blocked_on_user", plan, {
       goal: goalView(goal),
       evidenceRoot: context.evidenceRoot,
