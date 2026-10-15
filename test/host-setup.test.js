@@ -51,10 +51,12 @@ function fakeHosts(state) {
         .sort((left, right) => (left.scope === "project" ? -1 : 0) - (right.scope === "project" ? -1 : 0))
         .map((entry) => ({ id: "superloopy@beefiker", scope: entry.scope, entries: [{ scope: entry.scope, installPath: `/o/${entry.scope}/superloopy`, version: entry.version, ...(entry.enabled === false ? { enabled: false } : {}) }] }));
       if (line === "omp plugin list --json") return ok(JSON.stringify({ npm: [], marketplace: items }));
-      if (line === "omp plugin marketplace list") return ok(current.marketplace ? "Configured Marketplaces:\n\n  beefiker  beefiker/superloopy\n" : "No marketplaces configured\n");
+      // With FORCE_COLOR, omp colors the table with ANSI escapes, as the real CLI does.
+      const row = current.color ? "  \u001b[36mbeefiker\u001b[39m  \u001b[2mbeefiker/superloopy\u001b[22m\n" : "  beefiker  beefiker/superloopy\n";
+      if (line === "omp plugin marketplace list") return ok(current.marketplace ? `Configured Marketplaces:\n\n${row}` : "No marketplaces configured\n");
       if (line === "omp plugin marketplace add beefiker/superloopy") { current.marketplace = true; return ok(); }
       if (line === "omp plugin install superloopy@beefiker" && current.marketplace) { current.entries = [{ scope: "user", version: RELEASED }]; return ok(); }
-      if (line === "omp plugin marketplace update beefiker") return ok();
+      if (line === "omp plugin marketplace update beefiker" && current.marketplace) return ok();
       if (line === "omp plugin upgrade superloopy@beefiker") { for (const entry of current.entries) entry.version = RELEASED; return ok(); }
     }
     return fail(`unexpected: ${line}`);
@@ -250,6 +252,19 @@ test("omp gets the marketplace only when it lacks it, and an update refreshes th
   assert.deepEqual(changing(scoped.calls), ["omp plugin marketplace update beefiker", "omp plugin upgrade superloopy@beefiker"]);
 });
 
+test("omp re-adds a removed marketplace before upgrading, and reads a colored marketplace table", async () => {
+  // omp leaves plugins installed when their marketplace is removed; `marketplace update` then fails.
+  const removed = fakeHosts({ claude: { cli: false }, codex: { cli: false }, antigravity: { cli: false }, omp: { marketplace: false, entries: [{ scope: "user", version: "0.22.3" }] } });
+  const updated = await runHostSetup({ mode: "update", target: RELEASED, run: removed.run, nodeVersion: "22.1.0" });
+  assert.equal(report(updated, "omp").after, RELEASED);
+  assert.deepEqual(changing(removed.calls), ["omp plugin marketplace add beefiker/superloopy", "omp plugin upgrade superloopy@beefiker"]);
+
+  const colored = fakeHosts({ claude: { cli: false }, codex: { cli: false }, antigravity: { cli: false }, omp: { marketplace: true, color: true } });
+  const installed = await runHostSetup({ mode: "setup", target: RELEASED, run: colored.run, confirmInstall: async () => true, nodeVersion: "22.1.0" });
+  assert.equal(installed.ok, true);
+  assert.deepEqual(changing(colored.calls), ["omp plugin install superloopy@beefiker"]);
+});
+
 test("omp counts as on while any scope enables Superloopy; with every scope disabled doctor fails and names the enable command", async () => {
   const hosts = (entries) => fakeHosts({ claude: { cli: false }, codex: { cli: false }, antigravity: { cli: false }, omp: { marketplace: true, entries } });
   // A disabled project install (listed first) does not shadow an enabled user install.
@@ -260,6 +275,10 @@ test("omp counts as on while any scope enables Superloopy; with every scope disa
   const off = await runHostSetup({ mode: "doctor", target: RELEASED, run: hosts([{ scope: "user", version: RELEASED, enabled: false }]).run, nodeVersion: "22.1.0" });
   assert.equal(off.ok, false);
   assert.equal(report(off, "omp").next, "omp plugin enable superloopy@beefiker");
+
+  // With both scopes installed, omp rejects an enable that names no scope.
+  const bothOff = await runHostSetup({ mode: "doctor", target: RELEASED, run: hosts([{ scope: "user", version: RELEASED, enabled: false }, { scope: "project", version: RELEASED, enabled: false }]).run, nodeVersion: "22.1.0" });
+  assert.equal(report(bothOff, "omp").next, "omp plugin enable --scope user superloopy@beefiker");
 });
 
 test("plain doctor from an npm install reports hosts, unless a package-doctor option is given", () => {

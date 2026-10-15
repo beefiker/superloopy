@@ -15,7 +15,8 @@ Use the first matching path:
 1. If the current session is Codex or `codex` is the target, use the Codex flow.
 2. If the current session is Claude Code or `claude` is the target, use the Claude Code flow.
 3. If the current session is Google Antigravity or `antigravity`/`agy` is the target, use the Antigravity flow.
-4. If the user only asked to inspect or test a checkout, use the local checkout flow.
+4. If the current session is omp or `omp` is the target, use the omp flow.
+5. If the user only asked to inspect or test a checkout, use the local checkout flow.
 
 Prerequisite for all flows: Node.js >= 22.
 

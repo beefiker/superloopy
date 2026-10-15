@@ -122,12 +122,14 @@ function inspectOmp(run) {
     .filter((entry) => entry !== null && typeof entry === "object");
   const oldest = entries.reduce((found, entry) => (found === null || !isCurrent(String(entry.version ?? ""), String(found.version ?? "")) ? entry : found), null);
   const foreign = plugins.marketplace.find((item) => typeof item?.id === "string" && item.id.startsWith("superloopy@") && item.id !== PLUGIN_ID);
-  // `marketplace list` prints a table even with `--json`: one `<name>  <source>` row per marketplace.
+  // `marketplace list` prints a table even with `--json`: one `<name>  <source>` row per
+  // marketplace. It is colored with Chalk, which FORCE_COLOR turns on even without a TTY.
   const marketplaces = run("omp", ["plugin", "marketplace", "list"]);
+  const table = String(marketplaces.stdout ?? "").replace(/\u001b\[[0-9;]*m/gu, "");
   return {
-    installed: oldest === null ? null : { version: String(oldest.version ?? ""), path: oldest.installPath ?? null, enabled: entries.some((entry) => entry.enabled !== false) },
+    installed: oldest === null ? null : { version: String(oldest.version ?? ""), path: oldest.installPath ?? null, enabled: entries.some((entry) => entry.enabled !== false), scopes: entries.map((entry) => entry.scope) },
     foreign: foreign?.id ?? null,
-    marketplace: marketplaces.error === undefined && marketplaces.status === 0 && new RegExp(`^\\s*${MARKETPLACE}\\s`, "mu").test(String(marketplaces.stdout ?? ""))
+    marketplace: marketplaces.error === undefined && marketplaces.status === 0 && new RegExp(`^\\s*${MARKETPLACE}\\s`, "mu").test(table)
   };
 }
 
@@ -151,8 +153,18 @@ export function planHost(inspection, { target, allowInstall }) {
   if (!isCurrent(inspection.installed.version, target)) return { action: "update", steps: updateSteps(host, inspection) };
   // Installed and current but switched off contributes no hooks, skills, or agents. Turning it
   // back on is the user's call (they may have disabled it on purpose), so report, don't enable.
-  if (!inspection.installed.enabled) return { action: "disabled", steps: [], message: `Installed but disabled. Enable it with \`${ENABLE[host]}\`.` };
+  if (!inspection.installed.enabled) {
+    const enable = enableCommand(inspection);
+    return { action: "disabled", steps: [], message: `Installed but disabled. Enable it with \`${enable}\`.`, enable };
+  }
   return { action: "current", steps: [] };
+}
+
+// omp refuses an unscoped enable when the plugin is installed in both scopes; the user scope is
+// the one that applies everywhere.
+function enableCommand(inspection) {
+  if (inspection.host === "omp" && (inspection.installed.scopes?.length ?? 0) > 1) return `omp plugin enable --scope user ${PLUGIN_ID}`;
+  return ENABLE[inspection.host];
 }
 
 function installSteps(host, inspection) {
@@ -184,8 +196,12 @@ function updateSteps(host, inspection) {
   }
   // A marketplace upgrade only refreshes Codex's snapshot; `plugin add` reinstalls from it.
   if (host === "codex") return [step("codex", ["plugin", "marketplace", "upgrade", MARKETPLACE]), step("codex", ["plugin", "add", PLUGIN_ID])];
-  // `marketplace update` refreshes omp's catalog only; `plugin upgrade` reinstalls every scope from it.
-  if (host === "omp") return [step("omp", ["plugin", "marketplace", "update", MARKETPLACE]), step("omp", ["plugin", "upgrade", PLUGIN_ID])];
+  // `marketplace update` refreshes omp's catalog only; `plugin upgrade` reinstalls every scope from
+  // it. Removing a marketplace leaves its plugins installed, so re-add it when it is gone.
+  if (host === "omp") {
+    const catalog = inspection.marketplace ? step("omp", ["plugin", "marketplace", "update", MARKETPLACE]) : step("omp", ["plugin", "marketplace", "add", REPO]);
+    return [catalog, step("omp", ["plugin", "upgrade", PLUGIN_ID])];
+  }
   // Antigravity documents re-running the install as its update; it replaces the clone, which a
   // `git pull --ff-only` cannot do once the repository's history was rewritten.
   return [step("agy", ["plugin", "install", REPO_URL])];
@@ -243,7 +259,7 @@ export async function runHostSetup({ mode, target, hosts = SETUP_HOSTS, dryRun =
     if (mode === "doctor") {
       report.validate = before.installed === null ? null : validateHost(before, { run });
       report.ok = doctorOk(report);
-      report.next = doctorNext(report);
+      report.next = doctorNext(report, plan);
     }
     reports.push(report);
   }
@@ -264,9 +280,9 @@ function doctorOk(report) {
   return report.validate === null || report.validate === undefined || report.validate.ok;
 }
 
-function doctorNext(report) {
+function doctorNext(report, plan) {
   if (report.action === "update") return "npx superloopy@latest update";
-  if (report.action === "disabled") return ENABLE[report.host];
+  if (report.action === "disabled") return plan.enable;
   if (report.action === "not-installed") return `npx superloopy@latest setup --host ${report.host}`;
   if (report.validate?.ok === false) return `${report.validate.command} (then reinstall with npx superloopy@latest setup --host ${report.host})`;
   return undefined;
