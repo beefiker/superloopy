@@ -138,9 +138,27 @@ function guideForGoal(plan, goal, context) {
     });
   }
 
+  // buildGuide only reaches a goal already checkpointed blocked once no other goal can move, so the
+  // loop is waiting on the user: say so, instead of repeating the checkpoint that put it here.
+  const blocked = goal.criteria.filter((candidate) => candidate.status === "blocked");
+  if (goal.status === "blocked") {
+    const waiting = blocked.length > 0 ? blocked : goal.criteria.filter((candidate) => candidate.status !== "pass");
+    return guide("blocked_on_user", plan, {
+      goal: goalView(goal),
+      evidenceRoot: context.evidenceRoot,
+      unresolvedCriteria: context.unresolvedCriteria,
+      commands: context.commands,
+      blockers: waiting.map((criterion) => `${goal.id}/${criterion.id} waits on the user${criterion.artifact ? ` (question: \`${criterion.artifact}\`)` : ""}.`),
+      nextAction: action(
+        "Ask the user and stop",
+        context.commands.status,
+        `${goal.id} is blocked on the user${goal.failureReason ? `: ${goal.failureReason}` : ""}. Report the question and stop. When the user answers, record each criterion with \`loop evidence\`, then checkpoint ${goal.id} complete.`
+      )
+    });
+  }
+
   // Everything still open in this goal is blocked on the user: record the goal as blocked so the
   // loop can move on, instead of offering to prove a blocked criterion.
-  const blocked = goal.criteria.filter((candidate) => candidate.status === "blocked");
   if (blocked.length > 0) {
     return guide("checkpoint_goal", plan, {
       goal: goalView(goal),

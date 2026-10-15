@@ -16,7 +16,7 @@
 // so the parent does not treat an unproven worker reply as done.
 import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { SUPERLOOPY_DIR, appendLedger, normalizeLoopSessionId, nowIso, readLedger } from "./store.js";
+import { MALFORMED_LEDGER_LINE, SUPERLOOPY_DIR, appendLedger, normalizeLoopSessionId, nowIso, readLedger } from "./store.js";
 
 // Present in every continuation reason. Codex replays a Stop `block` reason as a new user prompt,
 // so UserPromptSubmit must recognize it and keep the session engaged.
@@ -62,11 +62,14 @@ export function recordPromptIntent(cwd, sessionId, intent) {
 // The report records how many ledger lines it read (`through`): workers finish in parallel, and an
 // entry appended between this read and the report line must stay in the next window. Two Stops
 // reading the same lines may both report them; a repeated notice is harmless, a lost one is not.
+// A torn (unparseable) line may have been a `plan_created`, so it also starts the window over, as
+// store.js asks of order-sensitive readers: misattributing an old plan's worker is worse than
+// dropping a notice that sat next to a crash.
 export async function takeWorkerExhaustion(cwd, scope) {
   const ledger = await readLedger(cwd, scope);
   let start = 0;
   ledger.forEach((entry, index) => {
-    if (entry.kind === "plan_created") start = Math.max(start, index + 1);
+    if (entry.kind === "plan_created" || entry.kind === MALFORMED_LEDGER_LINE) start = Math.max(start, index + 1);
     if (entry.kind === WORKER_EXHAUSTION_REPORTED) start = Math.max(start, Number.isInteger(entry.through) ? entry.through : index + 1);
   });
   const pending = ledger.slice(start).filter((entry) => EXHAUSTION_KINDS.has(entry.kind));
