@@ -99,11 +99,9 @@ export function renderGuideText(guideResult, summary) {
   return lines.filter(Boolean).join("\n");
 }
 
-// A blocked criterion waits on the user, so point at any other unresolved one first; fall back to
-// it only when nothing else in the goal is open.
+// A blocked criterion waits on the user and is never offered for proof again.
 export function nextOpenCriterion(goal) {
-  return goal.criteria.find((candidate) => candidate.status !== "pass" && candidate.status !== "blocked")
-    ?? goal.criteria.find((candidate) => candidate.status !== "pass");
+  return goal.criteria.find((candidate) => candidate.status !== "pass" && candidate.status !== "blocked");
 }
 
 function guideForGoal(plan, goal, context) {
@@ -136,6 +134,24 @@ function guideForGoal(plan, goal, context) {
         "Prove criterion with command",
         proveCommand(context.sessionId),
         `${goal.id}/${criterion.id} is not passed.`
+      )
+    });
+  }
+
+  // Everything still open in this goal is blocked on the user: record the goal as blocked so the
+  // loop can move on, instead of offering to prove a blocked criterion.
+  const blocked = goal.criteria.filter((candidate) => candidate.status === "blocked");
+  if (blocked.length > 0) {
+    return guide("checkpoint_goal", plan, {
+      goal: goalView(goal),
+      evidenceRoot: context.evidenceRoot,
+      unresolvedCriteria: context.unresolvedCriteria,
+      commands: context.commands,
+      blockers: blocked.map((criterion) => `${goal.id}/${criterion.id} is blocked on the user.`),
+      nextAction: action(
+        "Checkpoint blocked goal",
+        command("checkpoint", context.sessionId, ["--goal-id", goal.id, "--status", "blocked", "--evidence", "<what the user must decide or provide>", "--json"]),
+        `Every open criterion in ${goal.id} is blocked on the user.`
       )
     });
   }

@@ -118,19 +118,22 @@ journal-derived or `unknown`; they are never presented as enforced limits.
 
 Plugin hooks are installed for every session, so the Stop hook must not take over a session that
 never asked for a loop. With `SUPERLOOPY_STOP_HOOK` unset it drives only a host session whose
-user started or resumed a loop with a trigger (`loopy …`, `loopycrew`, `ultrawork`, `loopywork`):
+user started or resumed a loop with a full-loop trigger (`loopy …`, `loopycrew`, `ultrawork`):
 UserPromptSubmit writes `.superloopy/stop-engaged/<session_id>.json`, and any later plain prompt
-from that user removes it. A `SUPERLOOPY_STEER` prompt, an output-style toggle, or Codex replaying
-the continuation reason as a prompt (it carries `This is an automatic Superloopy continuation.`)
-keeps it. `on` drives every session with unresolved work; any other non-empty value disables it.
-A payload without `session_id` is never engaged by default. Claude Code does not fire Stop on a
-user interrupt, and Codex reports an interrupt as its own `Interrupt` event.
+from that user removes it, even while the transcript tail shows context pressure. A guidance-only
+trigger (`loopywork`, `lpy`, `$lpy`), a `SUPERLOOPY_STEER` prompt, an output-style toggle, or Codex
+replaying a Superloopy block reason as a prompt (every one carries
+`This is an automatic Superloopy continuation.`) leaves it as it is. `on` drives every session
+with unresolved work; any other non-empty value disables it. A payload without `session_id` is
+never engaged by default. Claude Code does not fire Stop on a user interrupt, and Codex reports an
+interrupt as its own `Interrupt` event.
 
 While engaged, the bounded engine in `src/continuation.js` decides; its stall and iteration caps
 mark the loop `blocked` rather than run on. Each continuation also lists, once, every worker or
 auditor that exhausted its receipt attempts since the last report (`subagent_attempt_exhausted`,
-`audit_attempt_exhausted`, then `worker_exhaustion_reported` in the ledger), because the parent
-otherwise sees only that worker's last message.
+`audit_attempt_exhausted`, then `worker_exhaustion_reported` with the ledger length it read), because
+the parent otherwise sees only that worker's last message. When a cap stops the loop instead, the
+same list goes to the user as a Stop `systemMessage`.
 
 ## What Superloopy cannot verify (advisory limits)
 
