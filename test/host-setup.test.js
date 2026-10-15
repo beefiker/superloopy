@@ -4,6 +4,7 @@ import test from "node:test";
 import { main } from "../src/cli.js";
 import { formatHostSetupResult, runHostSetup } from "../src/host-setup.js";
 import { runSetupCommand, selfUpdatePlan, wantsHostDoctor } from "../src/setup-command.js";
+import { resolveSpawnInvocation } from "../src/spawn-command.js";
 
 const RELEASED = "0.26.0";
 
@@ -159,7 +160,9 @@ test("an outdated npm copy hands the whole command to the latest release and ret
     }
   });
   assert.equal(code, 7);
-  assert.deepEqual(spawned, ["npx --yes superloopy@99.0.0 update --host claude"]);
+  // On Windows npx is a .cmd shim, so the same arguments go through cmd.exe.
+  const expected = resolveSpawnInvocation("npx", ["--yes", "superloopy@99.0.0", "update", "--host", "claude"]);
+  assert.deepEqual(spawned, [[expected.command, ...expected.args].join(" ")]);
 });
 
 test("a mistyped option or stray word stops setup before any host or registry call", async () => {
