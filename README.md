@@ -144,7 +144,25 @@ When Superpowers is installed (on Codex or Claude Code), Superloopy notices and 
 
 ## Install
 
-Superloopy installs on both **Codex** and **Claude Code** from one repo. The core (loop state, evidence gates, doctor) is host-agnostic; each host gets its own thin plugin manifest, hook wiring, and agent format.
+Superloopy installs on **Codex**, **Claude Code**, and **Google Antigravity** from one repo. The core (loop state, evidence gates, doctor) is host-agnostic; each host gets its own thin plugin manifest, hook wiring, and agent format.
+
+### Quick install with npx
+
+Needs Node.js ≥ 22. In a terminal:
+
+```sh
+npx superloopy@latest
+```
+
+It finds `claude`, `codex`, and `agy` on your `PATH`, asks before installing into each one, and installs through that host's own plugin commands (the same ones listed per host below). Hosts that already have Superloopy are updated instead. Then reload or restart each host as it tells you.
+
+```sh
+npx superloopy@latest setup --host claude,codex --yes   # no prompts
+npx superloopy@latest update                            # update every host that has Superloopy
+npx superloopy@latest doctor                            # each host's version, validation, and the fix command
+```
+
+An older cached copy of the package re-runs itself as the latest release first (`--no-self-update` turns that off). The per-host commands below do the same thing by hand.
 
 For agent-driven installs such as `install https://github.com/beefiker/superloopy`, use [installation.md](installation.md). It is written as a host-selection and verification checklist for Codex and Claude Code agents.
 
@@ -173,6 +191,14 @@ Needs Node.js ≥ 22 and Claude Code ≥ 2.1.280 for the pinned Opus 5.5 subagen
 Reload plugins (or restart Claude Code) and approve the hooks when prompted. On Claude Code the skills, subagents (`agents/*.md`), and hooks (`hooks/hooks.json`) are **plugin-bundled** — there is no `~/.codex` install step and no `superloopy` wrapper; the hooks invoke the CLI directly via `${CLAUDE_PLUGIN_ROOT}`, and `SessionStart` is a clean no-op (nothing to bootstrap). For local development, point Claude Code at a checkout with `claude --plugin-dir <checkout>`. Verify with `node "${CLAUDE_PLUGIN_ROOT}/src/cli.js" doctor --json`. The subagents' advisory model defaults for Claude are documented in `docs/superloopy-model-policy-claude.md`.
 
 ## Update
+
+Every host at once, through each host's own update commands:
+
+```sh
+npx superloopy@latest update
+```
+
+Or update one host by hand:
 
 ### Codex
 

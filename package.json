@@ -6,6 +6,26 @@
   "bin": {
     "superloopy": "src/cli.js"
   },
+  "files": [
+    "src/",
+    "agents/",
+    ".codex/agents/",
+    "hooks/",
+    "hooks.json",
+    "skills/",
+    "assets/",
+    ".claude-plugin/",
+    ".codex-plugin/",
+    ".gemini-plugin/",
+    "plugin.json",
+    "gemini-extension.json",
+    "model-policy.json",
+    "legacy-agent-manifests.json",
+    "docs/superloopy-model-policy.md",
+    "docs/superloopy-model-policy-claude.md",
+    "docs/superloopy-host-contract.md",
+    "installation.md"
+  ],
   "scripts": {
     "pretest": "node scripts/check-node-version.mjs",
     "test": "node --test \"test/**/*.test.js\" \"test/**/*.test.mjs\" \"examples/**/*.test.js\" \"examples/**/*.test.mjs\"",
@@ -27,6 +47,14 @@
   ],
   "author": "beefiker",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/beefiker/superloopy.git"
+  },
+  "homepage": "https://github.com/beefiker/superloopy#readme",
+  "bugs": {
+    "url": "https://github.com/beefiker/superloopy/issues"
+  },
   "engines": {
     "node": ">=22.0.0"
   }

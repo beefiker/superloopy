@@ -64,7 +64,8 @@ test("doctor accepts an npm-packed install run from an arbitrary cwd", async () 
 // A packed install nested inside a user's Git repository (the npx/npm layout): the
 // enclosing repo ignores node_modules/, so `git ls-files` run from the install root
 // answers for the PARENT repo and reports no package files. Doctor must list the
-// install's own filesystem instead of trusting the enclosing repo.
+// install's own filesystem instead of trusting the enclosing repo. Under node_modules a
+// bare `doctor` reports the hosts instead, so the package check is asked for explicitly.
 test("doctor accepts an npm-packed install nested inside a parent Git repository", async () => {
   const parent = await mkdtemp(join(tmpdir(), "superloopy-parent-"));
   const init = spawnSync("git", ["init"], { cwd: parent, encoding: "utf8" });
@@ -74,7 +75,7 @@ test("doctor accepts an npm-packed install nested inside a parent Git repository
   await mkdir(packed, { recursive: true });
   await tempNpmPackedCopy(packed);
 
-  const result = spawnSync(process.execPath, [join(packed, "src", "cli.js"), "doctor", "--json"], {
+  const result = spawnSync(process.execPath, [join(packed, "src", "cli.js"), "doctor", "--scope", "installed", "--json"], {
     cwd: parent,
     encoding: "utf8",
     env: { ...process.env, PATH: "" },

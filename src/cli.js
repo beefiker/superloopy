@@ -51,6 +51,7 @@ import {
 } from "./hooks.js";
 import { resolveWorkspaceRoot } from "./workspace-identity.js";
 import { readPlanUnchecked, scopeFromSessionId } from "./store.js";
+import { isNpmPackageRoot, runSetupCommand } from "./setup-command.js";
 
 const CLI_FILE = fileURLToPath(import.meta.url);
 const CLI_ROOT = dirname(dirname(CLI_FILE));
@@ -60,15 +61,25 @@ class CliUsageError extends Error {}
 async function main(argv, stdin, stdout, stderr, cwd) {
   const [command, subcommand, ...rest] = argv;
   try {
+    // A person typing bare `superloopy` (or `npx superloopy`) in a terminal gets setup; scripts
+    // and agents (no TTY) keep getting help.
+    if (command === undefined && stdin?.isTTY === true && stdout?.isTTY === true) {
+      return await runSetupCommand("setup", [], { root: CLI_ROOT, stdin, stdout, stderr });
+    }
     if (command === undefined || command === "help" || command === "--help" || command === "-h") {
       stdout.write(topHelp());
       return 0;
+    }
+    if (command === "setup" || command === "update") {
+      return await runSetupCommand(command, [subcommand, ...rest].filter((value) => value !== undefined), { root: CLI_ROOT, stdin, stdout, stderr });
     }
     if (command === "loop") {
       return await runLoop(subcommand ?? "help", rest, stdout, cwd);
     }
     if (command === "doctor") {
-      return await runDoctorCommand([subcommand, ...rest].filter((value) => value !== undefined), stdout, cwd);
+      const doctorArgs = [subcommand, ...rest].filter((value) => value !== undefined);
+      if (wantsHostDoctor(doctorArgs)) return await runSetupCommand("doctor", doctorArgs, { root: CLI_ROOT, stdin, stdout, stderr });
+      return await runDoctorCommand(doctorArgs, stdout, cwd);
     }
     if (command === "agents") {
       return await runAgents(subcommand ?? "help", rest, stdout, cwd);
@@ -88,6 +99,14 @@ async function main(argv, stdin, stdout, stderr, cwd) {
     stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     return error instanceof CliUsageError ? 2 : 1;
   }
+}
+
+// `doctor --hosts`, or plain `doctor` from an npm/npx install (no plugin root to check there),
+// reports each host's Superloopy install instead of this copy's files.
+function wantsHostDoctor(argv) {
+  if (hasFlag(argv, "--hosts")) return true;
+  if (!isNpmPackageRoot(CLI_ROOT)) return false;
+  return !["--root", "--plugin-root", "--scope", "--comparison-path"].some((flag) => hasFlag(argv, flag) || argv.some((value) => value.startsWith(`${flag}=`)));
 }
 
 async function runAgents(subcommand, argv, stdout, cwd) {
@@ -430,11 +449,14 @@ function formatLoopResult(subcommand, result) {
 function topHelp() {
   return [
     "Usage:",
+    "  npx superloopy@latest [setup|update|doctor]   install, update, or check Superloopy in Claude Code, Codex, and Antigravity",
+    "  superloopy setup [--host claude,codex,antigravity] [--yes] [--dry-run] [--json]",
+    "  superloopy update [--host ...] [--dry-run] [--json]",
     "  superloopy loop <subcommand> [args]",
     "  superloopy install [--bin-dir PATH] [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
     "  superloopy bin install [--bin-dir PATH] [--force] [--json]",
     "  superloopy agents install [--target PATH] [--refresh-models] [--compat] [--force] [--json]",
-    "  superloopy doctor [--scope source|installed] [--json] [--root PATH|--plugin-root PATH] [--comparison-path PATH] [--refresh-models]",
+    "  superloopy doctor [--hosts] [--scope source|installed] [--json] [--root PATH|--plugin-root PATH] [--comparison-path PATH] [--refresh-models]",
     "  superloopy hook session-start|pre-tool-use|stop|subagent-stop|user-prompt-submit",
     "",
     helpText()
