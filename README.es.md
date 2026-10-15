@@ -26,7 +26,7 @@ Después de instalarlo, escribe tu tarea en Codex o Claude Code con `loopy` al i
 loopy agrega el módulo de pagos
 ```
 
-El agente la planifica, prueba cada parte con un archivo real y responde con el resultado. No tienes que ejecutar comandos manualmente. El Stop hook incluido se queda inactivo salvo que `SUPERLOOPY_STOP_HOOK=on`.
+El agente la planifica, prueba cada parte con un archivo real y responde con el resultado. No tienes que ejecutar comandos manualmente. El Stop hook incluido mantiene la sesión en marcha solo después de que empiezas o retomas un loop con `loopy`, y solo hasta que envías un mensaje normal; `SUPERLOOPY_STOP_HOOK=on` lo activa en todas las sesiones y `SUPERLOOPY_STOP_HOOK=off` lo desactiva.
 
 ## ¿Por qué Superloopy?
 

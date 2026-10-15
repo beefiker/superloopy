@@ -39,8 +39,8 @@ Then dispatch any subagent (e.g. start a `loopy team` task that spawns `forge`, 
 
 ## 3. Linchpin C — plugin env vars reach the hook subprocess
 
-- [ ] Set in Claude `settings.json` `env`: `SUPERLOOPY_STOP_HOOK=on` and `SUPERLOOPY_AUTO_CONTEXT=on`.
-- [ ] Mid-loop, confirm the **Stop** hook continues the loop (the agent does not stop while criteria remain) and that SessionStart/UserPromptSubmit inject Superloopy context. If env vars set in `settings.json` work but plugin-defined ones do not, that is expected — document `settings.json env` as the toggle location.
+- [ ] Set in Claude `settings.json` `env`: `SUPERLOOPY_AUTO_CONTEXT=on`. Leave `SUPERLOOPY_STOP_HOOK` unset to exercise the default (continuation only after a `loopy` prompt in that session).
+- [ ] Start with `loopy <task>`, then mid-loop confirm the **Stop** hook continues the loop (the agent does not stop while criteria remain) and that SessionStart/UserPromptSubmit inject Superloopy context. Send a plain prompt and confirm the next stop is not continued. If env vars set in `settings.json` work but plugin-defined ones do not, that is expected — document `settings.json env` as the toggle location.
 
 ## 4. Linchpin D — UserPromptSubmit steering JSON
 

@@ -32,7 +32,7 @@ These references hold the situational detail. Read the one a row names when its 
 | Read | When |
 |---|---|
 | [CLI flow](references/cli-flow.md) | Running Superloopy commands beyond the loop engineer's `begin` → `guide` → `prove` → `check` → `finish` path: `create`, `capture`, manual `evidence`, `trace`, `report`, a blocked `check` repair plan, custom `review`/`checkpoint` gate workflows, or a cache-satisfied final proof. |
-| [Continuation engine](references/continuation.md) | `SUPERLOOPY_STOP_HOOK=on`, a loop shown `blocked` or `paused` in `superloopy loop status`, a quota/usage limit, or scheduling an auto-resume. |
+| [Continuation engine](references/continuation.md) | The Stop hook re-prompted you ("Superloopy continuation"), a loop shown `blocked` or `paused` in `superloopy loop status`, a quota/usage limit, or scheduling an auto-resume. |
 | [Evidence audit](references/evidence-audit.md) | Running `superloopy loop audit`, dispatching `assayer`, or handling a failed, `inconclusive`, or `blocked` audit. |
 | [Crew](references/crew.md) | Before dispatching any subagent (solo light delegation or `loopy team`/crew): parent responsibilities, `handoff`/`fleet` bookkeeping, the self-contained dispatch contract, subagent lifecycle, and agent allocation. |
 | [Reassurance copy](references/reassurance-copy.md) | The reassurance-copy condition below applies. |
@@ -44,7 +44,7 @@ When the user opens a message with `loopy <task>`, act as the loop engineer:
 - Start once with `superloopy loop begin --brief "<task>" --mode light --json`; do not create a second plan if one is active.
 - Drive each step from `superloopy loop guide --json`, prove criteria with `superloopy loop prove -- <command>`, preflight with `superloopy loop check`, then finish with `superloopy loop finish --evidence "<summary>" --artifact .superloopy/evidence/gate.json --json`.
 - The user types only `loopy <task>`. You run every Superloopy command and report progress as criteria proven and the next step.
-- `loopy` with no task asks what to build; `loopy` mid-loop resumes from existing state. The Stop hook is packaged with the plugin but stays inert until `SUPERLOOPY_STOP_HOOK=on`; when enabled, it blocks completion until evidence exists.
+- `loopy` with no task asks what to build; `loopy` mid-loop resumes from existing state. After a `loopy` prompt, the packaged Stop hook keeps this session going while criteria remain, until the user sends a plain prompt (`SUPERLOOPY_STOP_HOOK=on` drives every session, `off` disables it). If it reports a worker that stopped without proof, treat that worker's reply as unproven.
 
 ### Execution discipline
 
@@ -87,7 +87,7 @@ Before dispatching any worker, read [Crew](references/crew.md): it carries the p
 
 ## Quality Gate
 
-Every listed artifact must exist, be non-empty, and live under the active evidence root. Superloopy also accepts strict review gates and matrix gates when reviewer/architect, executor QA, rerun, artifact, and coverage fields validate.
+Every listed artifact must exist, be non-empty, and live under the active evidence root. Superloopy also accepts strict review gates and matrix gates when reviewer/architect, executor QA, rerun, artifact, and coverage fields validate. `loop review` and `loop finish` always write the default gate. A review gate is JSON you write by hand and pass to `loop checkpoint --quality-gate`; write one only when `sentinel`, `probe`, and `arbiter` each actually ran, and sign it as [Crew](references/crew.md) describes under "Review gate actors".
 
 For executor receipts, use the active evidence root. A global loop normally records under `.superloopy/evidence/`; a scoped loop records under `.superloopy/sessions/<id>/evidence/`. If a receipt is missing or invalid, the receipt block message names the active evidence root to repair.
 

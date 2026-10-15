@@ -174,7 +174,7 @@ function requireIndependentReviewActors(gate) {
   const seen = new Map();
   for (const lane of ["codeReview", "manualQa", "gateReview"]) {
     const actor = gate[lane].by.trim().toLowerCase();
-    if (seen.has(actor)) fail(`Review quality gate ${lane}.by repeats ${seen.get(actor)}.by (${gate[lane].by}); code review, manual QA, and gate review must come from different actors.`);
+    if (seen.has(actor)) fail(`Review quality gate ${lane}.by repeats ${seen.get(actor)}.by (${gate[lane].by}); code review, manual QA, and gate review must come from different actors. Name the crew lane whose report backs each section (codeReview: sentinel, manualQa: probe, gateReview: arbiter); if those lanes did not all run, finish with the default gate from \`superloopy loop finish\` instead.`);
     seen.set(actor, lane);
   }
   return gate;

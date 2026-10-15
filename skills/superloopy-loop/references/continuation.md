@@ -1,11 +1,14 @@
 # Continuation engine
 
-Load this reference when `SUPERLOOPY_STOP_HOOK=on`, when a loop is `blocked` or `paused`, or when scheduling a resume after a quota reset.
+Load this reference when the Stop hook re-prompts you, when a loop is `blocked` or `paused`, or when scheduling a resume after a quota reset.
 
 ## Continuation Engine
 
-The optional `Stop` hook is a bounded, progress-gated engine, not a one-shot nudge. With `SUPERLOOPY_STOP_HOOK=on`, while work remains it keeps driving you toward evidence-backed completion, counting iterations in `.superloopy/loop-control.json`.
+The packaged `Stop` hook is a bounded, progress-gated engine, not a one-shot nudge. While work remains it keeps driving you toward evidence-backed completion, counting iterations in `.superloopy/loop-control.json`.
 
+- Who it drives: by default only a host session whose user started or resumed a loop with a full-loop trigger (`loopy …`, `loopycrew`, `ultrawork`), until that user sends a plain prompt; a guidance-only trigger (`loopywork`, `lpy`, `$lpy`), a `SUPERLOOPY_STEER` prompt, or an output-style toggle leaves that as it is. `SUPERLOOPY_STOP_HOOK=on` drives every session with unresolved work; any other non-empty value turns it off. A user interrupt never becomes a continuation.
+- If only the user can unblock a criterion (a decision, credentials, access), write the question to an artifact and record that criterion `--status blocked`; it is not re-driven, and the guide moves on to the goal's other open criteria. If nothing else in the goal can proceed, checkpoint the goal `--status blocked` and move to the next goal; when nothing at all can proceed, stop.
+- A worker that used up its receipt attempts was allowed to stop without proof. The next continuation lists it once under "Workers that stopped without proof"; treat its reply as unproven and re-dispatch a narrower card or do the work and prove it yourself.
 - Progress is measured by recorded proof (passed criteria and completed goals) against a high-water mark; only new proof resets the no-progress counter.
 - It never completes anything. Completion stays the plan's authority via `superloopy loop check` + `superloopy loop finish` with real artifacts.
 - A cap or no-progress stall marks the loop `blocked` (visible in `superloopy loop status`) and asks for a human — it never fabricates a done.

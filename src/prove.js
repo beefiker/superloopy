@@ -1,6 +1,6 @@
 import { readFlag } from "./args.js";
 import { captureLoop } from "./capture.js";
-import { buildGuide } from "./guide.js";
+import { buildGuide, nextOpenCriterion } from "./guide.js";
 import { readPlan, scopeFromSessionId } from "./store.js";
 
 export async function proveLoop(cwd, argv = []) {
@@ -9,8 +9,13 @@ export async function proveLoop(cwd, argv = []) {
   const plan = await readPlan(cwd, scope);
   const goal = plan.goals.find((candidate) => candidate.status === "in_progress");
   if (goal === undefined) throw new Error("No active Superloopy goal. Run `superloopy loop next --json` first.");
-  const criterion = goal.criteria.find((candidate) => candidate.status !== "pass");
-  if (criterion === undefined) throw new Error(`Active goal ${goal.id} has no unresolved criteria.`);
+  const criterion = nextOpenCriterion(goal);
+  if (criterion === undefined) {
+    if (goal.criteria.some((candidate) => candidate.status === "blocked")) {
+      throw new Error(`Every open criterion in ${goal.id} is blocked on the user. Record the goal blocked: \`superloopy loop checkpoint --goal-id ${goal.id} --status blocked --evidence "<what the user must decide or provide>"\`.`);
+    }
+    throw new Error(`Active goal ${goal.id} has no unresolved criteria.`);
+  }
 
   const captureArgs = [
     "--goal-id",

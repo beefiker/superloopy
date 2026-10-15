@@ -26,7 +26,7 @@
 loopy 결제 모듈 적용해줘
 ```
 
-Superloopy가 계획을 세우고, 실행하고, 실제 파일로 각 조각을 검증한 뒤 결과를 보고합니다. 사용자가 중간에 명령을 직접 칠 필요는 없습니다. 패키징된 Stop hook은 기본으로 조용하고, `SUPERLOOPY_STOP_HOOK=on`일 때만 막아섭니다.
+Superloopy가 계획을 세우고, 실행하고, 실제 파일로 각 조각을 검증한 뒤 결과를 보고합니다. 사용자가 중간에 명령을 직접 칠 필요는 없습니다. 패키징된 Stop hook은 `loopy`로 루프를 시작하거나 이어 간 세션만 계속 진행시키고, 일반 메시지를 보내면 멈춥니다. `SUPERLOOPY_STOP_HOOK=on`이면 모든 세션에서 동작하고, `SUPERLOOPY_STOP_HOOK=off`면 꺼집니다.
 
 ## 왜 Superloopy?
 

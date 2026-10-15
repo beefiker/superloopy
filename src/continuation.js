@@ -8,7 +8,8 @@
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { dirname } from "node:path";
-import { appendLedger, auditStatePath, loopControlPath, nowIso, withFileLock, writeJsonAtomic } from "./store.js";
+import { CONTINUATION_MARKER, renderWorkerExhaustion } from "./loop-engagement.js";
+import { appendLedger, auditStatePath, loopControlPath, nowIso, scopeFromSessionId, withFileLock, writeJsonAtomic } from "./store.js";
 
 const STATE_VERSION = 1;
 const DEFAULT_MAX_ITERATIONS = 50; // loose backstop; 0 = unlimited
@@ -116,7 +117,8 @@ export async function decideContinuation(payload, deps) {
     // and ask for a re-check. A transient mid-write race self-heals on the next Stop.
     return `${JSON.stringify({ decision: "block", reason: [
       "Superloopy could not read the plan — `.superloopy/goals.json` may be corrupt or mid-write.",
-      "The loop will not complete until the plan is readable again; if this persists, repair the plan file."
+      "The loop will not complete until the plan is readable again; if this persists, repair the plan file.",
+      `- ${CONTINUATION_MARKER}`
     ].join("\n") })}\n`;
   }
 
@@ -134,7 +136,7 @@ export async function decideContinuation(payload, deps) {
   const remaining = status.summary.criteria.pending + status.summary.criteria.fail;
   if (remaining === 0) return ""; // nothing re-drivable; let the agent run check/finish
 
-  if (!limits.enabled) return blockReason(payload, status, deps); // engine off: single continuation
+  if (!limits.enabled) return await blockReason(payload, status, deps); // engine off: single continuation
 
   // Budget guard: if reading state/plan already took most of the hook window,
   // pause cleanly rather than risk a silent timeout mid-write.
@@ -199,7 +201,9 @@ export async function decideContinuation(payload, deps) {
     return "";
   }
 
-  if (decision.blocked) return "";
+  // The loop just stopped on a backstop. No continuation follows, so workers that gave up without
+  // proof are shown to the user now instead of waiting for a continuation that never comes.
+  if (decision.blocked) return await blockedNotice(payload, status, deps);
 
   await safeLedger(deps, cwd, scope, {
     at: decision.now,
@@ -211,15 +215,38 @@ export async function decideContinuation(payload, deps) {
   });
 
   const cap = limits.maxIterations > 0 ? ` of ${limits.maxIterations}` : "";
-  const reason = `${deps.renderContinuationDirective(status, deps.guideForPayload(payload, status.plan))}\n` +
+  const reason = `${await directiveWithWorkerNotices(payload, status, deps)}\n` +
     `- Loop iteration: ${decision.iteration}${cap}\n` +
-    "- This is an automatic continuation; the Stop hook re-checks recorded proof and keeps you going until aggregate completion or a backstop.";
+    `- ${CONTINUATION_MARKER} The Stop hook re-checks recorded proof and keeps you going until aggregate completion or a backstop.`;
   return `${JSON.stringify({ decision: "block", reason })}\n`;
 }
 
-function blockReason(payload, status, deps) {
-  const reason = deps.renderContinuationDirective(status, deps.guideForPayload(payload, status.plan));
+async function blockReason(payload, status, deps) {
+  const reason = `${await directiveWithWorkerNotices(payload, status, deps)}\n- ${CONTINUATION_MARKER}`;
   return `${JSON.stringify({ decision: "block", reason })}\n`;
+}
+
+async function directiveWithWorkerNotices(payload, status, deps) {
+  const directive = deps.renderContinuationDirective(status, deps.guideForPayload(payload, status.plan));
+  return [directive, ...renderWorkerExhaustion(await takeNotices(payload, status, deps))].join("\n");
+}
+
+// Workers that exhausted their receipt attempts are reported in the plan's own scope, the same
+// ledger SubagentStop wrote to. Best-effort: a ledger failure never stops the continuation.
+async function takeNotices(payload, status, deps) {
+  if (typeof deps.takeWorkerExhaustion !== "function") return [];
+  try {
+    return await deps.takeWorkerExhaustion(payload.cwd, scopeFromSessionId(status.plan.sessionId));
+  } catch {
+    return [];
+  }
+}
+
+async function blockedNotice(payload, status, deps) {
+  const lines = renderWorkerExhaustion(await takeNotices(payload, status, deps));
+  if (lines.length === 0) return "";
+  const systemMessage = ["Superloopy stopped the loop (no progress or iteration cap); `superloopy loop status` shows why.", ...lines].join("\n");
+  return `${JSON.stringify({ systemMessage })}\n`;
 }
 
 function defaultLoopControl(scope) {

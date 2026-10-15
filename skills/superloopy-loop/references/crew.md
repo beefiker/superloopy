@@ -41,3 +41,13 @@ Agent allocation:
 - `arbiter`: integrates implementation, review, QA, audit, and criteria coverage; writes a final gate report such as `.superloopy/evidence/arbiter-final-gate-report.md`; the parent still runs Superloopy completion commands.
 - `assayer`: read-only, skeptical evidence auditor; judges Superloopy's deterministic re-run against the scenario and ends with `SUPERLOOPY_AUDIT: <verdict-path>`. Installed by `superloopy agents install` alongside the workers.
 - `pathfinder`: read-only codebase navigator; locates files and code and returns absolute paths with a direct answer. Writes no evidence and edits nothing — dispatch it first to scope a slice before assigning an executor. Parallelize it with review/QA lanes.
+
+### Review gate actors
+
+The parent writes the review gate; workers never write gate JSON. Each section is signed by the lane whose report backs it:
+
+- `codeReview.by: "sentinel"`, with `codeReview.reportPath` pointing at sentinel's report.
+- `manualQa.by: "probe"`, with `manualQa.artifactRefs` citing probe's QA artifacts.
+- `gateReview.by: "arbiter"`, with `gateReview.reportPath` pointing at arbiter's final gate report.
+
+The three names must differ (case and spaces are ignored), or checkpoint rejects the gate. The names are self-declared, so the check stops one agent from signing every lane; it does not prove who did the work. Never fill a lane the crew did not run, neither with your own name nor with a role-labelled stand-in such as `parent:sentinel`. When a lane did not run or ended inconclusive (a solo loop, a host without subagents, a worker that stopped without proof), finish with the default gate from `superloopy loop finish` instead.
