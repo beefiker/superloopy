@@ -91,6 +91,7 @@ test("checkWrapper reports stale, dangling, recovered, foreign, and absent wrapp
   const danglingWrapper = join(dangling.binDir, "superloopy");
   const danglingResult = checkWrapper({ env: { PATH: dangling.binDir }, platform: "linux", fs: fakeFs({ [danglingWrapper]: shimFor(dangling.cliOf("0.7.0")) }) });
   assert.equal(danglingResult.dangling, true);
+  assert.equal(danglingResult.ok, false, "a wrapper whose CLI is gone means `superloopy` cannot run");
   assert.doesNotMatch(danglingResult.message, /`superloopy bin install/);
 
   const early = slPaths("earlyroot");

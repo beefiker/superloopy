@@ -1,5 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
-import { bootstrapHasUserSignal, bootstrapSuperloopy, formatBootstrapHookContext, isAntigravityHost, isClaudeHost } from "./agents.js";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { bootstrapHasUserSignal, bootstrapSuperloopy, formatBootstrapHookContext } from "./agents.js";
+import { detectHost, isAntigravityHost, isClaudeHost } from "./host-detect.js";
 import { runAutoUpdateCheck } from "./auto-update.js";
 import { parseJson } from "./args.js";
 import { resolveEvidenceArtifact } from "./artifacts.js";
@@ -22,6 +25,7 @@ import { isSayItStraightEnabled, parseLoopOutputStyleControl, renderSayItStraigh
 
 export { runPreToolUseHook } from "./pre-tool-use.js";
 
+const PLUGIN_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const EVIDENCE_RECEIPT_AGENT_TYPES = new Set(["forge", "sentinel", "probe", "arbiter"]);
 // An artifact up to this size must carry non-whitespace content to satisfy the receipt gate;
 // only larger artifacts (assumed non-trivial) skip the read. Closes the blank-placeholder hole.
@@ -122,7 +126,7 @@ export async function runSessionStartHook(payload, options = {}) {
   payload = { ...payload, cwd: resolveWorkspaceRoot(payload.cwd) };
   if (payload.source !== "compact" && transcriptHasContextPressureMarker(payload.transcript_path)) return "";
   const env = options.env ?? process.env;
-  const host = options.host ?? (isClaudeHost(env) ? "claude" : (isAntigravityHost(env) ? "antigravity" : "codex"));
+  const host = options.host ?? detectHost(PLUGIN_ROOT, env);
   const contexts = [];
   if (payload.source === "compact") {
     try {

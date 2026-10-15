@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -10,7 +11,9 @@ import {
   matchesAgentType,
   receiptFromPayload
 } from "../src/receipt.js";
-import { bootstrapSuperloopy, isClaudeHost } from "../src/agents.js";
+import { bootstrapSuperloopy } from "../src/agents.js";
+import { isClaudeHost } from "../src/host-detect.js";
+import { runSessionStartHook } from "../src/hooks.js";
 
 async function transcript(lines) {
   const dir = await mkdtemp(join(tmpdir(), "superloopy-receipt-"));
@@ -204,4 +207,31 @@ test("bootstrapSuperloopy is a clean no-op on Claude Code (no ~/.codex install)"
   assert.equal(result.host, "claude");
   assert.equal(result.ok, true);
   assert.deepEqual(result.agents.agents, []);
+});
+
+// A declared host is the host's (or our shim's) own word, as in detectHost. Ignoring a declared
+// "claude" ran the Codex bootstrap, which writes a `superloopy` wrapper and Codex agents into the
+// home directory: under `npm test` that rewired the real ~/.local/bin/superloopy to the checkout.
+test("SessionStart on a declared Claude host installs nothing into the home directory", async () => {
+  const home = await mkdtemp(join(tmpdir(), "superloopy-declared-claude-home-"));
+  const repo = await mkdtemp(join(tmpdir(), "superloopy-declared-claude-repo-"));
+  await runSessionStartHook({ hook_event_name: "SessionStart", source: "startup", cwd: repo }, { env: { SUPERLOOPY_HOST: "claude" }, homeDir: home });
+  assert.deepEqual(await readdir(home), []);
+  const bootstrap = await bootstrapSuperloopy(repo, [], { env: { SUPERLOOPY_HOST: "claude" }, homeDir: home });
+  assert.equal(bootstrap.host, "claude");
+  assert.deepEqual(await readdir(home), []);
+});
+
+test("the CLI SessionStart hook on a declared Claude host installs nothing into the home directory", async () => {
+  const home = await mkdtemp(join(tmpdir(), "superloopy-declared-claude-cli-home-"));
+  const repo = await mkdtemp(join(tmpdir(), "superloopy-declared-claude-cli-repo-"));
+  const result = spawnSync(process.execPath, [join(process.cwd(), "src", "cli.js"), "hook", "session-start"], {
+    cwd: repo,
+    input: JSON.stringify({ hook_event_name: "SessionStart", source: "startup", cwd: repo }),
+    env: { PATH: process.env.PATH, HOME: home, USERPROFILE: home, SUPERLOOPY_HOST: "claude" },
+    encoding: "utf8",
+    timeout: 30_000
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(await readdir(home), []);
 });

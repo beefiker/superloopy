@@ -1,4 +1,15 @@
-import { isAntigravityHost, isClaudeHost } from "./agents.js";
+// Claude Code exports CLAUDE_PLUGIN_ROOT into the plugin's hook subprocess; Codex does not.
+// It is the host signal that distinguishes the two runtimes at bootstrap time.
+export function isClaudeHost(env = process.env) {
+  return typeof env.CLAUDE_PLUGIN_ROOT === "string" && env.CLAUDE_PLUGIN_ROOT.trim().length > 0;
+}
+
+export function isAntigravityHost(env = process.env) {
+  if (env.SUPERLOOPY_HOST === "antigravity") return true;
+  if (env.SUPERLOOPY_HOST === "codex" || env.SUPERLOOPY_HOST === "claude") return false;
+  const isSet = (k) => typeof env[k] === "string" && env[k].trim().length > 0;
+  return isSet("ANTIGRAVITY_PLUGIN_ROOT") || isSet("GEMINI_PLUGIN_ROOT");
+}
 
 // The only host identities Superloopy resolves. Anything else is a broken declaration, not a
 // fourth host: `canonicalAgentType` returns null for an unknown host, so every receipt lookup

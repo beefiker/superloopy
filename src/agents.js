@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { hasFlag, readFlag } from "./args.js";
 import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
 import { binShimContent, isGeneratedSuperloopyBinShim } from "./bin-shim.js";
+import { detectHost, isAntigravityHost, isClaudeHost } from "./host-detect.js";
 export { binShimSupportsSiblingFallback, parseBinShimCliPath, parseBinShimHost } from "./bin-shim.js";
 import { loadLegacyAgentManifests, retiredAgentRemovalCommand } from "./legacy-agents.js";
 import {
@@ -257,19 +258,6 @@ export function formatBinInstallResult(result) {
   ].join("\n") + "\n";
 }
 
-// Claude Code exports CLAUDE_PLUGIN_ROOT into the plugin's hook subprocess; Codex does not.
-// It is the host signal that distinguishes the two runtimes at bootstrap time.
-export function isClaudeHost(env = process.env) {
-  return typeof env.CLAUDE_PLUGIN_ROOT === "string" && env.CLAUDE_PLUGIN_ROOT.trim().length > 0;
-}
-
-export function isAntigravityHost(env = process.env) {
-  if (env.SUPERLOOPY_HOST === "antigravity") return true;
-  if (env.SUPERLOOPY_HOST === "codex" || env.SUPERLOOPY_HOST === "claude") return false;
-  const isSet = (k) => typeof env[k] === "string" && env[k].trim().length > 0;
-  return isSet("ANTIGRAVITY_PLUGIN_ROOT") || isSet("GEMINI_PLUGIN_ROOT");
-}
-
 function bundledPluginBootstrap(host, displayName, bin) {
   const binResult = bin ?? { status: "unchanged", onPath: true, target: "(plugin-bundled)", next: `On ${displayName}, Superloopy runs from the bundled plugin; no CLI wrapper is installed.` };
   return {
@@ -297,7 +285,10 @@ function bundledPluginBootstrap(host, displayName, bin) {
 export async function bootstrapSuperloopy(cwd, argv = [], options = {}) {
   const env = options.env ?? process.env;
   const homeDir = options.homeDir ?? homedir();
-  const host = options.host ?? (isClaudeHost(env) ? "claude" : (isAntigravityHost(env) ? "antigravity" : "codex"));
+  // A declared host, then the host's plugin-root env, then where this install lives -- the same
+  // order doctor uses. Reading env alone let a declared "claude" fall through to the Codex
+  // bootstrap, which writes a wrapper and agents into the home directory.
+  const host = options.host ?? detectHost(REPO_ROOT, env);
   if (host === "claude" || isClaudeHost(env)) return bundledPluginBootstrap("claude", "Claude Code");
   if (host === "antigravity" || isAntigravityHost(env)) {
     const bin = await installBinShim(cwd, argv, {
