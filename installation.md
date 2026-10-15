@@ -19,6 +19,17 @@ Use the first matching path:
 
 Prerequisite for all flows: Node.js >= 22.
 
+## One Command For Any Host
+
+When a shell with network access is available, this runs the per-host flows below through each host's own plugin CLI, then reports what happened:
+
+```bash
+npx superloopy@latest setup --host <claude|codex|antigravity> --yes --json
+npx superloopy@latest doctor --host <same host> --json
+```
+
+Name only the host the user asked for. Report each host's `action`, `after` version, and `next` step from the JSON; `next` is the reload or restart the host still needs. If `setup` fails on a host, its `message` carries that host CLI's own error; fall back to the matching flow below. To update an existing install, run `npx superloopy@latest update --host <host> --json`.
+
 ## Codex Flow
 
 Run these commands from any directory:
