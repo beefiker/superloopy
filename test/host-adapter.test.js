@@ -235,3 +235,12 @@ test("the CLI SessionStart hook on a declared Claude host installs nothing into 
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(await readdir(home), []);
 });
+
+test("a declared Antigravity host bootstraps as Antigravity even with CLAUDE_PLUGIN_ROOT set", async () => {
+  const home = await mkdtemp(join(tmpdir(), "superloopy-declared-agy-home-"));
+  const binDir = await mkdtemp(join(tmpdir(), "superloopy-declared-agy-bin-"));
+  const env = { SUPERLOOPY_HOST: "antigravity", CLAUDE_PLUGIN_ROOT: "/plugins/superloopy", SUPERLOOPY_BIN_DIR: binDir, PATH: binDir };
+  const result = await bootstrapSuperloopy(home, [], { env, homeDir: home, platform: "linux" });
+  assert.equal(result.host, "antigravity");
+  assert.match(await readFile(join(binDir, "superloopy"), "utf8"), /SUPERLOOPY_HOST='antigravity'/u);
+});

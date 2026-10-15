@@ -11,7 +11,7 @@
 // the `superloopy` command itself cannot run, so the check fails. It is no-throw and
 // dependency-injectable.
 
-import { existsSync as fsExistsSync, readFileSync as fsReadFileSync, readdirSync as fsReaddirSync } from "node:fs";
+import { existsSync as fsExistsSync, readFileSync as fsReadFileSync, readdirSync as fsReaddirSync, statSync as fsStatSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { binShimSupportsSiblingFallback, parseBinShimCliPath } from "./agents.js";
 import { compareVersions, parseVersion } from "./auto-update-plan.js";
@@ -26,7 +26,7 @@ export function checkWrapper(options = {}) {
   try {
     const env = options.env !== null && typeof options.env === "object" ? options.env : process.env;
     const platform = options.platform ?? process.platform;
-    const fs = options.fs ?? { existsSync: fsExistsSync, readFileSync: fsReadFileSync, readdirSync: fsReaddirSync };
+    const fs = options.fs ?? { existsSync: fsExistsSync, readFileSync: fsReadFileSync, readdirSync: fsReaddirSync, statSync: fsStatSync };
 
     const located = locateWrapper(env, platform, fs);
     if (located === null) {
@@ -95,8 +95,10 @@ export function checkWrapper(options = {}) {
   }
 }
 
-// Find the wrapper the shell would actually run: the FIRST PATH entry holding a file named
-// `superloopy` (or `superloopy.cmd`), regardless of its content. Returns { path, content }
+// Find the wrapper the shell would actually run: the FIRST PATH entry holding a runnable file
+// named `superloopy` (or `superloopy.cmd`), regardless of its content. On POSIX the shell skips
+// entries that are not executable regular files, so this does too; otherwise a stale,
+// non-executable leftover would hide the command that really runs. Returns { path, content }
 // (content is null when unreadable) or null when no such file is on PATH. The caller decides
 // whether that resolved file is one of our generated shims — scanning past it to a later
 // generated shim would report on a command the user never invokes.
@@ -108,13 +110,7 @@ function locateWrapper(env, platform, fs) {
     const dir = entry.trim().replace(/^"|"$/gu, "");
     if (dir.length === 0) continue;
     const candidate = join(dir, wrapperName);
-    let exists = false;
-    try {
-      exists = fs.existsSync(candidate);
-    } catch {
-      exists = false;
-    }
-    if (!exists) continue;
+    if (!isRunnable(candidate, platform, fs)) continue;
     let content = null;
     try {
       content = fs.readFileSync(candidate, "utf8");
@@ -124,6 +120,17 @@ function locateWrapper(env, platform, fs) {
     return { path: candidate, content };
   }
   return null;
+}
+
+// Windows runs a `.cmd` by extension, so existence is enough there.
+function isRunnable(candidate, platform, fs) {
+  try {
+    if (platform === "win32") return fs.existsSync(candidate);
+    const stat = fs.statSync(candidate);
+    return stat.isFile() && (stat.mode & 0o111) !== 0;
+  } catch {
+    return false;
+  }
 }
 
 // Given a wrapper's (possibly missing) cli.js, find the newest sibling version dir under the
