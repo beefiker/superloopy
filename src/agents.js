@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { hasFlag, readFlag } from "./args.js";
 import { SUPERLOOPY_AGENT_NAMES } from "./agent-names.js";
 import { binShimContent, isGeneratedSuperloopyBinShim } from "./bin-shim.js";
-import { detectHost, isAntigravityHost, isClaudeHost } from "./host-detect.js";
+import { detectHost, hostFromEnv } from "./host-detect.js";
 export { binShimSupportsSiblingFallback, parseBinShimCliPath, parseBinShimHost } from "./bin-shim.js";
 import { loadLegacyAgentManifests, retiredAgentRemovalCommand } from "./legacy-agents.js";
 import {
@@ -208,7 +208,10 @@ export async function installBinShim(cwd, argv, options = {}) {
   const env = options.env ?? process.env;
   const homeDir = options.homeDir ?? homedir();
   const platform = options.platform ?? process.platform;
-  const host = options.host ?? (isAntigravityHost(env) ? "antigravity" : (isClaudeHost(env) ? "claude" : undefined));
+  // Same precedence as detectHost, env only: a declared host wins over a stray plugin-root
+  // variable. Codex shims carry no host line, as they always have.
+  const declared = hostFromEnv(env);
+  const host = options.host ?? (declared === "codex" || declared === null ? undefined : declared);
   const targetDir = resolveBinDir(cwd, argv, env, homeDir, platform);
   const target = join(targetDir, platform === "win32" ? "superloopy.cmd" : "superloopy");
   const content = binShimContent(CLI_PATH, platform, host);
