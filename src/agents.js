@@ -286,11 +286,11 @@ export async function bootstrapSuperloopy(cwd, argv = [], options = {}) {
   const env = options.env ?? process.env;
   const homeDir = options.homeDir ?? homedir();
   // A declared host, then the host's plugin-root env, then where this install lives -- the same
-  // order doctor uses. Reading env alone let a declared "claude" fall through to the Codex
-  // bootstrap, which writes a wrapper and agents into the home directory.
+  // order doctor uses. Branch on that one answer only: re-checking the plugin-root env here would
+  // let a stray CLAUDE_PLUGIN_ROOT override a declared "antigravity" or "codex".
   const host = options.host ?? detectHost(REPO_ROOT, env);
-  if (host === "claude" || isClaudeHost(env)) return bundledPluginBootstrap("claude", "Claude Code");
-  if (host === "antigravity" || isAntigravityHost(env)) {
+  if (host === "claude") return bundledPluginBootstrap("claude", "Claude Code");
+  if (host === "antigravity") {
     const bin = await installBinShim(cwd, argv, {
       host: "antigravity",
       env,

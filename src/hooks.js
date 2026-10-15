@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { bootstrapHasUserSignal, bootstrapSuperloopy, formatBootstrapHookContext } from "./agents.js";
-import { detectHost, isAntigravityHost, isClaudeHost } from "./host-detect.js";
+import { detectHost } from "./host-detect.js";
 import { runAutoUpdateCheck } from "./auto-update.js";
 import { parseJson } from "./args.js";
 import { resolveEvidenceArtifact } from "./artifacts.js";
@@ -140,7 +140,7 @@ export async function runSessionStartHook(payload, options = {}) {
   }
   try {
     // Skip auto-update checks on Claude Code and Antigravity; only run for Codex.
-    if (host === "codex" && !isClaudeHost(env) && !isAntigravityHost(env)) {
+    if (host === "codex") {
       const update = await runAutoUpdateCheck({ env });
       if (update.notices.length > 0) contexts.push(update.notices.join("\n\n"));
     }

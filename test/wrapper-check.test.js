@@ -137,13 +137,40 @@ test("checkWrapper warns when the generated command targets a different Superloo
   assert.match(result.message, /bin install --force/u);
 });
 
-function fakeFs(files, dirs = {}) {
+// The shell skips a PATH entry that is not executable, so a dead leftover there must not hide
+// the command that runs, nor fail doctor on its behalf.
+test("checkWrapper skips a non-executable superloopy earlier on PATH", () => {
+  const dead = slPaths("deadroot");
+  const live = slPaths("liveroot");
+  const deadWrapper = join(dead.binDir, "superloopy");
+  const liveWrapper = join(live.binDir, "superloopy");
+  const files = { [deadWrapper]: shimFor(dead.cliOf("0.7.0")), [liveWrapper]: shimFor(live.cliOf("0.7.1")), [live.cliOf("0.7.1")]: "x" };
+  const result = checkWrapper({
+    env: { PATH: `${dead.binDir}:${live.binDir}` },
+    platform: "linux",
+    fs: fakeFs(files, { [live.superloopyDir]: ["0.7.1"] }, { [deadWrapper]: 0o644 })
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.wrapperVersion, "0.7.1", "reports the executable wrapper, not the dead 0.7.0 leftover");
+
+  const alone = checkWrapper({ env: { PATH: dead.binDir }, platform: "linux", fs: fakeFs({ [deadWrapper]: shimFor(dead.cliOf("0.7.0")) }, {}, { [deadWrapper]: 0o644 }) });
+  assert.equal(alone.found, false);
+  assert.equal(alone.ok, true);
+});
+
+// Files are executable (0o755) unless `modes` says otherwise; directories are not regular files.
+function fakeFs(files, dirs = {}, modes = {}) {
   return {
     existsSync: (p) => p in files || p in dirs,
     readFileSync: (p) => { if (!(p in files)) throw new Error("ENOENT"); return files[p]; },
     readdirSync: (p) => {
       if (!(p in dirs)) throw new Error("ENOENT");
       return dirs[p];
+    },
+    statSync: (p) => {
+      if (p in files) return { isFile: () => true, mode: modes[p] ?? 0o755 };
+      if (p in dirs) return { isFile: () => false, mode: 0o755 };
+      throw new Error("ENOENT");
     }
   };
 }
