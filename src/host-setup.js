@@ -30,11 +30,17 @@ export function hostLabel(host) {
 
 // `run(command, args, { timeoutMs })` -> { status, stdout, stderr, error }. Injected in tests.
 export function defaultRun(command, args, { timeoutMs = QUERY_TIMEOUT_MS } = {}) {
-  // Windows host CLIs are often .cmd shims, which spawn cannot start without a shell.
-  const invocation = process.platform === "win32"
-    ? { command: "cmd.exe", args: ["/d", "/s", "/c", command, ...args] }
-    : { command, args };
-  const result = spawnSync(invocation.command, invocation.args, { encoding: "utf8", timeout: timeoutMs, stdio: ["ignore", "pipe", "pipe"] });
+  const options = { encoding: "utf8", timeout: timeoutMs, stdio: ["ignore", "pipe", "pipe"] };
+  let result = spawnSync(command, args, options);
+  // Windows: a native `.exe` host starts directly; an npm-installed host is a `.cmd` shim that
+  // only cmd.exe can start. cmd.exe re-parses its command line, so the fallback refuses any
+  // argument it would read as syntax instead of passing it through.
+  if (process.platform === "win32" && result.error?.code === "ENOENT") {
+    if (args.some((value) => /[&|<>^%!"()\r\n]/u.test(value))) {
+      return { status: null, stdout: "", stderr: "", error: new Error(`refusing to pass ${command} arguments with cmd.exe metacharacters to a .cmd shim`) };
+    }
+    result = spawnSync("cmd.exe", ["/d", "/c", `${command}.cmd`, ...args], options);
+  }
   return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "", error: result.error };
 }
 
@@ -144,8 +150,12 @@ export function validateHost(inspection, { run = defaultRun } = {}) {
   const path = inspection.installed?.path;
   if (path === null || path === undefined) return null;
   if (inspection.host === "claude") {
-    const result = run("claude", ["plugin", "validate", path, "--json"]);
-    return { ok: result.status === 0 && jsonOutput(result)?.success === true, command: `claude plugin validate ${path}` };
+    // The repository is both a marketplace and a plugin; validating the directory picks the
+    // marketplace manifest, so point at the plugin manifest when it is there.
+    const manifest = join(path, ".claude-plugin", "plugin.json");
+    const target = existsSync(manifest) ? manifest : path;
+    const result = run("claude", ["plugin", "validate", target, "--json"]);
+    return { ok: result.status === 0 && jsonOutput(result)?.success === true, command: `claude plugin validate ${target}` };
   }
   if (inspection.host === "antigravity") {
     const result = run("agy", ["plugin", "validate", path]);

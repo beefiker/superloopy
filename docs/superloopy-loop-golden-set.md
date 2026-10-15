@@ -56,6 +56,7 @@ Total: 100 points.
 | `.github/assets/probe.webp` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
 | `.github/assets/writing-comparison-demo.png` | Audit coverage and README writing-comparison-demo reference. | Must remain a documentation screenshot of the deployed writing-comparison viewer, not runtime plugin logic. |
 | `.github/assets/sentinel.webp` | Audit coverage. | Must remain a README documentation image, not runtime plugin logic. |
+| `.github/workflows/publish.yml` | GitHub Actions release run. | Must refuse a release whose tag differs from `v<package.json version>`, run the full suite, and publish through npm trusted publishing with `id-token: write` and no stored token. |
 | `.github/workflows/test.yml` | Cross-platform test CI and GitHub Actions. | Must run `node --test` (no shell glob) across the ubuntu/windows/macos × Node 22/24 matrix with SHA-pinned actions and no runtime side effects, covering the minimum supported line and the next LTS line. |
 | `.nvmrc` | NVM runtime selector. | Must select Node 22 so local development matches the minimum supported engine floor. |
 | `.gitignore` | Doctor runtime-boundary ignored samples and installed-cache docs coverage. | `.superloopy/`, logs, coverage, dependencies, OS noise, Codex marketplace metadata, `build/`, all local `docs/plans/`, unapproved `docs/specs/` drafts, and generated Astro output stay ignored; approved design specs may still be tracked when audited here. |
