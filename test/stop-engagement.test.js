@@ -6,7 +6,8 @@ import test from "node:test";
 
 import { buildGuide } from "../src/guide.js";
 import { runStopHook, runSubagentStopHook, runUserPromptSubmitHook } from "../src/hooks.js";
-import { createLoop, evidenceLoop, nextLoop } from "../src/loop.js";
+import { checkpointLoop, createLoop, evidenceLoop, nextLoop } from "../src/loop.js";
+import { finishLoop } from "../src/finish.js";
 import { readLedger, readPlan } from "../src/store.js";
 import { proveLoop } from "../src/prove.js";
 
@@ -183,4 +184,37 @@ test("a worker that gave up is shown to the user when the loop stops on its iter
     if (previous === undefined) delete process.env.SUPERLOOPY_MAX_ITERATIONS;
     else process.env.SUPERLOOPY_MAX_ITERATIONS = previous;
   }
+}));
+
+test("a goal blocked on the user ends in a stable wait state, and the plan finishes once the user answers", () => withStopHookEnv("on", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "@goal Need the staging key\nCall the staging API.\n\n@goal Docs\nWrite the docs."]);
+  await nextLoop(repo);
+  await blockCriterion(repo, "C001");
+  await blockCriterion(repo, "C002");
+  await checkpointLoop(repo, ["--goal-id", "G001", "--status", "blocked", "--evidence", "Need the staging key"]);
+  await nextLoop(repo);
+  await writeFile(join(repo, ".superloopy", "evidence", "docs.txt"), "docs written\n", "utf8");
+  for (const id of ["C001", "C002"]) await evidenceLoop(repo, ["--goal-id", "G002", "--criterion-id", id, "--status", "pass", "--artifact", ".superloopy/evidence/docs.txt"]);
+  await checkpointLoop(repo, ["--goal-id", "G002", "--status", "complete", "--evidence", "done"]);
+
+  for (let read = 0; read < 2; read += 1) {
+    const guide = buildGuide(await readPlan(repo), { cwd: repo });
+    assert.equal(guide.state, "blocked_on_user", "the same state on every read, never a repeated checkpoint");
+    assert.doesNotMatch(guide.nextAction.command, /checkpoint/u);
+    assert.match(guide.nextAction.reason, /G001 is blocked on the user: Need the staging key/u);
+  }
+  assert.equal(await stopReason(repo), null, "nothing is re-driven while the user is asked");
+
+  for (const id of ["C001", "C002"]) await evidenceLoop(repo, ["--goal-id", "G001", "--criterion-id", id, "--status", "pass", "--artifact", ".superloopy/evidence/docs.txt"]);
+  const finished = await finishLoop(repo, ["--evidence", "the user supplied the key"]);
+  assert.equal(finished.plan.aggregateCompletion.status, "complete");
+}));
+
+test("a torn line where plan_created would be keeps an old plan's worker out of the new plan's notice", () => withStopHookEnv("on", async () => {
+  const repo = await tempRepo();
+  await createLoop(repo, ["--brief", "Old plan"]);
+  exhaustProbe(repo, "old");
+  await appendFile(join(repo, ".superloopy", "ledger.jsonl"), '{"at":"2026-10-15T00:00:00.000Z","kind":"plan_cre\n', "utf8");
+  assert.doesNotMatch(await stopReason(repo) ?? "", /probe \(old\)/u);
 }));
