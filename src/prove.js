@@ -1,6 +1,6 @@
 import { readFlag } from "./args.js";
 import { captureLoop } from "./capture.js";
-import { buildGuide } from "./guide.js";
+import { buildGuide, nextOpenCriterion } from "./guide.js";
 import { readPlan, scopeFromSessionId } from "./store.js";
 
 export async function proveLoop(cwd, argv = []) {
@@ -9,7 +9,7 @@ export async function proveLoop(cwd, argv = []) {
   const plan = await readPlan(cwd, scope);
   const goal = plan.goals.find((candidate) => candidate.status === "in_progress");
   if (goal === undefined) throw new Error("No active Superloopy goal. Run `superloopy loop next --json` first.");
-  const criterion = goal.criteria.find((candidate) => candidate.status !== "pass");
+  const criterion = nextOpenCriterion(goal);
   if (criterion === undefined) throw new Error(`Active goal ${goal.id} has no unresolved criteria.`);
 
   const captureArgs = [

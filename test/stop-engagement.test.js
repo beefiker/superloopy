@@ -7,6 +7,7 @@ import test from "node:test";
 import { runStopHook, runSubagentStopHook, runUserPromptSubmitHook } from "../src/hooks.js";
 import { createLoop, evidenceLoop, nextLoop } from "../src/loop.js";
 import { readLedger } from "../src/store.js";
+import { proveLoop } from "../src/prove.js";
 
 async function tempRepo() { return mkdtemp(join(tmpdir(), "superloopy-stop-engagement-")); }
 
@@ -94,4 +95,9 @@ test("the continuation points at an open criterion, not one blocked on the user"
   assert.match(reason, /- Next criterion: C002 /u);
   assert.match(reason, /- Proof target: G001\/C002 pass/u);
   assert.doesNotMatch(reason, /Proof target: G001\/C001/u);
+
+  // `loop prove`, the directive's next action, must capture against that same open criterion.
+  const proved = await proveLoop(repo, ["--", process.execPath, "-e", "console.log('ok')"]);
+  assert.equal(proved.criterion.id, "C002");
+  assert.equal(proved.goal.criteria.find((criterion) => criterion.id === "C001").status, "blocked");
 }));
