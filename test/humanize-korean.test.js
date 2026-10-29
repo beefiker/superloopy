@@ -81,6 +81,49 @@ test("humanize audit rejects missing protected tokens", async () => {
   assert.match(result.stderr, /Protected tokens changed/);
 });
 
+test("humanize audit lets a declared R-7 reply cut pass 50% but still gates protected tokens", async () => {
+  const reply = "좋은 질문입니다! 정리하면, 어제부터 엑셀 내보내기가 빈 파일로 나온다는 말씀이 맞고, 저도 같은 증상을 확인했습니다. 수정 PR은 https://bitbucket.org/acme/web/pull-requests/312 입니다. 오늘 배포에 포함합니다.";
+  const run = async (finalText, extra) => {
+    const files = await writeCase(reply, finalText);
+    const result = spawnSync(process.execPath, [script, "--source", files.source, "--final", files.final, "--report", files.report, ...extra], { encoding: "utf8" });
+    return { result, report: JSON.parse(await readFile(files.report, "utf8")) };
+  };
+  const cutReply = "오늘 배포에 포함합니다. 수정 PR: https://bitbucket.org/acme/web/pull-requests/312";
+
+  const undeclared = await run(cutReply, []);
+  assert.notEqual(undeclared.result.status, 0);
+  assert.ok(undeclared.report.changeRate > 0.5, String(undeclared.report.changeRate));
+  assert.match(undeclared.result.stderr, /Change rate exceeds 50%/);
+
+  const declared = await run(cutReply, ["--cut", "R-7"]);
+  assert.equal(declared.result.status, 0, declared.result.stderr);
+  assert.equal(declared.report.cut, "R-7");
+  assert.notEqual(declared.report.grade, "D");
+  assert.ok(declared.report.warnings.some((warning) => warning.includes("declared R-7 reply cut")), JSON.stringify(declared.report.warnings));
+
+  const droppedLink = await run("오늘 배포에 포함합니다. 수정 PR은 올려 두었습니다.", ["--cut", "R-7"]);
+  assert.notEqual(droppedLink.result.status, 0);
+  assert.match(droppedLink.result.stderr, /Protected tokens changed/);
+
+  const longer = await run(`${reply} 내일 오전에 한 번 더 확인하겠습니다.`, ["--cut", "R-7"]);
+  assert.notEqual(longer.result.status, 0);
+  assert.ok(longer.report.problems.includes("A declared R-7 cut must shorten the text"), JSON.stringify(longer.report.problems));
+
+  const ceilingFiles = await writeCase(
+    "말씀하신 대로 어제부터 내보내기가 빈 파일로 나오고 있습니다. 원인을 살펴보니 필터가 비어 있었습니다. 오늘 배포에 포함하겠습니다.",
+    "네. 다른 작업부터 하겠습니다."
+  );
+  const ceiling = spawnSync(process.execPath, [script, "--source", ceilingFiles.source, "--final", ceilingFiles.final, "--report", ceilingFiles.report, "--cut", "R-7"], { encoding: "utf8" });
+  const ceilingReport = JSON.parse(await readFile(ceilingFiles.report, "utf8"));
+  assert.notEqual(ceiling.status, 0);
+  assert.deepEqual(ceilingReport.problems, ["Change rate exceeds 80%"]);
+  assert.equal(ceilingReport.grade, "D");
+
+  const unsupported = await run(cutReply, ["--cut", "R-3"]);
+  assert.notEqual(unsupported.result.status, 0);
+  assert.match(unsupported.result.stderr, /Unsupported --cut value/);
+});
+
 test("humanize audit rejects unchanged high-signal AI tells", async () => {
   const files = await writeCase(
     "결론적으로, Fileloom은 API를 통해 문서를 열 수 있습니다.",

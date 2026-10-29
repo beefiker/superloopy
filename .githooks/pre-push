@@ -1,0 +1,3 @@
+#!/bin/sh
+# Installed by `npm install` (prepare -> core.hooksPath=.githooks). See scripts/version-guard.mjs.
+exec node "$(git rev-parse --show-toplevel)/scripts/version-guard.mjs" --pre-push

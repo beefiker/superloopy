@@ -37,3 +37,21 @@ jobs:
       # directory, including gitignored ones such as local worktrees.
       - name: Run tests
         run: node --test "test/**/*.test.js" "test/**/*.test.mjs" "examples/**/*.test.js" "examples/**/*.test.mjs"
+
+  # Shipped files (package.json `files`) changed since the newest v* tag need a version above it.
+  # Bump with `npm run release:bump -- <patch|minor|major>`.
+  version-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with tags
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+
+      - name: Check the version moved past the last release
+        run: node scripts/version-guard.mjs --ref HEAD
