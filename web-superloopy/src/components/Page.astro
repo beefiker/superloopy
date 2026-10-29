@@ -25,6 +25,7 @@ try {
 } catch {}
 
 const installs = {
+  npx: { label: "npx", note: t.install.npxNote, lines: ["npx superloopy@latest"] },
   codex: { label: "Codex", note: t.install.codexNote, lines: ["codex plugin marketplace add https://github.com/beefiker/superloopy", "codex plugin add superloopy@beefiker"] },
   claude: { label: "Claude Code", note: t.install.claudeNote, lines: ["/plugin marketplace add beefiker/superloopy", "/plugin install superloopy@beefiker"] },
 };
