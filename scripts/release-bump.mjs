@@ -48,8 +48,8 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
   try {
     const result = await releaseBump({ repoRoot: dirname(dirname(fileURLToPath(import.meta.url))), kind, commit });
     console.log(`release-bump: ${result.from} -> ${result.version}, ${result.changed.length} files${result.committed ? `, committed "release ${result.version}"` : ", not committed"}`);
-    // The guard measures against the newest v* tag, so an untagged publish lets later changes reuse this version.
-    console.log(`After merging: npm publish && git tag v${result.version} && git push origin v${result.version}`);
+    // Pushing the tag is the release: publish.yml publishes it through npm trusted publishing.
+    console.log(`After merging to main: git tag v${result.version} && git push origin v${result.version}`);
   } catch (error) {
     console.error(`release-bump: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;

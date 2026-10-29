@@ -1,15 +1,16 @@
 name: Publish to npm
 
-# Publishes `superloopy` when a GitHub release is published for a `v<version>` tag, and only
-# then: there is no manual trigger, because a manual run could pick any branch and publish code
-# that was never released. Uses npm trusted publishing (OIDC), so no npm token is stored in the
-# repository and npm attaches a provenance attestation automatically. Configure it once on
-# npmjs.com: package `superloopy` -> Settings -> Trusted publishing -> GitHub Actions,
-# repository `beefiker/superloopy`, workflow `publish.yml`.
+# Publishes `superloopy` when a `v<version>` tag is pushed, and only then: there is no manual
+# trigger, the tag must match package.json, and the tagged commit must already be on main, so a
+# tag on an unmerged branch cannot publish unreleased code. Uses npm trusted publishing (OIDC):
+# no npm token or 2FA secret is stored anywhere, and npm attaches a provenance attestation.
+# Configure it once on npmjs.com: package `superloopy` -> Settings -> Trusted publishing ->
+# GitHub Actions, repository `beefiker/superloopy`, workflow `publish.yml`. Do not also run
+# `npm publish` by hand for the same version.
 
 on:
-  release:
-    types: [published]
+  push:
+    tags: ["v*"]
 
 permissions:
   contents: read
@@ -19,8 +20,10 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout with history
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -37,6 +40,15 @@ jobs:
           version="$(node -p "require('./package.json').version")"
           if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
             echo "Release tag ${GITHUB_REF_NAME} does not match package.json version ${version}." >&2
+            exit 1
+          fi
+
+      # HEAD, not GITHUB_SHA: after checkout it is the tagged commit for lightweight and annotated tags alike.
+      - name: Check the tagged commit is on main
+        run: |
+          commit="$(git rev-parse HEAD)"
+          if ! git merge-base --is-ancestor "${commit}" origin/main; then
+            echo "Tag ${GITHUB_REF_NAME} points at ${commit}, which is not on main." >&2
             exit 1
           fi
 

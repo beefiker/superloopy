@@ -1,3 +1,17 @@
 #!/bin/sh
 # Installed by `npm install` (prepare -> core.hooksPath=.githooks). See scripts/version-guard.mjs.
+# Non-login shells (agents, GUI git clients) often lack the PATH an nvm or Homebrew Node lives on.
+if ! command -v node >/dev/null 2>&1 && [ -s "${NVM_DIR:-$HOME/.nvm}/nvm.sh" ]; then
+  . "${NVM_DIR:-$HOME/.nvm}/nvm.sh" >/dev/null 2>&1
+fi
+if ! command -v node >/dev/null 2>&1; then
+  for dir in /opt/homebrew/bin /usr/local/bin; do
+    if [ -x "$dir/node" ]; then PATH="$dir:$PATH"; break; fi
+  done
+fi
+if ! command -v node >/dev/null 2>&1; then
+  # Fail open: the CI version-guard job is the authoritative check.
+  echo "version-guard: node not found, skipping (CI still checks)." >&2
+  exit 0
+fi
 exec node "$(git rev-parse --show-toplevel)/scripts/version-guard.mjs" --pre-push
