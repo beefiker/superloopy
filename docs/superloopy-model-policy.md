@@ -8,7 +8,9 @@ Superloopy's bundled agent model fields are steering, not proof. They give the h
 
 Allowed models:
 
+- `gpt-6.2-astra`
 - `gpt-6-astra`
+- `gpt-6.2-sol`
 - `gpt-6.1-sol`
 - `gpt-6-sol`
 - `gpt-6-luna`
@@ -22,17 +24,17 @@ Allowed service tiers: `priority`, `fast`, `efficient`.
 
 ## Profile Candidates
 
-| Profile | Preferred tuple | Fallback tuple | Compatibility tuple |
+| Profile | Preferred tuple | Fallback tuples, in order | Compatibility tuple |
 | --- | --- | --- | --- |
-| `standard` | `gpt-6.1-sol` / `high` / `priority` | `gpt-6-sol` / `high` / `priority` | `gpt-5.6-terra` / `high` / `priority` |
-| `deep` | `gpt-6.1-sol` / `xhigh` / `priority` | `gpt-6-sol` / `xhigh` / `priority` | `gpt-5.6-sol` / `xhigh` / `priority` |
+| `standard` | `gpt-6.2-sol` / `high` / `priority` | `gpt-6.1-sol` / `high` / `priority`, then `gpt-6-sol` / `high` / `priority` | `gpt-5.6-terra` / `high` / `priority` |
+| `deep` | `gpt-6.2-sol` / `xhigh` / `priority` | `gpt-6.1-sol` / `xhigh` / `priority`, then `gpt-6-sol` / `xhigh` / `priority` | `gpt-5.6-sol` / `xhigh` / `priority` |
 | `fast` | `gpt-6-luna` / `low` / `fast` | none | `gpt-5.6-luna` / `low` / `fast` |
 
 Availability is resolved before an agent is launched. Any selection after the preferred tuple is reported as a compatibility fallback. `--compat` and an unknown first probe select the last tuple, which stays on the widely available GPT-5.6 family. Superloopy never retries a worker with a different model after launch.
 
 ## Orchestrator Model
 
-The orchestrator is the user's own host session, not a bundled agent. Superloopy never sets, pins, or resolves its model; the host uses whatever the user selected. `gpt-6-astra` is allowed so the orchestrator may run on it when the user selected it, and `superloopy doctor` does not flag that selection as unsupported. The six crew lanes keep the profile pins above regardless of the orchestrator's model: an orchestrator on `gpt-6-astra` still dispatches `forge` and `sentinel` on `gpt-6.1-sol`, and `pathfinder` on `gpt-6-luna`. Crew guidance reports the orchestrator's model as `model_unverified` like any other lane unless the host attests it.
+The orchestrator is the user's own host session, not a bundled agent. Superloopy never sets, pins, or resolves its model; the host uses whatever the user selected. `gpt-6.2-astra` and `gpt-6-astra` are allowed so the orchestrator may run on either when the user selected it, and `superloopy doctor` does not flag that selection as unsupported. The six crew lanes keep the profile pins above regardless of the orchestrator's model: an orchestrator on `gpt-6.2-astra` still dispatches `forge` and `sentinel` on `gpt-6.2-sol`, and `pathfinder` on `gpt-6-luna`. Crew guidance reports the orchestrator's model as `model_unverified` like any other lane unless the host attests it.
 
 ## Upgrade And Diagnosis
 
@@ -50,11 +52,11 @@ Configured routing is not runtime attestation. The host must expose `agent_type`
 
 | Agent | Purpose | Profile | Model | Effort | Tier |
 | --- | --- | --- | --- | --- | --- |
-| `forge` | Bounded implementation lane. | `standard` | `gpt-6.1-sol` | `high` | `priority` |
-| `sentinel` | Skeptical code review lane. | `deep` | `gpt-6.1-sol` | `xhigh` | `priority` |
-| `probe` | QA and regression lane. | `standard` | `gpt-6.1-sol` | `high` | `priority` |
-| `arbiter` | Final gate integration lane. | `deep` | `gpt-6.1-sol` | `xhigh` | `priority` |
-| `assayer` | Evidence auditor lane. | `standard` | `gpt-6.1-sol` | `high` | `priority` |
+| `forge` | Bounded implementation lane. | `standard` | `gpt-6.2-sol` | `high` | `priority` |
+| `sentinel` | Skeptical code review lane. | `deep` | `gpt-6.2-sol` | `xhigh` | `priority` |
+| `probe` | QA and regression lane. | `standard` | `gpt-6.2-sol` | `high` | `priority` |
+| `arbiter` | Final gate integration lane. | `deep` | `gpt-6.2-sol` | `xhigh` | `priority` |
+| `assayer` | Evidence auditor lane. | `standard` | `gpt-6.2-sol` | `high` | `priority` |
 | `pathfinder` | Read-only navigation lane. | `fast` | `gpt-6-luna` | `low` | `fast` |
 
 ## Rules

@@ -1,10 +1,12 @@
 {
-  "version": "2026-09-30",
+  "version": "2026-11-19",
   "policy": "advisory-model-defaults-are-explicit",
   "codex": {
     "allowed": {
       "models": [
+        "gpt-6.2-astra",
         "gpt-6-astra",
+        "gpt-6.2-sol",
         "gpt-6.1-sol",
         "gpt-6-sol",
         "gpt-6-luna",
@@ -28,6 +30,11 @@
       "standard": {
         "candidates": [
           {
+            "model": "gpt-6.2-sol",
+            "model_reasoning_effort": "high",
+            "service_tier": "priority"
+          },
+          {
             "model": "gpt-6.1-sol",
             "model_reasoning_effort": "high",
             "service_tier": "priority"
@@ -46,6 +53,11 @@
       },
       "deep": {
         "candidates": [
+          {
+            "model": "gpt-6.2-sol",
+            "model_reasoning_effort": "xhigh",
+            "service_tier": "priority"
+          },
           {
             "model": "gpt-6.1-sol",
             "model_reasoning_effort": "xhigh",

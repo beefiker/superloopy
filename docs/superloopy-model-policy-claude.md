@@ -14,11 +14,11 @@ Claude Code edition of the advisory model policy. Same principle as `docs/superl
 
 | Agent | Purpose | Profile | Model | Read-only | Maps from Codex |
 | --- | --- | --- | --- | --- | --- |
-| `forge` | Bounded implementation lane. | `standard` | `claude-opus-5-5` | no | gpt-6.1-sol / high |
-| `sentinel` | Skeptical code review lane. | `deep` | `claude-opus-5-5` | no (one report) | gpt-6.1-sol / xhigh |
-| `probe` | QA and regression lane. | `standard` | `claude-opus-5-5` | no (one report) | gpt-6.1-sol / high |
-| `arbiter` | Final gate integration lane. | `deep` | `claude-opus-5-5` | no (one report) | gpt-6.1-sol / xhigh |
-| `assayer` | Evidence auditor lane. | `standard` | `claude-opus-5-5` | yes (no edit/write) | gpt-6.1-sol / high |
+| `forge` | Bounded implementation lane. | `standard` | `claude-opus-5-5` | no | gpt-6.2-sol / high |
+| `sentinel` | Skeptical code review lane. | `deep` | `claude-opus-5-5` | no (one report) | gpt-6.2-sol / xhigh |
+| `probe` | QA and regression lane. | `standard` | `claude-opus-5-5` | no (one report) | gpt-6.2-sol / high |
+| `arbiter` | Final gate integration lane. | `deep` | `claude-opus-5-5` | no (one report) | gpt-6.2-sol / xhigh |
+| `assayer` | Evidence auditor lane. | `standard` | `claude-opus-5-5` | yes (no edit/write) | gpt-6.2-sol / high |
 | `pathfinder` | Read-only navigation lane. | `fast` | `haiku` | yes (Read/Grep/Glob) | gpt-6-luna / low |
 
 ## Rules

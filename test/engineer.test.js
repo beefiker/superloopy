@@ -95,7 +95,7 @@ test("runUserPromptSubmitHook injects the crew fan-out playbook in team mode, wi
   assert.match(context, /configured name when named selection is available/);
   assert.match(context, /model_unverified/);
   assert.match(context, /role_unverified/);
-  assert.match(context, /`gpt-6-astra` is an allowed orchestrator model when the user selected it/);
+  assert.match(context, /`gpt-6.2-astra` and `gpt-6-astra` are allowed orchestrator models when the user selected one/);
   assert.match(context, /forge/);
   assert.match(context, /sentinel/);
   assert.match(context, /probe/);

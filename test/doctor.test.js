@@ -140,12 +140,12 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.modelPolicy.ok, true);
   assert.equal(parsed.checks.modelPolicy.policyPath, "docs/superloopy-model-policy.md");
   assert.equal(parsed.checks.modelPolicy.policyDataPath, "model-policy.json");
-  assert.equal(parsed.checks.modelPolicy.policyDataVersion, "2026-09-30");
+  assert.equal(parsed.checks.modelPolicy.policyDataVersion, "2026-11-19");
   assert.deepEqual(parsed.checks.modelPolicy.compatibilityModels, { standard: "gpt-5.6-terra", deep: "gpt-5.6-sol", fast: "gpt-5.6-luna" });
   assert.equal(parsed.checks.modelPolicy.agents.pathfinder.profile, "fast");
-  assert.equal(parsed.checks.modelPolicy.profiles.standard.candidates[0].model, "gpt-6.1-sol");
+  assert.equal(parsed.checks.modelPolicy.profiles.standard.candidates[0].model, "gpt-6.2-sol");
   assert.equal(parsed.checks.modelPolicy.agents.pathfinder.model, "gpt-6-luna");
-  assert.equal(parsed.checks.modelPolicy.agents.sentinel.model, "gpt-6.1-sol");
+  assert.equal(parsed.checks.modelPolicy.agents.sentinel.model, "gpt-6.2-sol");
   assert.equal(parsed.checks.modelPolicy.agents.sentinel.model_reasoning_effort, "xhigh");
   assert.equal(parsed.checks.hostContract.ok, true);
   assert.ok(parsed.checks.hostContract.cannotVerify.length >= 3);
@@ -161,7 +161,7 @@ test("doctor --json reports Superloopy packaging, audit, and reviewability check
   assert.equal(parsed.checks.claudeModelPolicy.ok, true);
   assert.equal(parsed.checks.claudeModelPolicy.policyPath, "docs/superloopy-model-policy-claude.md");
   assert.equal(parsed.checks.claudeModelPolicy.policyDataPath, "model-policy.json");
-  assert.equal(parsed.checks.claudeModelPolicy.policyDataVersion, "2026-09-30");
+  assert.equal(parsed.checks.claudeModelPolicy.policyDataVersion, "2026-11-19");
   assert.equal(parsed.checks.claudeModelPolicy.agents.pathfinder, "haiku");
   assert.equal(parsed.checks.claudeModelPolicy.agents.sentinel, "claude-opus-5-5");
   assert.equal(parsed.checks.claudeModelPolicy.agents.forge, "claude-opus-5-5");

@@ -14,6 +14,7 @@ const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
 function fullCatalog() {
   return [
+    { id: "gpt-6.2-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
     { id: "gpt-6.1-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
     { id: "gpt-6-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
     { id: "gpt-6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },
@@ -74,7 +75,7 @@ test("first managed install retires an exact pre-managed fleet and installs the 
   await assertCurrentFleetInstalled(setup, result);
   assert.equal(result.restartRequired, true);
   assert.deepEqual(new Set(result.agents.map(({ resolvedModel }) => resolvedModel)), new Set([
-    "gpt-6.1-sol",
+    "gpt-6.2-sol",
     "gpt-6-luna"
   ]));
   assert.deepEqual(result.retired.map(({ name, replacement, status }) => [name, replacement, status]),

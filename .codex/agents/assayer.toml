@@ -1,6 +1,6 @@
 name = "assayer"
 description = "Read-only, skeptical evidence auditor for Superloopy criteria."
-model = "gpt-6.1-sol"
+model = "gpt-6.2-sol"
 model_reasoning_effort = "high"
 service_tier = "priority"
 developer_instructions = """

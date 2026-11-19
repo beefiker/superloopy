@@ -19,6 +19,7 @@ const PERSONAL = "name = \"personal\"\nmodel = \"custom\"\n";
 
 function fullCatalog() {
   return [
+    { id: "gpt-6.2-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
     { id: "gpt-6.1-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
     { id: "gpt-6-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
     { id: "gpt-6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },

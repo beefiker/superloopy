@@ -148,35 +148,43 @@ test("resolver keeps every crew pin on the GPT-6 family when gpt-6-astra is also
   assert.equal(Object.values(result.profiles).every(({ reason }) => reason === "preferred_available"), true);
 });
 
-test("shipped model policy allows gpt-6-astra without pinning any profile to it", async () => {
+test("shipped model policy allows gpt-6.2-astra and gpt-6-astra without pinning any profile to them", async () => {
   const policy = JSON.parse(await readFile(new URL("../model-policy.json", import.meta.url), "utf8"));
-  assert.equal(policy.codex.allowed.models.includes("gpt-6-astra"), true);
   const pinned = Object.values(policy.codex.profiles).flatMap(({ candidates }) => candidates.map(({ model }) => model));
-  assert.equal(pinned.includes("gpt-6-astra"), false);
+  for (const astra of ["gpt-6.2-astra", "gpt-6-astra"]) {
+    assert.equal(policy.codex.allowed.models.includes(astra), true);
+    assert.equal(pinned.includes(astra), false);
+  }
 });
 
-test("shipped policy prefers GPT-6.1 Sol, then GPT-6 Sol, then GPT-5.6 for the Sol lanes", async () => {
+test("shipped policy prefers GPT-6.2 Sol, then GPT-6.1 Sol, then GPT-6 Sol, then GPT-5.6 for the Sol lanes", async () => {
   const loadModelPolicyData = requireExport("loadModelPolicyData");
   const resolveCodexModelPolicy = requireExport("resolveCodexModelPolicy");
   const loaded = await loadModelPolicyData(fileURLToPath(new URL("..", import.meta.url)));
   assert.equal(loaded.ok, true);
   const pick = (catalog) => Object.fromEntries(Object.entries(resolveCodexModelPolicy(loaded.data.codex, catalog).profiles)
     .map(([name, profile]) => [name, `${profile.requestedModel}>${profile.resolvedModel}:${profile.reason}`]));
+  const sol62 = { id: "gpt-6.2-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] };
   const sol61 = { id: "gpt-6.1-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] };
 
+  assert.deepEqual(pick([sol62, sol61, ...fullCatalog()]), {
+    standard: "gpt-6.2-sol>gpt-6.2-sol:preferred_available",
+    deep: "gpt-6.2-sol>gpt-6.2-sol:preferred_available",
+    fast: "gpt-6-luna>gpt-6-luna:preferred_available"
+  });
   assert.deepEqual(pick([sol61, ...fullCatalog()]), {
-    standard: "gpt-6.1-sol>gpt-6.1-sol:preferred_available",
-    deep: "gpt-6.1-sol>gpt-6.1-sol:preferred_available",
+    standard: "gpt-6.2-sol>gpt-6.1-sol:compatibility_fallback",
+    deep: "gpt-6.2-sol>gpt-6.1-sol:compatibility_fallback",
     fast: "gpt-6-luna>gpt-6-luna:preferred_available"
   });
   assert.deepEqual(pick(fullCatalog()), {
-    standard: "gpt-6.1-sol>gpt-6-sol:compatibility_fallback",
-    deep: "gpt-6.1-sol>gpt-6-sol:compatibility_fallback",
+    standard: "gpt-6.2-sol>gpt-6-sol:compatibility_fallback",
+    deep: "gpt-6.2-sol>gpt-6-sol:compatibility_fallback",
     fast: "gpt-6-luna>gpt-6-luna:preferred_available"
   });
   assert.deepEqual(pick(fullCatalog().filter(({ id }) => id.startsWith("gpt-5.6"))), {
-    standard: "gpt-6.1-sol>gpt-5.6-terra:compatibility_fallback",
-    deep: "gpt-6.1-sol>gpt-5.6-sol:compatibility_fallback",
+    standard: "gpt-6.2-sol>gpt-5.6-terra:compatibility_fallback",
+    deep: "gpt-6.2-sol>gpt-5.6-sol:compatibility_fallback",
     fast: "gpt-6-luna>gpt-5.6-luna:compatibility_fallback"
   });
 });

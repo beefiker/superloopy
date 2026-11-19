@@ -17,6 +17,7 @@ function fullCatalog() {
     ok: true,
     source: "model_list",
     models: [
+      { id: "gpt-6.2-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
       { id: "gpt-6.1-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
       { id: "gpt-6-sol", reasoningEfforts: ["high", "xhigh"], serviceTiers: ["priority"] },
       { id: "gpt-6-luna", reasoningEfforts: ["low"], serviceTiers: ["fast"] },
