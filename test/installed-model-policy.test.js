@@ -274,21 +274,23 @@ test("installed doctor accepts compatibility routing as healthy degraded state",
   assert.deepEqual(new Set(Object.values(check.agents).map(({ status }) => status)), new Set(["compatibility"]));
 });
 
-test("policy upgrade without GPT-6.2 Sol or GPT-6.1 Sol keeps GPT-6 Sol files unchanged and healthy", async (t) => {
-  const models = fullCatalog().filter(({ id }) => id !== "gpt-6.2-sol" && id !== "gpt-6.1-sol");
-  const setup = await fixture(t, { models });
-  await writeState(setup, { ...(await readState(setup)), policyVersion: "2026-09-25" });
-  const agentFiles = async () => (await snapshot(setup)).slice(1).map(({ content }) => content);
-  const before = await agentFiles();
-  const { env, homeDir, statePath } = setup;
-  const query = async () => ({ ok: true, source: "model_list", models });
-  const result = await installAgents(REPO_ROOT, [], { env, homeDir, statePath, policyRoot: REPO_ROOT, clock: () => NOW, queryModelCatalog: query });
-  assert.deepEqual([result.ok, result.modelResolution.cacheStatus, result.restartRequired], [true, "refreshed", false]);
-  assert.deepEqual(await agentFiles(), before);
-  assert.match(before[1], /^model = "gpt-6-sol"$/mu);
-  const check = installedCheck(await runDoctor(REPO_ROOT, options(setup)));
-  assert.deepEqual([check.ok, check.selectionStatus, check.degraded], [true, "compatibility", true]);
-});
+for (const [missing, kept, previousPolicy] of [[["gpt-6.2-sol", "gpt-6.1-sol"], "gpt-6-sol", "2026-09-25"], [["gpt-6.2-sol"], "gpt-6.1-sol", "2026-09-30"]]) {
+  test(`policy upgrade without ${missing.join(" or ")} keeps ${kept} files unchanged and healthy`, async (t) => {
+    const models = fullCatalog().filter(({ id }) => !missing.includes(id));
+    const setup = await fixture(t, { models });
+    await writeState(setup, { ...(await readState(setup)), policyVersion: previousPolicy });
+    const agentFiles = async () => (await snapshot(setup)).slice(1).map(({ content }) => content);
+    const before = await agentFiles();
+    const { env, homeDir, statePath } = setup;
+    const query = async () => ({ ok: true, source: "model_list", models });
+    const result = await installAgents(REPO_ROOT, [], { env, homeDir, statePath, policyRoot: REPO_ROOT, clock: () => NOW, queryModelCatalog: query });
+    assert.deepEqual([result.ok, result.modelResolution.cacheStatus, result.restartRequired], [true, "refreshed", false]);
+    assert.deepEqual(await agentFiles(), before);
+    assert.match(before[1], new RegExp(`^model = "${kept.replaceAll(".", "\\.")}"$`, "mu"));
+    const check = installedCheck(await runDoctor(REPO_ROOT, options(setup)));
+    assert.deepEqual([check.ok, check.selectionStatus, check.degraded], [true, "compatibility", true]);
+  });
+}
 
 test("installed doctor fails an exactly 24-hour stale state without requesting restart", async (t) => {
   const setup = await fixture(t);

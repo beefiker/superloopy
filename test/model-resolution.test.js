@@ -130,9 +130,10 @@ test("resolver selects every preferred GPT-6 tuple when fully available", () => 
   assert.deepEqual(Object.keys(result.agents), Object.keys(AGENTS));
 });
 
-test("resolver keeps every crew pin on the GPT-6 family when gpt-6-astra is also available", () => {
+test("resolver keeps every crew pin on the GPT-6 family when gpt-6.2-astra and gpt-6-astra are also available", () => {
   const resolveCodexModelPolicy = requireExport("resolveCodexModelPolicy");
   const catalog = [
+    { id: "gpt-6.2-astra", reasoningEfforts: ["low", "medium", "high", "xhigh", "max", "ultra"], serviceTiers: ["priority", "fast"] },
     { id: "gpt-6-astra", reasoningEfforts: ["low", "medium", "high", "xhigh", "max", "ultra"], serviceTiers: ["priority", "fast"] },
     ...fullCatalog()
   ];
@@ -144,7 +145,7 @@ test("resolver keeps every crew pin on the GPT-6 family when gpt-6-astra is also
     Object.fromEntries(Object.entries(result.profiles).map(([name, profile]) => [name, profile.resolvedModel])),
     { standard: "gpt-6-sol", deep: "gpt-6-sol", fast: "gpt-6-luna" }
   );
-  assert.equal(Object.values(result.agents).some(({ resolvedModel }) => resolvedModel === "gpt-6-astra"), false);
+  assert.equal(Object.values(result.agents).some(({ resolvedModel }) => resolvedModel.includes("astra")), false);
   assert.equal(Object.values(result.profiles).every(({ reason }) => reason === "preferred_available"), true);
 });
 
